@@ -73,7 +73,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ClearSurplusServices( self ):
         
         # if user clicks all known files, then all other services will be wiped
-        # all local files should do other file services too
+        # hydrus local file storage should do other file services too
         # and all my files does local file domains
         
         location_context = self._GetValue()

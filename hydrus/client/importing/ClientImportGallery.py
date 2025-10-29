@@ -112,6 +112,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         CG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _AmOverFileLimit( self ):
@@ -1058,6 +1059,12 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+        ClientImporting.WakeRepeatingJob( self._gallery_repeating_job )
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IMPORT ] = GalleryImport
 
@@ -1116,6 +1123,8 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         self._next_pub_value_check_time = 0
         
         self._importers_repeating_job = None
+        
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _AddGalleryImport( self, gallery_import ):
@@ -1988,4 +1997,10 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._importers_repeating_job )
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_GALLERY_IMPORT ] = MultipleGalleryImport

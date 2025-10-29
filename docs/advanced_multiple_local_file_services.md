@@ -87,21 +87,21 @@ If you search 'all known files'/'PTR', you can search all the files the PTR know
 
 You can search for deleted files under 'multiple domains' too. These may or may not still be in your client, so they might get the hydrus icon again. You won't need to do this much, but it can be super useful for some maintenance operations like 'I know I deleted this file by accident, what was its URL so I can find it again?'.
 
-Another service is 'all local files'. This is a larger version of 'all my files'. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('my files' and any others you create, i.e. the 'all my files' domain), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.
+Another service is 'hydrus local file storage'. This is a larger version of 'all my files'. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('my files' and any others you create, i.e. the 'all my files' domain), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.
 
-If you select 'repository updates' specifically, you can inspect this advanced domain, but I recommend you not touch it! Otherwise, if you search 'all local files', repository files are usually hidden from view.
+If you select 'repository updates' specifically, you can inspect this advanced domain, but I recommend you not touch it! Otherwise, if you search 'hydrus local file storage', repository files are usually hidden from view.
 
 Your client looks a bit like this:
 
 ```mermaid
 graph TB
-  A[all local files] --- B[repository updates]
+  A[hydrus local file storage] --- B[repository updates]
   A --- C[all my files]
   C --- D[local file domains]
   A --- E[trash]
 ```
 
-Repository files, your media, and the trash are actually mutually exclusive. When a file is imported, it is added to 'all local files' and either repository updates or 'all my files' and one or more local file domains. When it is deleted from all of those, it is taken from 'all my files' and moved to trash. When trashed files are cleared, the files are removed from 'trash' and then 'all local files' and thus your hard disk.
+Repository files, your media, and the trash are actually mutually exclusive. When a file is imported, it is added to 'hydrus local file storage' and either repository updates or 'all my files' and one or more local file domains. When it is deleted from all of those, it is taken from 'all my files' and moved to trash. When trashed files are cleared, the files are removed from 'trash' and then 'hydrus local file storage' and thus your hard disk.
 
 ## more advanced usage { id="advanced" }
 

@@ -16,6 +16,7 @@ from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
@@ -378,6 +379,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def _UpdateCountLabel( self ):
         
+        tooltip_override = None
+        
         if not self._potential_duplicate_id_pairs_and_distances_initialised:
             
             text = f'initialising{HC.UNICODE_ELLIPSIS}'
@@ -431,8 +434,17 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                     
                 
             
+            tooltip_override = 'The number on the left is how many pairs are in the system; on the right is how many match your current search.'
+            tooltip_override += '\n\n'
+            tooltip_override += 'A system:everything search in "all my files" at a distance of 8+ should find ~100%. Do not worry if there are a couple of loose pairs you cannot find--they are probably in the trash, waiting to be deleted.'
+            
         
         self._num_potential_duplicate_pairs_label.setText( text )
+        
+        if tooltip_override is not None:
+            
+            self._num_potential_duplicate_pairs_label.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip_override ) )
+            
         
     
     def _WeAreDoingACountEstimateAndHaveEnough( self ):

@@ -1146,7 +1146,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        from hydrus.client.gui.panels import ClientGUIManageOptionsPanel
+        from hydrus.client.gui.panels.options import ClientGUIManageOptionsPanel
         
         ClientGUIMenus.AppendMenuItem( menu, 'edit shortcuts', 'edit your sets of shortcuts, and change what shortcuts are currently active on this media viewer', ClientGUIManageOptionsPanel.ManageShortcuts, self )
         

@@ -140,7 +140,7 @@ All missing/incorrect files will also have their hashes, tags, and URLs exported
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : '''This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.''',
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : '''This forces a regeneration of the file's similar-files 'phashes'. It is not useful unless you know there is missing data to repair.''',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : '''This rechecks the file's modified timestamp and saves it to the database.''',
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : '''This loads the file to see if it has an alpha channel with useful data (completely opaque/transparency alpha channels are discarded). Only works for images and animated gif.''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : '''This loads the file to see if it has an alpha channel with useful data (the strictness of this test is determined in the options). Only works for images and some animations.''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : '''This loads the file to see if it has EXIF metadata, which can be shown in the media viewer and searched with "system:image has exif".''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : '''This loads the file to see if it has non-EXIF human-readable embedded metadata, which can be shown in the media viewer and searched with "system:image has human-readable embedded metadata".''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : '''This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.''',
@@ -622,7 +622,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'Record deleted during File Integrity check.' )
                     
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                     
                     self._controller.WriteSynchronous( 'content_updates', content_update_package )
                     
@@ -634,7 +634,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
                         
-                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                         
                         self._controller.WriteSynchronous( 'content_updates', content_update_package )
                         

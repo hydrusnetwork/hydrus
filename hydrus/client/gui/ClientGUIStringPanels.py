@@ -2072,7 +2072,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
         
         super().__init__( parent )
         

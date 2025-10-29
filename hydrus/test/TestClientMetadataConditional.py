@@ -415,9 +415,9 @@ class TestPredicateTesting( unittest.TestCase ):
             media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
             media_result_null = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
             
-            media_result_pass.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() + pass_delta )
-            media_result_fail.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() + fail_delta )
-            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            media_result_pass.GetTimesManager().SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HydrusTime.GetNowMS() + pass_delta )
+            media_result_fail.GetTimesManager().SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HydrusTime.GetNowMS() + fail_delta )
+            media_result_null.GetTimesManager().ClearTime( ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
             
             self.assertTrue( pred.TestMediaResult( media_result_pass ) )
             self.assertFalse( pred.TestMediaResult( media_result_fail ) )
@@ -760,7 +760,7 @@ class TestPredicateValueExtraction( unittest.TestCase ):
         
         # import time
         
-        fake_media_result.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123456 )
+        fake_media_result.GetTimesManager().SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, 123456 )
         
         system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME )
         

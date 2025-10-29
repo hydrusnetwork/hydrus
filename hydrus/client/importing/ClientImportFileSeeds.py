@@ -1845,7 +1845,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( ( hash, ), timestamp_data ) )
                         
-                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                         
                     
                     if self._cloudflare_last_modified_time is not None and ClientTime.TimestampIsSensible( self._cloudflare_last_modified_time ):
@@ -1854,7 +1854,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( ( hash, ), timestamp_data ) )
                         
-                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                        content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                         
                     
                 
@@ -1888,7 +1888,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( associable_urls, ( hash, ) ) )
             
-            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+            content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
             
         
         if tag_import_options is None:

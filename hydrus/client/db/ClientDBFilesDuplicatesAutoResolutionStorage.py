@@ -775,7 +775,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_removed:
             
-            CG.client_controller.duplicates_auto_resolution_manager.Wake()
+            CG.client_controller.duplicates_auto_resolution_manager.WakeIfNotWorking()
             
         
     

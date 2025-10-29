@@ -133,10 +133,10 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
-        service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        service_info = CG.client_controller.Read( 'service_info', CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
         
-        self._all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
-        self._all_local_files_total_num = service_info[ HC.SERVICE_INFO_NUM_FILES ]
+        self._hydrus_local_file_storage_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+        self._hydrus_local_file_storage_total_num = service_info[ HC.SERVICE_INFO_NUM_FILES ]
         
         menu_template_items = []
         
@@ -407,7 +407,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertLocationToDisplayTuple( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
         
-        f_space = self._all_local_files_total_size
+        f_space = self._hydrus_local_file_storage_total_size
         ( t_space_min, t_space_max ) = self._GetThumbnailSizeEstimates()
         
         #
@@ -736,7 +736,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         our_thumb_num_pixels = t_width * t_height
         our_thumb_size_estimate = typical_thumb_size * ( our_thumb_num_pixels / typical_thumb_num_pixels )
         
-        our_total_thumb_size_estimate = self._all_local_files_total_num * our_thumb_size_estimate
+        our_total_thumb_size_estimate = self._hydrus_local_file_storage_total_num * our_thumb_size_estimate
         
         return ( int( our_total_thumb_size_estimate * 0.8 ), int( our_total_thumb_size_estimate * 1.4 ) )
         
@@ -991,14 +991,14 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
-        self._media_base_locations_to_ideal_usage = ClientFilesPhysical.FilesStorageBaseLocation.STATICGetIdealWeights( self._all_local_files_total_size, self._media_base_locations )
+        self._media_base_locations_to_ideal_usage = ClientFilesPhysical.FilesStorageBaseLocation.STATICGetIdealWeights( self._hydrus_local_file_storage_total_size, self._media_base_locations )
         
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
         
         self._current_db_path_st.setText( 'database (about '+HydrusData.ToHumanBytes(approx_total_db_size)+'): '+self._controller.GetDBDir() )
         self._current_install_path_st.setText( 'install: ' + HC.BASE_DIR )
         
-        approx_total_client_files = self._all_local_files_total_size
+        approx_total_client_files = self._hydrus_local_file_storage_total_size
         ( approx_total_thumbnails_min, approx_total_thumbnails_max ) = self._GetThumbnailSizeEstimates()
         
         label = 'media is {}, thumbnails are estimated at {}-{}'.format( HydrusData.ToHumanBytes( approx_total_client_files ), HydrusData.ToHumanBytes( approx_total_thumbnails_min ), HydrusData.ToHumanBytes( approx_total_thumbnails_max ) )

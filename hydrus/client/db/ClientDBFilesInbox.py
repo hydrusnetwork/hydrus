@@ -111,7 +111,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             hash_ids = set( hash_ids )
             
         
-        location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) )
+        location_context = ClientLocation.LocationContext( current_service_keys = ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ) )
         
         hash_ids = self.modules_files_storage.FilterHashIds( location_context, hash_ids )
         
@@ -263,7 +263,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                batch_of_hash_ids_to_current_timestamps_ms = self.modules_files_storage.GetCurrentHashIdsToTimestampsMS( self.modules_services.combined_local_file_service_id, batch_of_hash_ids )
+                batch_of_hash_ids_to_current_timestamps_ms = self.modules_files_storage.GetCurrentHashIdsToTimestampsMS( self.modules_services.hydrus_local_file_storage_service_id, batch_of_hash_ids )
                 
                 batch_of_hash_ids_to_current_timestamps_ms = { hash_id : timestamp for ( hash_id, timestamp ) in batch_of_hash_ids_to_current_timestamps_ms.items() if timestamp is not None }
                 

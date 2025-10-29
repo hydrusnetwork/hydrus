@@ -7,6 +7,50 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 645](https://github.com/hydrusnetwork/hydrus/releases/tag/v645)
+
+### mpv samsara
+
+* background: after use, mpv players are not destroyed but released to a hidden pool and reused when another media viewer needs them. this is because, in my original implementation, attempting to destroy an mpv window caused an instacrash. many users have long-time struggled with situations where one of their persistent mpv players would get a fault due to an audio or video driver issue, such as a bug in restoring from system sleep, and thereafter their hydrus client would have one player good/one player bad, interlaced, as the media player swapped between them. there's a lame 'seal away bad mpv windows and create more' debug routine that ameliorates this, but the overall solution was just to restart the client
+* this hopefully changes today. I have added `TEST: Destroy/recreate mpv widgets instead of recycling them` to `options->media playback`. if you are an advanced user ready to risk a crash, or in particular if you are someone who gets the 'every other mpv window is broken' issue, please try it. load up one video hesitantly, then try unloading it. try browsing between video and images, video and video. then, if you like, go bananas. do you get any crashes? I cannot get it to crash, but if I scroll as fast as I can through videos, I'll get some warnings in the log, and if I scroll through a loop of like ten audio files it will hang
+* I am not sure why it does not crash any more. most likely I have simply cleaned up some really garbage code around here in the past couple of years and the problem is gone. it could also be a fix in mpv, mpv-python, or Qt in the same time period, or a mix of several of these things. it doesn't even crash with the legacy mpv interface I just moved from. in any case, I feel fairly good about this, and with a little more polish, if we have no big problems, I expect to make this mpv destruction/recreation the default behaviour going forward, with the recycling being another legacy mode people with problems can switch to. the only drawback of the new mode is a couple extra frames of delay to boot a video since we are initialising from nothing every time. I can address that in future in various ways, or users who care can just switch back to the legacy system
+* in a related thing, I'm trying to chase down a long-time layout flicker bug where after a media viewer sees a single mpv window, image-to-image transitions in some clients get a flicker where the next image is at the top-left position of the previous for one frame before moving to the correct position. I get this on my IRL machine but only sometimes on my dev machine, and I'd like to see if this layout-poisoning still happens if the associated mpv window is fully destroyed (I figure the media viewer converts to some sort of hardware-accelerated compositing mode or something for the mpv window, and that introduces some delay or voids double-buffering-something in future layout calcs. maybe that can be unwound, maybe not, but keeping the window alive but hidden with a new parent is definitely not doing it)
+
+### misc
+
+* for new users, 'all local files' is renamed to 'hydrus local file storage'. this is to address confusion with the other umbrella local file service, "all my files", which I am also thinking of renaming. if nothing blows up, most likely r.e. some commonly used Client API script that happens to access services in a funny way, I will rename all existing users in a couple weeks, for v647
+* the 'review services' panels now have a micro-FAQ description blurb for each service type
+* the 'review bandwidth' window now sorts 'web domain' network contexts with subdomains below their parents, so you'll get site.com and then media.site.com right after. it was previously raw alphabetical on domain
+* the four `network->pause->paged importer x` entries now wake all importers when they change, so all your import pages should update their UI and start allowed work immediately after you hit them (previously it would take up to thirty seconds to unpause)
+* you can now select the strictness of the 'has transparency' test under `options->media playback`. the default is still the 'human perceptible' test I added last week, but if you like you can change it to 'not totally transparent/opaque' (what it was before) or 'has any alpha channel at all'. this affects rendering and the "has transparency" property for new files and future file maintenance jobs
+* with help from a user, running a hydrus server or the client api in https mode with a proper cert now loads the full cert chain with issuers, letting a browser verify it properly. the old method was a very basic stub that was only sending the first leaf in the cert, and thus only appropriate for self-signed certs
+
+### duplicates auto-resolution
+
+* if an auto-resolution approve/deny action from the rule review panel takes longer than 4 seconds, it now boots a popup window with progress. if you like to fire off 1,000 approves and then close the window, you'll now see them finish up
+
+### duplicates search tech
+
+* there's a legacy situation in the duplicate system where potential duplicate pairs were not being delisted when one or both files in the pair were physically deleted. this is fixed today
+* when a single file or a king of a duplicate group is physically deleted, all potential duplicate pairs it is part of are now removed
+* added a new maintenance task under the duplicates page 'preparation' tab cog icon button to resync pairs to the currently local kings. this job will run in the update this week to fix us all
+* your various duplicate pair counts will now line up better in edge cases such as 'system:everything' searches or when the count of actionable pairs nears zero. there won't be a bunch of spare unmatching pairs you can't get at
+* there's still an issue here in that duplicate pair search operates in 'all my files', but the delisting happens when files leave hydrus local file storage, so if you manually delete a pair, it will stay in the master count until it is physically deleted. I considered making pairs delist when leaving 'all my files', but this would mean a delete/undelete cycle would re-queue the file for similar files search and it would make a 'set duplicate' action with a file delete component slightly logically frustrating, so I'm leaving it as-is now. let me know if your numbers are still so out of whack that it is distracting
+
+### boring stuff
+
+* fixed an intermittent Qt warning related to creating/showing menus with non-top-level-window parents
+* fixed a source of mpv/Qt instability with the mpv event processing during window destruction
+* fixed the mpv crash restart loop crash handler, which missed some recent rewrites
+* across the codebase, all the 'all local files' and 'combined local file' nomenclature is now unified to 'hydrus local file storage'
+* thanks to a user, added a note about `sudo xattr -rd com.apple.quarantine setup_venv.command` to the macOS 'running from source' help
+* all the macOS .command scripts now start with `#!/bin/bash -l` with the `-l`, which forces a login terminal that has more env stuff like homebrow on your PATH. finding ffmpeg and such should be easier hereon--sorry for any trouble!
+* the 7,000 line, 444KB main options dialog py is refactored into 38 sub files; all the panels now separated
+* added a tl;dr section to the duplicates auto-resolution help
+* updated some duplicates help to talk about trying too hard to saving disk space
+* added a note about https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator to the normal duplicates help
+* couple of misc linting fixes
+
 ## [Version 644](https://github.com/hydrusnetwork/hydrus/releases/tag/v644)
 
 ### new libraries
@@ -38,7 +82,8 @@ title: Changelog
 * when a file search is loading, the media results are now loaded in batches of 100 rather than 256. I also fetch them in file_id order, which I'm testing to see if it saves a little time (close ids _should_ share index branches, reducing cache I/O)
 * on many types of page status update, the GUI is now only hit with a 'update the status bar' call if this is the current page. this was hitting a busy session load a bunch
 
-* filename parsing: 
+### filename parsing
+
 * I completely overhauled the background worker and data objects that kick in when you drop files on the program and the window appears to parse them all
 * all paths that fail (zero size, missing, currently in use, bad filetype, Thumbs.db, seems to be a sidecar) are now listed with their failure reason
 * the cog button to set whether paths within folders be added in the 'human-sorted' way (ordering 'page 3' before 'page 11') is removed. paths are now always added this way

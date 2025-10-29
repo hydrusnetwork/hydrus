@@ -212,8 +212,6 @@ def HasTransparency( path, mime, duration_ms = None, num_frames = None, resoluti
                 return False # something crazy going on, so let's bail out
                 
             
-            we_checked_alpha_channel = False
-            
             if mime in ( HC.ANIMATION_GIF, HC.ANIMATION_WEBP ):
                 
                 renderer = ClientVideoHandling.AnimationRendererPIL( path, num_frames, resolution )
@@ -223,18 +221,20 @@ def HasTransparency( path, mime, duration_ms = None, num_frames = None, resoluti
                 renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, resolution )
                 
             
+            we_checked_for_just_alpha_channel = False
+            
             for i in range( num_frames ):
                 
                 numpy_image = renderer.read_frame()
                 
-                if not we_checked_alpha_channel:
+                if not we_checked_for_just_alpha_channel:
                     
                     if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
                         
                         return False
                         
                     
-                    we_checked_alpha_channel = True
+                    we_checked_for_just_alpha_channel = True
                     
                 
                 if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):

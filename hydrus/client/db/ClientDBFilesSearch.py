@@ -2247,7 +2247,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         # hide update files
         
-        if location_context.IsAllLocalFiles():
+        if location_context.IsHydrusLocalFileStorage():
             
             repo_update_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.local_update_service_id ) )
             
@@ -2418,8 +2418,8 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        file_location_is_all_local = self.modules_services.LocationContextIsCoveredByCombinedLocalFiles( location_context )
-        file_location_is_all_combined_local_files_deleted = location_context.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in location_context.deleted_service_keys
+        file_location_is_all_local = self.modules_services.LocationContextIsCoveredByHydrusLocalFileStorage( location_context )
+        file_location_is_all_hydrus_local_file_storages_deleted = location_context.IsOneDomain() and CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in location_context.deleted_service_keys
         
         must_be_local = system_predicates.MustBeLocal() or system_predicates.MustBeArchive()
         must_not_be_local = system_predicates.MustNotBeLocal()
@@ -2433,7 +2433,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 query_hash_ids = set()
                 
             
-        elif file_location_is_all_combined_local_files_deleted:
+        elif file_location_is_all_hydrus_local_file_storages_deleted:
             
             if must_be_local:
                 
@@ -2444,11 +2444,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if must_be_local:
                 
-                query_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( self.modules_services.combined_local_file_service_id, query_hash_ids, HC.CONTENT_STATUS_CURRENT )
+                query_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( self.modules_services.hydrus_local_file_storage_service_id, query_hash_ids, HC.CONTENT_STATUS_CURRENT )
                 
             elif must_not_be_local:
                 
-                local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 query_hash_ids.difference_update( local_hash_ids )
                 
@@ -2689,7 +2689,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                        file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY
                         
                     
                     file_service_id = self.modules_services.GetServiceId( file_service_key )

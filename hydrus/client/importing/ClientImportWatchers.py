@@ -82,6 +82,8 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._last_pubbed_value_range = ( 0, 0 )
         self._next_pub_value_check_time = 0
         
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
+        
     
     def _AddWatcher( self, watcher ):
         
@@ -685,6 +687,12 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._watchers_repeating_job )
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_WATCHER_IMPORT ] = MultipleWatcherImport
 
 class WatcherImport( HydrusSerialisable.SerialisableBase ):
@@ -758,6 +766,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = 0
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _CheckerNetworkJobPresentationContextFactory( self, network_job ):
@@ -2001,6 +2010,13 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
+        
+    
+
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+        ClientImporting.WakeRepeatingJob( self._checker_repeating_job )
         
     
 

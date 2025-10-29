@@ -113,7 +113,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 644
+SOFTWARE_VERSION = 645
 CLIENT_API_VERSION = 81
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -435,7 +435,7 @@ COMBINED_FILE = 11
 LOCAL_BOORU = 12
 IPFS = 13
 LOCAL_FILE_TRASH_DOMAIN = 14
-COMBINED_LOCAL_FILE = 15
+HYDRUS_LOCAL_FILE_STORAGE = 15
 TEST_SERVICE = 16
 LOCAL_NOTES = 17
 CLIENT_API_SERVICE = 18
@@ -452,7 +452,7 @@ service_string_lookup = {
     LOCAL_FILE_DOMAIN : 'local file domain',
     LOCAL_FILE_TRASH_DOMAIN : 'local trash file domain',
     LOCAL_FILE_UPDATE_DOMAIN : 'local update file domain',
-    COMBINED_LOCAL_FILE : 'virtual combined local file service',
+    HYDRUS_LOCAL_FILE_STORAGE : 'virtual combined local file service',
     COMBINED_LOCAL_MEDIA : 'virtual combined local media service',
     MESSAGE_DEPOT : 'hydrus message depot',
     LOCAL_TAG : 'local tag service',
@@ -473,9 +473,36 @@ service_string_lookup = {
     NULL_SERVICE : 'null service'
 }
 
+service_description_lookup = {
+    TAG_REPOSITORY : 'A repository of tag mapping data (tag-file pairs) stored on a remote server. Clients can sync with it, which means to download all the file hashes, tags, and mappings it knows of and synchronise that to local metadata storage. Clients can also upload new mapping data, which will in turn be shared to all users.\n\nThe "all known tags" service is a union of all local tag services and tag repositories.',
+    FILE_REPOSITORY : 'A repository of files stored on a remote server. Clients can sync with it, which means to regularly download all the file hashes and thumbnails. You can search it like any other file domain, viewing the thumbnails, and download files. Clients can also upload new files, which will in turn be shared to all users.',
+    LOCAL_FILE_DOMAIN : 'This stores media files you have imported. You can have multiple local file domains, and files may be in multiple local file domains at once. Each domain is completely isolated from one another when you perform a file or tag search (if your search page is pointed at A, you will not get any file search results or tag autocomplete suggestions from B).\n\nThe "all my files" service is the union of all your local file domains.',
+    LOCAL_FILE_TRASH_DOMAIN : 'This is where your files go when they have been removed from all your local file domains. It is a waiting area to allow for undeletes of mistakes. When files are deleted from this place, they are physically deleted. "all my files" does not search the trash.',
+    LOCAL_FILE_UPDATE_DOMAIN : 'This holds repository update files. It is not covered by "all my files" like the normal local file domains, and you can generally ignore it.',
+    HYDRUS_LOCAL_FILE_STORAGE : 'This represents all files currently tracked and stored in your database. If a file is in here, it is either in "repository updates", "all my files", or "trash", and it should be loadable from disk.\n\nWhen a file is deleted from the trash, it also leaves this domain and is scheduled to be physically deleted--which usually happens within a few seconds.',
+    COMBINED_LOCAL_MEDIA : 'This represents all files currently in any of your local file domains. You start with only "my files", but if you add more, this is a convenient umbrella that unions all of them. When a file is deleted from all your local file domains, it leaves this service and enters the trash.',
+    MESSAGE_DEPOT : 'You should not see this text',
+    LOCAL_TAG : 'This stores tag mappings (tag-file pairs) that you have added/imported. You can have multiple local tag services, and the exact same mappings map appear in multiple domains.\n\nTags are not removed when files are deleted, and if you later re-import the file, you will see it still has its tags.\n\nThe "all known tags" service is a union of all local tag services and tag repositories.',
+    LOCAL_RATING_INCDEC : 'This stores inc/dec ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
+    LOCAL_RATING_NUMERICAL : 'This stores numerical ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
+    LOCAL_RATING_LIKE : 'This stores like/dislike ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
+    RATING_NUMERICAL_REPOSITORY : 'You should not see this text',
+    RATING_LIKE_REPOSITORY : 'You should not see this text',
+    COMBINED_TAG : 'This is a union of all your local tag services and tag repositories.',
+    COMBINED_FILE : 'This is a special view on a tag service. It will deliver results without any cross-reference with a known file service, and thus if the file is tagged on a service, you will see it whether you have it, had it, or have never had it.',
+    LOCAL_BOORU : 'You should not see this text',
+    CLIENT_API_SERVICE : 'The Client API.',
+    IPFS : 'A remote listing of files stored/pinned on an IPFS daemon. You can search it like any other file domain.',
+    TEST_SERVICE : 'You should not see this text',
+    LOCAL_NOTES : 'This stores your file notes.\n\nNotes are not removed when files are deleted, and if you later re-import the file, you will see it still has its notes.',
+    SERVER_ADMIN : 'This is an interface to a server that allows editing of admin accounts and which remote services are running.',
+    COMBINED_DELETED_FILE : 'This represents all the files that have ever been deleted from any location. It is for advanced technical jobs, and you can generally ignore it.',
+    NULL_SERVICE : 'You should not see this text'
+}
+
 SPECIFIC_LOCAL_FILE_SERVICES = ( LOCAL_FILE_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN )
-LOCAL_FILE_SERVICES = SPECIFIC_LOCAL_FILE_SERVICES + ( COMBINED_LOCAL_FILE, COMBINED_LOCAL_MEDIA )
-LOCAL_FILE_SERVICES_IN_NICE_ORDER = ( LOCAL_FILE_DOMAIN, COMBINED_LOCAL_MEDIA, LOCAL_FILE_TRASH_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, COMBINED_LOCAL_FILE )
+LOCAL_FILE_SERVICES = SPECIFIC_LOCAL_FILE_SERVICES + ( HYDRUS_LOCAL_FILE_STORAGE, COMBINED_LOCAL_MEDIA )
+LOCAL_FILE_SERVICES_IN_NICE_ORDER = ( LOCAL_FILE_DOMAIN, COMBINED_LOCAL_MEDIA, LOCAL_FILE_TRASH_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, HYDRUS_LOCAL_FILE_STORAGE )
 LOCAL_TAG_SERVICES = ( LOCAL_TAG, )
 
 LOCAL_SERVICES = LOCAL_FILE_SERVICES + LOCAL_TAG_SERVICES + ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_RATING_INCDEC, LOCAL_NOTES, CLIENT_API_SERVICE )
@@ -493,10 +520,10 @@ MUST_HAVE_AT_LEAST_ONE_SERVICES = ( LOCAL_TAG, LOCAL_FILE_DOMAIN )
 MUST_BE_EMPTY_OF_FILES_SERVICES = ( LOCAL_FILE_DOMAIN, )
 
 FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES = REAL_FILE_SERVICES
-FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES = ( COMBINED_LOCAL_FILE, COMBINED_DELETED_FILE, FILE_REPOSITORY, IPFS )
+FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES = ( HYDRUS_LOCAL_FILE_STORAGE, COMBINED_DELETED_FILE, FILE_REPOSITORY, IPFS )
 
 FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_MEDIA = ( LOCAL_FILE_DOMAIN, )
-FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE = ( COMBINED_LOCAL_MEDIA, LOCAL_FILE_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN )
+FILE_SERVICES_COVERED_BY_HYDRUS_LOCAL_FILE_STORAGE = ( COMBINED_LOCAL_MEDIA, LOCAL_FILE_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, LOCAL_FILE_TRASH_DOMAIN )
 FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE = ( COMBINED_LOCAL_MEDIA, LOCAL_FILE_DOMAIN, LOCAL_FILE_UPDATE_DOMAIN, FILE_REPOSITORY, IPFS )
 
 ALL_SERVICES = REMOTE_SERVICES + LOCAL_SERVICES + ( COMBINED_FILE, COMBINED_TAG, COMBINED_DELETED_FILE )
@@ -514,7 +541,7 @@ SERVICE_TYPES_TO_CONTENT_TYPES = {
     LOCAL_FILE_UPDATE_DOMAIN : ( CONTENT_TYPE_FILES, ),
     LOCAL_FILE_TRASH_DOMAIN : ( CONTENT_TYPE_FILES, ),
     COMBINED_LOCAL_MEDIA : ( CONTENT_TYPE_FILES, ),
-    COMBINED_LOCAL_FILE : ( CONTENT_TYPE_FILES, ),
+    HYDRUS_LOCAL_FILE_STORAGE : ( CONTENT_TYPE_FILES, ),
     IPFS : ( CONTENT_TYPE_FILES, ),
     TAG_REPOSITORY : ( CONTENT_TYPE_MAPPINGS, CONTENT_TYPE_TAG_PARENTS, CONTENT_TYPE_TAG_SIBLINGS ),
     LOCAL_TAG : ( CONTENT_TYPE_MAPPINGS, CONTENT_TYPE_TAG_PARENTS, CONTENT_TYPE_TAG_SIBLINGS ),

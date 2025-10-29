@@ -3,7 +3,6 @@ import requests
 import time
 import traceback
 
-import twisted.internet.ssl
 from twisted.internet import threads, reactor, defer
 
 from hydrus.core import HydrusConstants as HC
@@ -468,11 +467,11 @@ class Controller( HydrusController.HydrusController ):
                             return
                             
                         
+                        from hydrus.core.networking import HydrusServerContextFactory
+                        
                         ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
                         
-                        sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
-                        
-                        context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
+                        context_factory = HydrusServerContextFactory.GenerateSSLContextFactory( ssl_cert_path, ssl_key_path )
                         
                         ipv6_port = None
                         

@@ -842,7 +842,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, deletee_hashes )
                     
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                     
                     CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     

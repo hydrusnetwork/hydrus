@@ -35,10 +35,10 @@ try:
     
     import mpv
     
-except Exception as e:
+except Exception as e_mpv:
     
     MPV_IS_AVAILABLE = False
-    MPV_MODULE_NOT_FOUND = isinstance( e, ModuleNotFoundError )
+    MPV_MODULE_NOT_FOUND = isinstance( e_mpv, ModuleNotFoundError )
     MPV_IMPORT_ERROR = traceback.format_exc()
     
 
@@ -753,11 +753,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _InitialiseMPVCallbacks( self ):
         
-        # note that these happen on the mpv mainloop, not UI code, so we need to post events to stay stable
-        
-        def event_handler( event: mpv.MpvEvent ):
-            
-            event_type = event.event_id.value
+        def qt_code( event_type ):
             
             if event_type == mpv.MpvEventID.SEEK:
                 
@@ -773,11 +769,18 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif event_type == mpv.MpvEventID.SHUTDOWN:
                 
-                if QP.isValid( self ):
-                    
-                    QW.QApplication.postEvent( self, MPVShutdownEvent() )
-                    
+                QW.QApplication.postEvent( self, MPVShutdownEvent() )
                 
+            
+        
+        # note that these happen on the mpv mainloop, not UI code, so we need to post events to stay stable
+        # lol when I started destroying mpv windows, this started failing because 'self' was already deleted C++ side. I just dump to Qt now w/e
+        
+        def event_handler( event: mpv.MpvEvent ):
+            
+            event_type = event.event_id.value
+            
+            CG.client_controller.CallAfterQtSafe( self, qt_code, event_type )
             
         
         self._player.register_event_callback( event_handler )
@@ -843,7 +846,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     if self._number_of_restarts_this_second > number_of_restarts_allowed:
                         
-                        self.EmergencyDumpOut( True, False, 'This file was caught in a rewind loop, it is probably damaged.' )
+                        self.EmergencyDumpOut( True,'This file was caught in a rewind loop, it is probably damaged.' )
                         
                         return True
                         
@@ -946,7 +949,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
-                message = f'A media loaded in MPV appears to have had an error. This may be not a big deal, or it may be a crash. The specific errors should be written after this message. They are not positively known as crashy, but if you are getting crashes, please send the file and these errors to hydev so he can test his end.{media_line}'
+                message = f'A media loaded in MPV appears to have had an error. This may not be a big deal, or it may herald a crash. The specific errors should be written after this message. They are not positively known as crashy, but if you are getting crashes, please send the file and these errors to hydev so he can test his end.{media_line}'
                 
                 HydrusData.DebugPrint( message )
                 

@@ -75,11 +75,11 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         times_manager = ClientMediaManagers.TimesManager()
         
         times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
-        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
@@ -212,11 +212,11 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         times_manager = ClientMediaManagers.TimesManager()
         
         times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
-        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
@@ -340,11 +340,11 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         times_manager = ClientMediaManagers.TimesManager()
         
         times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
-        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, urls )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, urls )
         
         # duplicate to generate proper dicts
         
@@ -409,14 +409,14 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         times_manager = ClientMediaManagers.TimesManager()
         
         times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
-        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, 123000 )
         times_manager.SetArchivedTimestampMS( archived_timestamp_ms )
         times_manager.SetFileModifiedTimestampMS( file_modified_timestamp_ms )
         times_manager.SetDomainModifiedTimestampMS( 'site.com', site_dot_com_modified_timestamp_ms )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, set() )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, set() )
         
         # duplicate to generate proper dicts
         
@@ -855,7 +855,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.Export( hash, urls )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -898,7 +898,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_timestamp_data_result = ClientTime.TimestampData.STATICArchivedTime( timestamp * 1000 ) # no precise milliseconds because we do not read millisecond precision from metadata migration yet!
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash, ), expected_timestamp_data_result ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash, ), expected_timestamp_data_result ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         

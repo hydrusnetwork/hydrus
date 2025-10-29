@@ -1215,10 +1215,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         selection_has_trash = True in ( locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
         selection_has_inbox = True in ( media.HasInbox() for media in self._selected_media )
         selection_has_archive = True in ( media.HasArchive() and media.GetLocationsManager().IsLocal() for media in self._selected_media )
-        selection_has_deletion_record = True in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() for locations_manager in selected_locations_managers )
+        selection_has_deletion_record = True in ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() for locations_manager in selected_locations_managers )
         
         all_file_domains = HydrusLists.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
-        all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
+        all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY } )
         
         some_downloading = True in ( locations_manager.IsDownloading() for locations_manager in selected_locations_managers )
         
@@ -1233,7 +1233,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         any_selected = num_selected > 0
         multiple_selected = num_selected > 1
         
-        menu = ClientGUIMenus.GenerateMenu( self.window() )
+        menu = ClientGUIMenus.GenerateMenu( self )
         
         # variables
         
@@ -1629,10 +1629,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             if selection_has_local_file_domain:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete trash physically now', 'Completely delete the selected trashed files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, only_those_in_file_service_key = CC.TRASH_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete trash physically now', 'Completely delete the selected trashed files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, only_those_in_file_service_key = CC.TRASH_SERVICE_KEY )
                 
             
-            ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Completely delete the selected files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            ClientGUIMenus.AppendMenuItem( menu, delete_physically_phrase, 'Completely delete the selected files, forcing an immediate physical delete from your hard drive.', self._Delete, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             ClientGUIMenus.AppendMenuItem( menu, undelete_phrase, 'Restore the selected files back to \'my files\'.', self._Undelete )
             
         
@@ -2615,7 +2615,7 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.global_pixmaps().notes )
             
         
-        if locations_manager.IsTrashed() or CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted():
+        if locations_manager.IsTrashed() or CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted():
             
             icons_to_draw.append( CC.global_pixmaps().trash )
             

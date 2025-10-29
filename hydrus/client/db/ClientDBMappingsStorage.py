@@ -426,7 +426,7 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
     
     def GetFastestStorageMappingTableNamesFromLocationContext( self, location_context: ClientLocation.LocationContext, tag_service_id: int ):
         
-        # TODO: this can probably work better, e.g. if we have multiple local domains we can return all local files or whatever
+        # TODO: this can probably work better, e.g. if we have multiple local domains we can return hydrus local file storage or whatever
         
         if location_context.IncludesDeleted() and not location_context.IncludesCurrent():
             

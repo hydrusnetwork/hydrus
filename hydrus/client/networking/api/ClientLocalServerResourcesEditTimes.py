@@ -146,7 +146,7 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
         
         content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hashes, timestamp_data ) ) ]
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_updates )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         

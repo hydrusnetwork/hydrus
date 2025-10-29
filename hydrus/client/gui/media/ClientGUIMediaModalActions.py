@@ -159,7 +159,7 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
 
 def ClearDeleteRecord( win, media ):
     
-    clearable_media = [ m for m in media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetDeleted() ]
+    clearable_media = [ m for m in media if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in m.GetLocationsManager().GetDeleted() ]
     
     if len( clearable_media ) == 0:
         
@@ -176,7 +176,7 @@ def ClearDeleteRecord( win, media ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
             
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
             
             CG.client_controller.Write( 'content_updates', content_update_package )
             
@@ -310,7 +310,7 @@ def DoClearFileViewingStats( win: QW.QWidget, flat_medias: collections.abc.Colle
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_DELETE, hashes )
         
-        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) )
+        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update ) )
         
     
 

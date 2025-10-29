@@ -359,23 +359,24 @@ class PreparationPanel( QW.QWidget ):
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_idle' )
         check_manager.AddNotifyCall( CG.client_controller.potential_duplicates_manager.Wake )
         
-        submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during idle time', 'Tell the client to find potential duplicate pairs in its normal idle time maintenance.', check_manager ) )
+        submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during idle time', 'Tell the client to find potential duplicate pairs in its idle time maintenance.', check_manager ) )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'maintain_similar_files_duplicate_pairs_during_active' )
         check_manager.AddNotifyCall( CG.client_controller.potential_duplicates_manager.Wake )
         
         submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'during normal time', 'Tell the client to find potential duplicate pairs all the time.', check_manager ) )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'search for potential duplicates', submenu_template_items ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'search for potential duplicate pairs', submenu_template_items ) )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'regenerate search tree', 'This will clear and regenerate the search tree. Useful if it appears to have orphan branches.', self._RegenerateSimilarFilesTree ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'regenerate search numbers', 'This will clear and regenerate the cache of the counts of which files have been searched at particular distances. Only useful if there is a miscount.', self._RegenerateMaintenanceNumbers ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'resync potential duplicate pairs to storage', 'This will clear out any potential duplicate pairs where one of the files has been physically deleted.', self._ResyncPotentialPairsToHydrusLocalFileStorage ) )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'delete all potential duplicates and re-search', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetPotentialDuplicates ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'delete all potential duplicate pairs and re-search', 'This will delete all the discovered potential duplicate pairs. All files that may have potential pairs will be queued up for similar file search again.', self._ResetPotentialDuplicates ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self._searching_panel, menu_template_items )
         
@@ -574,6 +575,20 @@ class PreparationPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.Write( 'delete_potential_duplicate_pairs' )
+            
+            self._RefreshMaintenanceNumbers()
+            
+        
+    
+    def _ResyncPotentialPairsToHydrusLocalFileStorage( self ):
+        
+        text = 'There was a time that pairs were not delisted when one or both of the pair were deleted. This maintenance task corrects that problem. You should not need to run it again unless you know something is wrong with your numbers (they might just be incorrect, but if you set many trashed/deleted files to be part of potential pairs, this would also do it).'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'resync_potential_pairs_to_hydrus_local_file_storage' )
             
             self._RefreshMaintenanceNumbers()
             

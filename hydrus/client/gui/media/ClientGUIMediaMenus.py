@@ -40,12 +40,12 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     
     focused_hash = focus_media_result.GetHash()
     
-    combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    combined_local_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
     
     if CG.client_controller.DBCurrentlyDoingJob():
         
         file_duplicate_info = {}
-        all_local_files_file_duplicate_info = {}
+        hydrus_local_file_storage_file_duplicate_info = {}
         
     else:
         
@@ -53,11 +53,11 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
         
         if location_context.current_service_keys.isdisjoint( CG.client_controller.services_manager.GetServiceKeys( HC.SPECIFIC_LOCAL_FILE_SERVICES ) ):
             
-            all_local_files_file_duplicate_info = {}
+            hydrus_local_file_storage_file_duplicate_info = {}
             
         else:
             
-            all_local_files_file_duplicate_info = CG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
+            hydrus_local_file_storage_file_duplicate_info = CG.client_controller.Read( 'file_duplicate_info', combined_local_location_context, focused_hash )
             
         
     
@@ -80,9 +80,9 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
             view_duplicate_relations_jobs.append( ( location_context, file_duplicate_info ) )
             
         
-        if len( all_local_files_file_duplicate_info ) > 0 and len( all_local_files_file_duplicate_info[ 'counts' ] ) > 0 and all_local_files_file_duplicate_info != file_duplicate_info:
+        if len( hydrus_local_file_storage_file_duplicate_info ) > 0 and len( hydrus_local_file_storage_file_duplicate_info[ 'counts' ] ) > 0 and hydrus_local_file_storage_file_duplicate_info != file_duplicate_info:
             
-            view_duplicate_relations_jobs.append( ( combined_local_location_context, all_local_files_file_duplicate_info ) )
+            view_duplicate_relations_jobs.append( ( combined_local_location_context, hydrus_local_file_storage_file_duplicate_info ) )
             
         
         for ( job_location_context, job_duplicate_info ) in view_duplicate_relations_jobs:

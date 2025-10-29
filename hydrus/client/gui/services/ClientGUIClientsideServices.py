@@ -1734,9 +1734,9 @@ class ReviewServicePanel( QW.QWidget ):
             subpanels.append( ( ReviewServiceFileSubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
-        if self._service.GetServiceKey() == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+        if self._service.GetServiceKey() == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
             
-            subpanels.append( ( ReviewServiceCombinedLocalFilesSubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
+            subpanels.append( ( ReviewServiceHydrusLocalFileStorageSubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
         if self._service.GetServiceKey() == CC.TRASH_SERVICE_KEY:
@@ -1903,6 +1903,7 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
         self._name_and_type = ClientGUICommon.BetterStaticText( self )
+        self._name_and_type.setWordWrap( True )
         
         #
         
@@ -1921,6 +1922,8 @@ class ReviewServiceSubPanel( ClientGUICommon.StaticBox ):
         service_type = self._service.GetServiceType()
         
         label = name + ' - ' + HC.service_string_lookup[ service_type ]
+        label += '\n\n'
+        label += HC.service_description_lookup[ service_type ]
         
         self._name_and_type.setText( label )
         
@@ -2231,7 +2234,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
     
 
-class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
+class ReviewServiceHydrusLocalFileStorageSubPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, service ):
         
@@ -2276,7 +2279,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, hashes )
                 
-                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                 
                 CG.client_controller.Write( 'content_updates', content_update_package )
                 
@@ -2373,7 +2376,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusNumbers.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
         
-        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.FILE_REPOSITORY ):
             
             num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
             
@@ -3906,7 +3909,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
                     
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                     
                     CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     

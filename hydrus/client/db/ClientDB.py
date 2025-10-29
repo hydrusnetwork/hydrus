@@ -967,10 +967,10 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.SetStatusText( 'looking for orphans' )
             
-            # actually important we do it in this order I guess, to potentially fix a file that is only in 'my files' and not in 'all my files' or 'all local files'
+            # actually important we do it in this order I guess, to potentially fix a file that is only in 'my files' and not in 'all my files' or 'hydrus local file storage'
             jobs = [
                 ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'all my files umbrella' ),
-                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.combined_local_file_service_id, 'all local files umbrella' )
+                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.hydrus_local_file_storage_service_id, 'hydrus local file storage umbrella' )
             ]
             
             for ( umbrella_components_service_types, umbrella_master_service_id, description ) in jobs:
@@ -1097,7 +1097,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         for hash_id in in_components_not_in_master:
                             
-                            self.modules_similar_files.StopSearchingFile( hash_id )
+                            self.modules_files_duplicates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
                             
                         
                         self.modules_files_maintenance_queue.CancelFiles( in_components_not_in_master )
@@ -1176,7 +1176,7 @@ class DB( HydrusDB.HydrusDB ):
             ( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, 'all known tags' ),
             ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ),
             ( CC.COMBINED_DELETED_FILE_SERVICE_KEY, HC.COMBINED_DELETED_FILE, 'deleted from anywhere' ),
-            ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ),
+            ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HC.HYDRUS_LOCAL_FILE_STORAGE, 'hydrus local file storage' ),
             ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files' ),
             ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ),
             ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ),
@@ -2070,7 +2070,7 @@ class DB( HydrusDB.HydrusDB ):
     ):
         
         all_my_files_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
-        all_local_files_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        hydrus_local_file_storage_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
         
         # get all sorts of stats and present them in ( timestamp, cumulative_num ) tuple pairs
         
@@ -2215,7 +2215,7 @@ class DB( HydrusDB.HydrusDB ):
         inbox_file_history = []
         archive_file_history = []
         
-        if current_files_table_name == all_local_files_current_files_table_name:
+        if current_files_table_name == hydrus_local_file_storage_current_files_table_name:
             
             ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
             
@@ -3372,7 +3372,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        if service_type in ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
+        if service_type in ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
             
@@ -3757,7 +3757,7 @@ class DB( HydrusDB.HydrusDB ):
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) )
                 
                 self.pub_content_update_package_after_commit(
-                    ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                 )
                 
             else:
@@ -4014,6 +4014,7 @@ class DB( HydrusDB.HydrusDB ):
                 'regenerate_similar_files_tree' : self.modules_similar_files.RegenerateTree,
                 'regenerate_similar_files_search_count_numbers' : self.modules_similar_files.RegenerateSearchCacheNumbers,
                 'regenerate_tag_siblings_and_parents_cache' : self.modules_tag_display.RegenerateTagSiblingsAndParentsCache,
+                'resync_potential_pairs_to_hydrus_local_file_storage' : self.modules_files_duplicates.ResyncPotentialPairsToHydrusLocalFileStorage,
                 'register_shutdown_work' : self.modules_db_maintenance.RegisterShutdownWork,
                 'relocate_client_files' : self.modules_files_physical_storage.RelocateClientFiles,
                 'remove_alternates_member' : self.modules_files_duplicates.RemoveAlternateMemberFromHashes,
@@ -4327,7 +4328,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_mappings_cache_combined_files_display,
             self.modules_mappings_cache_specific_display,
             self.modules_mappings_cache_specific_storage,
-            self.modules_similar_files,
+            self.modules_files_duplicates,
             self.modules_files_maintenance_queue,
             self.modules_repositories,
             self.modules_media_results
@@ -4780,7 +4781,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if we_are_big:
                         
-                        local_files_results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                        local_files_results = self._GetServiceInfo( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                         
                         local_files_num_files = local_files_results[ HC.SERVICE_INFO_NUM_FILES ]
                         
@@ -6402,11 +6403,11 @@ class DB( HydrusDB.HydrusDB ):
             
             name = service.GetName()
             
-            ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( self.modules_services.combined_local_file_service_id, tag_service_id )
+            ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( self.modules_services.hydrus_local_file_storage_service_id, tag_service_id )
             
             ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
             
-            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+            current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
             
             select_statement = 'SELECT hash_id FROM {};'.format( current_files_table_name )
             
@@ -7574,7 +7575,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -7606,7 +7607,7 @@ class DB( HydrusDB.HydrusDB ):
                     false_positive_medias_ids.update( self.modules_files_duplicates.GetAlternateMediaIds( alternates_group_id ) )
                     
                 
-                db_location_context = self.modules_files_storage.GetDBLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                db_location_context = self.modules_files_storage.GetDBLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
                 
                 false_positive_hash_ids = self.modules_files_duplicates.GetDuplicatesHashIds( false_positive_medias_ids, db_location_context )
                 
@@ -7648,7 +7649,7 @@ class DB( HydrusDB.HydrusDB ):
             try:
                 
                 file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ),
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ),
                     predicates = [
                         ClientSearchPredicate.Predicate(
                             predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE,
@@ -7810,7 +7811,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -7968,7 +7969,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8272,7 +8273,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8350,7 +8351,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8528,7 +8529,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.hydrus_local_file_storage_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
                 
                 hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusLists.SplayListForDB( [ HC.IMAGE_AVIF ] ) ) ) )
                 
@@ -8688,7 +8689,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8753,7 +8754,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # forgot to do this last week--turns out epubs generate a resolution now ta wangle the thumbnail resolution etc..
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8777,7 +8778,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # adding it for svgs and IBook thumbs
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8881,7 +8882,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8918,7 +8919,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
@@ -8942,6 +8943,41 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Some transparency scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 644:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'cleaning up some potential duplicates storage...' )
+                
+                self.modules_files_duplicates.ResyncPotentialPairsToHydrusLocalFileStorage()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Duplicates database maintenance failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        # prepped for v647
+        if version == 646:
+            
+            try:
+                
+                self._Execute( 'UPDATE services SET name = ? WHERE service_type = ? AND name = ?;', ( 'hydrus local file storage', HC.HYDRUS_LOCAL_FILE_STORAGE, 'all local files' ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to rename "all local files" failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

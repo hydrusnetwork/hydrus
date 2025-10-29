@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 pushd "$(dirname "$0")" || exit 1
 

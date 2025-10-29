@@ -1,7 +1,9 @@
 from hydrus.core import HydrusSerialisable
 
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT
@@ -114,6 +116,27 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     def GetDefault( self ):
         
         return NetworkContext( context_type = self.context_type, context_data = None )
+        
+    
+    def GetSortable( self ):
+        
+        if self.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+            
+            try:
+                
+                sortable_data = ClientNetworkingFunctions.ConvertDomainIntoSortable( self.context_data )
+                
+            except:
+                
+                sortable_data = tuple()
+                
+            
+        else:
+            
+            sortable_data = self.context_data
+            
+        
+        return ( self.context_type, sortable_data )
         
     
     def GetSummary( self ):

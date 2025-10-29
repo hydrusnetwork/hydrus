@@ -704,9 +704,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
-                file_service_id = self.modules_services.combined_local_file_service_id
+                file_service_id = self.modules_services.hydrus_local_file_storage_service_id
                 
             
             integer_subtags_table_name = GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id )
@@ -1064,9 +1064,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
-                file_service_id = self.modules_services.combined_local_file_service_id
+                file_service_id = self.modules_services.hydrus_local_file_storage_service_id
                 
             
             subtags_fts4_table_name = GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id )
@@ -1083,9 +1083,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
-                file_service_id = self.modules_services.combined_local_file_service_id
+                file_service_id = self.modules_services.hydrus_local_file_storage_service_id
                 
             
             subtags_searchable_map_table_name = GenerateSpecificSubtagsSearchableMapTableName( file_service_id, tag_service_id )
@@ -1390,9 +1390,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
-                file_service_id = self.modules_services.combined_local_file_service_id
+                file_service_id = self.modules_services.hydrus_local_file_storage_service_id
                 
             
             tags_table_name = GenerateSpecificTagsTableName( file_service_id, tag_service_id )

@@ -76,13 +76,9 @@ There are three ways a file can be related to another in the current duplicates 
 You can customise the shortcuts under _file->options->shortcuts->duplicate_filter_. The defaults are:
 
 *   Left-click: **this is better, delete the other**.
-    
 *   Right-click: **they are related alternates**.
-    
 *   Middle-click: **Go back one decision.**
-    
 *   Enter/Escape: **Stop filtering.**
-    
 
 ## merging metadata { id="duplicates_merging" }
 
@@ -110,38 +106,52 @@ I expect future versions of the system to also auto-resolve easy duplicate pairs
 
 If you import a lot of game CGs, which frequently have dozens or hundreds of alternates, I recommend you set them as alternates by selecting them all and setting the status through the thumbnail right-click menu. The duplicate filter, being limited to pairs, needs to compare all new members of an alternate group to all other members once to verify they are not duplicates. This is not a big deal for alternates with three or four members, but game CGs provide an overwhelming edge case. Setting a group of thumbnails as alternate 'fixes' their alternate status immediately, discounting the possibility of any internate duplicates, and provides an easy way out of this situation.
 
-## more information and examples { id="duplicates_examples" }
+## examples and discussion { id="duplicates_examples" }
 
 ### better/worse { id="duplicates_examples_better_worse" }
-    
-Which of two files is better? Here are some common reasons:
 
-*   higher resolution
-*   better image quality
-*   png over jpg for screenshots
-*   jpg over png for busy images
-*   jpg over png for pixel-for-pixel duplicates
-*   a better crop
-*   no watermark or site-frame or undesired blemish
-*   has been tagged by other people, so is likely to be the more 'popular'
+Which of two files is better? We generally want to aim for what is "Original" over anything else. Original files tend to have a mix of these traits:
 
-However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. You really have to look at it and decide for yourself.
+*   Older
+*   Higher resolution
+*   Better image quality
+*   PNG over Jpeg for screenshots
+*   Jpeg over PNG for anything else, particularly pixel-for-pixel duplicates
+*   A wider/fuller crop
+*   No watermark or site-frame or undesired blemish
+*   Has been tagged by other people, so is likely to be the more 'popular'
+
+However these are not hard rules--sometimes a file has a larger resolution or filesize due to a bad upscaling or encoding decision by the person who 'reinterpreted' it. Sometimes you imported the true original version of a file only two days ago. You sometimes have to look at it and decide for yourself.
 
 Here is a good example of a better/worse pair:
 
 [![](images/dupe_better_1.png)](images/dupe_better_1.png) [![](images/dupe_better_2.jpg)](images/dupe_better_2.jpg)
 
-The first image is better because it is a png (pixel-perfect pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts are on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, let's drop the second and keep the first.
+The first image is better because it is a png (pngs are always better than jpgs for screenshots of applications--note how obvious the jpg's encoding artifacts look on the flat colour background) and it has a slightly higher (original) resolution, making it less blurry. I presume the second went through some FunnyJunk-tier trash meme site to get automatically cropped to 960px height and converted to the significantly smaller jpeg. Whatever happened, let's drop the second and keep the first.
 
 When both files are jpgs, differences in quality are very common and often significant:
 
 [![](images/dupes_better_sg_a.jpg)](images/dupes_better_sg_a.jpg) [![](images/dupes_better_sg_b.jpg)](images/dupes_better_sg_b.jpg)
 
-Again, this is mostly due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.
-    
+Again, this is most often due to some online service resizing and lowering quality to ease on their bandwidth costs. There is usually no reason to keep the lower quality version.
+
+#### saving disk space
+
+It is nice to save disk space, and many people start filtering duplicates with this idea in mind. I did too. Why not consider a 208KB file as better than a 214KB that looks exactly the same? Don't we want to optimise? Having since dug into the nitty gritty of many IRL situations, I now believe that we should make the opposite decision.
+
+There are many variables that affect duplicate decisions, and filesize is one of the most reliable and easy to think about it. 4KB is 4KB, and we are familiar with the idea, whereas a file header block might have rich EXIF data or just some old Adobe xml brush descriptions, something that might only be useful one in a thousand times. It is tempting to save the reliable, well-known variable, since it has quantifiable value, but the exact opposite is true--we should sacrifice some reliable (and inexpensive!) disk space in order to preserve the variable unknown. Files tend to lose their internal metadata over time, so choosing to save it brings us more in line with the idea of keeping 'originals', too.
+
+Most importantly, disk space is cheap in a way that humans do not intuitively understand. If we always chose to select the smaller of two same-quality files 100,000 times, and if we saved an impressive 20KB average, that still only adds up to 2GB. If you think that's a lot of disk space, look up how much an 8TB drive costs and divide it by 4000.
+
+Moreover, we are _already_ saving a bunch of disk space when we delete the 'worse' file. The question of whether to delete 49.5% of the pair's total size or 51.5% is nothing to fuss over, so choose the one that has other value, known or potential.
+
+So, beyond edge-cases, I recommend you consider the question of saving disk space done and err on the side of preserving original metadata. Larger, older, nicer quality files is the way to go.
+
 ### same quality duplicates { id="duplicates_examples_same" }
-    
-When are two files the same quality? A good rule of thumb is if you scroll between them and see no obvious differences, and the comparison statements do not suggest anything significant, just set them as same quality.
+
+_I generally do not recommend you set "same quality" unless you really want to keep both files. If you can't tell the difference, pick the one that is older or has the larger filesize._
+
+When are two files the same quality? A good rule of thumb is if you scroll between them and see no obvious differences, and the comparison statements do not suggest anything significant, you can tell the system to set them as the same quality.
 
 Here are two same quality duplicates:
 
@@ -151,8 +161,8 @@ There is no obvious different between those two. The filesize is significantly d
 
 Given the filesize, you might decide that these are actually a better/worse pair--but if the larger image had tags and was the 'canonical' version on most boorus, the decision might not be so clear. You can choose better/worse and delete one randomly, but sometimes you may just want to keep both without a firm decision on which is best, so just set 'same quality' and move on. Your time is more valuable than a few dozen KB.
 
-Sometimes, you will see pixel-for-pixel duplicate jpegs of very slightly different size, such as 787KB vs 779KB. The smaller of these is usually an exact duplicate that has had its internal metadata (e.g. EXIF tags) stripped by a program or website CDN. They are same quality unless you have a strong opinion on whether having internal metadata in a file is useful.
-    
+Sometimes, you will see pixel-for-pixel duplicate jpegs of very slightly different size, such as 787KB vs 779KB. The smaller of these is usually an exact duplicate that has had its internal metadata (e.g. EXIF tags) stripped by a program or website CDN. You can consider them same quality, but it is simplest and best to keep the larger.
+
 ### alternates { id="duplicates_examples_alternates" }
 
 As I wrote above, hydrus's alternates system in not yet properly ready. It is important to have a basic 'alternates' relationship for now, but it is a holding area until we have a workflow to apply 'WIP'- or 'recolour'-type labels and present that information nicely in the media viewer.
@@ -208,6 +218,12 @@ The incidence of false positives increases as you broaden the search distance--t
 ## auto-resolution
 
 I do not recommend rushing into this, but once you are comfortable with the duplicates system and know what you want out of it, there is now a system that allows for [automating simple duplicate-processing](./advanced_duplicates_auto_resolution.md).
+
+## videos
+
+If and when you get comfortable with the Client API, check out this program which can queue up similar videos in your potential pairs:
+
+[https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator)
 
 ## the duplicates system { id="duplicates_advanced" }
 

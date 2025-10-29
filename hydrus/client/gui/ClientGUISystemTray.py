@@ -24,6 +24,8 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         super().__init__( parent )
         
+        self._parent_widget = parent
+        
         self._ui_is_currently_shown = True
         self._ui_is_currently_minimised = False
         self._should_always_show = False
@@ -55,9 +57,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     def _RegenerateMenu( self ):
         
         # I'm not a qwidget, but a qobject, so use my parent for this
-        parent_widget = self.parent()
-        
-        new_menu = ClientGUIMenus.GenerateMenu( parent_widget )
+        new_menu = ClientGUIMenus.GenerateMenu( self._parent_widget )
         
         self._show_hide_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'show/hide', 'Hide or show the hydrus client', self.flip_show_ui.emit )
         

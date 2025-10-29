@@ -111,6 +111,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = 0
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _GetSerialisableInfo( self ):
@@ -467,6 +468,12 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_HDD_IMPORT ] = HDDImport
 
 class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):

@@ -308,7 +308,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
-            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { m.GetHash() for m in media } ) )
+            content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { m.GetHash() for m in media } ) )
             
             content_update_packages.append( content_update_package )
             

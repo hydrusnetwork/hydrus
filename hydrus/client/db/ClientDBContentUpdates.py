@@ -15,6 +15,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBFileDeleteLock
+from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
@@ -32,7 +33,6 @@ from hydrus.client.db import ClientDBRatings
 from hydrus.client.db import ClientDBRepositories
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBServicePaths
-from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.db import ClientDBTagDisplay
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBTagParents
@@ -63,7 +63,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         modules_files_timestamps: ClientDBFilesTimestamps.ClientDBFilesTimestamps,
         modules_files_inbox: ClientDBFilesInbox.ClientDBFilesInbox,
         modules_file_delete_lock: ClientDBFileDeleteLock.ClientDBFileDeleteLock,
-        modules_hashes_local_cache: ClientDBDefinitionsCache,
+        modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_ratings: ClientDBRatings.ClientDBRatings,
         modules_service_paths: ClientDBServicePaths.ClientDBServicePaths,
         modules_mappings_storage: ClientDBMappingsStorage.ClientDBMappingsStorage,
@@ -74,7 +74,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         modules_mappings_cache_combined_files_display: ClientDBMappingsCacheCombinedFilesDisplay.ClientDBMappingsCacheCombinedFilesDisplay,
         modules_mappings_cache_specific_display: ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay,
         modules_mappings_cache_specific_storage: ClientDBMappingsCacheSpecificStorage.ClientDBMappingsCacheSpecificStorage,
-        modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
+        modules_files_duplicates: ClientDBFilesDuplicates.ClientDuplicates,
         modules_files_maintenance_queue: ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue,
         modules_repositories: ClientDBRepositories.ClientDBRepositories,
         modules_media_results: ClientDBMediaResults.ClientDBMediaResults
@@ -105,7 +105,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         self.modules_mappings_cache_combined_files_display = modules_mappings_cache_combined_files_display
         self.modules_mappings_cache_specific_display = modules_mappings_cache_specific_display
         self.modules_mappings_cache_specific_storage = modules_mappings_cache_specific_storage
-        self.modules_similar_files = modules_similar_files
+        self.modules_files_duplicates = modules_files_duplicates
         self.modules_files_maintenance_queue = modules_files_maintenance_queue
         self.modules_repositories = modules_repositories
         self.modules_media_results = modules_media_results
@@ -136,12 +136,12 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 self.DeleteFiles( self.modules_services.trash_service_id, new_hash_ids )
                 
                 self.AddFiles( self.modules_services.combined_local_media_service_id, valid_rows )
-                self.AddFiles( self.modules_services.combined_local_file_service_id, valid_rows )
+                self.AddFiles( self.modules_services.hydrus_local_file_storage_service_id, valid_rows )
                 
             
             if service_type == HC.LOCAL_FILE_UPDATE_DOMAIN:
                 
-                self.AddFiles( self.modules_services.combined_local_file_service_id, valid_rows )
+                self.AddFiles( self.modules_services.hydrus_local_file_storage_service_id, valid_rows )
                 
             
             # insert the files
@@ -176,7 +176,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
             
             # if entering the combined local domain, update the hash cache
             
-            if service_id == self.modules_services.combined_local_file_service_id:
+            if service_id == self.modules_services.hydrus_local_file_storage_service_id:
                 
                 self.modules_hashes_local_cache.AddHashIdsToCache( new_hash_ids )
                 
@@ -229,7 +229,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         
         # we go nuclear on the umbrella services, being very explicit to catch every possible problem
         
-        if service_id == self.modules_services.combined_local_file_service_id:
+        if service_id == self.modules_services.hydrus_local_file_storage_service_id:
             
             for local_file_service_id in local_file_service_ids:
                 
@@ -359,18 +359,18 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
             
             if service_id == self.modules_services.local_update_service_id:
                 
-                self.DeleteFiles( self.modules_services.combined_local_file_service_id, existing_hash_ids )
+                self.DeleteFiles( self.modules_services.hydrus_local_file_storage_service_id, existing_hash_ids )
                 
             
             # if the files are being fully deleted, then physically delete them
             
-            if service_id == self.modules_services.combined_local_file_service_id:
+            if service_id == self.modules_services.hydrus_local_file_storage_service_id:
                 
                 self.modules_files_inbox.ArchiveFiles( existing_hash_ids )
                 
                 for hash_id in existing_hash_ids:
                     
-                    self.modules_similar_files.StopSearchingFile( hash_id )
+                    self.modules_files_duplicates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
                     
                 
                 self.modules_files_maintenance_queue.CancelFiles( existing_hash_ids )
@@ -501,9 +501,9 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                             elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                                 
-                                if action == HC.CONTENT_UPDATE_DELETE and service_key in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                                if action == HC.CONTENT_UPDATE_DELETE and service_key in ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                                     
-                                    local_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), hash_ids )
+                                    local_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ), hash_ids )
                                     
                                     actually_deletable_hash_ids = self.modules_file_delete_lock.FilterForPhysicalFileDeleteLock( local_hash_ids )
                                     
@@ -527,7 +527,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                         
                                     
                                 
-                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE ):
+                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.HYDRUS_LOCAL_FILE_STORAGE ):
                                     
                                     if content_update.HasReason():
                                         
@@ -549,7 +549,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                     
                                     # shouldn't be called anymore, but just in case someone fidgets a trash delete with client api or something
                                     
-                                    self.DeleteFiles( self.modules_services.combined_local_file_service_id, hash_ids )
+                                    self.DeleteFiles( self.modules_services.hydrus_local_file_storage_service_id, hash_ids )
                                     
                                 else:
                                     
@@ -568,7 +568,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                                 self.modules_files_storage.PendFiles( service_id, valid_hash_ids )
                                 
-                                if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                                if service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                                     
                                     notify_new_downloads = True
                                     
@@ -593,7 +593,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                                 self.modules_files_storage.RescindPendFiles( service_id, hash_ids )
                                 
-                                if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                                if service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                                     
                                     notify_new_downloads = True
                                     
@@ -1038,7 +1038,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                             
                             if action == 'delete_for_deleted_files':
                                 
-                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_DELETED )
                                 
                                 self._Execute( 'DELETE FROM local_ratings WHERE service_id = ? and hash_id IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name ), ( service_id, ) )
                                 
@@ -1048,7 +1048,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                             elif action == 'delete_for_non_local_files':
                                 
-                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
                                 
                                 self._Execute( 'DELETE FROM local_ratings WHERE local_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ), ( service_id, ) )
                                 
@@ -1067,7 +1067,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                             
                             if action == 'delete_for_deleted_files':
                                 
-                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
+                                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_DELETED )
                                 
                                 self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id = ? and hash_id IN ( SELECT hash_id FROM {} );'.format( deleted_files_table_name ), ( service_id, ) )
                                 
@@ -1077,7 +1077,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                 
                             elif action == 'delete_for_non_local_files':
                                 
-                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+                                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
                                 
                                 self._Execute( 'DELETE FROM local_incdec_ratings WHERE local_incdec_ratings.service_id = ? and hash_id NOT IN ( SELECT hash_id FROM {} );'.format( current_files_table_name ), ( service_id, ) )
                                 
@@ -1240,7 +1240,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
     
     def UndeleteFiles( self, service_id, hash_ids ):
         
-        if service_id in ( self.modules_services.combined_local_file_service_id, self.modules_services.combined_local_media_service_id, self.modules_services.trash_service_id ):
+        if service_id in ( self.modules_services.hydrus_local_file_storage_service_id, self.modules_services.combined_local_media_service_id, self.modules_services.trash_service_id ):
             
             service_ids_to_do = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
             

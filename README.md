@@ -16,7 +16,7 @@ This github repository is currently a weekly sync with my home dev environment, 
 
 **[Getting Started Guide](https://hydrusnetwork.github.io/hydrus/introduction.html)**
 
-This help will walk you through installation and teach you the main systems of the program. Hydrus can do a lot, so while you can skim it, do not skip it. 
+This help will walk you through installation and teach you the main systems of the program. Hydrus can do a lot, so while you can skim the help, do not skip it. 
 
 The help is also included in every release.
 

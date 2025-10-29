@@ -905,7 +905,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = '{} - retrying in {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
+                self._status_text = '{} - retrying {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._connection_error_wake_time ) )
                 
             
             time.sleep( 1 )
@@ -958,7 +958,7 @@ class NetworkJob( object ):
             
             with self._lock:
                 
-                self._status_text = '{} - retrying in {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
+                self._status_text = '{} - retrying {}'.format( status_text, HydrusTime.TimestampToPrettyTimeDelta( self._serverside_bandwidth_wake_time ) )
                 
             
             time.sleep( 1 )

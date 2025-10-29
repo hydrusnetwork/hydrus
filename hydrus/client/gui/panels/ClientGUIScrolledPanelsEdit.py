@@ -798,23 +798,23 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         possible_file_service_keys.extend( ( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_service_domains ) )
         
-        possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
         
         if we_are_advanced_delete_dialog:
             
-            possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            possible_file_service_keys.append( ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
             
         else:
             
             # if not advanced, we still want regular users, in odd fixing situations, able to delete update files
-            possible_file_service_keys.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            possible_file_service_keys.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
             
         
         possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
         
         def PhysicalDeleteLockOK( s_k: bytes, media_result: ClientMediaResult.MediaResult ):
             
-            if s_k in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+            if s_k in ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
                 
                 return not media_result.IsPhysicalDeleteLocked()
                 
@@ -824,8 +824,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() if PhysicalDeleteLockOK( deletee_file_service_key, m.GetMediaResult() ) ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
         
-        trashed_key = ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        combined_key = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        trashed_key = ( CC.TRASH_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
+        combined_key = ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
         
         if trashed_key in keys_to_hashes and combined_key in keys_to_hashes and keys_to_hashes[ trashed_key ] == keys_to_hashes[ combined_key ]:
             
@@ -946,7 +946,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     hashes_physically_deleted = []
                     
                 
-            elif deletee_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+            elif deletee_file_service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                 
                 possibilities_involve_spicy_physical_delete = True
                 
@@ -976,7 +976,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in HydrusLists.SplitListIntoChunks( hashes, 16 ) ]
                 
-                content_update_packages = [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) for content_update in content_updates ]
+                content_update_packages = [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update ) for content_update in content_updates ]
                 
                 save_reason = True
                 
@@ -996,7 +996,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if CG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
-            hashes = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() if PhysicalDeleteLockOK( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, m.GetMediaResult() ) ]
+            hashes = [ m.GetHash() for m in self._media if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() if PhysicalDeleteLockOK( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, m.GetMediaResult() ) ]
             
             num_to_delete = len( hashes )
             
@@ -1017,11 +1017,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                 
-                content_update_packages.extend( [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) for content_update in content_updates ] )
+                content_update_packages.extend( [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update ) for content_update in content_updates ] )
                 
                 content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, chunk_of_hashes ) for chunk_of_hashes in chunks_of_hashes ]
                 
-                content_update_packages.extend( [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) for content_update in content_updates ] )
+                content_update_packages.extend( [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update ) for content_update in content_updates ] )
                 
                 save_reason = False
                 
@@ -2260,7 +2260,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
                 
                 for m in addee_media:
                     
-                    m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    m.GetMediaResult().ProcessContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                     
                 
                 self._pending_content_updates.append( content_update )
@@ -2319,7 +2319,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
             for m in removee_media:
                 
-                m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                m.GetMediaResult().ProcessContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                 
             
             self._pending_content_updates.append( content_update )

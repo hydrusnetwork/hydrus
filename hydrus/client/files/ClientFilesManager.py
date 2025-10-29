@@ -36,6 +36,8 @@ class ClientFilesManager( object ):
         # the locks for the sub-locations, broken into related umbrella groups
         self._prefix_umbrellas_to_rwlocks = collections.defaultdict( ClientThreading.FileRWLock )
         
+        # TODO: This needs another looking at and a rework back to simple fixed prefixes. we aren't doing umbrellas or prefix splitting/merging any more!
+        # it is ok to have some prefix length code somewhere as long as we have a CONST somewhere = 2 that we magically say = 4 or something in future and it all works
         self._prefix_umbrellas_to_client_files_subfolders: collections.defaultdict[ str, list[ ClientFilesPhysical.FilesStorageSubfolder ] ] = collections.defaultdict( list )
         self._shortest_prefix = 2
         self._longest_prefix = 2
@@ -447,9 +449,9 @@ class ClientFilesManager( object ):
                 return None
                 
             
-            service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            service_info = CG.client_controller.Read( 'service_info', CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             
-            all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+            hydrus_local_file_storage_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
             
             total_ideal_weight = sum( ( base_location.ideal_weight for base_location in ideal_media_base_locations ) )
             
@@ -476,7 +478,7 @@ class ClientFilesManager( object ):
                 normalised_weight = subfolder.GetNormalisedWeight()
                 
                 current_base_locations_to_normalised_weights[ base_location ] += normalised_weight
-                current_base_locations_to_size_estimate[ base_location ] += normalised_weight * all_local_files_total_size
+                current_base_locations_to_size_estimate[ base_location ] += normalised_weight * hydrus_local_file_storage_total_size
                 
                 if normalised_weight < smallest_subfolder_normalised_weight:
                     
@@ -489,7 +491,7 @@ class ClientFilesManager( object ):
                     
                 
             
-            smallest_subfolder_num_bytes = smallest_subfolder_normalised_weight * all_local_files_total_size
+            smallest_subfolder_num_bytes = smallest_subfolder_normalised_weight * hydrus_local_file_storage_total_size
             
             #
             
@@ -520,7 +522,7 @@ class ClientFilesManager( object ):
                         
                     else:
                         
-                        total_normalised_weight_lost_in_first_round += base_location.max_num_bytes / all_local_files_total_size
+                        total_normalised_weight_lost_in_first_round += base_location.max_num_bytes / hydrus_local_file_storage_total_size
                         
                     
                     if base_location.NeedsToRemoveSubfolders( current_num_bytes ):

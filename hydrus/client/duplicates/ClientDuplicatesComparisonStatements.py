@@ -394,8 +394,8 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     
     # older
     
-    s_import_timestamp = HydrusTime.SecondiseMS( shown_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
-    c_import_timestamp = HydrusTime.SecondiseMS( comparison_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+    s_import_timestamp = HydrusTime.SecondiseMS( shown_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
+    c_import_timestamp = HydrusTime.SecondiseMS( comparison_media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
     
     one_month = 86400 * 30
     

@@ -321,7 +321,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'replace_percent_twenty_with_space_in_gug_input' : False,
             'use_legacy_mpv_mediator' : False,
             'potential_duplicate_pairs_search_context_panel_stops_to_estimate' : True,
-            'manage_tags_show_deleted_mappings' : False
+            'manage_tags_show_deleted_mappings' : False,
+            'mpv_destruction_test' : False,
         }
         
         #
@@ -419,6 +420,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
         from hydrus.client.gui.widgets import ClientGUIPainterShapes
         from hydrus.core.files.images import HydrusImageHandling
+        from hydrus.core.files.images import HydrusImageColours
         
         self._dictionary[ 'integers' ] = {
             'notebook_tab_alignment' : CC.DIRECTION_UP,
@@ -533,7 +535,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'watcher_page_status_update_time_ratio_denominator' : 30,
             'media_viewer_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
             'preview_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
-            'export_filename_character_limit' : 220
+            'export_filename_character_limit' : 220,
+            'file_has_transparency_strictness' : HydrusImageColours.HAS_TRANSPARENCY_STRICTNESS_HUMAN,
         }
         
         self._dictionary[ 'floats' ] = {

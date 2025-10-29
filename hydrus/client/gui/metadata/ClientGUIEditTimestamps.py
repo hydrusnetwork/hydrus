@@ -977,7 +977,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
             
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_updates )
         
         return content_update_package
         

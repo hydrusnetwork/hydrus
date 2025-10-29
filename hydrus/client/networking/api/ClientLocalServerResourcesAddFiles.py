@@ -128,7 +128,7 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
@@ -147,13 +147,13 @@ class HydrusResourceClientAPIRestrictedAddFilesClearDeletedFileRecord( HydrusRes
         
         media_results = CG.client_controller.Read( 'media_results', hashes )
         
-        media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in media_result.GetLocationsManager().GetDeleted() ]
+        media_results = [ media_result for media_result in media_results if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in media_result.GetLocationsManager().GetDeleted() ]
         
         clearee_hashes = { m.GetHash() for m in media_results }
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         CG.client_controller.Write( 'content_updates', content_update_package )
         
@@ -180,9 +180,9 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         
         hashes = set( ClientLocalServerCore.ParseHashes( request ) )
         
-        location_context.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
+        location_context.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
         
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in location_context.current_service_keys:
+        if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in location_context.current_service_keys:
             
             media_results = CG.client_controller.Read( 'media_results', hashes )
             
@@ -255,7 +255,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceCli
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
@@ -278,7 +278,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         media_results = CG.client_controller.Read( 'media_results', hashes )
         
         # this is the only scan I have to do. all the stuff like 'can I undelete from here' and 'what does an undelete to combined local media mean' is all sorted at the db level no worries
-        media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
+        media_results = [ media_result for media_result in media_results if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
         
         hashes = { media_result.GetHash() for media_result in media_results }
         

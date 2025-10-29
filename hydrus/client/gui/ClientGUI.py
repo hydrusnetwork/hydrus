@@ -78,11 +78,11 @@ from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.panels import ClientGUILocalFileImports
-from hydrus.client.gui.panels import ClientGUIManageOptionsPanel
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.panels import ClientGUIURLClass
+from hydrus.client.gui.panels.options import ClientGUIManageOptionsPanel
 from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
@@ -1040,7 +1040,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
             
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
             
             self._controller.WriteSynchronous( 'content_updates', content_update_package )
             
@@ -3667,13 +3667,43 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        self._menubar_network_pause_all_paged_importers = ClientGUIMenus.AppendMenuCheckItem( submenu, 'all paged importer work', 'Pause all file/search/check work in paged importers.', self._controller.new_options.GetBoolean( 'pause_all_paged_importers' ), self._controller.new_options.FlipBoolean, 'pause_all_paged_importers' )
+        #
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'pause_all_paged_importers' )
+        
+        check_manager.AddNotifyCall( HydrusData.Call( CG.client_controller.pub, 'notify_global_page_import_pause_change' ) )
+        
+        self._menubar_network_pause_all_paged_importers = ClientGUIMenus.AppendMenuCheckItem( submenu, 'all paged importer work', 'Pause all file/search/check work in paged importers.', check_manager.GetCurrentValue(), check_manager.Invert )
+        
+        #
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        self._menubar_network_paged_import_queues_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file importing', 'Pause all file import queues in pages.', self._controller.new_options.GetBoolean( 'pause_all_file_queues' ), self._controller.new_options.FlipBoolean, 'pause_all_file_queues' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged gallery searching', 'Pause all gallery imports\' searching in pages.', self._controller.new_options.GetBoolean( 'pause_all_gallery_searches' ), self._controller.new_options.FlipBoolean, 'pause_all_gallery_searches' )
-        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged watcher checking', 'Pause all watchers\' checking, obviously in pages.', self._controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ), self._controller.new_options.FlipBoolean, 'pause_all_watcher_checkers' )
+        #
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'pause_all_file_queues' )
+        
+        check_manager.AddNotifyCall( HydrusData.Call( CG.client_controller.pub, 'notify_global_page_import_pause_change' ) )
+        
+        self._menubar_network_paged_import_queues_paused = ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged file importing', 'Pause all file import queues in pages.', check_manager.GetCurrentValue(), check_manager.Invert )
+        
+        #
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'pause_all_gallery_searches' )
+        
+        check_manager.AddNotifyCall( HydrusData.Call( CG.client_controller.pub, 'notify_global_page_import_pause_change' ) )
+        
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged gallery searching', 'Pause all gallery imports\' searching in pages.', check_manager.GetCurrentValue(), check_manager.Invert )
+        
+        #
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'pause_all_watcher_checkers' )
+        
+        check_manager.AddNotifyCall( HydrusData.Call( CG.client_controller.pub, 'notify_global_page_import_pause_change' ) )
+        
+        ClientGUIMenus.AppendMenuCheckItem( submenu, 'paged watcher checking', 'Pause all watchers\' checking, obviously in pages.', check_manager.GetCurrentValue(), check_manager.Invert )
+        
+        #
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'pause' )
         
@@ -6239,7 +6269,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                     self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
                     
-                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                     
                     page = self._notebook.NewPageQuery( location_context )
                     
@@ -8404,11 +8434,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def ReleaseMPVWidget( self, mpv_widget ):
+    def ReleaseMPVWidget( self, mpv_widget: ClientGUIMPV.MPVWidget ):
         
-        mpv_widget.setParent( self )
-        
-        self._persistent_mpv_widgets.append( mpv_widget )
+        if CG.client_controller.new_options.GetBoolean( 'mpv_destruction_test' ):
+            
+            mpv_widget.deleteLater()
+            
+        else:
+            
+            mpv_widget.setParent( self )
+            
+            self._persistent_mpv_widgets.append( mpv_widget )
+            
         
     
     def _UnloadAndPurgeQtMediaplayer( self, qt_media_player: ClientGUICanvasMedia.QtMediaPlayer ):

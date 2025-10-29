@@ -65,6 +65,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = 0
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _DelayWork( self, time_delta, reason ):
@@ -865,6 +866,12 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+        ClientImporting.WakeRepeatingJob( self._gallery_repeating_job )
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_IMPORT ] = SimpleDownloaderImport
 
@@ -928,6 +935,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         CG.client_controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
+        CG.client_controller.sub( self, 'Wake', 'notify_global_page_import_pause_change' )
         
     
     def _DelayWork( self, time_delta, reason ):
@@ -1569,6 +1577,12 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 return
                 
             
+        
+    
+    def Wake( self ):
+        
+        ClientImporting.WakeRepeatingJob( self._files_repeating_job )
+        ClientImporting.WakeRepeatingJob( self._gallery_repeating_job )
         
     
 

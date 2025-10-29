@@ -76,7 +76,7 @@ class HydrusResourceClientAPIRestrictedEditFileViewingStatisticsIncrementFileVie
         
         content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta_ms ) ) for hash in applicable_hashes ]
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_updates )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
@@ -142,7 +142,7 @@ class HydrusResourceClientAPIRestrictedEditFileViewingStatisticsSetFileViewingSt
         
         content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_SET, ( hash, canvas_type, view_timestamp_ms, views, viewtime_ms ) ) for hash in applicable_hashes ]
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_updates )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         

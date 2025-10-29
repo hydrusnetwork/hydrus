@@ -72,7 +72,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         
         hash = self.modules_hashes_local_cache.GetHash( hash_id )
         
-        ( is_deleted, timestamp_ms, file_deletion_reason ) = self.modules_files_storage.GetDeletionStatus( self.modules_services.combined_local_file_service_id, hash_id )
+        ( is_deleted, timestamp_ms, file_deletion_reason ) = self.modules_files_storage.GetDeletionStatus( self.modules_services.hydrus_local_file_storage_service_id, hash_id )
         
         if is_deleted:
             
@@ -103,7 +103,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
-        result = self.modules_files_storage.GetImportedTimestampMS( self.modules_services.combined_local_file_service_id, hash_id )
+        result = self.modules_files_storage.GetImportedTimestampMS( self.modules_services.hydrus_local_file_storage_service_id, hash_id )
         
         if result is not None:
             

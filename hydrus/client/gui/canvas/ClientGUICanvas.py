@@ -386,7 +386,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ) )
             
         
     
@@ -477,7 +477,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ) )
+        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ) )
         
     
     def _ManageNotes( self, name_to_start_on = None ):
@@ -576,7 +576,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if len( pending_content_updates ) > 0:
                     
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, pending_content_updates )
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, pending_content_updates )
                     
                     CG.client_controller.Write( 'content_updates', content_update_package )
                     
@@ -1748,7 +1748,7 @@ class CanvasPanel( Canvas ):
             
             if locations_manager.IsTrashed():
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
                 
             
@@ -3339,7 +3339,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
             
             block_of_deleted_hashes = [ m.GetHash() for m in block_of_deleted if not m.GetLocationsManager().inbox ]
             
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, block_of_deleted_hashes ) )
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, block_of_deleted_hashes ) )
             
             CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
@@ -3374,7 +3374,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
         job_status.SetStatusText( f'Archiving: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}' )
         job_status.SetGauge( num_done, num_to_do )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) )
         
         CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
@@ -4342,7 +4342,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if locations_manager.IsTrashed():
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete physically now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete physically now', 'Delete this file immediately. This cannot be undone.', self._Delete, file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash, returning it to its original file service.', self._Undelete )
                 
             

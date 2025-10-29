@@ -461,7 +461,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
                     
                 except:
                     
-                    file_service_key = CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                    file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY
                     
                 
                 del serialisable_keys[ 'file_service' ]

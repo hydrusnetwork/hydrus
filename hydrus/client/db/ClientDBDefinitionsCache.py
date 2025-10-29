@@ -243,7 +243,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         
         all_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM local_hashes_cache;' ) )
         
-        all_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id ) )
+        all_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id ) )
         
         self.SyncHashIds( all_hash_ids, job_status = job_status )
         
@@ -282,7 +282,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( block_of_hash_ids, 'hash_id' ) as temp_table_name:
                 
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, temp_table_name, HC.CONTENT_STATUS_CURRENT )
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.hydrus_local_file_storage_service_id, temp_table_name, HC.CONTENT_STATUS_CURRENT )
                 
                 local_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {table_join};' ) )
                 
@@ -542,7 +542,7 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         
         tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
         
-        queries = [ self.modules_mappings_counts.GetQueryPhraseForCurrentTagIds( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_local_file_service_id, tag_service_id ) for tag_service_id in tag_service_ids ]
+        queries = [ self.modules_mappings_counts.GetQueryPhraseForCurrentTagIds( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.hydrus_local_file_storage_service_id, tag_service_id ) for tag_service_id in tag_service_ids ]
         
         full_query = '{};'.format( ' UNION '.join( queries ) )
         

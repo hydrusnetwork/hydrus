@@ -369,6 +369,7 @@ def WakeRepeatingJob( job ):
         job.Wake()
         
     
+
 class NetworkJobPresentationContext( object ):
     
     def __init__( self, enter_call, exit_call ):

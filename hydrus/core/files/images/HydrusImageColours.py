@@ -2,6 +2,8 @@ import numpy
 
 from PIL import Image as PILImage
 
+from hydrus.core import HydrusGlobals as HG
+
 def GetNumPyAlphaChannel( numpy_image: numpy.ndarray ) -> numpy.ndarray:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
@@ -40,7 +42,44 @@ def NumPyImageHasAllCellsTheSame( numpy_image: numpy.ndarray, value: int ):
     # alpha_channel == numpy.full( ( shape[0], shape[1] ), 255, dtype = 'uint8' ) ).all()
     
 
-def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
+def NumPyImageHasAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
+    
+    # note this does not test how useful the channel is, just if it exists
+    
+    shape = numpy_image.shape
+    
+    if len( shape ) <= 2:
+        
+        return False
+        
+    
+    # 2 for LA? think this works
+    return shape[2] in ( 2, 4 )
+    
+
+def NumPyImageHasNonFullyBlackOrWhiteAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
+    
+    if not NumPyImageHasAlphaChannel( numpy_image ):
+        
+        return False
+        
+    
+    alpha_channel = GetNumPyAlphaChannel( numpy_image )
+    
+    if NumPyImageHasAllCellsTheSame( alpha_channel, 0 ): # totally transparent
+        
+        return False
+        
+    
+    if NumPyImageHasAllCellsTheSame( alpha_channel, 255 ): # totally opaque
+        
+        return False
+        
+    
+    return True
+    
+
+def NumPyImageHasHumanPerceptibleAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
     if not NumPyImageHasAlphaChannel( numpy_image ):
         
@@ -81,28 +120,65 @@ def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     return True
     
 
-# note that this is not the same as 'not useful'. we need to test for the alpha explictly, otherwise an RGB image passing through here returns false
-def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
+HAS_TRANSPARENCY_STRICTNESS_CHANNEL_PRESENCE = 0
+HAS_TRANSPARENCY_STRICTNESS_NOT_BLACK_OR_WHITE = 1
+HAS_TRANSPARENCY_STRICTNESS_HUMAN = 2
+
+has_transparency_strictness_string_lookup = {
+    HAS_TRANSPARENCY_STRICTNESS_CHANNEL_PRESENCE : 'it has a transparency channel',
+    HAS_TRANSPARENCY_STRICTNESS_NOT_BLACK_OR_WHITE : 'it has a transparency channel that is not completely transparent or opaque',
+    HAS_TRANSPARENCY_STRICTNESS_HUMAN : 'it has a transparency channel that a human might recognise'
+}
+
+CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL = HAS_TRANSPARENCY_STRICTNESS_HUMAN
+
+def NumPyImageHasUsefulAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
-    return NumPyImageHasAlphaChannel( numpy_image ) and not NumPyImageHasUsefulAlphaChannel( numpy_image )
+    global CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL
+    
+    if CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL == HAS_TRANSPARENCY_STRICTNESS_HUMAN:
+        
+        return NumPyImageHasHumanPerceptibleAlphaChannel( numpy_image )
+        
+    elif CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL == HAS_TRANSPARENCY_STRICTNESS_NOT_BLACK_OR_WHITE:
+        
+        return NumPyImageHasNonFullyBlackOrWhiteAlphaChannel( numpy_image )
+        
+    elif CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL == HAS_TRANSPARENCY_STRICTNESS_CHANNEL_PRESENCE:
+        
+        return NumPyImageHasAlphaChannel( numpy_image )
+        
+    else:
+        
+        raise NotImplementedError( 'Unknown transparency strictness!' )
+        
     
 
-def NumPyImageHasAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
+# note that this is not the same as 'not useful()'. we need to test for the alpha explictly, otherwise an RGB image passing through here returns false
+def NumPyImageHasUselessAlphaChannel( numpy_image: numpy.ndarray ) -> bool:
     
-    # note this does not test how useful the channel is, just if it exists
-    
-    shape = numpy_image.shape
-    
-    if len( shape ) <= 2:
+    if not NumPyImageHasAlphaChannel( numpy_image ):
         
         return False
         
     
-    # 2 for LA? think this works
-    return shape[2] in ( 2, 4 )
+    return not NumPyImageHasUsefulAlphaChannel( numpy_image )
     
 
 def PILImageHasTransparency( pil_image: PILImage.Image ) -> bool:
     
     return pil_image.mode in ( 'LA', 'RGBA' ) or ( pil_image.mode == 'P' and 'transparency' in pil_image.info )
+    
+
+def SetHasTransparencyStrictnessLevel( value: bool ):
+    
+    global CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL
+    
+    if value != CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL:
+        
+        CURRENT_HAS_TRANSPARENCY_STRICTNESS_LEVEL = value
+        
+        HG.controller.pub( 'clear_image_cache' )
+        HG.controller.pub( 'clear_image_tile_cache' )
+        
     

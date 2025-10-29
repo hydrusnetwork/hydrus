@@ -6,9 +6,13 @@ import sqlite3
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
@@ -792,7 +796,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             file_relationships_dict[ 'king_is_on_file_domain' ] = len( filtered_hash_ids ) > 0
             
-            filtered_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), { hash_id } )
+            filtered_hash_ids = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ), { hash_id } )
             
             file_relationships_dict[ 'king_is_local' ] = len( filtered_hash_ids ) > 0
             
@@ -1373,6 +1377,22 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
+    def IsKing( self, hash_id: int   ):
+        
+        result = self._Execute( 'SELECT king_hash_id FROM duplicate_file_members CROSS JOIN duplicate_files USING ( media_id ) WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            return True
+            
+        else:
+            
+            ( king_hash_id, ) = result
+            
+            return king_hash_id == hash_id
+            
+        
+    
     def MediasAreAlternates( self, media_id_a, media_id_b ):
         
         alternates_group_id_a = self.GetAlternatesGroupId( media_id_a, do_not_create = True )
@@ -1419,6 +1439,16 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
         
         return self.AlternatesGroupsAreFalsePositive( alternates_group_id_a, alternates_group_id_b )
+        
+    
+    def NotifyFileLeavingHydrusLocalFileStorage( self, hash_id ):
+        
+        if self.IsKing( hash_id ):
+            
+            self.RemovePotentialPairs( hash_id )
+            
+        
+        self.modules_similar_files.StopSearchingFile( hash_id )
         
     
     def RemoveAlternateMember( self, media_id ):
@@ -1509,6 +1539,88 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         for hash_id in hash_ids:
             
             self.RemovePotentialPairs( hash_id )
+            
+        
+    
+    def ResyncPotentialPairsToHydrusLocalFileStorage( self ):
+        
+        job_status = ClientThreading.JobStatus( cancellable = True )
+        
+        num_files_cleared_out = 0
+        
+        try:
+            
+            job_status.SetStatusTitle( 'resyncing potential pairs to hydrus local file storage' )
+            
+            CG.client_controller.pub( 'message', job_status )
+            
+            job_status.SetStatusText( 'gathering data' )
+            
+            all_ids_we_are_tracking = self._Execute( 'SELECT DISTINCT king_hash_id, media_id FROM potential_duplicate_pairs CROSS JOIN duplicate_files ON ( potential_duplicate_pairs.smaller_media_id = duplicate_files.media_id OR potential_duplicate_pairs.larger_media_id = duplicate_files.media_id );' ).fetchall()
+            
+            all_king_hash_ids_we_are_tracking = { king_hash_id for ( king_hash_id, media_id ) in all_ids_we_are_tracking }
+            
+            good_king_hash_ids = self.modules_files_storage.FilterAllLocalHashIds( all_king_hash_ids_we_are_tracking )
+            
+            bad_king_hash_ids = all_king_hash_ids_we_are_tracking.difference( good_king_hash_ids )
+            
+            num_bad_king_hash_ids = len( bad_king_hash_ids )
+            
+            if num_bad_king_hash_ids > 0:
+                
+                all_bad_ids = [ ( king_hash_id, media_id ) for ( king_hash_id, media_id ) in all_ids_we_are_tracking if king_hash_id in bad_king_hash_ids ]
+                
+                for ( num_done, num_to_do, batch_of_bad_ids ) in HydrusLists.SplitListIntoChunksRich( all_bad_ids, 16 ):
+                    
+                    if job_status.IsCancelled():
+                        
+                        break
+                        
+                    
+                    message = f'Clearing orphans: {HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )}'
+                    
+                    job_status.SetStatusText( message )
+                    job_status.SetGauge( num_done, num_to_do )
+                    
+                    for ( king_hash_id, media_id ) in batch_of_bad_ids:
+                        
+                        if job_status.IsCancelled():
+                            
+                            break
+                            
+                        
+                        self.DeletePotentialDuplicatesForMediaId( media_id )
+                        
+                        self.modules_similar_files.StopSearchingFile( king_hash_id )
+                        
+                        num_files_cleared_out += 1
+                        
+                    
+                
+            
+        finally:
+            
+            if num_files_cleared_out > 0:
+                
+                HydrusData.Print( f'During potential duplicate pair local storage resync, I cleared out pairs for {HydrusNumbers.ToHumanInt(num_files_cleared_out)} files.' )
+                
+                job_status.SetStatusText( f'Done! Pairs for {HydrusNumbers.ToHumanInt(num_files_cleared_out)} out-of-domain files cleared out.' )
+                
+            else:
+                
+                if job_status.IsCancelled():
+                    
+                    job_status.SetStatusText( 'Cancelled!' )
+                    
+                else:
+                    
+                    job_status.SetStatusText( 'Done! No orphan pairs found!' )
+                    
+                
+            
+            job_status.DeleteGauge()
+            
+            job_status.Finish()
             
         
     

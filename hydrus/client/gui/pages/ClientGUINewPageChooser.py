@@ -270,11 +270,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                 
                 if self._controller.new_options.GetBoolean( 'show_local_files_on_page_chooser_at_top' ):
                     
-                    entries.insert( 0, ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                    entries.insert( 0, ( 'page_query', CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
                     
                 else:
                     
-                    entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+                    entries.append( ( 'page_query', CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
                 
             
             for service_key in self._controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ):

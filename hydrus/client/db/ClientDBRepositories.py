@@ -283,7 +283,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         self.modules_hashes_local_cache.SyncHashIds( update_hash_ids )
         
         # so we are also going to pull from here in case there are orphan records!!!
-        other_table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
+        other_table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.hydrus_local_file_storage_service_id, repository_updates_table_name, HC.CONTENT_STATUS_CURRENT )
         
         other_update_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( other_table_join ) ) )
         

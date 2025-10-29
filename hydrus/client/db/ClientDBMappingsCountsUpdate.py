@@ -30,7 +30,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
         
         if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and len( new_tag_ids ) > 0:
             
-            if not self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if not self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
                 self.modules_tag_search.AddTags( file_service_id, tag_service_id, new_tag_ids )
                 
@@ -77,7 +77,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
         
         if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and len( deleted_tag_ids ) > 0:
             
-            if not self.modules_services.FileServiceIsCoveredByAllLocalFiles( file_service_id ):
+            if not self.modules_services.FileServiceIsCoveredByHydrusLocalFileStorage( file_service_id ):
                 
                 # we don't want to delete chained stuff from definitions cache, even if count goes to zero!
                 
@@ -93,7 +93,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
                 include_current = True
                 include_pending = False
                 
-                ids_to_count = self.modules_mappings_counts.GetCounts( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_tag_service_id, self.modules_services.combined_local_file_service_id, deleted_local_tag_ids, include_current, include_pending )
+                ids_to_count = self.modules_mappings_counts.GetCounts( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_tag_service_id, self.modules_services.hydrus_local_file_storage_service_id, deleted_local_tag_ids, include_current, include_pending )
                 
                 useful_tag_ids = [ tag_id for ( tag_id, ( current_min, current_max, pending_min, pending_max ) ) in ids_to_count.items() if current_min > 0 ]
                 

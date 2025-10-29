@@ -16,9 +16,9 @@ def FilterOutRedundantMetaServices( list_of_service_keys: list[ bytes ] ):
     
     if len( special_local_file_service_keys.intersection( list_of_service_keys ) ) <= 1:
         
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in list_of_service_keys:
+        if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in list_of_service_keys:
             
-            list_of_service_keys.remove( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            list_of_service_keys.remove( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             
         
     
@@ -64,7 +64,7 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_im
             
             if advanced_mode:
                 
-                service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
+                service_types_in_order.append( HC.HYDRUS_LOCAL_FILE_STORAGE )
                 
             
             if not only_local_file_domains_allowed:
@@ -172,14 +172,14 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     def ClearSurplusLocalFilesServices( self, service_type_func: collections.abc.Callable ):
         # if we have combined local files, then we don't need specific local domains
         
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys:
+        if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self.current_service_keys:
             
-            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE ) )
+            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_HYDRUS_LOCAL_FILE_STORAGE ) )
             
         
-        if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.deleted_service_keys:
+        if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self.deleted_service_keys:
             
-            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE ) )
+            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_HYDRUS_LOCAL_FILE_STORAGE ) )
             
         
         if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in self.current_service_keys:
@@ -255,9 +255,9 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return CC.COMBINED_FILE_SERVICE_KEY in self.current_service_keys
         
     
-    def IsAllLocalFiles( self ):
+    def IsHydrusLocalFileStorage( self ):
         
-        return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self.current_service_keys
+        return self.IsOneDomain() and CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self.current_service_keys
         
     
     def IsAllMediaFiles( self ):

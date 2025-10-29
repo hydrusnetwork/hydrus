@@ -197,7 +197,7 @@ class TestSerialisables( unittest.TestCase ):
         
         local_times_manager = ClientMediaManagers.TimesManager()
         
-        current_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123000 }
+        current_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 123000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
         
         local_times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
         
@@ -205,7 +205,7 @@ class TestSerialisables( unittest.TestCase ):
         
         trash_times_manager = ClientMediaManagers.TimesManager()
         
-        current_to_timestamps_ms = { CC.TRASH_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 12000 }
+        current_to_timestamps_ms = { CC.TRASH_SERVICE_KEY : 123000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 12000 }
         
         local_times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
         
@@ -213,8 +213,8 @@ class TestSerialisables( unittest.TestCase ):
         
         deleted_times_manager = ClientMediaManagers.TimesManager()
         
-        deleted_to_previously_imported_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 10000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 118000, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 118000 }
-        deleted_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 120000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 120000, CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 123000 }
+        deleted_to_previously_imported_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 10000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 118000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 118000 }
+        deleted_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 120000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 120000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
         
         deleted_times_manager.SetDeletedTimestampsMS( deleted_to_timestamps_ms )
         deleted_times_manager.SetPreviouslyImportedTimestampsMS( deleted_to_previously_imported_timestamps_ms )

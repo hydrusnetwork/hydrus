@@ -8,7 +8,6 @@ import typing
 import unittest
 
 from twisted.internet import reactor
-import twisted.internet.ssl
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -99,7 +98,9 @@ class TestServer( unittest.TestCase ):
                 HydrusEncryption.GenerateOpenSSLCertAndKeyFile( cls._ssl_cert_path, cls._ssl_key_path )
                 
             
-            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( cls._ssl_key_path, cls._ssl_cert_path )
+            from hydrus.core.networking import HydrusServerContextFactory
+            
+            context_factory = HydrusServerContextFactory.GenerateSSLContextFactory( cls._ssl_cert_path, cls._ssl_key_path )
             
             reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( cls._serverside_admin_service ), context_factory )
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryFile( cls._serverside_file_service ), context_factory )

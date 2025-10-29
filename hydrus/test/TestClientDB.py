@@ -550,7 +550,7 @@ class TestClientDB( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ) )
+        content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ) )
         content_update_package.AddContentUpdate( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
         
         self._write( 'content_updates', content_update_package )
@@ -850,8 +850,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( locations_manager.IsLocal() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -877,8 +877,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( locations_manager.IsLocal() )
         self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -899,8 +899,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( locations_manager.IsLocal() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertTrue( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -921,8 +921,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertTrue( locations_manager.IsLocal() )
         self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertTrue( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -932,7 +932,7 @@ class TestClientDB( unittest.TestCase ):
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         self._write( 'content_updates', content_update_package )
         
@@ -943,8 +943,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( locations_manager.IsLocal() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -989,7 +989,7 @@ class TestClientDB( unittest.TestCase ):
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         self._write( 'content_updates', content_update_package )
         
@@ -1000,8 +1000,8 @@ class TestClientDB( unittest.TestCase ):
         self.assertFalse( locations_manager.IsLocal() )
         self.assertFalse( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertTrue( CC.LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
-        self.assertFalse( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetCurrent() )
-        self.assertTrue( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() )
+        self.assertFalse( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetCurrent() )
+        self.assertTrue( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in locations_manager.GetDeleted() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetCurrent() )
         self.assertFalse( CC.TRASH_SERVICE_KEY in locations_manager.GetDeleted() )
         
@@ -1543,7 +1543,7 @@ class TestClientDB( unittest.TestCase ):
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         self._write( 'content_updates', content_update_package )
         
@@ -2013,11 +2013,11 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
+        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
+        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
         
         #
         

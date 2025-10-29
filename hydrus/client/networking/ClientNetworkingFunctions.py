@@ -132,6 +132,26 @@ def ConvertDomainIntoSecondLevelDomain( domain ):
     return domains[-1]
     
 
+def ConvertDomainIntoSortable( domain: str ):
+    
+    second_level_domain = ConvertDomainIntoSecondLevelDomain( domain )
+    
+    if domain == second_level_domain:
+        
+        subdomains_in_power_order = tuple()
+        
+    else:
+        
+        prefix_component = domain.replace( '.' + second_level_domain, '' )
+        
+        subdomains_in_power_order = tuple( reversed( prefix_component.split( '.' ) ) )
+        
+    
+    # ( mysite.com, tuple() )
+    # ( mysite.com, ( 'artistname', ) )
+    return ( second_level_domain, subdomains_in_power_order )
+    
+
 def ConvertHTTPSToHTTP( url ):
     
     if url.startswith( 'http://' ):

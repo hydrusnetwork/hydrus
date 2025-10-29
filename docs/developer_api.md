@@ -154,9 +154,9 @@ You can play around with this yourself by clicking 'multiple locations' in the c
 
 In extreme edge cases, these two can be mixed by populating both A and B selective, making a larger union of both current and deleted file records.
 
-Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like `all my files` or `all local files`, please do. Otherwise, let me know what is running slow and I'll have a look at it.
+Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like `all my files` or `hydrus local file storage`, please do. Otherwise, let me know what is running slow and I'll have a look at it.
 
-'deleted from all local files' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files _and_ the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!
+'deleted from hydrus local file storage' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files _and_ the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!
 
 'all known files' is a tricky domain. It converts much of the search tech to ignore where files actually are and look at the accompanying tag domain (e.g. all the files that have been tagged), and can sometimes be very expensive.
 
@@ -214,7 +214,7 @@ When it does this, it gives you this structure, typically under a `services` key
     "type_pretty" : "hydrus file repository"
   },
   "616c6c206c6f63616c2066696c6573" : {
-    "name" : "all local files",
+    "name" : "hydrus local file storage",
     "type": 15,
     "type_pretty" : "virtual combined local file service"
   },
@@ -285,7 +285,7 @@ You won't see all of these, but the service `type` enum is:
 * 12 - the local booru -- you can ignore this
 * 13 - IPFS
 * 14 - trash
-* 15 - all local files -- all files on hard disk ('all my files' + updates + trash) 
+* 15 - hydrus local file storage -- all files on hard disk ('all my files' + updates + trash) 
 * 17 - file notes
 * 18 - Client API
 * 19 - deleted from anywhere -- you can ignore this
@@ -563,7 +563,7 @@ Arguments (in JSON):
 }
 ```
 
-If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
+If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'hydrus local file storage', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
 
 Arguments (as bytes): 
 :   
@@ -619,14 +619,14 @@ Response:
 :   200 and no content.
 
 !!! note "Careful"
-    `all my files` and `all local files` are different!
+    `all my files` and `hydrus local file storage` are different!
     
     - Deleting from `all my files` sends files straight to the trash, no matter how many local file services they are in.
-    - Deleting from `all local files` removes files from the trash and triggers an immediate physical delete.
+    - Deleting from `hydrus local file storage` removes files from the trash and triggers an immediate physical delete.
     
     Check [here](advanced_multiple_local_file_services.md#meta_file_domains) for more info.
 
-If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `all my files` and `all local files` domains. It defaults to `all my files`, which will delete from all local services (i.e. force sending to trash). Sending `all local files` on a file already in the trash will trigger a physical file delete. 
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `all my files` and `hydrus local file storage` domains. It defaults to `all my files`, which will delete from all local services (i.e. force sending to trash). Sending `hydrus local file storage` on a file already in the trash will trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
@@ -655,7 +655,7 @@ Response:
 
 This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records.
 
-This operation will only occur on files that are currently in your file store (i.e. in 'all local files', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!
+This operation will only occur on files that are currently in your file store (i.e. in 'hydrus local file storage', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!
 
 ### **POST `/add_files/clear_file_deletion_record`** { id="add_files_clear_file_deletion_record" }
 
@@ -681,7 +681,7 @@ Arguments (in JSON):
 Response: 
 :   200 and no content.
 
-This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'all local files' domain). A file that no longer has a 'all local files' deletion record will pass a 'exclude previously deleted files' check in a _file import options_.
+This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'hydrus local file storage' domain). A file that no longer has a 'hydrus local file storage' deletion record will pass a 'exclude previously deleted files' check in a _file import options_.
 
 
 ### **POST `/add_files/migrate_files`** { id="add_files_migrate_files" }

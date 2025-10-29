@@ -12,6 +12,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientThreading
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.duplicates import ClientPotentialDuplicatesPairFactory
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
@@ -251,22 +252,35 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def status_hook( status: str ):
+        job_status = ClientThreading.JobStatus()
+        
+        job_status.SetStatusText( 'approving auto-resolution decisions' )
+        
+        rule = self._rule
+        
+        def sensitive_status_hook( status: str ):
             
             self._approve_selected_button.setText( status )
             
         
-        rule = self._rule
+        def status_hook( status: str ):
+            
+            job_status.SetStatusText( status )
+            
+            CG.client_controller.CallAfterQtSafe( self, sensitive_status_hook, status )
+            
         
         def work_callable():
             
-            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, status_hook, message )
+            CG.client_controller.CallLater( 4, CG.client_controller.pub, 'message', job_status )
             
             ClientDuplicatesAutoResolution.ActionAutoResolutionReviewPairs(
                 rule,
                 decisions,
-                status_hook = wrapped_status_hook
+                status_hook = status_hook
             )
+            
+            job_status.FinishAndDismiss()
             
             return 1
             
@@ -405,22 +419,35 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def status_hook( status: str ):
+        rule = self._rule
+        
+        job_status = ClientThreading.JobStatus()
+        
+        job_status.SetStatusText( 'denying auto-resolution decisions' )
+        
+        def sensitive_status_hook( status: str ):
             
             self._deny_selected_button.setText( status )
             
         
-        rule = self._rule
+        def status_hook( status: str ):
+            
+            job_status.SetStatusText( status )
+            
+            CG.client_controller.CallAfterQtSafe( self, sensitive_status_hook, status )
+            
         
         def work_callable():
             
-            wrapped_status_hook = lambda message: CG.client_controller.CallAfterQtSafe( self, status_hook, message )
+            CG.client_controller.CallLater( 4, CG.client_controller.pub, 'message', job_status )
             
             ClientDuplicatesAutoResolution.ActionAutoResolutionReviewPairs(
                 rule,
                 decisions,
-                status_hook = wrapped_status_hook
+                status_hook = status_hook
             )
+            
+            job_status.FinishAndDismiss()
             
             return 1
             

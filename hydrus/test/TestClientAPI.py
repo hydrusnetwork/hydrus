@@ -98,7 +98,7 @@ def GetExampleServicesDict():
             'type_pretty' : 'hydrus file repository'
         },
         '616c6c206c6f63616c2066696c6573' : {
-            'name' : 'all local files',
+            'name' : 'hydrus local file storage',
             'type' : 15,
             'type_pretty' : 'virtual combined local file service'
         },
@@ -806,8 +806,8 @@ class TestClientAPI( unittest.TestCase ):
                 }
             ],
             'all_local_files' : [
-                { 
-                    'name' : 'all local files',
+                {
+                    'name' : 'hydrus local file storage',
                     'service_key' : '616c6c206c6f63616c2066696c6573',
                     'type' : 15,
                     'type_pretty' : 'virtual combined local file service'
@@ -1143,9 +1143,9 @@ class TestClientAPI( unittest.TestCase ):
             
             media_result = HF.GetFakeMediaResult( hash )
             
-            media_result.GetLocationsManager()._current = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }
+            media_result.GetLocationsManager()._current = { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }
             media_result.GetLocationsManager()._service_keys_to_filenames = {
-                CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 100,
+                CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 100,
                 CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 100,
                 CC.LOCAL_FILE_SERVICE_KEY : 100
             }
@@ -1187,9 +1187,9 @@ class TestClientAPI( unittest.TestCase ):
             
             some_file_service_key = HydrusData.GenerateKey()
             
-            media_result.GetLocationsManager()._current = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, some_file_service_key }
+            media_result.GetLocationsManager()._current = { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, some_file_service_key }
             media_result.GetLocationsManager()._service_keys_to_filenames = {
-                CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 100,
+                CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 100,
                 CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 100,
                 some_file_service_key : 100
             }
@@ -1443,7 +1443,7 @@ class TestClientAPI( unittest.TestCase ):
         
         path = '/add_files/delete_files'
         
-        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex() }
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ], 'file_service_key' : CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY.hex() }
         
         body = json.dumps( body_dict )
         
@@ -1549,8 +1549,8 @@ class TestClientAPI( unittest.TestCase ):
         deleted_timestamp_ms = 5000000
         previously_imported_timestamp_ms = 2500000
         
-        deleted_to_timestamps_ms = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : deleted_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : deleted_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : deleted_timestamp_ms }
-        deleted_to_previously_imported_timestamp_ms = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : previously_imported_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : previously_imported_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : previously_imported_timestamp_ms }
+        deleted_to_timestamps_ms = { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : deleted_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : deleted_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : deleted_timestamp_ms }
+        deleted_to_previously_imported_timestamp_ms = { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : previously_imported_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : previously_imported_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : previously_imported_timestamp_ms }
         
         times_manager = ClientMediaManagers.TimesManager()
         
@@ -1590,7 +1590,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, { hash } ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, { hash } ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1614,7 +1614,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1638,7 +1638,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1662,7 +1662,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -1686,7 +1686,7 @@ class TestClientAPI( unittest.TestCase ):
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] )
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
@@ -2143,7 +2143,7 @@ class TestClientAPI( unittest.TestCase ):
                 content_update_row = ( hash, canvas_type, timestamp_we_expect, new_views, new_viewtime )
                 
                 expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
-                    CC.COMBINED_LOCAL_FILE_SERVICE_KEY,
+                    CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY,
                     [
                         ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, content_update_row )
                     ]
@@ -2314,7 +2314,7 @@ class TestClientAPI( unittest.TestCase ):
                 content_update_row = ( hash, canvas_type, new_timestamp_ms, new_views, new_viewtime )
                 
                 expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
-                    CC.COMBINED_LOCAL_FILE_SERVICE_KEY,
+                    CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY,
                     [
                         ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_SET, content_update_row )
                     ]
@@ -2844,15 +2844,15 @@ class TestClientAPI( unittest.TestCase ):
         
         request_args = {
             'timestamp_type' : HC.TIMESTAMP_TYPE_IMPORTED,
-            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'file_service_key' : CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY.hex(),
             'timestamp_ms' : 123456789
         }
         
         media_result = HF.GetFakeMediaResult( hash )
         
-        media_result.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        media_result.GetTimesManager().SetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HydrusTime.GetNowMS() )
         
-        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, timestamp_ms = 123456789 )
         
         jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
@@ -2860,15 +2860,15 @@ class TestClientAPI( unittest.TestCase ):
         
         request_args = {
             'timestamp_type' : HC.TIMESTAMP_TYPE_DELETED,
-            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'file_service_key' : CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY.hex(),
             'timestamp_ms' : 123456789
         }
         
         media_result = HF.GetFakeMediaResult( hash )
         
-        media_result.GetTimesManager().SetDeletedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        media_result.GetTimesManager().SetDeletedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HydrusTime.GetNowMS() )
         
-        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_DELETED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_DELETED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, timestamp_ms = 123456789 )
         
         jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
@@ -2876,15 +2876,15 @@ class TestClientAPI( unittest.TestCase ):
         
         request_args = {
             'timestamp_type' : HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED,
-            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'file_service_key' : CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY.hex(),
             'timestamp_ms' : 123456789
         }
         
         media_result = HF.GetFakeMediaResult( hash )
         
-        media_result.GetTimesManager().SetPreviouslyImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        media_result.GetTimesManager().SetPreviouslyImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HydrusTime.GetNowMS() )
         
-        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, timestamp_ms = 123456789 )
         
         jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
@@ -2913,7 +2913,7 @@ class TestClientAPI( unittest.TestCase ):
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
-            expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( [ media_result.GetHash() ], result_timestamp_data ) ) ] )
+            expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( [ media_result.GetHash() ], result_timestamp_data ) ) ] )
             
             [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
             
@@ -4171,7 +4171,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4198,7 +4198,7 @@ class TestClientAPI( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4223,7 +4223,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4248,7 +4248,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4274,7 +4274,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ normalised_url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ normalised_url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4299,7 +4299,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ unnormalised_url ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ unnormalised_url ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4324,7 +4324,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -4349,7 +4349,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = TG.test_controller.GetWrite( 'content_updates' )
         
@@ -7777,7 +7777,7 @@ class TestClientAPI( unittest.TestCase ):
         
         times_manager = ClientMediaManagers.TimesManager()
         
-        locations_manager = ClientMediaManagers.LocationsManager( { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager )
+        locations_manager = ClientMediaManagers.LocationsManager( { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
         file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )

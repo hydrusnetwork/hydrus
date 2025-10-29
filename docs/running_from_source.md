@@ -220,7 +220,7 @@ There are three special external libraries. You just have to get them and put th
 === "Linux"
 
     
-    _You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal._
+    _You do not need to run the setup script as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal._
     
     The file is `setup_venv.sh`. You may be able to double-click it. If not, open a terminal in the folder and type:  
     
@@ -239,24 +239,26 @@ There are three special external libraries. You just have to get them and put th
 === "macOS"
 
     
-    _You do not need to run this as sudo, and doing so may cause some things not to work. Just regular you in a normal terminal._
+    _You do not need to run the setup script as sudo, and doing so may cause some things not to work. Just regular you._
     
     Double-click `setup_venv.command`.
     
-    If you do not have permission to run the .command file, then open a terminal on the folder and enter:
+    If you do not have permission to run the .command file, open a terminal on the folder and enter:
     
     `chmod +x setup_venv.command`
     
+    You likely also need this to tell Gatekeeper you are ok running it:
+    
+    `sudo xattr -rd com.apple.quarantine setup_venv.command`
+    
     You will likely have to do the same on the other .command files.
     
-    If your macOS is old, you may need to experiment with the advanced choices.
-    
 
-The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
+The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual (e.g. very old/new python), try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
 
-If something messes up, or you want to make a different decision, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should _just work_ on most normal computers, but let me know if you have any trouble.
+If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should _just work_ on most normal computers, but let me know if you have any trouble.
 
-Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.
+Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to update to the current help.
 
 #### Running it
 
@@ -296,12 +298,12 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         
         I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.
     
-    Run 'hydrus_client.sh' to start the client. Don't forget to set `chmod +x hydrus_client.sh` if you need it.
+    Run 'hydrus_client.sh' to start the client. Don't forget to `chmod +x hydrus_client.sh` if you need it.
     
 
 === "macOS"
 
-    Run 'hydrus_client.command' to start the client. Don't forget to set `chmod +x hydrus_client.command` if you need it.
+    Run 'hydrus_client.command' to start the client. Don't forget to `chmod +x hydrus_client.command` and `sudo xattr -rd com.apple.quarantine hydrus_client.command` if you need it.
 
 The first start will take a little longer (it has to compile all the code into something your computer understands). Once up, it will operate just like a normal build with the same folder structure and so on.
 
@@ -332,9 +334,9 @@ The first start will take a little longer (it has to compile all the code into s
 
 ### Have Fun
 
-If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct.
+If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct. Hitting `help->about` will show if the optional libraries are all available and will give you error popups detailing any problems.
 
-Don't forget to create a new shortcut to your `hydrus_client` or `hydrus_client-user` launch script. If you can, set a custom icon--there are several `hydrus...` files in `install_dir/static` that are suitable.
+Don't forget to create a nice shortcut to your `hydrus_client` or `hydrus_client-user` launch script. If you can, set a custom icon--there are several `hydrus...` files in `install_dir/static` that are suitable.
 
 ??? note "System Qt styles"
     
@@ -348,7 +350,7 @@ Don't forget to create a new shortcut to your `hydrus_client` or `hydrus_client-
 
 Updating is simple. If you installed with `git`, it takes about three seconds: just close the client, open the base install directory in a terminal, and type `git pull`. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). 
 
-If you installed by extracting the source zip, you can update much like you would with the built extract: download the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) source zip and extract it over the top of the folder you have, overwriting the existing source files.
+If you installed by extracting the source zip, update just as you would with the built extract: download the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) source zip and extract it over the top of the folder you have, overwriting the existing source files.
 
 If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.
 

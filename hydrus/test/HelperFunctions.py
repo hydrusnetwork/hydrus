@@ -76,7 +76,7 @@ def GetFakeMediaResult( hash: bytes, mime = None ):
     
     times_manager.SetFileModifiedTimestampMS( file_modified_timestamp_ms )
     
-    current_to_timestamps_ms = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : import_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : import_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : import_timestamp_ms }
+    current_to_timestamps_ms = { CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : import_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : import_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : import_timestamp_ms }
     
     times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
     

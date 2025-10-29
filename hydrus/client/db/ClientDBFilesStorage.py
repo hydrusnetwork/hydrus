@@ -360,7 +360,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         pending_changed = self._GetRowCount() > 0
         
-        if service_id == self.modules_services.combined_local_file_service_id:
+        if service_id == self.modules_services.hydrus_local_file_storage_service_id:
             
             for ( hash_id, timestamp_ms ) in insert_rows:
                 
@@ -436,7 +436,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         service_ids_to_nums_cleared = {}
         
-        local_non_trash_service_types = { HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN }
+        local_non_trash_service_types = { HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN }
         
         local_non_trash_service_ids = self.modules_services.GetServiceIds( local_non_trash_service_types )
         
@@ -571,6 +571,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return current_hash_ids
         
     
+    def FilterAllLocalHashIds( self, hash_ids ):
+        
+        return self.FilterAllCurrentHashIds( hash_ids, ( self.modules_services.hydrus_local_file_storage_service_id, ) )
+        
+    
     def FilterAllPendingHashIds( self, hash_ids, just_these_service_ids = None ):
         
         if just_these_service_ids is None:
@@ -687,7 +692,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def FilterOrphanFileHashIds( self, hash_ids, ignore_service_id = None ):
         
-        useful_hash_ids = self.FilterHashIdsToStatus( self.modules_services.combined_local_file_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
+        useful_hash_ids = self.FilterHashIdsToStatus( self.modules_services.hydrus_local_file_storage_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
         
         orphan_hash_ids = set( hash_ids ).difference( useful_hash_ids )
         
@@ -711,7 +716,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def FilterOrphanThumbnailHashIds( self, hash_ids, ignore_service_id = None ):
         
-        services = self.modules_services.GetServices( ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ) )
+        services = self.modules_services.GetServices( ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.FILE_REPOSITORY ) )
         
         current_service_keys = [ service.GetServiceKey() for service in services ]
         
@@ -1091,7 +1096,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     def GetNumLocal( self, service_id: int ) -> int:
         
         current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
-        combined_local_current_files_table_name = GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        combined_local_current_files_table_name = GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
         
         ( num_local, ) = self._Execute( 'SELECT COUNT( * ) FROM {} CROSS JOIN {} USING ( hash_id );'.format( current_files_table_name, combined_local_current_files_table_name ) ).fetchone()
         
@@ -1337,7 +1342,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         pending_changed = self._GetRowCount() > 0
         
-        if self.modules_services.GetService( service_id ).GetServiceType() == HC.COMBINED_LOCAL_FILE:
+        if self.modules_services.GetService( service_id ).GetServiceType() == HC.HYDRUS_LOCAL_FILE_STORAGE:
             
             self.DeferFilesDeleteIfNowOrphan( hash_ids )
             

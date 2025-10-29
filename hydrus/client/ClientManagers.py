@@ -348,7 +348,7 @@ class FileViewingStatsManager( object ):
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, pubsub_row )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
         
         CG.client_controller.pub( 'content_updates_data', content_update_package )
         CG.client_controller.pub( 'content_updates_gui', content_update_package )
@@ -371,7 +371,7 @@ class FileViewingStatsManager( object ):
                     content_updates.append( content_update )
                     
                 
-                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_updates )
                 
                 # non-synchronous, non-publishing
                 self._controller.Write( 'content_updates', content_update_package, publish_content_updates = False )

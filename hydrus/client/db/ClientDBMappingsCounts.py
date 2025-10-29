@@ -173,7 +173,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 
                 new_tag_ids.add( tag_id )
                 
-                if file_service_id == self.modules_services.combined_local_file_service_id: # and tag_service_id = all known tags
+                if file_service_id == self.modules_services.hydrus_local_file_storage_service_id: # and tag_service_id = all known tags
                     
                     new_local_tag_ids.add( tag_id )
                     
@@ -602,7 +602,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 
                 deleted_tag_ids.add( tag_id )
                 
-                if file_service_id == self.modules_services.combined_local_file_service_id: # and tag_service_id = all known tags
+                if file_service_id == self.modules_services.hydrus_local_file_storage_service_id: # and tag_service_id = all known tags
                     
                     deleted_local_tag_ids.add( tag_id )
                     

@@ -170,7 +170,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if presentation_location == 1:
                 
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                 
             else:
                 
@@ -240,7 +240,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if not self._location_context.IsAllMediaFiles():
             
-            if self._location_context.IsAllLocalFiles():
+            if self._location_context.IsHydrusLocalFileStorage():
                 
                 s = 'including if trashed'
                 

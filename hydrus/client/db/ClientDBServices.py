@@ -75,7 +75,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         
         self.local_update_service_id = None
         self.trash_service_id = None
-        self.combined_local_file_service_id = None
+        self.hydrus_local_file_storage_service_id = None
         self.combined_local_media_service_id = None
         self.combined_file_service_id = None
         self.combined_deleted_file_service_id = None
@@ -118,7 +118,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             self.local_update_service_id = self.GetServiceId( CC.LOCAL_UPDATE_SERVICE_KEY )
             self.trash_service_id = self.GetServiceId( CC.TRASH_SERVICE_KEY )
-            self.combined_local_file_service_id = self.GetServiceId( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            self.hydrus_local_file_storage_service_id = self.GetServiceId( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             self.combined_file_service_id = self.GetServiceId( CC.COMBINED_FILE_SERVICE_KEY )
             
             try:
@@ -158,9 +158,9 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             self.trash_service_id = service_id
             
-        elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+        elif service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
             
-            self.combined_local_file_service_id = service_id
+            self.hydrus_local_file_storage_service_id = service_id
             
         elif service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
             
@@ -199,11 +199,11 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM services WHERE service_id = ?;', ( service_id, ) )
         
     
-    def FileServiceIsCoveredByAllLocalFiles( self, service_id ) -> bool:
+    def FileServiceIsCoveredByHydrusLocalFileStorage( self, service_id ) -> bool:
         
         service_type = self.GetService( service_id ).GetServiceType()
         
-        return service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE
+        return service_type in HC.FILE_SERVICES_COVERED_BY_HYDRUS_LOCAL_FILE_STORAGE
         
     
     def GetFileSearchContextBranch( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ) -> FileSearchContextBranch:
@@ -319,7 +319,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def LocationContextIsCoveredByCombinedLocalFiles( self, location_context: ClientLocation.LocationContext ):
+    def LocationContextIsCoveredByHydrusLocalFileStorage( self, location_context: ClientLocation.LocationContext ):
         
         if location_context.IncludesDeleted():
             
@@ -330,7 +330,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         
         for service_id in service_ids:
             
-            if not self.FileServiceIsCoveredByAllLocalFiles( service_id ):
+            if not self.FileServiceIsCoveredByHydrusLocalFileStorage( service_id ):
                 
                 return False
                 

@@ -256,7 +256,7 @@ class StatusBarRedirectFilter( QC.QObject ):
 
 def GenerateMenu( parent: QW.QWidget ) -> QW.QMenu:
     
-    menu = QW.QMenu( parent )
+    menu = QW.QMenu( parent.window() ) # menus are supposed to have TLW parents
     
     menu.setToolTipsVisible( True )
     

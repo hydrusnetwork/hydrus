@@ -1313,11 +1313,11 @@ class MediaList( object ):
                     if action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                         
                         local_file_domains = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                        all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY ] )
+                        all_local_file_services = set( list( local_file_domains ) + [ CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY ] )
                         
                         #
                         
-                        physically_deleted = service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY
+                        physically_deleted = service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY
                         possibly_trashed = ( service_key in local_file_domains or service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) and action == HC.CONTENT_UPDATE_DELETE
                         
                         deleted_specifically_from_our_domain = self._location_context.IsOneDomain() and service_key in self._location_context.current_service_keys

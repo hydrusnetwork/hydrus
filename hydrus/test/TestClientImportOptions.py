@@ -617,7 +617,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_ANY_GOOD )
         presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC )
-        presentation_import_options.SetLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+        presentation_import_options.SetLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
         
         pre_filter_expected_result = [
             new_and_inboxed_hash,
@@ -642,7 +642,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         
         [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'filter_hashes' )
         
-        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
+        self.assertEqual( args, ( ClientLocation.LocationContext( current_service_keys = ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ) ), pre_filter_expected_result ) )
         
         self.assertEqual( result, expected_result )
         

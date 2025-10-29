@@ -1179,9 +1179,11 @@ class Controller( HydrusController.HydrusController ):
         
         from hydrus.core.files.images import HydrusImageHandling
         from hydrus.core.files.images import HydrusImageNormalisation
+        from hydrus.core.files.images import HydrusImageColours
         
         HydrusImageHandling.SetEnableLoadTruncatedImages( self.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
         HydrusImageNormalisation.SetDoICCProfileNormalisation( self.new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
+        HydrusImageColours.SetHasTransparencyStrictnessLevel( self.new_options.GetInteger( 'file_has_transparency_strictness' ) )
         
         HydrusImageHandling.FORCE_PIL_ALWAYS = self.new_options.GetBoolean( 'load_images_with_pil' )
         
@@ -2092,13 +2094,11 @@ class Controller( HydrusController.HydrusController ):
                         
                         if use_https:
                             
-                            import twisted.internet.ssl
+                            from hydrus.core.networking import HydrusServerContextFactory
                             
                             ( ssl_cert_path, ssl_key_path ) = self.db.GetSSLPaths()
                             
-                            sslmethod = twisted.internet.ssl.SSL.TLSv1_2_METHOD
-                            
-                            context_factory = twisted.internet.ssl.DefaultOpenSSLContextFactory( ssl_key_path, ssl_cert_path, sslmethod )
+                            context_factory = HydrusServerContextFactory.GenerateSSLContextFactory( ssl_cert_path, ssl_key_path )
                             
                         
                         ipv6_port = None

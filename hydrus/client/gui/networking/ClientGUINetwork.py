@@ -775,13 +775,13 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertNetworkContextsToSortTuple( self, network_context ):
+    def _ConvertNetworkContextsToSortTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
         
         bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
         
         has_rules = not self._controller.network_engine.bandwidth_manager.UsesDefaultRules( network_context )
         
-        sortable_network_context = ( network_context.context_type, network_context.context_data )
+        sortable_network_context = network_context.GetSortable()
         sortable_context_type = CC.network_context_type_string_lookup[ network_context.context_type ]
         current_usage = bandwidth_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, 1, for_user = True )
         

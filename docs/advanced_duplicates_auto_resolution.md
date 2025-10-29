@@ -2,7 +2,7 @@
 title: Filtering Duplicates Automatically
 ---
 
-**Hey, this is all for a system that is close to launching but still has some rough edges. If you are new to hydrus, please come back in a few months!**
+**Hey, this is all for a system that is close to launching but still has a couple rough edges. If you are new to hydrus, please come back soon!**
 
 ## the problem with duplicates processing
 
@@ -19,6 +19,10 @@ If only there were some way to automate common decisions! Hydrus could solve the
     Resolving duplicates is a highly subjective issue. Maybe you think EXIF data is the best, or maybe you always want it gone. Maybe you never want to delete low quality files, or always merge URLs, or set an artist correction as a duplicate instead of an alternate. People simply differ.
     
     This system has templated quick-start suggestions, but they are not mandatory. I have made general decisions that will work for many users, but if you care, you should double-check anything before starting it. The whole system is highly configurable, and you are encouraged to set it up exactly as you want. Everything is off by default!
+
+## tl;dr
+
+If you just want to do this, open up a new duplicates page, go to the `auto-resolution` tab, hit `edit rules`, then, from the `add suggested` button, add `pixel-perfect jpegs and pngs`, `pixel-perfect pairs`, and `visually similar pairs`. Edit each rule and change it from 'semi-automatic' to 'fully automatic'. Save it all and never look at this page again.
 
 ## philosophy
 

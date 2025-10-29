@@ -931,7 +931,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_IMPORT_TIME:
             
-            return media_result.GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            return media_result.GetTimesManager().GetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
             
@@ -1537,7 +1537,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             if self._predicate_type == PREDICATE_TYPE_SYSTEM_IMPORT_TIME:
                 
-                file_timestamp_ms_to_test = media_result.GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                file_timestamp_ms_to_test = media_result.GetTimesManager().GetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_MODIFIED_TIME:
                 

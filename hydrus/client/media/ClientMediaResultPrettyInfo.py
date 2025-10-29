@@ -138,9 +138,9 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     seen_local_file_service_timestamps_ms = set()
     
-    if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
+    if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in current_service_keys:
         
-        timestamp_ms = times_manager.GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        timestamp_ms = times_manager.GetImportedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
         
         line = f'imported: {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )}'
         
@@ -190,9 +190,9 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     local_file_deletion_reason = locations_manager.GetLocalFileDeletionReason()
     
-    if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
+    if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in deleted_service_keys:
         
-        timestamp_ms = times_manager.GetDeletedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        timestamp_ms = times_manager.GetDeletedTimestampMS( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
         
         line = f'deleted from this client {HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) )} ({local_file_deletion_reason})'
         

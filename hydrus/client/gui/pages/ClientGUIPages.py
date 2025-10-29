@@ -3429,7 +3429,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if location_context.IsAllKnownFiles() and tag_service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
             
         
         tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )

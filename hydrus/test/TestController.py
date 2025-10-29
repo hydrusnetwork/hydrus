@@ -250,7 +250,7 @@ class Controller( object ):
         services = []
         
         services.append( ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' ) )
-        services.append( ClientServices.GenerateService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HC.COMBINED_LOCAL_FILE, 'all local files' ) )
+        services.append( ClientServices.GenerateService( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HC.HYDRUS_LOCAL_FILE_STORAGE, 'hydrus local file storage' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files' ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ) )

@@ -279,7 +279,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 random.shuffle( service_keys )
                 
-                if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in service_keys:
+                if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in service_keys:
                     
                     total_successful_hashes_in_this_run += 1
                     

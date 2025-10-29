@@ -670,23 +670,23 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             if first_locations_manager.inbox and not second_locations_manager.inbox and not delete_a:
                 
-                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
+                content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update_archive_first )
                 
             elif not first_locations_manager.inbox and second_locations_manager.inbox and not delete_b:
                 
-                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
+                content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update_archive_second )
                 
             
         elif action_to_actually_consult == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
             
             if first_locations_manager.inbox and not delete_a:
                 
-                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
+                content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update_archive_first )
                 
             
             if second_locations_manager.inbox and not delete_b:
                 
-                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
+                content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update_archive_second )
                 
             
         
@@ -701,18 +701,18 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_a, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_a, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
                 elif ClientTime.ShouldUpdateModifiedTime( second_timestamp_ms, first_timestamp_ms ):
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_b, ), ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_b, ), ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp_ms ) ) ) )
                     
                 
             elif self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
                 if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_a, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash_a, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
                 
             
@@ -733,16 +733,16 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
+                    content_update_package.AddContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
                     
                 
                 if len( second_needs ) > 0:
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, hash_b_set ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, hash_b_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_b, media_result_a, first_urls ) )
+                    content_update_package.AddContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, get_domain_modified_content_updates( media_result_b, media_result_a, first_urls ) )
                     
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
@@ -751,9 +751,9 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
+                    content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, hash_a_set ) ) )
                     
-                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
+                    content_update_package.AddContentUpdates( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, get_domain_modified_content_updates( media_result_a, media_result_b, second_urls ) )
                     
                 
             
@@ -799,7 +799,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     if ( undo_delete_lock_1 or undo_delete_lock_2 ):
                         
-                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { media_result.GetHash() } ) )
+                        content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { media_result.GetHash() } ) )
                         
                         content_update_packages.append( content_update_package )
                         

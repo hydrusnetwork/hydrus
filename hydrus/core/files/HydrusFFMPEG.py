@@ -127,7 +127,7 @@ def HandleFFMPEGFileNotFound( e, path ):
             
         else:
             
-            message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment problem. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
+            message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment issue. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
             
         
         message += '\n' * 2

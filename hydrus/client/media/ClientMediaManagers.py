@@ -822,7 +822,7 @@ class LocationsManager( object ):
             # forced import time here to handle do_undelete, ensuring old timestamp is propagated
             
             self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
-            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
+            self._AddToService( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
             
         
         if service_key not in self._current:
@@ -831,7 +831,7 @@ class LocationsManager( object ):
             
             self._current.add( service_key )
             
-            if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+            if service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                 
                 self.inbox = True
                 
@@ -901,7 +901,7 @@ class LocationsManager( object ):
                 self._AddToService( CC.TRASH_SERVICE_KEY )
                 
             
-        elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+        elif service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
             
             for local_service_key in list( self._current.intersection( local_service_keys ) ):
                 
@@ -1087,7 +1087,7 @@ class LocationsManager( object ):
     
     def IsDownloading( self ):
         
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
+        return CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self._pending
         
     
     def IsInLocationContext( self, location_context: ClientLocation.LocationContext ):
@@ -1118,12 +1118,12 @@ class LocationsManager( object ):
     
     def IsLocal( self ):
         
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current
+        return CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self._current
         
     
     def IsRemote( self ):
         
-        return CC.COMBINED_LOCAL_FILE_SERVICE_KEY not in self._current
+        return CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY not in self._current
         
     
     def IsTrashed( self ):
@@ -1141,9 +1141,9 @@ class LocationsManager( object ):
                 
                 if service_key in self._deleted:
                     
-                    if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                    if service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                         
-                        service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ) )
+                        service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.HYDRUS_LOCAL_FILE_STORAGE ) )
                         
                     else:
                         
@@ -1224,9 +1224,9 @@ class LocationsManager( object ):
                             
                         
                     
-                elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                elif service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                     
-                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
                         
                         if s_k in self._current:
                             
