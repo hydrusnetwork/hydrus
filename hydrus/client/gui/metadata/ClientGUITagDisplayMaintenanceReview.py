@@ -288,7 +288,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
-            return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+            return ClientGUIAsync.AsyncQtUpdater( 'review tag display maintenance status', self, loading_callable, work_callable, publish_callable )
             
         
         def _StartRefresh( self ):

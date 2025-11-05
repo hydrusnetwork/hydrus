@@ -111,7 +111,7 @@ class DBSideEffect( object ):
         
         if name in self._names_to_callables:
             
-            return self._names_to_callables[name]( name, *args, **kwargs )
+            return self._names_to_callables[name]( *args, **kwargs )
             
         if name in self._names_to_results:
             

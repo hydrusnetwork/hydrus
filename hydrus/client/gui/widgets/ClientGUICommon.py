@@ -877,20 +877,20 @@ class BetterHyperLink( BetterStaticText ):
     
     def __init__( self, parent, label, url ):
         
-        super().__init__( parent, label )
+        self._colours = {
+            'link_color' : QG.QColor( 0, 0, 255 )
+        }
         
         self._url = url
+        
+        super().__init__( parent, label )
+        
+        self.setObjectName( 'HydrusHyperlink' )
         
         self.setToolTip( ClientNetworkingFunctions.ConvertURLToHumanString( self._url ) )
         
         self.setTextFormat( QC.Qt.TextFormat.RichText )
         self.setTextInteractionFlags( QC.Qt.TextInteractionFlag.LinksAccessibleByMouse | QC.Qt.TextInteractionFlag.LinksAccessibleByKeyboard )
-        
-        self._colours = {
-            'link_color' : QG.QColor( 0, 0, 255 )
-        }
-        
-        self.setObjectName( 'HydrusHyperlink' )
         
         # need this polish to load the QSS property and update self._colours
         self.style().polish( self )

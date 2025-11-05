@@ -84,6 +84,12 @@ class CallAfterEventCatcher( QC.QObject ):
 
 def CallAfter( call_after_catcher: QC.QObject, qobject: QC.QObject, func, *args, **kwargs ):
     
+    # this is ugly since there's a tiny dangerzone between now and the postEvent where it could die during shutdown, but this is ok for now
+    if not QP.isValid( call_after_catcher ):
+        
+        return
+        
+    
     call = HydrusData.Call( func, *args, **kwargs )
     
     QW.QApplication.postEvent( call_after_catcher, CallAfterEvent( qobject, call ) )

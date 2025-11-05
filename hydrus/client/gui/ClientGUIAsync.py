@@ -114,13 +114,15 @@ class AsyncQtJob( object ):
         CG.client_controller.CallToThread( self._doWork )
         
     
+
 # this can refresh dirty stuff n times and won't spam work
 class AsyncQtUpdater( object ):
     
-    def __init__( self, win, loading_callable, work_callable, publish_callable, pre_work_callable = None ):
+    def __init__( self, name, win, loading_callable, work_callable, publish_callable, pre_work_callable = None ):
         
         # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
         
+        self._name = name
         self._win = win
         
         self._loading_callable = loading_callable
@@ -133,6 +135,11 @@ class AsyncQtUpdater( object ):
         self._is_working = False
         
         self._lock = threading.Lock()
+        
+    
+    def __repr__( self ):
+        
+        return f'AsyncQtUpdater: {self._name}'
         
     
     def _doWork( self ):

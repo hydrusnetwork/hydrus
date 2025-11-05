@@ -3278,7 +3278,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
             self._UpdateButtonLabel()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'review deferred delete table data fetch', self, loading_callable, work_callable, publish_callable )
         
     
     def _RefreshData( self ):

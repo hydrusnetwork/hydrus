@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v645"
+version = "v646"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"

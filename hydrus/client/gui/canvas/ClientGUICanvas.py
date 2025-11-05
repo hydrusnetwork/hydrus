@@ -319,6 +319,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     mediaCleared = QC.Signal()
     mediaChanged = QC.Signal( ClientMedia.MediaSingleton )
+    readyToDestroy = QC.Signal()
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
         
@@ -365,6 +366,8 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self.installEventFilter( self._click_drag_reporting_filter )
         
         self._media_container = ClientGUICanvasMedia.MediaContainer( self, self.CANVAS_TYPE, self._background_colour_generator, self._click_drag_reporting_filter )
+        
+        self._media_container.readyToDestroy.connect( self.readyToDestroy )
         
         self._last_drag_pos = None
         self._current_drag_is_touch = False
@@ -1411,6 +1414,11 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         return command_processed
+        
+    
+    def ReadyToDestroy( self ):
+        
+        return self._media_container.ReadyToDestroy()
         
     
     def ResetMediaWindowCenterPosition( self ):
@@ -2847,6 +2855,11 @@ class CanvasWithHovers( Canvas ):
         pass
         
     
+    def CanConsiderAClose( self ):
+        
+        return self._media_container.CanConsiderAClose()
+        
+    
     def CleanBeforeDestroy( self ):
         
         self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
@@ -3023,11 +3036,9 @@ class CanvasWithHovers( Canvas ):
         self.update()
         
     
-    def TryToDoPreClose( self ):
+    def UserOKToClose( self ):
         
-        can_close = True
-        
-        return can_close
+        return True
         
     
     def TIMERUIUpdate( self ):
@@ -3087,14 +3098,19 @@ class CanvasMediaList( CanvasWithHovers ):
             
         
     
-    def TryToDoPreClose( self ):
+    def UserOKToClose( self ):
         
-        if self._current_media is not None:
+        can_close = super().UserOKToClose()
+        
+        if can_close:
             
-            self.exitFocusMedia.emit( self._current_media )
+            if self._current_media is not None:
+                
+                self.exitFocusMedia.emit( self._current_media )
+                
             
         
-        return super().TryToDoPreClose()
+        return can_close
         
     
     def _GenerateHoverTopFrame( self ):
@@ -3430,7 +3446,14 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def TryToDoPreClose( self ):
+    def UserOKToClose( self ):
+        
+        can_close = super().UserOKToClose()
+        
+        if not can_close:
+            
+            return can_close
+            
         
         kept = list( self._kept )
         
@@ -3562,7 +3585,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
             
         
-        return CanvasMediaList.TryToDoPreClose( self )
+        return True
         
     
     def _Delete( self, media = None, reason = None, file_service_key = None ):

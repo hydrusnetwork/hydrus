@@ -245,6 +245,10 @@ class TemporaryIntegerTable( object ):
                 
                 column_defs = ', '.join( ( f'{column_name} INTEGER' for column_name in self._column_names ) )
                 
+                columns_listed = ', '.join( self._column_names )
+                
+                column_defs += f', PRIMARY KEY ( {columns_listed} )'
+                
                 self._cursor.execute( f'CREATE TABLE IF NOT EXISTS {self._table_name} ( {column_defs} );' )
                 
                 if '.' in self._table_name:

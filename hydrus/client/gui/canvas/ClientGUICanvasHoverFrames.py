@@ -2609,7 +2609,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             self._comparison_statement_updater_slow.update()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'duplicate filter comparison statements - fast', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _InitialiseComparisonStatementUpdaterSlow( self ):
@@ -2651,7 +2651,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             self._PopulateStatements( statements_and_scores, self._comparison_statement_names_slow )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'duplicate filter comparison statements - slow', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _PopulateStatements( self, statements_and_scores, names ):

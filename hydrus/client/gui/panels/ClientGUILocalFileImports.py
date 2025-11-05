@@ -556,7 +556,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             self._DoParseWork()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'local file imports parser', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _UpdateWidgets( self ):

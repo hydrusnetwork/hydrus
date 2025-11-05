@@ -2492,7 +2492,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             frame.SetPanel( panel )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'mr bones legacy', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetFileHistoryUpdater( self ):
@@ -2516,7 +2516,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             frame.SetPanel( panel )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'file history legacy', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterDatabase( self ):
@@ -2571,7 +2571,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_database_file_maintenance_during_active.setChecked( CG.client_controller.new_options.GetBoolean( 'file_maintenance_during_active' ) )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'database menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterFile( self ):
@@ -2645,7 +2645,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_file_import_folders_paused.setChecked( CG.client_controller.new_options.GetBoolean( 'pause_import_folders_sync' ) )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'file menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterNetwork( self ):
@@ -2673,7 +2673,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_network_paged_import_queues_paused.setChecked( CG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ) )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'network menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterPages( self ):
@@ -2838,7 +2838,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'pages menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterPending( self ):
@@ -2985,7 +2985,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_pending_submenu.menuAction().setVisible( has_pending_services )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'pending menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterServices( self ):
@@ -3102,7 +3102,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_services_admin_submenu.menuAction().setVisible( len( admin_services ) > 0 )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'services menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterTags( self ):
@@ -3123,7 +3123,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_tags_tag_display_maintenance_during_active.setChecked( CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ) )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'tags menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenubarGetMenuUpdaterUndo( self ):
@@ -3197,7 +3197,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             self._menubar_undo_submenu.menuAction().setEnabled( have_closed_pages or have_undo_stuff )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'undo menu', self, loading_callable, work_callable, publish_callable )
         
     
     def _InitialiseMenuInfoDatabase( self ):
@@ -3532,6 +3532,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'mpv report mode', 'Have the client report significant mpv debug information.', HG.mpv_report_mode, self._SwitchBoolean, 'mpv_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode (silent)', 'Have the network engine report new jobs, do not make spammy popups.', HG.network_report_mode_silent, self._SwitchBoolean, 'network_report_mode_silent' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'potential duplicates report mode', 'Report the speed and branching of the potential duplicate pair search.', HG.potential_duplicates_report_mode, self._SwitchBoolean, 'potential_duplicates_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the perceptual_hash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
@@ -7069,6 +7070,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.phash_generation_report_mode = not HG.phash_generation_report_mode
             
+        elif name == 'potential_duplicates_report_mode':
+            
+            HG.potential_duplicates_report_mode = not HG.potential_duplicates_report_mode
+            
         elif name == 'pubsub_report_mode':
             
             HG.pubsub_report_mode = not HG.pubsub_report_mode
@@ -7155,7 +7160,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._controller.UnclosePageKeys( page.GetPageKeys() )
         
-        self._controller.pub( 'notify_page_unclosed', page )
+        self._controller.pub( 'unclose_this_page', page )
         
         self._menu_updater_undo.update()
         
@@ -8436,16 +8441,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ReleaseMPVWidget( self, mpv_widget: ClientGUIMPV.MPVWidget ):
         
-        if CG.client_controller.new_options.GetBoolean( 'mpv_destruction_test' ):
-            
-            mpv_widget.deleteLater()
-            
-        else:
-            
-            mpv_widget.setParent( self )
-            
-            self._persistent_mpv_widgets.append( mpv_widget )
-            
+        mpv_widget.setParent( self )
+        
+        self._persistent_mpv_widgets.append( mpv_widget )
         
     
     def _UnloadAndPurgeQtMediaplayer( self, qt_media_player: ClientGUICanvasMedia.QtMediaPlayer ):
@@ -8858,6 +8856,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def TryToExit( self, restart = False, force_shutdown_maintenance = False ):
         
         if not self._controller.DoingFastExit():
+            
+            ( space_needed, free_space ) = CG.client_controller.db.GetSafeTransactionDiskSpaceAndCurrentFreeSpace()
+            
+            if free_space is not None and free_space < space_needed:
+                
+                text = f'You currently have very little free space ({HydrusData.ToHumanBytes( free_space )}) on your hydrus database drive partition. I think you should really have at least {HydrusData.ToHumanBytes( space_needed )} in order to save your exit data correctly. I recommend you free up disk space NOW.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'try exiting now', no_label = 'back out' )
+                
+                if result != QW.QDialog.DialogCode.Accepted:
+                    
+                    return
+                    
+                
             
             reasons_and_pages = self._notebook.GetAbleToCloseData( for_session_close = True )
             

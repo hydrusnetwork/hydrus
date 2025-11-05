@@ -391,19 +391,13 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._InitDB()
             self._CloseDBConnection()
+        
+        
+        ( space_wanted, free_space ) = self.GetSafeTransactionDiskSpaceAndCurrentFreeSpace()
+        
+        if free_space is not None and free_space < space_wanted:
             
-        
-        total_db_size = self.GetApproxTotalFileSize()
-        
-        size_check = min( int( total_db_size * 0.5 ), 500 * 1048576 )
-        
-        size_check = max( size_check, 64 * 1048576 )
-        
-        free_space = HydrusPaths.GetFreeSpace( db_dir )
-        
-        if free_space is not None and free_space < size_check:
-            
-            raise HydrusExceptions.DBAccessException( 'Sorry, it looks like the database drive partition has less than {} free space. It needs this for database transactions, so please free up some space.'.format( HydrusData.ToHumanBytes( size_check ) ) )
+            raise HydrusExceptions.DBAccessException( 'Sorry, it looks like the database drive partition has less than {} free space. It needs this for database transactions, so please free up some space.'.format( HydrusData.ToHumanBytes( space_wanted ) ) )
             
         
         self._InitDB()
@@ -1051,6 +1045,19 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
         
         return total
+        
+    
+    def GetSafeTransactionDiskSpaceAndCurrentFreeSpace( self ):
+        
+        total_db_size = self.GetApproxTotalFileSize()
+        
+        space_wanted = min( int( total_db_size * 0.5 ), 5 * 1024 * 1048576 )
+        
+        space_wanted = max( space_wanted, 64 * 1048576 )
+        
+        free_space = HydrusPaths.GetFreeSpace( self._db_dir )
+        
+        return ( space_wanted, free_space )
         
     
     def GetSSLPaths( self ):

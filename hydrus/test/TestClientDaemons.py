@@ -194,7 +194,7 @@ class TestDaemons( unittest.TestCase ):
             
             write_db_side_effect = HelperFunctions.DBSideEffect()
             
-            def handle_import_file( name, *args, **kwargs ):
+            def handle_import_file( *args, **kwargs ):
                 
                 ( file_import_job, ) = args
                 

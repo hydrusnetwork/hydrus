@@ -36,12 +36,14 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = None
         
-        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_initialised = False
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+        self._potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch(
+            ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext(),
+            True
+        )
+        
+        self._potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( 256 ) # just a nice hint
         
         self._fetch_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         
         self._fetched_pairs = []
         
@@ -198,34 +200,25 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def _InitialisePotentialDuplicatePairs( self ):
         
-        if self._value is None or self._potential_duplicate_id_pairs_and_distances_initialised or self._potential_duplicate_id_pairs_and_distances_fetch_started:
+        if self._value is None or self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised() or self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted():
             
             return
             
         
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = True
+        self._potential_duplicate_pairs_fragmentary_search.NotifySearchSpaceFetchStarted()
         
-        location_context = self._value.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
+        location_context = self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
         
         def work_callable():
             
             potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
-            
-            # ok randomise the order we'll do this guy, but only at the block level
-            # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
-            
-            potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
             
             return potential_duplicate_id_pairs_and_distances
             
         
         def publish_callable( potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances ):
             
-            self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
-            
-            self._potential_duplicate_id_pairs_and_distances_initialised = True
-            
-            self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+            self._potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
             
             self._RefetchPairs()
             
@@ -246,30 +239,26 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         def pre_work_callable():
             
-            if self._WeHaveSearchedEnough() or self._value is None or len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 or self._search_paused or not self._page_currently_shown:
+            if self._value is None or self._WeHaveSearchedEnough() or self._potential_duplicate_pairs_fragmentary_search.SearchDone() or self._search_paused or not self._page_currently_shown:
                 
                 self._UpdateSearchLabels()
                 
                 raise HydrusExceptions.CancelledException()
                 
             
-            potential_duplicates_search_context = self._value.GetPotentialDuplicatesSearchContext()
-            
-            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock( block_size = 256 )
-            
-            return ( potential_duplicates_search_context, block_of_id_pairs_and_distances, self._fetch_pairs_job_status )
+            return ( self._potential_duplicate_pairs_fragmentary_search, self._fetch_pairs_job_status )
             
         
         def work_callable( args ):
             
-            ( potential_duplicates_search_context, block_of_id_pairs_and_distances, job_status ) = args
+            ( potential_duplicate_pairs_fragmentary_search, job_status ) = args
             
             if job_status.IsCancelled():
                 
                 return ( [], job_status )
                 
             
-            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', potential_duplicate_pairs_fragmentary_search )
             
             potential_duplicate_media_result_pairs_and_distances.Sort( ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE, False )
             
@@ -296,7 +285,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             self._DoTestWork()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'preview auto-resolution search', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _InitialiseTestWorkUpdater( self ):
@@ -378,7 +367,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             self._DoTestWork()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'preview auto-resolution test', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _PassRowActivated( self, model_index: QC.QModelIndex ):
@@ -454,9 +443,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
-            if not self._potential_duplicate_id_pairs_and_distances_fetch_started:
+            if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted():
                 
                 self._InitialisePotentialDuplicatePairs()
                 
@@ -467,7 +456,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._fetched_pairs = []
         self._fetched_pairs_still_to_test = []
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
+        self._potential_duplicate_pairs_fragmentary_search = self._potential_duplicate_pairs_fragmentary_search.SpawnNewSearch()
         
         self._fetch_pairs_job_status.Cancel()
         
@@ -487,9 +476,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             return
             
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
-            if not self._potential_duplicate_id_pairs_and_distances_fetch_started:
+            if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted():
                 
                 self._InitialisePotentialDuplicatePairs()
                 
@@ -535,22 +524,22 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
     
     def _UpdateSearchLabels( self ):
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
             self._search_results_label.setText( f'initialising{HC.UNICODE_ELLIPSIS}' )
             
-        elif len( self._potential_duplicate_id_pairs_and_distances ) == 0:
+        elif self._potential_duplicate_pairs_fragmentary_search.SearchSpaceIsEmpty():
             
             self._search_results_label.setText( f'no potential pairs in this file domain!' )
             
-        elif len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+        elif self._potential_duplicate_pairs_fragmentary_search.SearchDone():
             
-            self._search_results_label.setText( f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances))} pairs searched; {HydrusNumbers.ToHumanInt( len( self._fetched_pairs ) )} matched' )
+            self._search_results_label.setText( f'{HydrusNumbers.ToHumanInt(self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace())} pairs searched; {HydrusNumbers.ToHumanInt( len( self._fetched_pairs ) )} matched' )
             
         else:
             
-            value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-            range = len( self._potential_duplicate_id_pairs_and_distances )
+            value = self._potential_duplicate_pairs_fragmentary_search.NumPairsSearched()
+            range = self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace()
             
             self._search_results_label.setText( f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( len( self._fetched_pairs ) )} matched{HC.UNICODE_ELLIPSIS}' )
             
@@ -647,6 +636,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value = new_value
         
+        self._potential_duplicate_pairs_fragmentary_search.SetPotentialDuplicatesSearchContext( self._value.GetPotentialDuplicatesSearchContext() )
+        
         if old_value is None:
             
             self._RefetchPairs()
@@ -658,16 +649,9 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             
             if new_search.GetFileSearchContext1().GetLocationContext() != old_search.GetFileSearchContext1().GetLocationContext():
                 
-                self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-                self._potential_duplicate_id_pairs_and_distances_initialised = False
-                self._potential_duplicate_id_pairs_and_distances_fetch_started = False
-                
                 self._InitialisePotentialDuplicatePairs()
                 
-                return
-                
-            
-            if new_search.DumpToString() != old_search.DumpToString():
+            elif new_search.DumpToString() != old_search.DumpToString():
                 
                 self._RefetchPairs()
                 

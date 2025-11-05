@@ -13,6 +13,7 @@ from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMediaResults
 from hydrus.client.db import ClientDBModule
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.media import ClientMediaResult
 
 class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule ):
@@ -183,7 +184,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         # there is some overhead for any search. even as we prime with a query_hash_ids, I suspect some searches will be bad.
         # if we dicover that fetching just two rows here every thirty seconds really screws things up, we'll want to batch this to 256 chunks or something
         
-        limit = 4096
+        limit = 2000
         
         unsearched_pairs_and_distances = self.modules_files_duplicates_auto_resolution_storage.GetUnsearchedPairsAndDistances( rule, limit = limit )
         
@@ -193,7 +194,11 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             potential_duplicates_search_context = rule.GetPotentialDuplicatesSearchContext()
             
-            matching_potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistancesFragmentary( potential_duplicates_search_context, unsearched_pairs_and_distances )
+            fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, False )
+            fragmentary_search.SetSearchSpace( unsearched_pairs_and_distances )
+            fragmentary_search.StartNewSearch()
+            
+            matching_potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistances( fragmentary_search )
             
             #
             

@@ -1,5 +1,3 @@
-import math
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -21,9 +19,6 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 
-# good idea to refresh this cache regularly, to clear out since-deleted pairs and catch other unusual desync situations
-POTENTIAL_PAIRS_REFRESH_TIMEOUT = 3600
-
 class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     restartedSearch = QC.Signal()
@@ -37,13 +32,9 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         #
         
-        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_initialised = False
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
-        self._potential_duplicate_id_pairs_and_distances_initialised_time = 0
+        self._potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         self._estimate_confidence_reached = False
         
         self._num_potential_duplicate_pairs = 0
@@ -159,16 +150,16 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             return False
             
         
-        if self._potential_duplicate_id_pairs_and_distances_initialised and HydrusTime.TimeHasPassed( self._potential_duplicate_id_pairs_and_distances_initialised_time + POTENTIAL_PAIRS_REFRESH_TIMEOUT ):
+        if self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised() and self._potential_duplicate_pairs_fragmentary_search.SearchSpaceIsStale():
             
             self._RefreshPotentialDuplicateIdPairsAndDistances()
             
             return False
             
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
-            if not self._potential_duplicate_id_pairs_and_distances_fetch_started:
+            if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted():
                 
                 self._InitialisePotentialDuplicatePairs()
                 
@@ -185,6 +176,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
     
     def _BroadcastValueChanged( self ):
+        
+        self._potential_duplicate_pairs_fragmentary_search.SetPotentialDuplicatesSearchContext( self.GetValue() )
         
         self._RefreshDuplicateCounts()
         
@@ -212,23 +205,19 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                 raise HydrusExceptions.CancelledException()
                 
             
-            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 or self._count_paused:
+            if self._potential_duplicate_pairs_fragmentary_search.SearchDone() or self._count_paused:
                 
                 self._UpdateCountLabel()
                 
                 raise HydrusExceptions.CancelledException()
                 
             
-            potential_duplicates_search_context = self.GetValue()
-            
-            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
-            
-            return ( self._potential_duplicate_id_pairs_and_distances_still_to_search, potential_duplicates_search_context, block_of_id_pairs_and_distances, self._count_job_status )
+            return ( self._potential_duplicate_pairs_fragmentary_search, self._count_job_status )
             
         
         def work_callable( args ):
             
-            ( potential_duplicate_id_pairs_and_distances_still_to_search, potential_duplicates_search_context, block_of_id_pairs_and_distances, job_status ) = args
+            ( potential_duplicate_pairs_fragmentary_search, job_status ) = args
             
             if job_status.IsCancelled():
                 
@@ -237,11 +226,11 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             start_time = HydrusTime.GetNowPrecise()
             
-            count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            count = CG.client_controller.Read( 'potential_duplicates_count_fragmentary', potential_duplicate_pairs_fragmentary_search )
             
             actual_work_period = HydrusTime.GetNowPrecise() - start_time
             
-            potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
+            potential_duplicate_pairs_fragmentary_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
             
             return ( count, job_status )
             
@@ -262,7 +251,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             self._num_potential_duplicate_pairs += count
             
-            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 and self._num_potential_duplicate_pairs == 0:
+            if self._potential_duplicate_pairs_fragmentary_search.SearchDone() and self._num_potential_duplicate_pairs == 0:
                 
                 self.thisSearchDefinitelyHasNoPairs.emit()
                 
@@ -272,17 +261,17 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             self._DoCountWork()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'potential duplicate pairs search context count', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _InitialisePotentialDuplicatePairs( self ):
         
-        if self._potential_duplicate_id_pairs_and_distances_initialised or self._potential_duplicate_id_pairs_and_distances_fetch_started:
+        if self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised() or self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted():
             
             return
             
         
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = True
+        self._potential_duplicate_pairs_fragmentary_search.NotifySearchSpaceFetchStarted()
         
         location_context = self.GetValue().GetFileSearchContext1().GetLocationContext()
         
@@ -290,29 +279,12 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
             
-            # ok randomise the order we'll do this guy, but only at the block level
-            # we'll preserve order each block came in since we'll then keep db-proximal indices close together on each actual block fetch
-            
-            if CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_context_panel_stops_to_estimate' ):
-                
-                potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
-                
-            else:
-                
-                potential_duplicate_id_pairs_and_distances.RandomiseForFastSearch()
-                
-            
             return potential_duplicate_id_pairs_and_distances
             
         
         def publish_callable( potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances ):
             
-            self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
-            
-            self._potential_duplicate_id_pairs_and_distances_initialised = True
-            self._potential_duplicate_id_pairs_and_distances_initialised_time = HydrusTime.GetNow()
-            
-            self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+            self._potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
             
             self._RefreshDuplicateCounts()
             
@@ -342,10 +314,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     
     def _RefreshPotentialDuplicateIdPairsAndDistances( self ):
         
-        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_initialised = False
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
-        self._potential_duplicate_id_pairs_and_distances_initialised_time = 0
+        self._potential_duplicate_pairs_fragmentary_search.ResetSearchSpace()
         
         self._RefreshDuplicateCounts()
         
@@ -360,7 +329,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._count_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
+        self._potential_duplicate_pairs_fragmentary_search = self._potential_duplicate_pairs_fragmentary_search.SpawnNewSearch()
         self._estimate_confidence_reached = False
         
         self._DoCountWork()
@@ -381,28 +350,28 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         tooltip_override = None
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
             text = f'initialising{HC.UNICODE_ELLIPSIS}'
             
-        elif len( self._potential_duplicate_id_pairs_and_distances ) == 0:
+        elif self._potential_duplicate_pairs_fragmentary_search.SearchSpaceIsEmpty():
             
             text = f'no potential pairs in this file domain!'
             
         else:
             
+            num_pairs_in_search_space = self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace()
+            num_pairs_searched = self._potential_duplicate_pairs_fragmentary_search.NumPairsSearched()
+            
             if self._WeAreDoingACountEstimateAndHaveEnough():
                 
-                if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+                if self._potential_duplicate_pairs_fragmentary_search.SearchDone():
                     
-                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances ))} pairs; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
+                    text = f'{HydrusNumbers.ToHumanInt( num_pairs_in_search_space )} pairs; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
                     
                 else:
                     
-                    value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-                    range = len( self._potential_duplicate_id_pairs_and_distances )
-                    
-                    estimate = int( self._num_potential_duplicate_pairs ) * ( range / value )
+                    estimate = self._potential_duplicate_pairs_fragmentary_search.EstimatedNumHits()
                     
                     estimate_base = estimate
                     estimate_base_multiplier = 1
@@ -416,19 +385,19 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
                     
                     estimate = estimate_base * estimate_base_multiplier
                     
-                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances ))} pairs; ~{HydrusNumbers.ToHumanInt( estimate )} match'
+                    text = f'{HydrusNumbers.ToHumanInt(num_pairs_in_search_space)} pairs; ~{HydrusNumbers.ToHumanInt( estimate )} match'
                     
                 
             else:
                 
-                if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+                if self._potential_duplicate_pairs_fragmentary_search.SearchDone():
                     
-                    text = f'{HydrusNumbers.ToHumanInt(len( self._potential_duplicate_id_pairs_and_distances))} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
+                    text = f'{HydrusNumbers.ToHumanInt(num_pairs_in_search_space)} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match'
                     
                 else:
                     
-                    value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-                    range = len( self._potential_duplicate_id_pairs_and_distances )
+                    value = num_pairs_searched
+                    range = num_pairs_in_search_space
                     
                     text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( self._num_potential_duplicate_pairs )} match{HC.UNICODE_ELLIPSIS}'
                     
@@ -456,75 +425,14 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         # this is mostly AI vomit, but I'm generally there. 95% of <2.5%, simple as
         
-        Z_CONFIDENCE = 1.9599639845 # 95% confidence
         REL_ERROR  = 0.025 # 2.5% error
         
-        def finite_population_correction( n: int, N: int ) -> float:
-            """FPC multiplier for standard errors; 1 if N is None or n==0."""
-            
-            if n <= 1:
-                
-                return 1.0
-                
-            
-            return math.sqrt((N - n) / (N - 1))
-            
-        
-        def wilson_ci( x: int, n: int, z: float ) -> tuple[float, float]:
-            """Wilson interval for p, clipped to [0,1]."""
-            
-            if n <= 0:
-                
-                return (0.0, 1.0)
-                
-            
-            phat = x / n
-            z2 = z*z
-            denom = 1 + z2/n
-            center = phat + z2/(2*n)
-            adj = z * math.sqrt(phat*(1-phat)/n + z2/(4*n*n))
-            lo = max(0.0, (center - adj)/denom)
-            hi = min(1.0, (center + adj)/denom)
-            
-            return ( lo, hi )
-            
-        
-        def wilson_ci_with_fpc( x: int, n: int, z: float, N: int ) -> tuple[float, float]:
-            """Apply FPC by shrinking the Wilson half-width (approximation)."""
-            
-            ( lo, hi ) = wilson_ci( x, n, z )
-            mid = 0.5*(lo + hi)
-            half = 0.5*(hi - lo)
-            half *= finite_population_correction(n, N)
-            
-            return ( max( 0.0, mid - half ), min( 1.0, mid + half ) )
-            
-        
-        def relative_halfwidth_from_counts( x: int, n: int, N: int ) -> float:
-            """
-            Returns rel_halfwidth where that is halfwidth / phat.
-            If x==0 or n==0, rel_halfwidth is math.inf.
-            """
-            
-            z = Z_CONFIDENCE
-            ( lo, hi ) = wilson_ci_with_fpc( x, n, z, N )
-            phat = x/n if n > 0 else 0.0
-            half = 0.5*(hi - lo)
-            rel = half / phat if phat > 0 else math.inf
-            
-            return rel
-            
-        
-        x = int( self._num_potential_duplicate_pairs )
-        n = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-        N = len( self._potential_duplicate_id_pairs_and_distances )
-        
-        if n == N or self._estimate_confidence_reached:
+        if self._estimate_confidence_reached:
             
             return True
             
         
-        rel = relative_halfwidth_from_counts( x, n, N )
+        rel = self._potential_duplicate_pairs_fragmentary_search.GetRelativeErrorAt95Certainty()
         
         should_stop = rel <= REL_ERROR
         
@@ -632,11 +540,6 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._tag_autocomplete_2.blockSignals( False )
         
-        if reinit_pairs:
-            
-            self._RefreshPotentialDuplicateIdPairsAndDistances()
-            
-        
         self._BroadcastValueChanged()
         
     
@@ -650,11 +553,6 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._tag_autocomplete_1.SetSynchronised( self._tag_autocomplete_2.IsSynchronised() )
         
         self._tag_autocomplete_1.blockSignals( False )
-        
-        if reinit_pairs:
-            
-            self._RefreshPotentialDuplicateIdPairsAndDistances()
-            
         
         self._BroadcastValueChanged()
         

@@ -1448,6 +1448,7 @@ class MediaContainer( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     readyForNeighbourPrefetch = QC.Signal()
+    readyToDestroy = QC.Signal()
     
     zoomChanged = QC.Signal( int, float )
     
@@ -1471,6 +1472,7 @@ class MediaContainer( QW.QWidget ):
         self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
         self._media = None
+        self._deferred_set_media_call = None
         self._show_action = CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
         self._start_paused = False
         self._start_with_embed = False
@@ -1487,6 +1489,8 @@ class MediaContainer( QW.QWidget ):
         }
         
         self._current_zoom_type = self._GetDefaultZoomType()
+        
+        self._closing_mpv_widgets = []
         
         self._media_window = None
         
@@ -1539,6 +1543,24 @@ class MediaContainer( QW.QWidget ):
         CG.client_controller.sub( self, 'Pause', 'pause_all_media' )
         
     
+    def _CheckClosingMPVWidgets( self ):
+        
+        for mpv_widget in list( self._closing_mpv_widgets ):
+            
+            if mpv_widget.ReadyForDestruction():
+                
+                mpv_widget.deleteLater()
+                
+                self._closing_mpv_widgets.remove( mpv_widget )
+                
+                if len( self._closing_mpv_widgets ) == 0:
+                    
+                    self.readyToDestroy.emit()
+                    
+                
+            
+        
+    
     def _DestroyOrHideThisMediaWindow( self, media_window ):
         
         if media_window is not None:
@@ -1569,7 +1591,20 @@ class MediaContainer( QW.QWidget ):
                 
                 if isinstance( media_window, ClientGUIMPV.MPVWidget ):
                     
-                    CG.client_controller.gui.ReleaseMPVWidget( media_window )
+                    mpv_widget = media_window
+                    
+                    if CG.client_controller.new_options.GetBoolean( 'mpv_destruction_test' ):
+                        
+                        mpv_widget.StartCleanBeforeDestroy()
+                        
+                        self._closing_mpv_widgets.append( mpv_widget )
+                        
+                        mpv_widget.readyForDestruction.connect( self._CheckClosingMPVWidgets )
+                        
+                    else:
+                        
+                        CG.client_controller.gui.ReleaseMPVWidget( mpv_widget )
+                        
                     
                 
                 if isinstance( media_window, QtMediaPlayer ):
@@ -1678,6 +1713,8 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window = CG.client_controller.gui.GetMPVWidget( self )
             
+            self._media_window.amInitialised.connect( self._NotifyMPVInitialised )
+            
             self._media_window.SetCanvasType( self._canvas_type )
             
             self._media_window.SetMedia( self._media, start_paused = self._start_paused )
@@ -1738,6 +1775,19 @@ class MediaContainer( QW.QWidget ):
             
         
         self.move( self.pos() + delta )
+        
+    
+    def _NotifyMPVInitialised( self ):
+        
+        if self._deferred_set_media_call is not None:
+            
+            if self.isVisible():
+                
+                self._deferred_set_media_call()
+                
+            
+            self._deferred_set_media_call = None
+            
         
     
     def _SetZoom( self, zoom: float, move_delta = None ):
@@ -2004,6 +2054,11 @@ class MediaContainer( QW.QWidget ):
     def BeginDrag( self ):
         
         self.parentWidget().BeginDrag()
+        
+    
+    def CanConsiderAClose( self ):
+        
+        return self.ReadyToSwitchMedia()
         
     
     def ClearMedia( self ):
@@ -2294,6 +2349,23 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def ReadyToDestroy( self ):
+        
+        return len( self._closing_mpv_widgets ) == 0
+        
+    
+    def ReadyToSwitchMedia( self ):
+        
+        if isinstance( self._media_window, ClientGUIMPV.MPVWidget ):
+            
+            return self._media_window.IsInitialised()
+            
+        else:
+            
+            return True
+            
+        
+    
     def RescueIfOffScreen( self ):
         
         my_ideal_size = self.sizeHint()
@@ -2389,6 +2461,13 @@ class MediaContainer( QW.QWidget ):
         
     
     def SetMedia( self, media: ClientMedia.MediaSingleton, maintain_zoom, maintain_zoom_type, maintain_pan, start_paused = None ):
+        
+        if not self.ReadyToSwitchMedia():
+            
+            self._deferred_set_media_call = HydrusData.Call( self.SetMedia, media, maintain_zoom, maintain_zoom_type, maintain_pan, start_paused = start_paused )
+            
+            return
+            
         
         previous_media = self._media
         

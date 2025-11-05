@@ -74,6 +74,7 @@ network_report_mode_silent = False
 pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False
+potential_duplicates_report_mode = False
 
 mpv_allow_crashy_files = False
 

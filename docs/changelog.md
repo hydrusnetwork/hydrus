@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 646](https://github.com/hydrusnetwork/hydrus/releases/tag/v646)
+
+### misc
+
+* I made mpv safer, both in the existing recycle system and the create/destruction test. if you tried the mpv test last week and got hangs when flicking quickly or when leaving certain media viewers on an mpv window, please give it another go
+* when pages load themselves initially, the individual file load jobs are split into different work packets for the worker pool, so a handful of big pages will no longer monopolise the queue. also, if a page is closed, the initial load pauses--if it is undo-reopened, initial load resumes
+* in the duplicate filter, when the difference in import time is less than 30 days, the 'imported at similar time (unhelpful average timestamp)' label is replaced with '_a little_ newer/older than' (issue #1898)
+* if you have a very large database, it now requires up to 5GB of free disk space on the db partition to boot (the cap was previously 512MB)
+* the db disk space check now occurs on shutdown too. if you have less space than it thinks is safe, it warns you that shutdown may not save correctlly and you should immediately free up some space. you have the choice of backing out or going ahead (issue #1895)
+
+### low hitrate potential duplicate pairs search
+
+* when potential duplicate pairs are counted or searched with just one small creator tag or a system:hash or something, and the final result is tiny, like 5 out of 750,000, it now won't iterate through your whole pair store but instead do a few blocks and then immediately come up with the answer in one step (issue #1778)
+* this works by examining the running sample, and if we are confident the hit-rate is lower than 1%, the search strategy now inverts, and rather than iterating through 750,000 pairs to find 5 that match the search context, it runs the underlying (typically very small and fast) file search and runs those n files against the 750,000 rows, getting the 5 hits
+* it should all just work, but let me know how it goes. does it kick in too late, too infrequently? are there search types it lags out at?
+* I've added a 'potential duplicates report mode' to `help->debug->report modes` that spits a bunch of search data to log. if you are into all this, please run it on a variety of searches in IRL situations and copy/paste to me
+* this was the last difficult job for duplicates auto-resolution. I've now got about a dozen small jobs for comparator tweaks and stuff, and maybe some smarter count update tech so we aren't resetting search spaces so much, and then this system is v1.0 done. I still feel good about hitting this by the end of the year
+
+### boring duplicates stuff
+
+* the routine that performs the 'search duplicate pairs in small increments' iteration now has a unified object to govern the search. it handles search space initialisation/reset, search progress, reset, block-popping, block-throttling, hitrate tracking, estimate confidence intervals, desired total hits, status reports, and now search strategy
+* put this new fragmentary search into the potential duplicate search context panel count call and the Client API version
+* put it in group/mixed filtering pairs fetch, the 'fetch some random', and the Client API version
+* put it in the auto-resolution preview panel thumbnail pair fetch
+* added another wilson interval confidence test to the fragmentary test to do 'are we 95% sure the hitrate is below x%?'
+* added some logic to figure out if a one-time file search or the remaining iterative search is going to be faster, including if the caller only wants n hits, and I profiled stuff a bit so I could establish a magic coefficient
+* the search space randomisation strategy is now based on whether the searcher is looking to stop/switch early or always wants to do the whole job
+* deleted some old pair-fetch code that is no longer used by the Client API since the pairfactory overhaul
+* updated my Client API unit tests for potential pair fetch to use nicer db mocking to handle some cleverer fragmentary update stuff properly
+* wrote some neater db routines for navigating these questions
+* cleaned up some search optimisations in here. not that significant, just edge cases
+
+### boring mpv stuff
+
+* all media viewers will now defer any media transition if they are currently looking at an mpv window that is still initialising. once the mpv window is ok, they'll recall the most recent set-media request and move on. this seems to fix the 'spawn errors/hang the client when scrolling through many mpv windows fast' issue in the mpv destruction test, and some related jank
+* all media viewer top level windows (i.e. not the preview) now immediately ignore window close events if the current mpv player is not yet initialised
+* in the new mpv destruction test, mpv windows are put in a holding queue and the mpv handle explicitly terminated before Qt widget deletion. previously this was handled by the python garbage collector, which is not ideal
+* when any top level media window (i.e. not the previews) gets a close signal, if there are any mpv windows awaiting destruction, the window hides itself and waits until mpv is clear before allowing Qt to destroy it
+* in both the 'is initialised?' and 'is cleaned up?' checks, we just go ahead if it has been 180 seconds
+* fixed an mpv options-setting bug that could sometimes print an error to log on shutdown
+
+### other boring stuff
+
+* all multi-column temp integer tables in the db are now row-unique
+* fixed an issue where a couple of shutdown-late CallAfter guys could try to do a CallAfter after Qt was down and the log was closed out, which would spam some error to the terminal
+* cleaned up some media viewer close logic
+* the thumbnail-preview focus-media logic is now more cleverly idempotent and stops spamming some excess update signals
+* all async updaters have names that now render nice in the 'review threads' debug panel (we're chasing down a guy that seems to be stuck on one client)
+
 ## [Version 645](https://github.com/hydrusnetwork/hydrus/releases/tag/v645)
 
 ### mpv samsara
@@ -604,48 +653,3 @@ title: Changelog
 * wrote some code to better handle and report critical hash definition errors during forced file maintenance
 * network jobs that are expecting HTML/JSON no longer error out if they exceed 100MB. such jobs now spool to a temp file after 10MB. good luck to the guy with the larger-than 100MB JSON files
 * when hydrus tries to import an expected HTML/JSON that doesn't seem to parse correct (just in case it is actually some raw file redirect), the copy from the network job to the import file temp location source is a smarter, low-memory stream. other work is still going to stay stuck in memory, however, so we'll see how it shakes out
-
-## [Version 635](https://github.com/hydrusnetwork/hydrus/releases/tag/v635)
-
-### misc
-
-* with help from a user, the manual `file->import files` dialog has a new 'search subdirectories' checkbox, default on, that, if off, allows you to just search the files in the base dir
-* import folders now also have a checkbox for 'search subdirectories', for the same thing
-* the importer 'file log' menu now offers to remove everything except unknown (i.e. unstarted) items from the queue
-* the `network->data->review current network jobs` window now has auto-refresh, with custom time delta
-* if the client files manager runs into a critical drive error and subs, paged importers, and import folders are paused, the `file->import and export folders->pause` menu is now correctly updated immediately to reflect this
-
-### cog icons
-
-* after various discussions about 'advanced mode', I've decided to push more on cog icon buttons to tuck away advanced settings and commands. I hope to slowly slowly migrate most 'advanced mode' stuff to cog icons and similar
-* I fired up Inkscape and made a new .svg cog icon. it will draw with nice antialiasing and scale up nicely as we move to UI-scale-scaling buttons in future. please bear with my artistic skill, but I think it is ok in both light and dark modes. the recent cool thing is, if it isn't to your taste, you can now replace/edit the file yourself and put a copy in `/db/static` and hydrus will use that instead
-* the file sort widget, when set to namespaces mode, now tucks the tag service selector button and tag display type selector button (previously also only visible in advanced mode), into a cog icon button
-* the file collect widget now always has a cog icon. it handles tag service and tag display type selection
-* the file sort widget in 'num tags' sort now has a cog icon allowing tag service selection. the current tag service of the search page no longer controls the tag service in these sorts--you set what you want
-
-### retry icon
-
-* the 'retry failed' and 'retry ignored' buttons in gallery pages, watcher pages, edit subscriptions, and edit subscription panels are now collapsed into one new menu icon button. this liberates a row of space in the downloader pages
-* lists across the program will update their button 'enabled' status instantly after various advanced commands now. if you see the list text change, the buttons should update
-
-### boring stuff
-
-* wrote a nicer menu templating system (old system was all horrible tuple hardcoding)
-* the scrollable menu choice buttons now all use the new templating system
-* the menu icon buttons now all use the new templating system
-* the menu buttons now all use the new templating system
-* wrote a 'cog icon' class just to keep track of it nicely across the program
-* fixed up alignment and position (cog icons will now generally always go far right) of buttons in network job widget
-* secondary file sort now applies within collections
-* I did some prep work for allowing customisable secondary sort on any file page, but we aren't quite there yet
-* replace my ancient 'buffered window icon' widget with a simple QLabel with a pixmap, affecting: the trash and inbox icons in the media viewer top-right hover, Mr Bones, Lain, and the 'open externally' thumb-and-button widget in the media viewer
-* brushed up the grammar of the various 'text-and-gauge' stuff that I moved to always be zero-indexed the other week, particularly in the subscription popups
-
-### boring url stuff
-
-* updated `URLClass` to now hold a static one-domain `URLDomainMask` and use it for all internal `netloc` tests and subdomain clipping
-* added raw domain rules to the new `URLDomainMask`
-* added more `URLDomainMask` unit tests for this
-* added a unit test to better check discarding subdomains at the url class level
-* fixed 'www'-stripping alternate-url searching for urls with more components like `www.subdomain.something.something`
-* the network engine is now more tolerant of non-urls, only checking strictly when you input into downloaders. previously, any normalise call on something that didn't parse would raise an error--now it is a no-op. the client api will respond to invalid `get_url_x` and `associate_url` URL params as best it can rather than responding with 400 (while still erroring out on `add_url`), and when you export urls with a sidecar, invalid urls should be outputted ok

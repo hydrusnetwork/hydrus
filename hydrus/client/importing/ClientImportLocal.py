@@ -872,7 +872,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                 elif file_seed.status == CC.STATUS_ERROR:
                     
-                    HydrusData.Print( 'A file failed to import from import folder ' + self._name + ':' + path )
+                    HydrusData.Print( f'Import folder "{self._name}" failed to import: "{path}"' )
                     
                 
                 i += 1

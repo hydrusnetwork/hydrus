@@ -401,32 +401,29 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     
     if s_import_timestamp is not None and c_import_timestamp is not None:
         
-        if abs( s_import_timestamp - c_import_timestamp ) < one_month:
+        if s_import_timestamp < c_import_timestamp:
             
-            score = 0
-            
-            statement = 'imported at similar time ({})'.format( HydrusTime.TimestampToPrettyTimeDelta( int( ( s_import_timestamp + c_import_timestamp ) / 2 ) ) )
+            operator = 'older than'
+            score = duplicate_comparison_score_older
             
         else:
             
-            if s_import_timestamp < c_import_timestamp:
-                
-                operator = 'older than'
-                score = duplicate_comparison_score_older
-                
-            else:
-                
-                operator = 'newer than'
-                score = -duplicate_comparison_score_older
-                
+            operator = 'newer than'
+            score = -duplicate_comparison_score_older
             
-            if they_are_pixel_duplicates:
-                
-                score = 0
-                
+        
+        if abs( s_import_timestamp - c_import_timestamp ) < one_month:
             
-            statement = '{}, {} {}'.format( HydrusTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, HydrusTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
+            operator = 'a little ' + operator
+            score = 0
             
+        
+        if they_are_pixel_duplicates:
+            
+            score = 0
+            
+        
+        statement = '{}, {} {}'.format( HydrusTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, HydrusTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         

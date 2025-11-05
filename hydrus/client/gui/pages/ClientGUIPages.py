@@ -84,6 +84,8 @@ class Page( QW.QWidget ):
         self._page_manager = page_manager
         
         self._initial_hashes = initial_hashes
+        self._initial_hash_blocks_still_to_load = []
+        self._initial_media_results_loaded = []
         
         self._page_manager.SetVariable( 'page_key', self._page_key )
         
@@ -94,6 +96,8 @@ class Page( QW.QWidget ):
         
         self._initialised = len( initial_hashes ) == 0
         self._pre_initialisation_media_results = []
+        
+        self._initial_media_results_load_updater = self._InitialiseInitialMediaResultsLoadUpdater()
         
         self._pretty_status = ''
         self._pretty_status_override = ''
@@ -181,6 +185,11 @@ class Page( QW.QWidget ):
         self._sidebar.ConnectMediaResultsPanelSignals( self._media_panel )
         
     
+    def _DoInitialMediaResultsLoadWork( self ):
+        
+        self._initial_media_results_load_updater.update()
+        
+    
     def _GetCurrentSessionPageHashesHash( self ):
         
         hashlist = self.GetHashes()
@@ -188,6 +197,84 @@ class Page( QW.QWidget ):
         hashlist_hashable = tuple( hashlist )
         
         return hash( hashlist_hashable )
+        
+    
+    def _InitialiseInitialMediaResultsLoadUpdater( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def pre_work_callable():
+            
+            if len( self._initial_hash_blocks_still_to_load ) == 0:
+                
+                self._initialised = True
+                
+            
+            if self._initialised:
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            if CG.client_controller.PageClosedButNotDestroyed( self._page_key ):
+                
+                raise HydrusExceptions.CancelledException()
+                
+            
+            status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusNumbers.ValueRangeToPrettyString( len( self._initial_media_results_loaded ), len( self._initial_hashes ) )}'
+            
+            self._SetPrettyStatus( status, override = True )
+            
+            block_of_hashes = self._initial_hash_blocks_still_to_load.pop()
+            
+            return block_of_hashes
+            
+        
+        def work_callable( block_of_hashes ):
+            
+            block_of_media_results = CG.client_controller.Read( 'media_results', block_of_hashes )
+            
+            return block_of_media_results
+            
+        
+        def publish_callable( block_of_media_results ):
+            
+            self._initial_media_results_loaded.extend( block_of_media_results )
+            
+            if len( self._initial_hash_blocks_still_to_load ) == 0:
+                
+                self._SetPrettyStatus( '', override = True )
+                
+                hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self._initial_media_results_loaded }
+                
+                sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in self._initial_hashes if hash in hashes_to_media_results ]
+                
+                media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._page_manager, sorted_initial_media_results )
+                
+                self._SwapMediaResultsPanel( media_panel )
+                
+                self._initialised = True
+                self._initial_media_results_loaded = []
+                self._initial_hashes = []
+                
+                if len( self._pre_initialisation_media_results ) > 0:
+                    
+                    media_panel.AddMediaResults( self._page_key, self._pre_initialisation_media_results )
+                    
+                    self._pre_initialisation_media_results = []
+                    
+                
+                CG.client_controller.CallAfterQtSafe( self, self._sidebar.Start )
+                
+            else:
+                
+                self._DoInitialMediaResultsLoadWork()
+                
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( 'page initial media results load', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _PreviewCanvasWantsToLaunchMediaViewer( self ):
@@ -704,6 +791,11 @@ class Page( QW.QWidget ):
         return self._page_manager.GetType() == ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS
         
     
+    def NotifyUnclosed( self ):
+        
+        self._DoInitialMediaResultsLoadWork()
+        
+    
     def PageHidden( self ):
         
         self._sidebar.PageHidden()
@@ -723,6 +815,8 @@ class Page( QW.QWidget ):
         self._sidebar.PageShown()
         self._media_panel.PageShown()
         self._preview_canvas.PageShown()
+        
+        self._DoInitialMediaResultsLoadWork()
         
     
     def RefreshQuery( self ):
@@ -837,65 +931,6 @@ class Page( QW.QWidget ):
             
         
     
-    def _StartInitialMediaResultsLoad( self ):
-        
-        def qt_code_status( status ):
-            
-            self._SetPrettyStatus( status, override = True )
-            
-        
-        controller = CG.client_controller
-        initial_hashes = HydrusLists.DedupeList( self._initial_hashes )
-        
-        def work_callable():
-            
-            initial_media_results = []
-            
-            for ( num_done, num_to_do, group_of_initial_hashes ) in HydrusLists.SplitListIntoChunksRich( initial_hashes, 100 ):
-                
-                more_media_results = controller.Read( 'media_results', group_of_initial_hashes )
-                
-                initial_media_results.extend( more_media_results )
-                
-                status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusNumbers.ValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
-                
-                CG.client_controller.CallAfterQtSafe( self, qt_code_status, status )
-                
-            
-            hashes_to_media_results = { media_result.GetHash() : media_result for media_result in initial_media_results }
-            
-            sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in initial_hashes if hash in hashes_to_media_results ]
-            
-            return sorted_initial_media_results
-            
-        
-        def publish_callable( media_results ):
-            
-            self._SetPrettyStatus( '', override = True )
-            
-            media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._page_manager, media_results )
-            
-            self._SwapMediaResultsPanel( media_panel )
-            
-            if len( self._pre_initialisation_media_results ) > 0:
-                
-                media_panel.AddMediaResults( self._page_key, self._pre_initialisation_media_results )
-                
-                self._pre_initialisation_media_results = []
-                
-            
-            # do this 'after' so on a long session setup, it all boots once session loaded
-            CG.client_controller.CallAfterQtSafe( self, self._sidebar.Start )
-            
-            self._initialised = True
-            self._initial_hashes = []
-            
-        
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        job.start()
-        
-    
     def SetSort( self, media_sort, do_sort = True ):
         
         self._sidebar.SetMediaSort( media_sort, do_sort = do_sort )
@@ -905,14 +940,16 @@ class Page( QW.QWidget ):
         
         if self._initial_hashes is not None and len( self._initial_hashes ) > 0:
             
-            self._StartInitialMediaResultsLoad()
+            self._initial_hash_blocks_still_to_load = list( HydrusLists.SplitListIntoChunks( self._initial_hashes, 100 ) )
+            
+            self._DoInitialMediaResultsLoadWork()
             
         else:
             
+            self._initialised = True
+            
             # do this 'after' so on a long session setup, it all boots once session loaded
             CG.client_controller.CallAfterQtSafe( self, self._sidebar.Start )
-            
-            self._initialised = True
             
         
     
@@ -1044,7 +1081,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._closed_pages = []
         
         CG.client_controller.sub( self, 'RefreshPageName', 'refresh_page_name' )
-        CG.client_controller.sub( self, 'NotifyPageUnclosed', 'notify_page_unclosed' )
+        CG.client_controller.sub( self, 'TryToUncloseThisPage', 'unclose_this_page' )
         CG.client_controller.sub( self, '_UpdateOptions', 'notify_new_options' )
         
         self.currentChanged.connect( self.pageJustChanged )
@@ -3521,7 +3558,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return page
         
     
-    def NotifyPageUnclosed( self, page ):
+    def NotifyUnclosed( self ):
+        
+        for page in self._GetPages():
+            
+            page.NotifyUnclosed()
+            
+        
+    
+    def TryToUncloseThisPage( self, page ):
         
         page_key = page.GetPageKey()
         
@@ -3539,6 +3584,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self.setCurrentIndex( insert_index )
                 
                 CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
+                
+                page.NotifyUnclosed()
                 
                 self._closed_pages.remove( ( index, closed_page_key ) )
                 

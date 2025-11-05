@@ -215,6 +215,11 @@ class MPVMediator( object ):
         self._mpv_player = mpv_player
         
     
+    def BlockingTerminate( self ):
+        
+        self._mpv_player.terminate()
+        
+    
     def ForceStop( self ):
         
         self._mpv_player.stop()
@@ -417,6 +422,7 @@ class MPVMediatorPolite( MPVMediator ):
         self._mpv_player.observe_property( 'playback-time', self._Catcher )
         self._mpv_player.observe_property( 'path', self._Catcher )
         self._mpv_player.observe_property( 'playlist', self._Catcher )
+        # self._mpv_player.observe_property( 'vo-configured', self._Catcher ) kind of useful, it seems to show when the video connection with Qt is initialised
         
     
     def _Catcher( self, name, value ):
@@ -585,11 +591,18 @@ class MPVMediatorPolite( MPVMediator ):
         
     
 
+MPV_WIDGET_STATE_INITIALISING = 0
+MPV_WIDGET_STATE_WORKING = 1
+MPV_WIDGET_STATE_CLEANING_UP = 2
+MPV_WIDGET_STATE_READY_TO_DESTROY = 3
+
 #Not sure how well this works with hardware acceleration. This just renders to a QWidget. In my tests it seems fine, even with vdpau video out, but I'm not 100% sure it actually uses hardware acceleration.
 #Here is an example on how to render into a QOpenGLWidget instead: https://gist.github.com/cosven/b313de2acce1b7e15afda263779c0afc
 class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
+    amInitialised = QC.Signal()
     launchMediaViewer = QC.Signal()
+    readyForDestruction = QC.Signal()
     
     def __init__( self, parent ):
         
@@ -610,6 +623,10 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._black_png_path = HydrusStaticDir.GetStaticPath( 'blacksquare.png' )
         self._hydrus_png_path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         self._currently_in_media_load_error_state = False
+        
+        self._current_mpv_player_state = MPV_WIDGET_STATE_INITIALISING
+        self._initialisation_start_time = HydrusTime.GetNow()
+        self._cleanup_start_time = 0
         
         global LOCALE_IS_SET
         
@@ -703,6 +720,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         except mpv.ShutdownError:
             
+            self._NotifyInitialisationIsDone()
+            
             # fugg, libmpv core probably shut down already. not much we can do but panic
             self._currently_in_media_load_error_state = True
             
@@ -786,6 +805,16 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._player.register_event_callback( event_handler )
         
     
+    def _NotifyInitialisationIsDone( self ):
+        
+        if self._current_mpv_player_state == MPV_WIDGET_STATE_INITIALISING:
+            
+            self._current_mpv_player_state = MPV_WIDGET_STATE_WORKING
+            
+            self.amInitialised.emit()
+            
+        
+    
     def ClearMedia( self ):
         
         self.SetMedia( None )
@@ -796,6 +825,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         try:
             
             if event.type() == MPVFileLoadedEventType:
+                
+                self._NotifyInitialisationIsDone()
                 
                 if self._mpv_mediator.LooksLikeALoadError():
                     
@@ -866,6 +897,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif event.type() == MPVPlaybackRestartedType:
                 
+                self._NotifyInitialisationIsDone()
+                
                 # a seek is now complete and mpv has loaded up the frame
                 
                 self._mpv_mediator.NotifySeekComplete()
@@ -894,6 +927,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         # we had to rewrite this thing due to some threading/loop/event issues at the lower mpv level
         # it now broadcasts to all mpv widgets, so we could unload all on very serious errors, but for now I've hacked in the problem widget handle so we'll only do it for us right now
+        
+        self._NotifyInitialisationIsDone() 
         
         original_media = self._media
         
@@ -1038,6 +1073,13 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return self._current_seek_to_start_count > 0
         
     
+    def IsInitialised( self ):
+        
+        INITIALISE_TOOK_TOO_LONG_PERIOD = 180
+        
+        return self._current_mpv_player_state != MPV_WIDGET_STATE_INITIALISING or HydrusTime.TimeHasPassed( self._initialisation_start_time + INITIALISE_TOOK_TOO_LONG_PERIOD )
+        
+    
     def IsPaused( self ):
         
         if self._currently_in_media_load_error_state:
@@ -1148,6 +1190,13 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         return command_processed
+        
+    
+    def ReadyForDestruction( self ):
+        
+        TERMINATE_TOOK_TOO_LONG_PERIOD = 180
+        
+        return self._current_mpv_player_state == MPV_WIDGET_STATE_READY_TO_DESTROY or HydrusTime.TimeHasPassed( self._cleanup_start_time + TERMINATE_TOOK_TOO_LONG_PERIOD )
         
     
     def Seek( self, time_index_ms, precise = True ):
@@ -1400,6 +1449,40 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+    def StartCleanBeforeDestroy( self ):
+        
+        self._current_mpv_player_state = MPV_WIDGET_STATE_CLEANING_UP
+        self._cleanup_start_time = HydrusTime.GetNow()
+        
+        mpv_mediator = self._mpv_mediator
+        
+        def work_callable():
+            
+            mpv_mediator.BlockingTerminate()
+            
+            return 1
+            
+        
+        def publish_callable( _ ):
+            
+            self._current_mpv_player_state = MPV_WIDGET_STATE_READY_TO_DESTROY
+            
+            self.readyForDestruction.emit()
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            HydrusData.ShowText( 'Unable to terminate mpv instance:' )
+            HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+            
+            self._current_mpv_player_state = MPV_WIDGET_STATE_READY_TO_DESTROY
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        
+        job.start()
+        
+    
     def StopForSlideshow( self, value ):
         
         self._stop_for_slideshow = value
@@ -1443,6 +1526,11 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
     
     def UpdateConfAndCoreOptions( self ):
+        
+        if self._player.handle is None or self._current_mpv_player_state in ( MPV_WIDGET_STATE_CLEANING_UP, MPV_WIDGET_STATE_READY_TO_DESTROY ):
+            
+            return
+            
         
         # this fixes at least one instance of the 100% CPU 'too many events queued' bug, which was down to bad APNG EOF rewind navigation
         loop_playlist = CG.client_controller.new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' )

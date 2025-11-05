@@ -1556,9 +1556,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             self._duplicates_auto_resolution_rules.SetData( rules )
             
         
-        updater = ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
-        
-        return updater
+        return ClientGUIAsync.AsyncQtUpdater( 'review auto-resolution rules fetch', self, loading_callable, work_callable, publish_callable )
         
     
     def _RegenNumbers( self ):

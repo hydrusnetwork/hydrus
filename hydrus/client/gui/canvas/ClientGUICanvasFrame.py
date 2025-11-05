@@ -29,6 +29,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         super().__init__( parent_to_set, 'hydrus client media viewer', 'media_viewer' )
         
         self._canvas_window = None
+        self._we_are_hidden_and_cleaning_up_before_destroy = False
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media_viewer' ] )
         
@@ -39,36 +40,96 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         self._was_maximised_before_fullscreen = True
         
     
-    def moveEvent(self, event):
+    def _NotifyCanvasReadyToDestroy( self ):
+        
+        if self._we_are_hidden_and_cleaning_up_before_destroy:
+            
+            if self.ReadyToDestroy():
+                
+                self.close()
+                
+            
+        
+    
+    def moveEvent( self, event ):
         
         # manually calling SaveTLW on moveEvent fixes a bug that does not save the position of the window when it is moved, but not resized, by Windows Snap™
         # but it's probably useful on all platforms with window movement keys so removing #if HC.PLATFORM_WINDOWS
         ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
         
-        super().moveEvent(event)
+        super().moveEvent( event )
+        
+    
+    def ReadyToDestroy( self ):
+        
+        if self._canvas_window is not None:
+            
+            return self._canvas_window.ReadyToDestroy()
+            
+        
+        return True
         
     
     def closeEvent( self, event ):
         
-        if self._canvas_window is not None:
+        if self._we_are_hidden_and_cleaning_up_before_destroy:
             
-            can_close = self._canvas_window.TryToDoPreClose()
-            
-            if can_close:
+            if self.ReadyToDestroy():
                 
-                # only affect media viewer TLWs
-                if CG.client_controller.new_options.GetBoolean( 'save_window_size_and_position_on_close' ):
-                    
-                    ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
-                    
-                
-                self._canvas_window.CleanBeforeDestroy()
-                
-                super().closeEvent( event )
+                event.accept()
                 
             else:
                 
                 event.ignore()
+                
+                CG.client_controller.CallLaterQtSafe( self, 5.0, 'closing old media viewer safety check', self.close )
+                
+            
+            return
+            
+        
+        if self._canvas_window is not None:
+            
+            if not self._canvas_window.CanConsiderAClose():
+                
+                event.ignore()
+                
+                return
+                
+            
+            if not self._canvas_window.UserOKToClose():
+                
+                event.ignore()
+                
+                return
+                
+            
+            # WE ARE CLOSING
+            
+            # only affect media viewer TLWs
+            if CG.client_controller.new_options.GetBoolean( 'save_window_size_and_position_on_close' ):
+                
+                ClientGUITopLevelWindows.SaveTLWSizeAndPosition( self, self._frame_key )
+                
+            
+            self._canvas_window.CleanBeforeDestroy()
+            
+            super().closeEvent( event )
+            
+            if self.ReadyToDestroy():
+                
+                event.accept()
+                
+            else:
+                
+                self.hide()
+                
+                self._we_are_hidden_and_cleaning_up_before_destroy = True
+                
+                event.ignore()
+                
+                # just in case somehow the signal doesn't fire
+                CG.client_controller.CallLaterQtSafe( self, 5.0, 'closing old media viewer safety check', self.close )
                 
             
         else:
@@ -193,6 +254,8 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
     def SetCanvas( self, canvas_window: ClientGUICanvas.CanvasWithHovers ):
         
         self._canvas_window = canvas_window
+        
+        self._canvas_window.readyToDestroy.connect( self._NotifyCanvasReadyToDestroy )
         
         self.setFocusProxy( self._canvas_window )
         

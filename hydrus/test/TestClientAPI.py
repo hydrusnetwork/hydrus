@@ -5315,6 +5315,23 @@ class TestClientAPI( unittest.TestCase ):
     
     def _test_manage_duplicate_potential_pairs( self, connection, set_up_permissions ):
         
+        def fragmentary_fetch_factory( result ):
+            
+            def the_callable( fragmentary_search, *args, **kwargs ):
+                
+                while not fragmentary_search.SearchDone():
+                    
+                    fragmentary_search.PopBlock()
+                    
+                
+                return result
+                
+            
+            return the_callable
+            
+        
+        #
+        
         api_permissions = set_up_permissions[ 'everything' ]
         
         access_key_hex = api_permissions.GetAccessKey().hex()
@@ -5388,17 +5405,32 @@ class TestClientAPI( unittest.TestCase ):
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
-        
         path = '/manage_file_relationships/get_potential_pairs'
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddCallable( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', fragmentary_fetch_factory( test_potential_duplicate_media_result_pairs_and_distances ) )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 2 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'potential_duplicate_id_pairs_and_distances' )
+            self.assertEqual( all_read_calls[0].args[1], default_location_context )
+            
+            self.assertEqual( all_read_calls[1].args[0], 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
+            self.assertTrue( isinstance( all_read_calls[1].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context = all_read_calls[1].args[1].GetPotentialDuplicatesSearchContext()
+            
         
         text = str( data, 'utf-8' )
         
@@ -5415,18 +5447,6 @@ class TestClientAPI( unittest.TestCase ):
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
         self.assertEqual( hashes_we_got_back, hashes_we_expect )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances' )
-        
-        ( read_location_context, ) = args
-        
-        self.assertEqual( read_location_context, default_location_context )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
-        
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        self.assertEqual( read_potential_duplicate_id_pairs_and_distances.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
         
         file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
@@ -5446,10 +5466,6 @@ class TestClientAPI( unittest.TestCase ):
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
-        
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
             test_tag_service_key_1.hex(),
             urllib.parse.quote( json.dumps( test_tags_1 ) ),
@@ -5460,11 +5476,30 @@ class TestClientAPI( unittest.TestCase ):
             test_max_hamming_distance
         )
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddCallable( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', fragmentary_fetch_factory( test_potential_duplicate_media_result_pairs_and_distances ) )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 2 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'potential_duplicate_id_pairs_and_distances' )
+            self.assertEqual( all_read_calls[0].args[1], default_location_context )
+            
+            self.assertEqual( all_read_calls[1].args[0], 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
+            self.assertTrue( isinstance( all_read_calls[1].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context = all_read_calls[1].args[1].GetPotentialDuplicatesSearchContext()
+            
         
         text = str( data, 'utf-8' )
         
@@ -5481,18 +5516,6 @@ class TestClientAPI( unittest.TestCase ):
         hashes_we_expect = [ ( mr_1.GetHash(), mr_2.GetHash() ) for ( mr_1, mr_2 ) in test_potential_duplicate_media_result_pairs_and_distances_duplicate.GetPairs() ]
         
         self.assertEqual( hashes_we_got_back, hashes_we_expect )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances' )
-        
-        ( read_location_context, ) = args
-        
-        self.assertEqual( read_location_context, default_location_context )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
-        
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        self.assertEqual( read_potential_duplicate_id_pairs_and_distances.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
         
         file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
@@ -5512,10 +5535,6 @@ class TestClientAPI( unittest.TestCase ):
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
-        
         test_max_num_pairs = 10
         
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&max_num_pairs={}'.format(
@@ -5529,11 +5548,30 @@ class TestClientAPI( unittest.TestCase ):
             test_max_num_pairs
         )
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddCallable( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', fragmentary_fetch_factory( test_potential_duplicate_media_result_pairs_and_distances ) )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 2 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'potential_duplicate_id_pairs_and_distances' )
+            self.assertEqual( all_read_calls[0].args[1], default_location_context )
+            
+            self.assertEqual( all_read_calls[1].args[0], 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
+            self.assertTrue( isinstance( all_read_calls[1].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context = all_read_calls[1].args[1].GetPotentialDuplicatesSearchContext()
+            
         
         text = str( data, 'utf-8' )
         
@@ -5559,18 +5597,6 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( hashes_we_got_back, hashes_we_expect_cut_down_and_in_order )
         
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances' )
-        
-        ( read_location_context, ) = args
-        
-        self.assertEqual( read_location_context, default_location_context )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
-        
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        self.assertEqual( read_potential_duplicate_id_pairs_and_distances.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
-        
         file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
         potentials_search_type = read_potential_duplicates_search_context.GetDupeSearchType()
@@ -5589,10 +5615,6 @@ class TestClientAPI( unittest.TestCase ):
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
-        
         test_max_num_pairs = 10
         
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&max_num_pairs={}&duplicate_pair_sort_type={}&duplicate_pair_sort_asc={}'.format(
@@ -5608,11 +5630,30 @@ class TestClientAPI( unittest.TestCase ):
             'true'
         )
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddCallable( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', fragmentary_fetch_factory( test_potential_duplicate_media_result_pairs_and_distances ) )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 2 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'potential_duplicate_id_pairs_and_distances' )
+            self.assertEqual( all_read_calls[0].args[1], default_location_context )
+            
+            self.assertEqual( all_read_calls[1].args[0], 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
+            self.assertTrue( isinstance( all_read_calls[1].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context = all_read_calls[1].args[1].GetPotentialDuplicatesSearchContext()
+            
         
         text = str( data, 'utf-8' )
         
@@ -5637,18 +5678,6 @@ class TestClientAPI( unittest.TestCase ):
         hashes_we_expect_cut_down_and_in_order = [ pair for pair in hashes_we_expect if pair in hashes_we_got_back_fast ]
         
         self.assertEqual( hashes_we_got_back, hashes_we_expect_cut_down_and_in_order )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances' )
-        
-        ( read_location_context, ) = args
-        
-        self.assertEqual( read_location_context, default_location_context )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
-        
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        self.assertEqual( read_potential_duplicate_id_pairs_and_distances.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
         
         file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
@@ -5717,12 +5746,6 @@ class TestClientAPI( unittest.TestCase ):
         
         test_potential_duplicate_media_result_pairs_and_distances_duplicate = test_potential_duplicate_media_result_pairs_and_distances.Duplicate()
         
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_id_pairs_and_distances_fragmentary', group_test_potential_duplicate_id_pairs_and_distances )
-        
-        TG.test_controller.SetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', test_potential_duplicate_media_result_pairs_and_distances )
-        
         path = '/manage_file_relationships/get_potential_pairs?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}&duplicate_pair_sort_type={}&duplicate_pair_sort_asc={}&group_mode={}'.format(
             test_tag_service_key_1.hex(),
             urllib.parse.quote( json.dumps( test_tags_1 ) ),
@@ -5736,11 +5759,38 @@ class TestClientAPI( unittest.TestCase ):
             'true'
         )
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances', test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddResult( 'potential_duplicate_id_pairs_and_distances_fragmentary', group_test_potential_duplicate_id_pairs_and_distances )
+        read_db_side_effect.AddResult( 'potential_duplicate_media_result_pairs_and_distances', test_potential_duplicate_media_result_pairs_and_distances )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 3 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'potential_duplicate_id_pairs_and_distances' )
+            self.assertEqual( all_read_calls[0].args[1], default_location_context )
+            
+            self.assertEqual( all_read_calls[1].args[0], 'potential_duplicate_id_pairs_and_distances_fragmentary' )
+            self.assertTrue( isinstance( all_read_calls[1].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context_for_ids = all_read_calls[1].args[1].GetPotentialDuplicatesSearchContext()
+            read_potential_duplicate_id_pairs_and_distances_for_ids = all_read_calls[1].args[1]._potential_duplicate_id_pairs_and_distances_search_space
+            
+            self.assertEqual( all_read_calls[2].args[0], 'potential_duplicate_media_result_pairs_and_distances' )
+            self.assertTrue( isinstance( all_read_calls[2].args[1], ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) )
+            
+            read_potential_duplicates_search_context_for_media_results = all_read_calls[2].args[1].GetPotentialDuplicatesSearchContext()
+            read_potential_duplicate_id_pairs_and_distances_for_media_results = all_read_calls[2].args[1]._potential_duplicate_id_pairs_and_distances_search_space
+            
         
         text = str( data, 'utf-8' )
         
@@ -5766,21 +5816,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( hashes_we_got_back, hashes_we_expect_cut_down_and_in_order )
         
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances' )
-        
-        ( read_location_context, ) = args
-        
-        self.assertEqual( read_location_context, default_location_context )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_id_pairs_and_distances_fragmentary' )
-        
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
-        file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
-        potentials_search_type = read_potential_duplicates_search_context.GetDupeSearchType()
-        pixel_duplicates = read_potential_duplicates_search_context.GetPixelDupesPreference()
-        max_hamming_distance = read_potential_duplicates_search_context.GetMaxHammingDistance()
+        file_search_context_1 = read_potential_duplicates_search_context_for_ids.GetFileSearchContext1()
+        file_search_context_2 = read_potential_duplicates_search_context_for_ids.GetFileSearchContext2()
+        potentials_search_type = read_potential_duplicates_search_context_for_ids.GetDupeSearchType()
+        pixel_duplicates = read_potential_duplicates_search_context_for_ids.GetPixelDupesPreference()
+        max_hamming_distance = read_potential_duplicates_search_context_for_ids.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
@@ -5788,19 +5828,15 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( pixel_duplicates, test_pixel_duplicates )
         self.assertEqual( max_hamming_distance, test_max_hamming_distance )
         
-        self.assertEqual( read_potential_duplicate_id_pairs_and_distances.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
+        self.assertEqual( read_potential_duplicate_id_pairs_and_distances_for_ids.GetPairs(), test_potential_duplicate_id_pairs_and_distances.GetPairs() )
         
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'potential_duplicate_media_result_pairs_and_distances_fragmentary' )
+        self.assertEqual( set( read_potential_duplicate_id_pairs_and_distances_for_media_results.GetPairs() ), set( group_test_potential_duplicate_id_pairs_and_distances.GetPairs() ) ) # jumbled by this point
         
-        ( read_potential_duplicates_search_context, read_potential_duplicate_id_pairs_and_distances ) = args
-        
-        self.assertEqual( set( read_potential_duplicate_id_pairs_and_distances.GetPairs() ), set( group_test_potential_duplicate_id_pairs_and_distances.GetPairs() ) ) # jumbled by this point
-        
-        file_search_context_1 = read_potential_duplicates_search_context.GetFileSearchContext1()
-        file_search_context_2 = read_potential_duplicates_search_context.GetFileSearchContext2()
-        potentials_search_type = read_potential_duplicates_search_context.GetDupeSearchType()
-        pixel_duplicates = read_potential_duplicates_search_context.GetPixelDupesPreference()
-        max_hamming_distance = read_potential_duplicates_search_context.GetMaxHammingDistance()
+        file_search_context_1 = read_potential_duplicates_search_context_for_media_results.GetFileSearchContext1()
+        file_search_context_2 = read_potential_duplicates_search_context_for_media_results.GetFileSearchContext2()
+        potentials_search_type = read_potential_duplicates_search_context_for_media_results.GetDupeSearchType()
+        pixel_duplicates = read_potential_duplicates_search_context_for_media_results.GetPixelDupesPreference()
+        max_hamming_distance = read_potential_duplicates_search_context_for_media_results.GetMaxHammingDistance()
         
         self.assertEqual( file_search_context_1.GetSerialisableTuple(), test_file_search_context_1.GetSerialisableTuple() )
         self.assertEqual( file_search_context_2.GetSerialisableTuple(), test_file_search_context_2.GetSerialisableTuple() )
@@ -5813,15 +5849,27 @@ class TestClientAPI( unittest.TestCase ):
         test_hashes = [ os.urandom( 32 ) for i in range( 6 ) ]
         test_hash_pairs_hex = [ h.hex() for h in test_hashes ]
         
-        TG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
-        
         path = '/manage_file_relationships/get_random_potentials'
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'random_potential_duplicate_hashes', test_hashes )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 1 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'random_potential_duplicate_hashes' )
+            
+            potential_duplicates_search_context = all_read_calls[0].args[1]
+            
         
         text = str( data, 'utf-8' )
         
@@ -5830,10 +5878,6 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
-        
-        ( potential_duplicates_search_context, ) = args
         
         file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()
@@ -5849,8 +5893,6 @@ class TestClientAPI( unittest.TestCase ):
         
         # get random with params
         
-        TG.test_controller.SetRead( 'random_potential_duplicate_hashes', test_hashes )
-        
         path = '/manage_file_relationships/get_random_potentials?tag_service_key_1={}&tags_1={}&tag_service_key_2={}&tags_2={}&potentials_search_type={}&pixel_duplicates={}&max_hamming_distance={}'.format(
             test_tag_service_key_1.hex(),
             urllib.parse.quote( json.dumps( test_tags_1 ) ),
@@ -5861,11 +5903,25 @@ class TestClientAPI( unittest.TestCase ):
             test_max_hamming_distance
         )
         
-        connection.request( 'GET', path, headers = headers )
+        read_db_side_effect = HF.DBSideEffect()
+        read_db_side_effect.AddResult( 'random_potential_duplicate_hashes', test_hashes )
         
-        response = connection.getresponse()
-        
-        data = response.read()
+        with mock.patch.object( TG.test_controller, 'Read', side_effect = read_db_side_effect ) as read_mock_object:
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            all_read_calls = read_mock_object.call_args_list
+            
+            self.assertEqual( len( all_read_calls ), 1 )
+            
+            self.assertEqual( all_read_calls[0].args[0], 'random_potential_duplicate_hashes' )
+            
+            potential_duplicates_search_context = all_read_calls[0].args[1]
+            
         
         text = str( data, 'utf-8' )
         
@@ -5874,10 +5930,6 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d[ 'random_potential_duplicate_hashes' ], test_hash_pairs_hex )
-        
-        [ ( args, kwargs ) ] = TG.test_controller.GetRead( 'random_potential_duplicate_hashes' )
-
-        ( potential_duplicates_search_context, ) = args
         
         file_search_context_1 = potential_duplicates_search_context.GetFileSearchContext1()
         file_search_context_2 = potential_duplicates_search_context.GetFileSearchContext2()

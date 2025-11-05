@@ -1804,6 +1804,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def _SetFocusedMedia( self, media, focus_page = False ):
         
+        if media == self._focused_media:
+            
+            return
+            
+        
         self._next_best_media_if_focuses_removed = None
         
         for m in [ media, self._focused_media ]:

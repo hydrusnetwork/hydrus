@@ -2180,7 +2180,7 @@ class ListBox( QW.QScrollArea ):
             self._DataHasChanged()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'tags list box text info updater', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _LogicalIndexIsSelected( self, logical_index ):

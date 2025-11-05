@@ -640,7 +640,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             self.update()
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'duplicate filter commit', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _InitialiseSearchWorkUpdater( self ):
@@ -686,7 +686,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, self._potential_duplicate_pair_factory.DoSearchWork, publish_callable, pre_work_callable = pre_work_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'duplicate filter search', self, loading_callable, self._potential_duplicate_pair_factory.DoSearchWork, publish_callable, pre_work_callable = pre_work_callable )
         
     
     def _LoadNextBatchOfPairs( self ):
@@ -1385,7 +1385,14 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         
     
-    def TryToDoPreClose( self ):
+    def UserOKToClose( self ):
+        
+        can_close = super().UserOKToClose()
+        
+        if not can_close:
+            
+            return can_close
+            
         
         if self._CurrentlyCommitting():
             
@@ -1432,7 +1439,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
             
         
-        return super().TryToDoPreClose()
+        return True
         
     
     def Undelete( self, canvas_key ):

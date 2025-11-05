@@ -571,7 +571,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._listctrl_panel.UpdateButtons()
                 
             
-            return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+            return ClientGUIAsync.AsyncQtUpdater( 'tag parents pertinent pairs', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
             
         
         def _WipeWorkspace( self ):

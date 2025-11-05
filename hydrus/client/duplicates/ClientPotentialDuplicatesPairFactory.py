@@ -175,36 +175,27 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
     
     def __init__( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, duplicate_pair_sort_type: int, duplicate_pair_sort_asc: bool ):
         
-        self._potential_duplicates_search_context = potential_duplicates_search_context
+        self._potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         self._duplicate_pair_sort_type = duplicate_pair_sort_type
         self._duplicate_pair_sort_asc = duplicate_pair_sort_asc
-        
-        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_initialised = False
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
-        
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
         
         self._fetched_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
         
     
     def DoInitialisationWork( self ) -> bool:
         
-        location_context = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
+        location_context = self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
         
         potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
         
-        # in both cases we are stopping early, so let's go for a rich mix rather than fast full search
-        potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
-        
-        self._potential_duplicate_id_pairs_and_distances = potential_duplicate_id_pairs_and_distances
+        self._potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
         
         return True
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
+        return self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
         
     
     def GetPotentialDuplicateMediaResultPairsAndDistances( self ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances:
@@ -214,48 +205,46 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
     
     def InitialisationWorkLooksGood( self ):
         
-        if not self._potential_duplicate_id_pairs_and_distances_initialised:
+        if not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised():
             
             raise Exception( 'Was asked about initialisation before it happened!' )
             
         
-        return len( self._potential_duplicate_id_pairs_and_distances ) > 0
+        return self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace() > 0
         
     
     def InitialisationWorkNeeded( self ) -> bool:
         
-        return not self._potential_duplicate_id_pairs_and_distances_initialised
+        return not self._potential_duplicate_pairs_fragmentary_search.SearchSpaceInitialised()
         
     
     def InitialisationWorkStarted( self ) -> bool:
         
-        return self._potential_duplicate_id_pairs_and_distances_fetch_started
+        return self._potential_duplicate_pairs_fragmentary_search.SearchSpaceFetchStarted()
         
     
     def NotifyCommitDone( self ):
         
         # unfortunate, but the old value is now invalid since we are about to change things
         # we may have knocked out potentials without merging media ids (set alternate) or, more rarely, added new potentials from merge inheritance
-        self._potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_initialised = False
+        self._potential_duplicate_pairs_fragmentary_search.ResetSearchSpace()
         
         self.NotifyFetchMorePairs()
         
     
     def NotifyInitialisationWorkStarted( self ):
         
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = True
+        self._potential_duplicate_pairs_fragmentary_search.NotifySearchSpaceFetchStarted()
         
     
     def NotifyInitialisationWorkFinished( self ):
         
-        self._potential_duplicate_id_pairs_and_distances_initialised = True
-        self._potential_duplicate_id_pairs_and_distances_fetch_started = False
+        pass # done in the fragmentary search when the search space is set
         
     
     def NotifyFetchMorePairs( self ):
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances.Duplicate()
+        self._potential_duplicate_pairs_fragmentary_search = self._potential_duplicate_pairs_fragmentary_search.SpawnNewSearch()
         
         self._fetched_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( [] )
         
@@ -284,24 +273,22 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
             
             # no group yet, so let's look for one
             
-            if len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0:
+            if self._potential_duplicate_pairs_fragmentary_search.SearchDone():
                 
                 # shouldn't be able to get here
                 
                 return False
                 
             
-            block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
-            
             # ok let's find a group if poss
             
             start_time = HydrusTime.GetNowPrecise()
             
-            probing_potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances_fragmentary', self._potential_duplicates_search_context, block_of_id_pairs_and_distances )
+            probing_potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances_fragmentary', self._potential_duplicate_pairs_fragmentary_search )
             
             actual_work_period = HydrusTime.GetNowPrecise() - start_time
             
-            self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
+            self._potential_duplicate_pairs_fragmentary_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
             
             if len( probing_potential_duplicate_media_result_pairs_and_distances ) == 0:
                 
@@ -314,17 +301,14 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
                 
                 pair = random.choice( pairs )
                 
-                group_potential_duplicate_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances.FilterWiderPotentialGroup( pair )
-                
-                self._group_media_ids = { media_id for pair in group_potential_duplicate_id_pairs_and_distances.GetRows() for media_id in pair }
+                self._group_media_ids = self._potential_duplicate_pairs_fragmentary_search.FilterWiderPotentialGroup( pair )
                 
             
         else:
             
-            # ok we have a group; we want to re-fetch it
-            group_potential_duplicate_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances.FilterWiderPotentialGroup( self._group_media_ids )
+            group_fragmentary_search = self._potential_duplicate_pairs_fragmentary_search.SpawnMediaIdFilteredSearch( self._group_media_ids )
             
-            self._fetched_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', self._potential_duplicates_search_context, group_potential_duplicate_id_pairs_and_distances )
+            self._fetched_media_result_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances', group_fragmentary_search )
             
             if len( self._fetched_media_result_pairs_and_distances ) == 0:
                 
@@ -347,8 +331,8 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
             
             if len( self._group_media_ids ) == 0:
                 
-                value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-                range = len( self._potential_duplicate_id_pairs_and_distances )
+                value = self._potential_duplicate_pairs_fragmentary_search.NumPairsSearched()
+                range = self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace()
                 
                 loading_text = f'Searching for group; {HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched{HC.UNICODE_ELLIPSIS}'
                 
@@ -364,7 +348,7 @@ class PotentialDuplicatePairFactoryDBGroupMode( PotentialDuplicatePairFactoryDB 
     def SearchWorkIsDone( self ) -> bool:
         
         have_results = len( self._fetched_media_result_pairs_and_distances ) > 0
-        found_nothing = len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0 and len( self._group_media_ids ) == 0
+        found_nothing = self._potential_duplicate_pairs_fragmentary_search.SearchDone() and len( self._group_media_ids ) == 0
         
         return have_results or found_nothing
         
@@ -385,18 +369,18 @@ class PotentialDuplicatePairFactoryDBMixed( PotentialDuplicatePairFactoryDB ):
         
         self._no_more_than = no_more_than
         
+        self._potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( self._no_more_than )
+        
     
     def DoSearchWork( self, *args ) -> bool:
         
-        block_of_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
-        
         start_time = HydrusTime.GetNowPrecise()
         
-        potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', self._potential_duplicates_search_context, block_of_id_pairs_and_distances, no_more_than = self._no_more_than )
+        potential_duplicate_media_result_pairs_and_distances = CG.client_controller.Read( 'potential_duplicate_media_result_pairs_and_distances_fragmentary', self._potential_duplicate_pairs_fragmentary_search, no_more_than = self._no_more_than )
         
         actual_work_period = HydrusTime.GetNowPrecise() - start_time
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
+        self._potential_duplicate_pairs_fragmentary_search.NotifyWorkTimeForAutothrottle( actual_work_period, 0.5 )
         
         for row in potential_duplicate_media_result_pairs_and_distances.IterateRows():
             
@@ -419,8 +403,8 @@ class PotentialDuplicatePairFactoryDBMixed( PotentialDuplicatePairFactoryDB ):
             
         else:
             
-            value = len( self._potential_duplicate_id_pairs_and_distances ) - len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
-            range = len( self._potential_duplicate_id_pairs_and_distances )
+            value = self._potential_duplicate_pairs_fragmentary_search.NumPairsSearched()
+            range = self._potential_duplicate_pairs_fragmentary_search.NumPairsInSearchSpace()
             
             loading_text = f'{HydrusNumbers.ValueRangeToPrettyString(value, range)} pairs searched; {HydrusNumbers.ToHumanInt( len( self._fetched_media_result_pairs_and_distances ) )} matched{HC.UNICODE_ELLIPSIS}'
             
@@ -430,7 +414,7 @@ class PotentialDuplicatePairFactoryDBMixed( PotentialDuplicatePairFactoryDB ):
     
     def SearchWorkIsDone( self ):
         
-        search_exhausted = len( self._potential_duplicate_id_pairs_and_distances_still_to_search ) == 0
+        search_exhausted = self._potential_duplicate_pairs_fragmentary_search.SearchDone()
         
         we_have_enough = len( self._fetched_media_result_pairs_and_distances ) >= self._no_more_than
         

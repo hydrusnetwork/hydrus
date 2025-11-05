@@ -203,14 +203,6 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self.assertEqual( set( result ), self._all_hashes )
         
-        filtering_pairs = self._read( 'duplicate_pair_hashes_for_filtering', potential_duplicates_search_context )
-        
-        for ( a, b ) in filtering_pairs:
-            
-            self.assertIn( a, self._all_hashes )
-            self.assertIn( b, self._all_hashes )
-            
-        
         result = self._read( 'file_duplicate_info', ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), self._dupe_hashes[0] )
         
         self.assertEqual( result[ 'is_king' ], True )

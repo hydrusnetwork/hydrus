@@ -522,7 +522,7 @@ class PreparationPanel( QW.QWidget ):
             self.pageTabNameChanged.emit( page_name )
             
         
-        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        return ClientGUIAsync.AsyncQtUpdater( 'duplicates page preparation searched distance counts', self, loading_callable, work_callable, publish_callable )
         
     
     def _RefreshMaintenanceNumbers( self ):
