@@ -69,6 +69,7 @@
                         <li>in both the 'is initialised?' and 'is cleaned up?' checks, we just go ahead if it has been 180 seconds</li>
                         <li>fixed an mpv options-setting bug that could sometimes print an error to log on shutdown</li>
                         <li><h3>other boring stuff</h3></li>
+						<li>I think I fixed an issue where some thread jobs could not terminate correctly if the UI window they were attached to died before the job was done. this may be related to some hanging clients that have extremely busy sessions</li>
                         <li>all multi-column temp integer tables in the db are now row-unique</li>
                         <li>fixed an issue where a couple of shutdown-late CallAfter guys could try to do a CallAfter after Qt was down and the log was closed out, which would spam some error to the terminal</li>
                         <li>cleaned up some media viewer close logic</li>

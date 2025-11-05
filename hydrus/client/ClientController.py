@@ -455,12 +455,17 @@ class Controller( HydrusController.HydrusController ):
         
         while not job_status.IsDone():
             
-            done_event.wait( 1.0 )
+            if not QP.isValid( win ):
+                
+                raise HydrusExceptions.QtDeadWindowException( 'Window died before job returned!' )
+                
             
             if HG.model_shutdown or not self._qt_app_running:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
+            
+            done_event.wait( 1.0 )
             
         
         if job_status.HasVariable( 'result' ):

@@ -50,6 +50,7 @@ title: Changelog
 
 ### other boring stuff
 
+* I think I fixed an issue where some thread jobs could not terminate correctly if the UI window they were attached to died before the job was done. this may be related to some hanging clients that have extremely busy sessions
 * all multi-column temp integer tables in the db are now row-unique
 * fixed an issue where a couple of shutdown-late CallAfter guys could try to do a CallAfter after Qt was down and the log was closed out, which would spam some error to the terminal
 * cleaned up some media viewer close logic
