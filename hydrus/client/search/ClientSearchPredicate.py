@@ -1087,6 +1087,58 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return None
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
+            
+            operator, *dims = self._value
+            
+            if operator == 'taller than':
+                
+                return Predicate( self._predicate_type, ( 'wider than', *dims ) )
+                
+            elif operator == 'wider than':
+                
+                return Predicate( self._predicate_type, ( 'taller than', *dims ) )
+                
+            elif operator == '=':
+                
+                return Predicate( self._predicate_type, ( HC.UNICODE_NOT_EQUAL, *dims ) )
+                
+            elif operator == HC.UNICODE_NOT_EQUAL:
+                
+                return Predicate( self._predicate_type, ( '=', *dims ) )
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
+            
+            ( operator, val, service_key ) = self._value
+            
+            if operator == '=':
+                
+                if val == 'not rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'rated', service_key ) )
+                    
+                elif val == 'rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'not rated', service_key ) )
+                    
+                elif isinstance( val, ( int, float ) ):
+                    
+                    return Predicate( self._predicate_type, ( HC.UNICODE_APPROX_EQUAL, val, service_key ) )
+                    
+            elif operator == HC.UNICODE_APPROX_EQUAL:
+                
+                return Predicate( self._predicate_type, ( '=', val, service_key ) )
+                
+            elif operator == '>':
+                
+                return Predicate( self._predicate_type, ( '<', val, service_key ) )
+                
+            elif operator == '<':
+                
+                return Predicate( self._predicate_type, ( '>', val, service_key ) )
+                
+            
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
             
             return Predicate( self._predicate_type, not self._value )
