@@ -217,7 +217,9 @@ def ReadFetch(
                 
                 media = CG.client_controller.CallBlockingToQt( win, qt_media_callable )
                 
-            except HydrusExceptions.QtDeadWindowException:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                job_status.Cancel()
                 
                 return
                 
@@ -2447,7 +2449,8 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         include_unusual_predicate_types = True,
         allow_all_known_files = True,
         only_allow_local_file_domains = False,
-        only_allow_all_my_files_domains = False,
+        only_allow_combined_local_file_domains = False,
+        allow_multiple_file_domains = True,
         force_system_everything = False,
         hide_favourites_edit_actions = False,
         fixed_results_list_height = None,
@@ -2476,8 +2479,9 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         
         super().__init__( parent, location_context, tag_context, file_search_context, page_key, for_metadata_conditional )
         
+        self._location_context_button.SetMultipleFileDomainsAllowed( allow_multiple_file_domains )
         self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
-        self._location_context_button.SetOnlyAllMyFilesDomainsAllowed( only_allow_all_my_files_domains )
+        self._location_context_button.SetOnlyCombinedLocalFileDomainsAllowed( only_allow_combined_local_file_domains )
         self._location_context_button.SetAllKnownFilesAllowed( allow_all_known_files, True )
         
         #

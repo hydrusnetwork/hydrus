@@ -7,6 +7,58 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 647](https://github.com/hydrusnetwork/hydrus/releases/tag/v647)
+
+### misc
+
+* if the selected subtags have any whitespace, all taglist menus now offer 'copy (selected subtags with underscores)'!
+* all existing users will see 'all local files' renamed to 'hydrus local file storage'. I did this for new users a couple weeks ago and we had no obvious problems, so now everyone gets it
+* the similarly not-excellently-named 'all my files' is renamed for new users to 'combined local file domains'. I'll do everyone else in a couple weeks if no problems
+* a file import options now has two 'do this if file is already in db' checkboxes--one for the auto-archive option, which now disables in the panel if you aren't auto-archiving, and the other to specifically say whether 'already in db' files should be re-sent to the stated import destinations, which matters for clients with multiple local file domains. this latter question is typically more annoying than helpful, so it is now default off **and will move to off, on update, for all file import options you have**. if you use multiple local file domains and want your 'already in db' files to be re-sent to a particular domain somewhere (I'm guessing we'd be talking a special import folder, rather than always), please go into that import context and edit the file import options back
+* thanks to a user, 'system:ratio' and 'system:rating' predicates can now produce inverted copies of themself, so they can invert on a ctrl+double-click (also available in the predicate menu under `search->require`) and can auto-exclude clearly mutually exclusive predicates (you may not have noticed, but see what happens when you add system:inbox to a query with system:archive. this happens with a bunch of stuff). when you have something like 'system:ratio is 16:9', you'll now be able to replace it with 'system:ratio is not 16:9'. for ratings, you'll similarly get 'rated' and 'not rated' and like/dislike flips. they will also do taller/wider and 'less than/greater than' numerical or inc/dec ratings, but since these predicates do not yet support `>=` or `<=`, the inversion is imperfect. this will be fixed in future when I eventually migrate these guys to the newer object that, for instance, 'system:number of frames' uses (issue #1777)
+* the default pixiv downloaders now say a more clear 'no support for pixiv ugoiras yet' when they veto an ugoira URL
+* the 'notes' and 'zoom - index' in a navigable media viewer window are now background-drawn in the 'media viewer text' colour, matching the top file info text and the top-right stuff
+* the command palette now displays and searches long page names without 'eliding...'
+* the 'edit gallery url generator' panel now shows separate text boxes for the raw url generated and the post-normalised url if there is a matching url class
+
+### duplicates
+
+* duplicate auto-resolution rules now have a separate paused status and operation mode. it was not ultimately helpful to go for paused/semi/automatic; now it is paused/unpaused, semi/automatic. any rule that was previously paused is now paused and semi-automatic
+* you can now pause/play rules from the normal duplicates page list with a button. you don't have to go into the edit dialog to pause or resume a rule
+* I wrote a new hardcoded comparator for 'A has a clearly higher jpeg quality than B'. just a simple thing for now, no testing of specific value or anything, but maybe that'll come in future
+* the rule edit UI now explictly says 'hey these work in name order so name them "1 - ", "2 - ", if you want to force one to have precedence'
+* the sort order here is now my clever human sort (so '3 - ' is earlier than '10 - '), and the list in the edit and review panels sort the name column that way too
+* deleted the 'pixel-perfect pairs - keep EXIF or ICC data' suggested rule--this is generally now covered by the 'pixel-perfect pairs' rule
+* after a user suggestion, added 'near-perfect jpegs vs pngs' suggested rule. this guy uses a 'visual duplicates' comparator in 'near perfect' mode to check for what is for practical purposes a pixel-perfect jpeg/png pair, but with a couple extra caveats in the rule to ensure we don't throw out a useful png. it has comparators to select the jpeg that is of same or higher resolution (obvious), of smaller filesize (so we don't select a wastefully high quality jpeg of a vector or flat screenshot that is better as png), where the png doesn't uniquely have EXIF data (to err on the side of originality). also added a note about this guy in the help
+* tweaked my visual duplicates algorthim, the edge detection part in particular, to better filter out heavy jpeg artifacts
+* the cog icon beside a potential duplicate pair search context panel's count now has `allow single slow search optimisation when seeing low hit-rate`, which turns off my new optimisation. it looks like it performs very badly in some complicated edge cases, so now you can turn it off. I will gather more information and revisit this
+* just to be a little more human, some arbitrary user-facing numbers around here are moved from 4,096/512/256/128 to 4,000/500/250/100
+* to stay sane with the file search logic here, potential duplicate pair searches will no longer let you select a 'multiple locations' domain. just a single local file domain or the 'all my files'/'combined local file domains' umbrella
+* fixed up a number of update-signals that bounce around the duplicates auto-resolution system. some maintenance tasks now correctly update all duplicate pages lists, not just for the page that started the job, and different jobs are careful to emit the correct 'rules changed' vs 'state changed' so various things update more efficiently
+* duplicate auto-resolution sub-pages now only update their rules or rule number display when they are in view (or switched to)
+
+### client api
+
+* thanks to a user, the `/manage_pages/get_page_info` call now returns file selection data: `num_files_selected`, `hash_ids_selected`, and in non-simple mode, `hashes_selected`
+* clarified in the help (and checked in code) that sending a client api file delete call to 'hydrus local file storage' will work on any local file, anywhere, as a 'permanent delete now' command. I wasn't sure if it would only work on currently trashed files, but we are good
+* client api version is now 82
+
+### blocking ui calls and a memory leak
+
+* I discovered a long-time memory leak for busy clients at the last minute last week. I patched it just before release, and this week I have polished my patch. any time that an asynchronous 'thread to ui' job that waits on the ui to do something fails due to the attached ui widget dying early (think closing a dialog before an update routine finishes) now handles this situation appropriately to the caller and yields back the thread, in all cases (previously it could get stuck in a loop waiting forever for the dead window to respond, tying up that thread worker until program exit, and, in critical situations, when there were more than 200 current ongoing jobs, block other work indefinitely). there's about sixty of these calls across the code, including a bunch in the Client API when asking about pages, and some were not coping with all error situations nicely--they now do
+* many of these calls also now navigate to a last-ditch ui widget anchor correctly (e.g. when they are doing something during boot/shutdown, when the main gui isn't available)
+* reporting to a custom async errback is also now handled more gracefully. if the ui panel dies before a custom errback can be called, we now fallback to the default errback
+* also did some smart typing here so an IDE can figure out what is supposed to be coming back from one of these
+
+### boring stuff
+
+* mpv file load error reporting is nicer, and simple missing file errors have their own hook
+* fixed a logical issue in the new potential duplicates debug report mode, where it'd error out if you started the mode while a long job was still working
+* fixed some bad newlines and old text in the running from source help
+* cleaned up the default auto-resolution rule definitions, which was turning into a monolith
+* I think/hope I have fixed an issue with loading the client when URL Domain Masks have bad data
+* did some misc type linting, particularly around some non-beautiful clientside service juggling
+
 ## [Version 646](https://github.com/hydrusnetwork/hydrus/releases/tag/v646)
 
 ### misc
@@ -534,123 +586,3 @@ title: Changelog
 * wrote a pair factory for the thumbnail lists
 * misc URL handling code cleanup and variable normallisation
 * added a couple notes regarding mpv and ffmpeg in macOS to the 'running from source' help; thanks to the feedback from users who recently made the migration
-
-## [Version 637](https://github.com/hydrusnetwork/hydrus/releases/tag/v637)
-
-### duplicates auto-resolution
-
-* 'test A or B' comparators now support 'system:time', for the four main time system predicates (import time, modified time, last viewed time, archived time)
-* 'test A against B using file info' comparators now support the same 'system:time' stuff, so you can now mandate, say, that "A has system:import time earlier than B". I also wangled a time delta in there, so you can say 'A was imported more than three months earlier than B' if you like
-* I brushed up the comparator UI for time; instead of `<` and `=`, you'll see a vertical stack of 'earlier than', 'roughly the same time as' and so on. also, the deltas for `+/-` and the B delta are full time widgets, so you set the time you mean and don't have to care about converting to milliseconds. this all percolates to the comparator summary string too.
-* same deal for `system:duration` in that panel--it now has a time delta for the absolute `+/-` test and the B delta, and has a time-aware summary string
-* I added 'only earlier imports' variants for the 'visually similar pairs' suggested duplicates auto-resolution rules. I am sure there are many edge cases, but I feel that these are pretty good 'near-zero false positive' rules to try out
-* the 'edit duplicate auto-resolution rules' panel now has export/import/duplicate buttons
-* the 'comparison' tab of 'edit duplicate auto-resolution rule', where you edit comparators, now has export/import/duplicate buttons
-
-### duplicates
-
-* in the duplicate filter, jpeg subsampling and quality info is cached in a nicer, more thread-safe way. certain laggy calculation situations should be more stable. I am not sure if this was the source of the crashes some people have had, so if you still get them, please let me know
-
-### misc
-
-* for the new `/db/static` overwrite tech, a .png icon in the db dir now overrides an .svg in the install dir. if you chose to add it, I'll prefer it
-* the star.png used for favourites buttons is now an svg
-* the fullscreen_switch.png used in the media viewer is now an svg, and more like the typical icon for this
-* I forgot to do some metadata regen on epubs last week, so any existing epubs probably got stretched thumbnails. soon after v637 boots, your epubs should double-check their resolution ratios and regen any busted thumbs (issue #1788)
-* I overhauled one of the ways that threads can give Qt work to do, making it more Qt safe. there were about 80 calls that used this system, mostly stuff like initialising a label or focusing a button in the event loop immediately after a panel appears. fingers crossed, these will be much more stable in edge cases when, say, a dialog insta-closes before an initialising job can fire
-
-### big brain subscription logic improvement
-
-* when subscription queries compact themselves down to the (typically 250) newest URLs, they now recognise that child URLs ("Found 2 new URLs in 2 sub-posts.") should not be counted. in sites where the gallery pages have potentially high count and each gallery-parsed post URL can also each produce many files (e.g. Pixiv manga), 250 file import objects could only be, say, 21 top-level Post URLs, significantly less than the gallery page provides, and the safety checks here, which are tuned to recognise 100 contiguous Post URLs 'already in cache', were overflowing every n checks and causing some post re-downloads. hydrus should be better about recognising this situation
-* the compaction routine does this by grouping file import objects into parents, including nesting parents, and only culling on the top level. when things are confusing, it tries to fail safely in complicated situations, on the side of reducing compaction aggressision
-* if you have manga subs, they may well grow to be like 4,000 files. let me know how it all goes
-* a similar bit of logic that tests the number of items found versus the pre-gallery-sync size of the file log now uses this tech to estimate that size (previously it did some hacky referral url checking stuff)
-* thanks to the user who worked with me to figure this one out
-* this is more evidence that I should write a layer on the database level URL storage for 'subscription x saw this URL', and then we wouldn't have such a problem
-
-### base64URL
-
-* String Converters can now encode/decode with Base64URL, which is a variant of Base64 that uses `-_` instead of `+/` and where '=' padding is encoder-optional (and not added here) to make inclusion in an URL parameter simpler
-* when I _decode_ (convert from base64 to normal text) by base64 of either sort now, I add any extra `=` padding that is needed, no worries
-* String Matches can now have a 'character set' of Base64URL (`^[a-zA-Z\d\-_]+={0,2}$`) or 'Base64 (url encoded)'' (`^([a-zA-Z\d]|%2B|%2F)+(%3D){0,2}$`)
-
-### boring stuff
-
-* removed the macOS build script and such. I left the macOS build files in place and copied my various .yml workflow scripts to `static/build_files/macos`
-* fixed up some bad layout flags in the duplicates auto-resolution comparator edit panels
-* swapped the trash and retry buttons in the gallery downloader page sidebar
-* similarly moved the trash button to the end in the watcher downloader page sidebar
-* wrote unit tests for predicate value testing (i.e. for Metadata Conditionals) for import time, modified time, last viewed time, archived time
-* wrote unit tests for predicate value extracting (i.e. for relative file info comparators) for import time, modified time, last viewed time, archived time
-* wrote unit tests for the new Base64URL encode/decode and added some clever stuff to check for the `+/-_` stuff
-* wrote unit tests for the new Base64 character set filters
-* fleshed out some of my Base64 unit tests to catch a couple extra situations
-* wrote unit tests for my new query compaction parent-grouping tech and 'master url' counting routine
-* moved the 'CallAfter' thread-to-qt calling system to a new file `ClientGUICallAfter.py`, and made it safer
-* moved an overhead-heavy alternate Qt-safe CallAfter to this leaner pipeline
-* renamed `PREDICATE_TYPE_SYSTEM_AGE` to `PREDICATE_TYPE_SYSTEM_IMPORT_TIME`
-* the `NumberTest` init no longer flips from `+/-%` to `=` if the inherent 'value' is 0--this was not helping in duplicates auto-resolution, where the value is not used and in some cases initialises to 0
-* updated the predicate object so null/stub preds (which until comparators generally only appeared in memory as autocomplete dropdown system preds) can always serialise
-* if a menu item label is longer than 128 characters and thus...elides, the tooltip will no longer have doubled ampersands (generally affects urls in menus)
-* added a catch to the `help->about` error reporting; if you have "sio_flush" in an mpv import error, I now say to try running from source
-
-## [Version 636](https://github.com/hydrusnetwork/hydrus/releases/tag/v636)
-
-### multi-domain URL Classes
-
-* URL Classes now support multiple domains! you can set multiple fixed domains like `example.com`/`example.net` and multiple regex rules like `example\.[^\.]+`. if a given URL matches any of the patterns, the URL Class can now match
-* in the URL Class edit panel, there's now a 'domain' box panel for it all. by default, you'll start in a simple mode with a single text input for a single domain, but you can flip to an advanced mode that shows two add/edit/delete lists for the underlying fixed and regex rules
-* the 'match subdomains' and 'keep matched subdomains' checkboxes are also moved into this panel
-* two new 'test'/'normalised' text boxes let you enter a test domain to see if your current rules match it, and what it will normalise to (think subdomains) according to everything set
-* if you are a downloader creator, please play with this, but I'll say don't go crazy yet. I feel good about it all, but this is new ground so I don't know if there's something we haven't thought of. also obviously be careful with the regex stuff. learn the difference between `.` and `\.` or you might end up matching more than you think!
-* I believe this tech is fundamentally cool though, and if you know a new site uses a particular content engine you already have support for (e.g. some specific booru), then just adding its domain to the list for the file and gallery page URL Classes should essentially activate the downloader for that whole site. only thing you'd need for a full downloader would be a new GUG. no new parser example urls or any of that stuff needed. as a little test on my dev machine, I was able to merge the e621, e6ai, and e926 URL Classes with minimum fuss in about two minutes and nothing broke!!
-* in terms of layout and bells and whistles, I think we might want some import/export copy/paste stuff here, let me know how it works for you IRL. the lists were already huge, so I didn't wrap them in nice labels saying 'these are the raw domains' and 'these are the regex rules', but I think I may need to pretty it up. I also added collapse/expand arrows to the three main static boxes in the edit URL Class panel, so I hope that helps if you are dealing with twenty domains or something
-* if you have an URL in the media viewer top-right menu that matches a URL Class more complicated than just one fixed domain, it now says the domain of the URL after the name of the URL Class. e.g. 'coolbooru post (somecoolbooru.com)', so you know what's going on
-
-### unfortunate macOS App news
-
-* this is the last macOS App I will be putting out, and there will not be a Silicon App from me. I am sorry!
-* Github are retiring the old macos-13 runner (intel) that we have been using, and for the past few weeks I've been trying to build both Intel and Silicon builds on the macos-14 runner. unfortunately, I could not get the retroactive Intel one to build, and Silicon Apps have special signing requirements. I bashed my head at the signing problem, and I was very hopeful I'd have a 'future build' test this week, but unfortunately I ran up against a hard technical barrier and I do not have the time and macOS expertise to properly overcome it. I also suspect the self-signed hole we had hoped to fit through will be closed in the not so distant future. we've been coasting on a very hacky App structure for a long time, and it would need a couple full passes to work in the new system, so I simply had to call it. even if that overhaul worked out, we'd still be locked to older Python 3.10 due to pyoxidizer and looking at asking users to override Gatekeeper quarantine
-* thus, I now recommend that all macOS users run from source going forward. although it is a small one-time headache to set up, it'll run much better than the old Intel App, which was likely being Rosetta'd to your newer machines. I have brushed up the 'running from source' help and written a small specific section for you here: https://hydrusnetwork.github.io/hydrus/running_from_source.html#migrating_from_an_existing_install
-* all the help is updated to talk about there being no App build now; let me know if I missed anything
-* let me know how you get on and if you have any trouble getting a source release going. I regret the sudden halt here, and while I understand there are still a few weeks of Github macos-13 brownout if we are desperate to get an App out, the writing is on the wall, so best to start on migrations now. I'll put reminder banners on the release posts for the next four weeks
-* it is possible that another user will figure out their own an App solution in future, perhaps with PyInstaller instead of pyoxidizer, but it shalln't be me!
-
-### B is not better
-
-* a subtle bug caused auto-resolution rules with the action "B is better" to swap the AB to BA when pairs were in the 'pending a decision' queue in semi-automatic mode. I believe they were fine in automatic mode
-* I have decided the maintenance debt for this command not justified, and it mostly just serves to confuse everyone, so it is removed from duplicates auto-resolution. I also removed it from the API docs (it'll still work there, and it seems to work well, but it isn't documented any more and I recommend anyone using it migrate carefully to use 'A is better' instead)
-* in future I will add a 'swap A and B' button to the auto-resolution comparators tab so if you did set everything up wrong, it is still recoverable without frustrating the overall pipeline
-* on update, all auto-resolution rules set to 'B is better' will pause and reset to 'A is better', and you'll get a popup about the situation
-* thank you very much to the user who tested and reported this. it was unwise of me to throw this action in the mix, and another good example of KISS
-
-### greyscale jpeg duplicate info
-
-* in the duplicate filter, I now detect when jpegs are truly greyscale (i.e. actually 8 bits per pixel), and report that in the subsampling label. previously, greyscale were registering as 'unknown'. if either file is greyscale, the subsampling score is now 0
-* the jpeg quality value is also adjusted for a greyscale image. they were reporting as slightly higher quality than they should have been when compared to an RGB equivalent. let me know how this works out IRL, though. I may need to tune it more
-* the jpeg subsampling and quality comparison lines now have nicer tooltips explaining what they are
-
-### epub covers
-
-* thanks to a user who waded through some ugly xml, we can now produce thumbnails for EPUB files! should work for any EPUB 3 file that actually has a thumb
-* I extended this to support EPUB 2 and some other broken files. I'll be interested in any examples that you think do have a cover but still don't have one in hydrus
-* all existing EPUB files will be scheduled for a thumb regen on update
-
-### client api
-
-* fixed a 500-causing typo in `/add_files/generate_hashes/` for filetypes with a perceptual hash (issue #1783)
-* added unit tests for both the path and bytes versions of this call so this won't happen again
-
-### boring stuff
-
-* the new retry svg icon has a brighter green arrow that stands out better in darkmode--thanks for letting me know
-* after a user mentioned it, I optimised my new svg icons' filesize (with `scour`), and will continue to do so
-* I rejigged the buttons in the duplicates page sidebar 'preparation' tab. my new rule is generally that cog buttons go on the right, as part of the thing they modify
-* I may have fixed the alignment of the gallery downloader sidebar cog icon button in crazier stylesheets. if you still get the problem, let me know
-* if a user runs into the 'It seems an entire batch of pairs were unable to be displayed.' duplicate filter error, all the pertinent rows are now printed to the log
-* improved a little keyboard focus stuff on some small dialogs
-* fixed an unstable list menu call that could cause trouble if the list was closed and deleted before the menu could show
-* moved the 80KB-odd of URL Class UI code to a new `ClientGUIURLClass` file
-* wrote some code to better handle and report critical hash definition errors during forced file maintenance
-* network jobs that are expecting HTML/JSON no longer error out if they exceed 100MB. such jobs now spool to a temp file after 10MB. good luck to the guy with the larger-than 100MB JSON files
-* when hydrus tries to import an expected HTML/JSON that doesn't seem to parse correct (just in case it is actually some raw file redirect), the copy from the network job to the import file temp location source is a smarter, low-memory stream. other work is still going to stay stuck in memory, however, so we'll see how it shakes out

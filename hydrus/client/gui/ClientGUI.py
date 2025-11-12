@@ -830,6 +830,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         for service in services:
             
+            service = typing.cast( ClientServices.ServiceRepository, service )
+            
             credentials = service.GetCredentials()
             
             if credentials.GetSerialisableTuple() == ptr_credentials.GetSerialisableTuple():
@@ -1094,7 +1096,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
         text += '\n' * 2
-        text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain (e.g. my files) but not an umbrella domain (e.g. all my files), and the actual file also exists on disk, it will try to recover the record. If the file does not actually exist on disk, or the record is in the umbrella domain and not in the specific domain, or if recovery data cannot be found, the record will be deleted.'
+        text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain like "my files" but not an associated umbrella domain "combined local file domains", and the actual file also exists on disk, it will try to recover the record and fix the umbrella domain. If the file does not actually exist on disk, or the record is in the umbrella domain and not in the specific, or if recovery data cannot be found, the orphaned record will be deleted.'
         text += '\n' * 2
         text += 'You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly and may break other maintenance routines. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
         text += '\n' * 2
@@ -2811,7 +2813,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
             
-            repositories = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
+            repositories: list[ ClientServices.ServiceRepository ] = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
             
             file_repositories = [ service for service in repositories if service.GetServiceType() == HC.FILE_REPOSITORY ]
             
@@ -3008,10 +3010,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             repository_admin_permissions = [ ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_CREATE ), ( HC.CONTENT_TYPE_ACCOUNTS, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_ACCOUNT_TYPES, HC.PERMISSION_ACTION_MODERATE ), ( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE ) ]
             
-            repositories = self._controller.services_manager.GetServices( HC.REPOSITORIES )
+            repositories: list[ ClientServices.ServiceRepository ] = self._controller.services_manager.GetServices( HC.REPOSITORIES )
             admin_repositories = [ service for service in repositories if True in ( service.HasPermission( content_type, action ) for ( content_type, action ) in repository_admin_permissions ) ]
             
-            servers_admin = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
+            servers_admin: list[ ClientServices.ServiceRestricted ] = self._controller.services_manager.GetServices( ( HC.SERVER_ADMIN, ) )
             server_admins = [ service for service in servers_admin if service.HasPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE ) ]
             
             admin_services = admin_repositories + server_admins
@@ -4316,14 +4318,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                             
                         
                     
-                    try:
-                        
-                        controller.CallBlockingToQt( self, qt_do_it )
-                        
-                    except HydrusExceptions.QtDeadWindowException:
-                        
-                        pass
-                        
+                    controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_do_it )
                     
                 finally:
                     
@@ -4435,14 +4430,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                             
                         
                     
-                    try:
-                        
-                        controller.CallBlockingToQt( self, qt_do_it )
-                        
-                    except HydrusExceptions.QtDeadWindowException:
-                        
-                        pass
-                        
+                    controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_do_it )
                     
                 finally:
                     
@@ -5044,9 +5032,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         
                         CG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
                         
-                    except HydrusExceptions.QtDeadWindowException:
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
                         
-                        pass
+                        return
                         
                     except HydrusExceptions.CancelledException:
                         
@@ -5635,7 +5623,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             CG.client_controller.SaveGUISession( session )
             
-            CG.client_controller.CallBlockingToQt( self, qt_load )
+            CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_load )
             
         
         self._controller.CallToThread( do_save )
@@ -6277,7 +6265,14 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     return page.GetPageKey()
                     
                 
-                page_key = CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_session_gubbins )
+                try:
+                    
+                    page_key = CG.client_controller.CallBlockingToQtTLW( qt_session_gubbins )
+                    
+                except HydrusExceptions.ShutdownException:
+                    
+                    return
+                    
                 
                 #
                 
@@ -6501,29 +6496,36 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         def do_it():
             
-            # pages
-            
-            CG.client_controller.CallBlockingToQt( self, qt_review_services )
-            
-            time.sleep( 3 )
-            
-            page_of_pages = CG.client_controller.CallBlockingToQt( self, qt_open_pages )
-            
-            time.sleep( 4 )
-            
-            CG.client_controller.CallBlockingToQt( self, qt_close_unclose_one_page )
-            
-            time.sleep( 1.5 )
-            
-            CG.client_controller.CallBlockingToQt( self, qt_close_pages, page_of_pages )
-            
-            time.sleep( 5 )
-            
-            del page_of_pages
-            
-            # a/c
-            
-            CG.client_controller.CallBlockingToQt( self, qt_test_ac )
+            try:
+                
+                # pages
+                
+                CG.client_controller.CallBlockingToQt( self, qt_review_services )
+                
+                time.sleep( 3 )
+                
+                page_of_pages = CG.client_controller.CallBlockingToQt( self, qt_open_pages )
+                
+                time.sleep( 4 )
+                
+                CG.client_controller.CallBlockingToQt( self, qt_close_unclose_one_page )
+                
+                time.sleep( 1.5 )
+                
+                CG.client_controller.CallBlockingToQt( self, qt_close_pages, page_of_pages )
+                
+                time.sleep( 5 )
+                
+                del page_of_pages
+                
+                # a/c
+                
+                CG.client_controller.CallBlockingToQt( self, qt_test_ac )
+                
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                HydrusData.Print( 'Test could not finish because of a shutdown, looks like.' )
+                
             
         
         CG.client_controller.CallToThread( do_it )

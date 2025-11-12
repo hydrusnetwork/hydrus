@@ -567,6 +567,38 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
     return ( statements_and_scores, they_are_pixel_duplicates )
     
 
+def populate_jpeg_quality_storage( jpeg_hash ):
+    
+    jpeg_quality_storage = JpegQualityStorage.instance()
+    
+    if not jpeg_quality_storage.HasData( jpeg_hash ):
+        
+        path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
+        
+        subsampling = HydrusImageMetadata.SUBSAMPLING_UNKNOWN
+        quality_result = ( 'unknown', None )
+        
+        try:
+            
+            raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+            
+            subsampling = HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image )
+            
+            quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+            
+        except:
+            
+            pass
+            
+        
+        ( quality_label, quality ) = quality_result
+        
+        jpeg_quality = JpegQuality( subsampling, quality_label, quality )
+        
+        jpeg_quality_storage.AddData( jpeg_hash, jpeg_quality )
+        
+    
+
 def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.MediaResult, comparison_media_result: ClientMediaResult.MediaResult, they_are_pixel_duplicates: bool ):
     
     new_options = CG.client_controller.new_options
@@ -586,37 +618,10 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
     
     if s_mime == HC.IMAGE_JPEG and c_mime == HC.IMAGE_JPEG:
         
-        jpeg_quality_storage = JpegQualityStorage.instance()
+        populate_jpeg_quality_storage( s_hash )
+        populate_jpeg_quality_storage( c_hash )
         
-        for jpeg_hash in ( s_hash, c_hash ): 
-            
-            if not jpeg_quality_storage.HasData( jpeg_hash ):
-                
-                path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
-                
-                subsampling = HydrusImageMetadata.SUBSAMPLING_UNKNOWN
-                quality_result = ( 'unknown', None )
-                
-                try:
-                    
-                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
-                    
-                    subsampling = HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image )
-                    
-                    quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
-                    
-                except:
-                    
-                    pass
-                
-                
-                ( quality_label, quality ) = quality_result
-                
-                jpeg_quality = JpegQuality( subsampling, quality_label, quality )
-                
-                jpeg_quality_storage.AddData( jpeg_hash, jpeg_quality )
-                
-            
+        jpeg_quality_storage = JpegQualityStorage.instance()
         
         s_jpeg_quality = typing.cast( JpegQuality, jpeg_quality_storage.GetData( s_hash ) )
         c_jpeg_quality = typing.cast( JpegQuality, jpeg_quality_storage.GetData( c_hash ) )

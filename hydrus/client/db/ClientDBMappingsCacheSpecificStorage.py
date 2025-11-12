@@ -110,7 +110,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
+        version = 486 if file_service_id == self.modules_services.combined_local_file_domains_service_id else 400
         
         index_generation_dict = {}
         
@@ -153,7 +153,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 400
+        version = 486 if file_service_id == self.modules_services.combined_local_file_domains_service_id else 400
         
         table_dict[ cache_current_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )
         table_dict[ cache_deleted_mappings_table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, tag_id INTEGER, PRIMARY KEY ( hash_id, tag_id ) ) WITHOUT ROWID;', version )

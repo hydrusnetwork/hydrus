@@ -1091,10 +1091,79 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, not self._value )
             
-        else:
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
             
-            return None
+            operator, *dims = self._value
             
+            # the taller/wider swap here is imperfect, and when we change to a NumberTest or whatever, we'd then have >=, <=
+            if operator == 'taller than':
+                
+                return Predicate( self._predicate_type, ( 'wider than', *dims ) )
+                
+            elif operator == 'wider than':
+                
+                return Predicate( self._predicate_type, ( 'taller than', *dims ) )
+                
+            elif operator == '=':
+                
+                return Predicate( self._predicate_type, ( HC.UNICODE_NOT_EQUAL, *dims ) )
+                
+            elif operator == HC.UNICODE_NOT_EQUAL:
+                
+                return Predicate( self._predicate_type, ( '=', *dims ) )
+                
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
+            
+            ( operator, val, service_key ) = self._value
+            
+            if operator == '=':
+                
+                if val == 'not rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'rated', service_key ) )
+                    
+                elif val == 'rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'not rated', service_key ) )
+                    
+                elif isinstance( val, ( int, float ) ):
+                    
+                    try:
+                        
+                        service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+                        
+                    except:
+                        
+                        return None
+                        
+                    
+                    if service_type == HC.LOCAL_RATING_LIKE:
+                        
+                        if val == 0.0:
+                            
+                            return Predicate( self._predicate_type, ( '=', 1.0, service_key ) )
+                            
+                        elif val == 1.0:
+                            
+                            return Predicate( self._predicate_type, ( '=', 0.0, service_key ) )
+                            
+                        
+                    
+                
+            elif operator == '>':
+                
+                # again these are imperfect and we'd want NumberTest tech so we could go <=, >= here
+                
+                return Predicate( self._predicate_type, ( '<', val, service_key ) )
+                
+            elif operator == '<':
+                
+                return Predicate( self._predicate_type, ( '>', val, service_key ) )
+                
+            
+        
+        return None
         
     
     def GetMagicSortValue( self ):

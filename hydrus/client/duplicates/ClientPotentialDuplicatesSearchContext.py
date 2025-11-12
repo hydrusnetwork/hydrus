@@ -16,7 +16,7 @@ from hydrus.client.media import ClientMediaResult
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
-POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE = 4096
+POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE = 4000
 
 class PotentialDuplicateIdPairsAndDistances( object ):
     
@@ -352,7 +352,7 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
     def DoingFileBasedSearchIsOK( self ):
         
         # don't do it for partial searches, and a sanity check
-        return self._is_searching_full_space and self.NumPairsInSearchSpace() > 10000
+        return self._is_searching_full_space and self.NumPairsInSearchSpace() > 10000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
         
     
     def EstimatedNumHits( self ):
@@ -682,7 +682,7 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
                 
             except:
                 
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
             
         

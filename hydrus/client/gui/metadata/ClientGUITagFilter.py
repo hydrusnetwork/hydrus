@@ -1,5 +1,6 @@
 import collections
 import collections.abc
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -15,6 +16,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -828,6 +830,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIMenus.AppendSeparator( menu )
             
             for service in sorted( tag_repositories, key = lambda s: s.GetName() ):
+                
+                service = typing.cast( ClientServices.ServiceRepository, service )
                 
                 tag_filter = service.GetTagFilter()
                 

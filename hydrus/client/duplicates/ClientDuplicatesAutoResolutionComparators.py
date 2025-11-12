@@ -320,13 +320,14 @@ HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME = 0
 HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS = 1
 HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME = 2
 HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME = 3
-# do not put pixel similarity here. we'll have this enum be a toolbox of _very_ hardcoded stuff, no customisation for KISS
+HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY = 4
 
 hardcoded_comparator_type_str_lookup = {
     HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME : 'A and B have the same filetype',
     HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS : 'A and B have different filetypes',
     HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME : 'A and B have the same "has exif" value',
     HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME : 'A and B have the same "has icc profile" value',
+    HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY : 'A has clearly better jpeg quality than B',
 }
 
 class PairComparatorRelativeHardcoded( PairComparator ):
@@ -357,6 +358,11 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def CanDetermineBetter( self ) -> bool:
         
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+            
+            return True
+            
+        
         return False
         
     
@@ -367,10 +373,20 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def IsFast( self ) -> bool:
         
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+            
+            return False
+            
+        
         return True
         
     
     def OrderDoesNotMatter( self ):
+        
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+            
+            return False
+            
         
         return True
         
@@ -398,6 +414,39 @@ class PairComparatorRelativeHardcoded( PairComparator ):
         elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME:
             
             return media_result_a.GetFileInfoManager().has_icc_profile == media_result_b.GetFileInfoManager().has_icc_profile
+            
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+            
+            a_mime = media_result_a.GetMime()
+            b_mime = media_result_b.GetMime()
+            
+            if a_mime != HC.IMAGE_JPEG or b_mime != HC.IMAGE_JPEG:
+                
+                return False
+                
+            
+            a_hash = media_result_a.GetHash()
+            b_hash = media_result_b.GetHash()
+            
+            ClientDuplicatesComparisonStatements.populate_jpeg_quality_storage( a_hash )
+            ClientDuplicatesComparisonStatements.populate_jpeg_quality_storage( b_hash )
+            
+            jpeg_quality_storage = ClientDuplicatesComparisonStatements.JpegQualityStorage.instance()
+            
+            a_jpeg_quality = typing.cast( ClientDuplicatesComparisonStatements.JpegQuality, jpeg_quality_storage.GetData( a_hash ) )
+            b_jpeg_quality = typing.cast( ClientDuplicatesComparisonStatements.JpegQuality, jpeg_quality_storage.GetData( b_hash ) )
+            
+            if a_jpeg_quality.quality is None or b_jpeg_quality.quality is None or a_jpeg_quality.quality <= 0 or b_jpeg_quality.quality <= 0:
+                
+                return False
+                
+            else:
+                
+                # lower is better
+                quality_ratio = a_jpeg_quality.quality / b_jpeg_quality.quality
+                
+                return quality_ratio < 0.7 # 0.7 is about our quality step here
+                
             
         
         raise Exception( f'Do not understand what I should do with a type of {self._hardcoded_type}!' )

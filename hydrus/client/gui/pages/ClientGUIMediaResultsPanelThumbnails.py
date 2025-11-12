@@ -1,4 +1,5 @@
 import random
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -16,6 +17,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientServices
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
@@ -1243,7 +1245,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         services = services_manager.GetServices()
         
-        file_repositories = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
+        file_repositories: list[ ClientServices.ServiceRepository ] = [ service for service in services if service.GetServiceType() == HC.FILE_REPOSITORY ]
         
         ipfs_services = [ service for service in services if service.GetServiceType() == HC.IPFS ]
         
@@ -2519,6 +2521,8 @@ class Thumbnail( Selectable ):
         for numerical_service in numerical_services_to_show:
             
             service_key = numerical_service.GetServiceKey()
+            
+            numerical_service = typing.cast( ClientServices.ServiceLocalRatingNumerical, numerical_service )
             
             custom_pad = numerical_service.GetCustomPad()
             

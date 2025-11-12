@@ -187,9 +187,13 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good.'
         self._auto_archive.setToolTip( tt )
         
-        self._do_content_updates_on_already_in_db_files = QW.QCheckBox( post_import_panel )
-        tt = 'Normally, the "import destinations" and "archive all imports" options apply both to "successful" new files and those "already in db", so a file you already have may be retroactively archived and added to any missing destinations. If you need to only do this on new files, uncheck this.'
-        self._do_content_updates_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._do_archive_on_already_in_db_files = QW.QCheckBox( post_import_panel )
+        tt = 'Should a file that is "already in db" be retroactively archived? If you want to only do this on new files, uncheck this.'
+        self._do_archive_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._do_import_destinations_on_already_in_db_files = QW.QCheckBox( post_import_panel )
+        tt = 'Should a file that is "already in db" be force-added to the import destinations set by these options, if it is missing from any of them? This only matters for clients with multiple local file domains. It is often annoying, so only check this if you are sure you want it (usually for a one-time job).'
+        self._do_import_destinations_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._associate_primary_urls = QW.QCheckBox( post_import_panel )
         tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
@@ -269,8 +273,9 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'archive all imports: ', self._auto_archive ) )
-        rows.append( ( 'archive and set import destinations to \'already in db\' files: ', self._do_content_updates_on_already_in_db_files ) )
+        rows.append( ( 'auto-archive imports: ', self._auto_archive ) )
+        rows.append( ( '-- even for \'already in db\' files?: ', self._do_archive_on_already_in_db_files ) )
+        rows.append( ( 're-add \'already in db\' files to import destinations?: ', self._do_import_destinations_on_already_in_db_files ) )
         
         if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -323,8 +328,11 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preimport_hash_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromHash )
         self._preimport_url_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromURL )
         
+        self._auto_archive.clicked.connect( self._UpdateDoArchiveWidget )
+        
         self._UpdateDispositiveFromHash()
         self._UpdateDispositiveFromURL()
+        self._UpdateDoArchiveWidget()
         
     
     def _LoadDefaultOptions( self ):
@@ -384,7 +392,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
         
         self._auto_archive.setChecked( automatic_archive )
-        self._do_content_updates_on_already_in_db_files.setChecked( file_import_options.GetDoContentUpdatesOnAlreadyInDBFiles() )
+        self._do_archive_on_already_in_db_files.setChecked( file_import_options.GetDoArchiveOnAlreadyInDBFiles() )
+        self._do_import_destinations_on_already_in_db_files.setChecked( file_import_options.GetDoImportDestinationsOnAlreadyInDBFiles() )
         self._associate_primary_urls.setChecked( associate_primary_urls )
         self._associate_source_urls.setChecked( associate_source_urls )
         
@@ -456,6 +465,13 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
         
         self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != FileImportOptions.DO_NOT_CHECK )
+        
+    
+    def _UpdateDoArchiveWidget( self ):
+        
+        auto_archive = self._auto_archive.isChecked()
+        
+        self._do_archive_on_already_in_db_files.setEnabled( auto_archive )
         
     
     def _UpdateIsDefault( self ):
@@ -532,7 +548,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
             file_import_options.SetDestinationLocationContext( destination_location_context )
             file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-            file_import_options.SetDoContentUpdatesOnAlreadyInDBFiles( self._do_content_updates_on_already_in_db_files.isChecked() )
+            file_import_options.SetDoArchiveOnAlreadyInDBFiles( self._do_archive_on_already_in_db_files.isChecked() )
+            file_import_options.SetDoImportDestinationsOnAlreadyInDBFiles( self._do_import_destinations_on_already_in_db_files.isChecked() )
             file_import_options.SetPresentationImportOptions( presentation_import_options )
             
         

@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -93,7 +94,11 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!' )
+        label = 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!'
+        label += '\n\n'
+        label += 'Rules are worked on in alphabetical name order, so if you have overlapping test domains and want to force precedence, try naming them "1 - " and "2 - " etc..'
+        
+        st = ClientGUICommon.BetterStaticText( self, label )
         st.setWordWrap( True )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -108,7 +113,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         duplicates_auto_resolution_rule = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( name )
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
         predicates = [
             ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.GENERAL_IMAGE, ) ),
@@ -177,10 +182,22 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         pretty_operation_mode = ClientDuplicatesAutoResolution.duplicates_auto_resolution_rule_operation_mode_str_lookup[ operation_mode ]
         
+        if duplicates_auto_resolution_rule.IsPaused():
+            
+            pretty_operation_mode += ' - paused'
+            
+        
         return ( name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_operation_mode )
         
     
-    _ConvertRuleToSortTuple = _ConvertRuleToDisplayTuple
+    def _ConvertRuleToSortTuple( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+        
+        ( name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_operation_mode ) = self._ConvertRuleToDisplayTuple( duplicates_auto_resolution_rule )
+        
+        sort_name = HydrusText.HumanTextSortKey( name )
+        
+        return ( sort_name, rule_summary, pair_selector_summary, action_summary, search_status, pretty_operation_mode )
+        
     
     def _Edit( self ):
         
@@ -246,16 +263,15 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         self._duplicates_auto_resolution_rule = duplicates_auto_resolution_rule
         
-        self._starting_operation_mode = self._duplicates_auto_resolution_rule.GetOperationMode()
-        
         self._rule_panel = ClientGUICommon.StaticBox( self, 'rule' )
         
         self._name = QW.QLineEdit( self._rule_panel )
         
+        self._paused = QW.QCheckBox( self )
+        
         self._operation_mode = ClientGUICommon.BetterChoice( self._rule_panel )
         
         for operation_mode in [
-            ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED,
             ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION,
             ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC
         ]:
@@ -303,6 +319,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         #
         
         self._name.setText( self._duplicates_auto_resolution_rule.GetName() )
+        self._paused.setChecked( self._duplicates_auto_resolution_rule.IsPaused() )
         self._operation_mode.SetValue( self._duplicates_auto_resolution_rule.GetOperationMode() )
         self._max_pending_pairs.SetValue( self._duplicates_auto_resolution_rule.GetMaxPendingPairs() )
         
@@ -388,6 +405,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         rows = []
         
         rows.append( ( 'name: ', self._name ) )
+        rows.append( ( 'paused: ', self._paused ) )
         rows.append( ( 'operation: ', self._operation_mode ) )
         rows.append( ( 'max pending pairs (semi-automatic only): ', self._max_pending_pairs ) )
         
@@ -442,16 +460,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         
         operation_mode = self._operation_mode.GetValue()
         
-        if self._starting_operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC:
-            
-            enabled = operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION
-            
-        else:
-            
-            enabled = operation_mode != ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_FULLY_AUTOMATIC
-            
-        
-        self._max_pending_pairs.setEnabled( enabled )
+        self._max_pending_pairs.setEnabled( operation_mode == ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION )
         
     
     def GetValue( self ):
@@ -459,6 +468,8 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
         name = self._name.text()
         
         duplicates_auto_resolution_rule = ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule( name )
+        
+        duplicates_auto_resolution_rule.SetPaused( self._paused.isChecked() )
         
         duplicates_auto_resolution_rule.SetOperationMode( self._operation_mode.GetValue() )
         
@@ -681,6 +692,7 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
         additional_comparators = [
             ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ), 'A comparator that tests if the two files share the same filetype.' ),
             ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS ), 'A comparator that tests if the two files have different filetype.' ),
+            ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY ), 'A comparator that tests if A has a non-trivially higher apparent jpeg quality than B. The difference corresponds to about one label-step of quality as you see in the duplicate filter. If either file is not a jpeg, it fails.' ),
             ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME ), 'A comparator that tests if the two files either both have or both do not have some amount of EXIF data.' ),
             ( ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME ), 'A comparator that tests if the two files either both have or both do not have some amount of ICC Profile data.' ),
         ]
@@ -1246,6 +1258,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         super().__init__( parent )
         
+        self._rules_are_stale = True
+        self._properties_are_stale = True
+        
         menu_template_items = []
         
         call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES_AUTO_RESOLUTION )
@@ -1258,7 +1273,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         #
         
-        self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._UpdateList )
+        self._refresh_button = ClientGUICommon.IconButton( self, CC.global_icons().refresh, self._SetRulesStale )
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, self._GetCogMenuTemplateItems() )
         
         #
@@ -1271,6 +1286,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
+        self._duplicates_auto_resolution_rules_panel.AddIconButton( CC.global_icons().pause, self._PausePlayRules, tooltip = 'pause/play', enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
         #self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
@@ -1301,9 +1317,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         self._rules_list_updater = self._InitialiseUpdater()
         
-        self._rules_list_updater.update()
+        self._SetRulesStale()
         
-        CG.client_controller.sub( self, 'NotifyWorkComplete', 'notify_duplicates_auto_resolution_work_complete' )
+        CG.client_controller.sub( self, 'NotifyRulePropertiesHaveChanged', 'duplicates_auto_resolution_rules_properties_have_changed' )
         CG.client_controller.sub( self, 'NotifyNewRules', 'notify_duplicates_auto_resolution_new_rules' )
         
     
@@ -1313,6 +1329,26 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         working_hard_rules = CG.client_controller.duplicates_auto_resolution_manager.GetWorkingHard()
         
         return True in ( rule.CanWorkHard() or rule in working_hard_rules for rule in rules )
+        
+    
+    def _CheckStaleStuff( self ):
+        
+        if self.isVisible():
+            
+            if self._properties_are_stale:
+                
+                self._duplicates_auto_resolution_rules.UpdateDatas()
+                
+                self._properties_are_stale = False
+                
+            
+            if self._rules_are_stale:
+                
+                self._rules_list_updater.update()
+                
+                self._rules_are_stale = False
+                
+            
         
     
     def _ConvertRuleToDisplayTuple( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -1326,11 +1362,20 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         return ( name, search_status, running_status )
         
     
-    _ConvertRuleToSortTuple = _ConvertRuleToDisplayTuple
+    def _ConvertRuleToSortTuple( self, duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+        
+        ( name, search_status, running_status ) = self._ConvertRuleToDisplayTuple( duplicates_auto_resolution_rule )
+        
+        sort_name = HydrusText.HumanTextSortKey( name )
+        
+        return ( sort_name, search_status, running_status )
+        
     
     def _DeleteOrphanRules( self ):
         
-        text = f'This will scan the database for rule definitions in the primary rule module and the backing object in the serialisable module. If a rule is in one location but not the other (probably due to hard drive damage), the rule will be deleted.'
+        text = 'PAUSE ALL RULE WORK BEFORE STARTING THIS.'
+        text += '\n\n'
+        text += f'This will scan the database for rule definitions in the primary rule module and the backing object in the serialisable module. If a rule is in one location but not the other (probably due to hard drive damage), the rule will be deleted.'
         text += '\n\n'
         text += 'This command is useful if your client is shouting about missing rules, otherwise it is pointless.'
         
@@ -1339,8 +1384,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_fix_orphan_rules' )
-            
-            self._rules_list_updater.update()
             
         
     
@@ -1353,8 +1396,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' )
-            
-            self._rules_list_updater.update()
             
         
     
@@ -1373,8 +1414,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                     edited_duplicates_auto_resolution_rules = panel.GetValue()
                     
                     CG.client_controller.duplicates_auto_resolution_manager.SetRules( edited_duplicates_auto_resolution_rules )
-                    
-                    self._rules_list_updater.update()
                     
                 
             
@@ -1414,7 +1453,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                     
                     rules = CG.client_controller.duplicates_auto_resolution_manager.GetRules()
                     
-                    CG.client_controller.CallBlockingToQt( self, do_it_qt, rules )
+                    CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, do_it_qt, rules )
                     
                 finally:
                     
@@ -1434,8 +1473,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         CG.client_controller.duplicates_auto_resolution_manager.Wake()
         
-        self._rules_list_updater.update()
-        
     
     def _FlipWorkingHard( self ):
         
@@ -1454,8 +1491,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 CG.client_controller.duplicates_auto_resolution_manager.SetWorkingHard( rule, True )
                 
             
-        
-        self._rules_list_updater.update()
         
     
     def _GetCogMenuTemplateItems( self ) -> list[ ClientGUIMenuButton.MenuTemplateItem ]:
@@ -1559,6 +1594,16 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         return ClientGUIAsync.AsyncQtUpdater( 'review auto-resolution rules fetch', self, loading_callable, work_callable, publish_callable )
         
     
+    def _PausePlayRules( self ):
+        
+        rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
+        
+        for rule in rules:
+            
+            CG.client_controller.duplicates_auto_resolution_manager.PausePlayRule( rule )
+            
+        
+    
     def _RegenNumbers( self ):
         
         text = f'This will delete all the cached pair counts for your rules. If it seems there is a miscount somewhere (e.g. a pending pair to search that never clears), try hitting this.'
@@ -1568,8 +1613,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_regen_numbers' )
-            
-            self._rules_list_updater.update()
             
         
     
@@ -1595,8 +1638,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
             CG.client_controller.duplicates_auto_resolution_manager.ResetRuleDeclined( rules )
             
-            self._rules_list_updater.update()
-            
         
     
     def _ResetSearch( self ):
@@ -1620,8 +1661,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.duplicates_auto_resolution_manager.ResetRuleSearchProgress( rules )
-            
-            self._rules_list_updater.update()
             
         
     
@@ -1647,8 +1686,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
             CG.client_controller.duplicates_auto_resolution_manager.ResetRuleTestProgress( rules )
             
-            self._rules_list_updater.update()
-            
         
     
     def _ReviewActions( self ):
@@ -1665,18 +1702,37 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
         
     
-    def _UpdateList( self ):
+    def _SetPropertiesStale( self ):
         
-        self._rules_list_updater.update()
+        self._properties_are_stale = True
+        
+        self._CheckStaleStuff()
+        
+    
+    def _SetRulesStale( self ):
+        
+        self._rules_are_stale = True
+        
+        self._CheckStaleStuff()
         
     
     def NotifyNewRules( self ):
         
-        self._rules_list_updater.update()
+        self._SetRulesStale()
         
     
-    def NotifyWorkComplete( self ):
+    def NotifyRulePropertiesHaveChanged( self ):
         
-        self._duplicates_auto_resolution_rules.UpdateDatas()
+        self._SetPropertiesStale()
+        
+    
+    def PageHidden( self ):
+        
+        pass
+        
+    
+    def PageShown( self ):
+        
+        self._CheckStaleStuff()
         
     

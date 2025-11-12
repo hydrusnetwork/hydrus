@@ -241,7 +241,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
     
     if len( hashes ) > 0:
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
         CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
@@ -596,7 +596,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if we_are_looking_at_urls:
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
             file_seed_datas = [ file_seed.file_seed_data for file_seed in selected_file_seeds ]
             urls = [ file_seed_data for file_seed_data in file_seed_datas if isinstance( file_seed_data, str ) and file_seed_data.startswith( 'http' ) ]
@@ -871,7 +871,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( hashes ) > 0:
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
             ClientGUIMediaSimpleActions.ShowFilesInNewPage( hashes, location_context )
             

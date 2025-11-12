@@ -75,7 +75,7 @@ I also expect to write a system to easily merge clients together. Several users 
 
 Note that when you select a file domain, you can select 'multiple locations'. This provides the union of whichever domains you like. Tag counts will be correct but imprecise, often something like 'blonde hair (2-5)', meaning 'between two and five files', due to the complexity of quickly counting within these complicated domains.
 
-As soon as you add another local file service, you will also see a 'all my files' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. 
+As soon as you add another local file service, you will also see a 'combined local file domains' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. 
 
 This whole system is new. I will keep working on it, including better 'at a glance' indications of which files are where (current thoughts are custom thumbnail border colours and little indicator icons). Let me know how you get on with it!
 
@@ -87,7 +87,7 @@ If you search 'all known files'/'PTR', you can search all the files the PTR know
 
 You can search for deleted files under 'multiple domains' too. These may or may not still be in your client, so they might get the hydrus icon again. You won't need to do this much, but it can be super useful for some maintenance operations like 'I know I deleted this file by accident, what was its URL so I can find it again?'.
 
-Another service is 'hydrus local file storage'. This is a larger version of 'all my files'. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('my files' and any others you create, i.e. the 'all my files' domain), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.
+Another service is 'hydrus local file storage'. This is like the 'combined local file domains' umbrella, but larger. It essentially means 'all the files on your hard disk', which strictly means the union of all the files in your local file domains ('combined local file domains'), 'repository updates' (which stores update files for hydrus repository sync), and 'trash'. This search can be useful for some advanced maintenance jobs.
 
 If you select 'repository updates' specifically, you can inspect this advanced domain, but I recommend you not touch it! Otherwise, if you search 'hydrus local file storage', repository files are usually hidden from view.
 
@@ -96,12 +96,12 @@ Your client looks a bit like this:
 ```mermaid
 graph TB
   A[hydrus local file storage] --- B[repository updates]
-  A --- C[all my files]
+  A --- C[combined local file domains]
   C --- D[local file domains]
   A --- E[trash]
 ```
 
-Repository files, your media, and the trash are actually mutually exclusive. When a file is imported, it is added to 'hydrus local file storage' and either repository updates or 'all my files' and one or more local file domains. When it is deleted from all of those, it is taken from 'all my files' and moved to trash. When trashed files are cleared, the files are removed from 'trash' and then 'hydrus local file storage' and thus your hard disk.
+Repository files, 'combined local file domains', and the trash are mutually exclusive. When a file is imported, it is added to 'hydrus local file storage' and 'combined local file domains' and one or more local file domains. When it is deleted from all of its local file domains, it is taken from the 'combined local file domains' umbrella and moved to trash. When trashed files time out or are force-delete-confirmed by the user, the files are removed from 'trash' and then 'hydrus local file storage' and will soon be physically deleted from your hard disk (although, by default, hydrus tries to send to your OS recycle bin, so there's usually another chance to save something that was accidentally deleted).
 
 ## more advanced usage { id="advanced" }
 

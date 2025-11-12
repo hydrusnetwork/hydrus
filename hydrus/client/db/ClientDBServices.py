@@ -76,7 +76,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         self.local_update_service_id = None
         self.trash_service_id = None
         self.hydrus_local_file_storage_service_id = None
-        self.combined_local_media_service_id = None
+        self.combined_local_file_domains_service_id = None
         self.combined_file_service_id = None
         self.combined_deleted_file_service_id = None
         self.combined_tag_service_id = None
@@ -124,7 +124,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             try:
                 
                 self.combined_deleted_file_service_id = self.GetServiceId( CC.COMBINED_DELETED_FILE_SERVICE_KEY )
-                self.combined_local_media_service_id = self.GetServiceId( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                self.combined_local_file_domains_service_id = self.GetServiceId( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -162,9 +162,9 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             self.hydrus_local_file_storage_service_id = service_id
             
-        elif service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+        elif service_key == CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY:
             
-            self.combined_local_media_service_id = service_id
+            self.combined_local_file_domains_service_id = service_id
             
         elif service_key == CC.COMBINED_FILE_SERVICE_KEY:
             

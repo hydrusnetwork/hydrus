@@ -1656,7 +1656,7 @@ class TestClientDB( unittest.TestCase ):
         
         media_result = self._read( 'media_result', bytes.fromhex( swf_hash_hex ) )
         
-        earliest_import_timestamp = HydrusTime.SecondiseMS( media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+        earliest_import_timestamp = HydrusTime.SecondiseMS( media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
         
         result = self._read( 'boned_stats' )
         
@@ -1678,7 +1678,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
         predicates = [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.APPLICATION_FLASH, ) ) ]
         
@@ -2013,11 +2013,11 @@ class TestClientDB( unittest.TestCase ):
         
         TestClientDB._clear_db()
         
-        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
+        result = self._read( 'services', ( HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_TAG, HC.LOCAL_RATING_LIKE ) )
         
         result_service_keys = { service.GetServiceKey() for service in result }
         
-        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
+        self.assertEqual( { CC.TRASH_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY }, result_service_keys )
         
         #
         

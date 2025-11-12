@@ -39,7 +39,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
         
         tag_service_key = ClientLocalServerCore.ParseTagServiceKey( request )
         
@@ -661,7 +661,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     metadata_row[ 'is_inbox' ] = locations_manager.inbox
                     metadata_row[ 'is_local' ] = locations_manager.IsLocal()
                     metadata_row[ 'is_trashed' ] = locations_manager.IsTrashed()
-                    metadata_row[ 'is_deleted' ] = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in locations_manager.GetDeleted() or locations_manager.IsTrashed()
+                    metadata_row[ 'is_deleted' ] = CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in locations_manager.GetDeleted() or locations_manager.IsTrashed()
                     
                     metadata_row[ 'has_transparency' ] = file_info_manager.has_transparency
                     metadata_row[ 'has_exif' ] = file_info_manager.has_exif

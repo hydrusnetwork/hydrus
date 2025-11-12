@@ -1003,7 +1003,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
                     
-                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update ) )
+                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, content_update ) )
                     
                 
             

@@ -239,7 +239,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             # are there any non-inbox local files or any deleted files for which we have an import time (actual or deletion memory) before the magic time for which there is no accompanying archive time? 
             
             # current media PLUS current trash
-            current_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_media_service_id ) )
+            current_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_domains_service_id ) )
             current_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.trash_service_id ) )
             
             current_archived_hash_ids = current_hash_ids.difference( self.inbox_hash_ids )
@@ -288,7 +288,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             #
             
             # deleted from my media EX current trash. these are all archived
-            deleted_hash_ids = set( self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_media_service_id ) )
+            deleted_hash_ids = set( self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_file_domains_service_id ) )
             deleted_hash_ids.difference_update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.trash_service_id ) )
             
             BLOCK_SIZE = 4096
@@ -310,7 +310,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                batch_of_hash_ids_to_deleted_timestamps_ms = self.modules_files_storage.GetDeletedHashIdsToTimestampsMS( self.modules_services.combined_local_media_service_id, batch_of_hash_ids )
+                batch_of_hash_ids_to_deleted_timestamps_ms = self.modules_files_storage.GetDeletedHashIdsToTimestampsMS( self.modules_services.combined_local_file_domains_service_id, batch_of_hash_ids )
                 
                 batch_of_hash_ids_to_deleted_timestamps_ms = { hash_id : ( deleted_timestamp_ms, original_import_timestamp_ms ) for ( hash_id, ( deleted_timestamp_ms, original_import_timestamp_ms ) ) in batch_of_hash_ids_to_deleted_timestamps_ms.items() if original_import_timestamp_ms is not None }
                 

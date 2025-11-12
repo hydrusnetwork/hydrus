@@ -15,9 +15,13 @@ from hydrus.client.caches import ClientCachesBase
 
 
 # to help smooth out jpeg artifacts, we can do a gaussian blur at 100% zoom
-# jpeg artifacts are on the scale of 8x8 blocks. 0.8 sigma, which is about 3x that (2.4px) radius, is a nice sweet spot I have confirmed visually
+# jpeg artifacts are on the scale of 8x8 blocks.
+# I tried 0.8 sigma, which is about 3x that radius (2.4px). I generated this visually during debug. it was ok
+# I am moving to 0.95 sigma after doing some stats and more visual comparison at 0.7 up to 1.1
+# obviously the numbers get closer and closer the higher you go though, so don't trust them alone. we only want to attack jpeg artifacts here
+# anything that is like 600x1000 and low quality jpeg just gets blurred a lot!
 JPEG_ARTIFACT_BLUR_FOR_PROCESSING = True
-JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM = 0.8
+JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM = 0.95
 
 # saves lots of CPU time for no great change
 NORMALISE_SCALE_FOR_LAB_HISTOGRAM_PROCESSING = True
@@ -260,6 +264,27 @@ def FilesAreVisuallySimilarRegional( lab_tile_hist_1: VisualDataTiled, lab_tile_
 
 def FilesAreVisuallySimilarRegionalEdgeMapRaw( edge_map_1: EdgeMap, edge_map_2: EdgeMap ):
     
+    # TODO: I think this can all be a lot smarter
+    #
+    # most importantly, I think we should go regional, tile stuff, for the max score testing
+    # we want to determine if we have a crazy skew in all cases. we don't care about one bad pixel, and if we care about multiple bad pixels, we care where they are
+    # so, move the largest point difference to its own tile thing and chop it all up and examine the averages or the spread of maxes or the spread of top 1%s or something
+    # if we have tiles with a bunch of edge difference, that's an alternate!
+    # if we have 70% of tiles with a bit of fuzz, that's jpeg fun
+    # 
+    # also convertall this to Lab mate
+    #
+    # we could make our absolute skew pull by using the average of the top decile rather than the absolute peak
+    # HOW ABOUT THIS, for top 1% average (655 pixels for 256x256=65536 array):
+    # try even higher, top 0.2% or so, to catch eye differences and so on
+    # biggest_point_difference = numpy.mean( difference_edge_map_b[ difference_edge_map_b > numpy.percentile( difference_edge_map_b, 99.8 ) ] )
+    # (but I forgot to abs it here, but yeah)
+    # this is interesting, but may be the wrong tack if we go regional anyway
+    #
+    # ANY CHANGES HERE NEED A RETUNE
+    
+    # ####
+    
     # each edge map is -255 to +255, hovering around 0
     
     difference_edge_map_r = edge_map_1.edge_map_r - edge_map_2.edge_map_r
@@ -271,6 +296,10 @@ def FilesAreVisuallySimilarRegionalEdgeMapRaw( edge_map_1: EdgeMap, edge_map_2: 
     largest_point_difference_b = numpy.max( numpy.abs( difference_edge_map_b ) )
     
     largest_point_difference = max( largest_point_difference_r, largest_point_difference_g, largest_point_difference_b )
+    
+    # In some cases, you get something like a sliver of hair or an eye pupil that at a different resolution and jpeg quality loses some of its colour. maybe this is a subsampling thing?
+    # This boosts these max-seen point differences up to like 30 or so
+    # maybe I shouldn't be testing RGB as much as a weighted Lab
     
     #
     
@@ -553,9 +582,6 @@ def FilesAreVisuallySimilarRegionalLabHistograms( histograms_1: list[ LabHistogr
 
 def FilesAreVisuallySimilarSimple( visual_data_1: VisualData, visual_data_2: VisualData ):
     
-    # if I do not scale images to be the same size, this guy falls over!
-    # I guess the INTER_AREA or something is doing an implicit gaussian of some sort and my tuned numbers assume that
-    
     if FilesHaveDifferentRatio( visual_data_1.resolution, visual_data_2.resolution ):
         
         return ( False, VISUAL_DUPLICATES_RESULT_NOT, 'not visual duplicates\n(different ratio)' )
@@ -646,10 +672,14 @@ def GenerateEdgeMapNumPy( rgb_numpy_image: numpy.ndarray ) -> EdgeMap:
     
     rgb_numpy_image = rgb_numpy_image.astype( numpy.float32 )
     
+    # TODO: Tune the 10.0 gaussian here more. run the tuning suite with multiple values and see if there is a better sweet spot with more numbers
+    # were I feeling gigabrain, in part of converting this to Lab, we could blur the chromaticity channels less/more/whatever either as a matter of course or when we have 4:2:0 etc.. explicitly
+    # that might be true of the original JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM blur, too
+    
     # Compute Difference of Gaussians
-    # note we already did 0.8 blur on the 100% zoom
+    # note we already did a JPEG_ARTIFACT_GAUSSIAN_SIGMA_AT_100_ZOOM blur on the 100% zoom. now we want to subtract a blur at subjective zoom
     # I tried several upper range blurs, 10.0 works well visually and with the final stats
-    # ultimately this is more of a 'filtered and scaled image' more than a strict tight-band edge-map, but this seembs to handle general situations better
+    # ultimately this is more of a 'filtered and scaled image' more than a strict tight-band edge-map, but this seems to handle general situations better
     dog = rgb_numpy_image - BlurRGBNumPy( rgb_numpy_image, 10.0 )
     #dog = BlurRGBNumPy( rgb_numpy_image, 2.0 ) - BlurRGBNumPy( rgb_numpy_image, 6.0 )
     
@@ -657,13 +687,21 @@ def GenerateEdgeMapNumPy( rgb_numpy_image: numpy.ndarray ) -> EdgeMap:
     dog = dog.astype( numpy.float32 )
     
     # ok collapse to something smaller, using mean average
-    edge_map = cv2.resize( dog, EDGE_MAP_NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
+    edge_map = do_cv2_resize( dog, EDGE_MAP_NORMALISED_RESOLUTION )
     
     edge_map_r = edge_map[ :, :, 0 ]
     edge_map_g = edge_map[ :, :, 1 ]
     edge_map_b = edge_map[ :, :, 2 ]
     
     return EdgeMap( edge_map_r, edge_map_g, edge_map_b )
+    
+
+def do_cv2_resize( numpy_image: numpy.ndarray, resolution: tuple[ int, int ] ):
+    
+    # I tried to be clever with 'if downscaling, use area; if upscaling, use lanczos4', but the clash of strategies when the pair does differ seems to make the edge detection go nuts
+    # AREA is KISS??
+    
+    return cv2.resize( numpy_image, resolution, interpolation = cv2.INTER_AREA )
     
 
 def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
@@ -689,7 +727,7 @@ def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
         
         if NORMALISE_SCALE_FOR_LAB_HISTOGRAM_PROCESSING:
             
-            alpha_channel = cv2.resize( alpha_channel, LAB_HISTOGRAM_NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
+            alpha_channel = do_cv2_resize( alpha_channel, LAB_HISTOGRAM_NORMALISED_RESOLUTION )
             
         
         ( alpha_hist, alpha_gubbins ) = numpy.histogram( alpha_channel, bins = LAB_HISTOGRAM_NUM_BINS, range = ( 0, 255 ), density = True )
@@ -708,7 +746,7 @@ def GenerateImageVisualDataNumPy( numpy_image: numpy.ndarray ) -> VisualData:
     
     if NORMALISE_SCALE_FOR_LAB_HISTOGRAM_PROCESSING:
         
-        lab_histogram_numpy_image_rgb = cv2.resize( numpy_image_rgb, LAB_HISTOGRAM_NORMALISED_RESOLUTION, interpolation = cv2.INTER_AREA )
+        lab_histogram_numpy_image_rgb = do_cv2_resize( numpy_image_rgb, LAB_HISTOGRAM_NORMALISED_RESOLUTION )
         
     else:
         
@@ -751,7 +789,8 @@ def GenerateImageVisualDataTiledNumPy( numpy_image: numpy.ndarray ) -> VisualDat
     
     scale_resolution = HydrusImageHandling.GetThumbnailResolution( resolution, EDGE_MAP_PERCEPTUAL_RESOLUTION, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
     
-    edge_map_numpy_image_rgb = cv2.resize( numpy_image_rgb, scale_resolution, interpolation = cv2.INTER_AREA )
+    # We do not want to scale to 2048x2048 or whatever; we want to keep the ratio for the edge stuff because: the Gaussian stuff is circles and we don't want to warp the image dimensions!
+    edge_map_numpy_image_rgb = do_cv2_resize( numpy_image_rgb, scale_resolution )
     
     edge_map = GenerateEdgeMapNumPy( edge_map_numpy_image_rgb )
     
@@ -770,7 +809,7 @@ def GenerateImageVisualDataTiledNumPy( numpy_image: numpy.ndarray ) -> VisualDat
         lab_size_we_will_scale_to = ( tile_fitting_width, tile_fitting_height )
         
     
-    scaled_numpy = cv2.resize( numpy_image_rgb, lab_size_we_will_scale_to, interpolation = cv2.INTER_AREA )
+    scaled_numpy = do_cv2_resize( numpy_image_rgb, lab_size_we_will_scale_to )
     
     numpy_image_lab = cv2.cvtColor( scaled_numpy, cv2.COLOR_RGB2Lab )
     
@@ -822,6 +861,7 @@ def GetVisualDataWassersteinDistanceScore( lab_hist_1: LabHistograms, lab_hist_2
     b_score = GetHistogramNormalisedWassersteinDistance( lab_hist_1.b_hist, lab_hist_2.b_hist )
     
     interesting_tile = lab_hist_1.IsInteresting() or lab_hist_2.IsInteresting()
+    
     
     return ( interesting_tile, 0.6 * l_score + 0.2 * a_score + 0.2 * b_score )
     

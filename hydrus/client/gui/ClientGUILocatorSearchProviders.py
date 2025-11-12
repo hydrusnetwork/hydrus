@@ -12,6 +12,8 @@ def highlight_result_text( result_text: str, query_text: str ):
     
     result_text = escape( result_text )
     
+    original_result_text = result_text
+    
     if query_text:
         
         query_text = escape( query_text )
@@ -20,16 +22,19 @@ def highlight_result_text( result_text: str, query_text: str ):
             
             query_text = query_text.casefold()
             
-            if query_text not in result_text:
-                
-                result_text = result_text.casefold() # last ditch attempt
-                
+        
+        if query_text not in result_text:
+            
+            result_text = result_text.casefold() # last ditch attempt
             
         
-        result_text = result_text.replace( escape( query_text ), '<b>' + escape( query_text ) + '</b>' )
+        if query_text in result_text:
+            
+            return result_text.replace( query_text, '<b>' + query_text + '</b>' )
+            
         
     
-    return result_text
+    return '<b>' + escape( original_result_text ) + '</b>'
     
 
 # Subclass for customizing icon paths
@@ -129,11 +134,11 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     
                     selectable_media_page = widget
                     
-                    label = selectable_media_page.GetNameForMenu()
+                    page_name = selectable_media_page.GetNameForMenu( elide = False ) # I tried having the raw name, no '- 1 files', but it is better to be able to type what you see
                     
-                    if query_casefold in label.casefold():
+                    if query_casefold in page_name.casefold():
                         
-                        primary_text = highlight_result_text( label, query )
+                        primary_text = highlight_result_text( page_name, query )
                         secondary_text = 'top level page' if not parent_name else  "child of '" + escape( parent_name ) + "'"
                         
                         if is_page_of_pages:
@@ -250,10 +255,10 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
             result = []
             
             for action in menu.actions():
-            
+                
                 actionText = action.text().replace( "&", "" )
                 if action.menu():
-            
+                
                     new_parent_name = parent_name + " | " + actionText if parent_name else actionText
 
                     result.extend( get_menu_items( action.menu(), new_parent_name ) )
@@ -382,10 +387,11 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
             result = []
             
             for action in menu.actions():
-            
+                
                 actionText = action.text().replace( "&", "" )
+                
                 if action.menu():
-            
+                
                     new_parent_name = parent_name + " | " + actionText if parent_name else actionText
 
                     result.extend( get_menu_items( action.menu(), new_parent_name ) )

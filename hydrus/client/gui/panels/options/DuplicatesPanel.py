@@ -19,7 +19,7 @@ class DuplicatesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         open_panel = ClientGUICommon.StaticBox( self, 'open in a new duplicates filter page' )
         
         self._open_files_to_duplicate_filter_uses_all_my_files = QW.QCheckBox( open_panel )
-        self._open_files_to_duplicate_filter_uses_all_my_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normally, when you open a selection of files into a new page, the current file domain is preserved. For duplicates filters, you usually want to search in "all my files", so this sticks that. If you need domain-specific duplicates pages and know what you are doing, you can turn this off.' ) )
+        self._open_files_to_duplicate_filter_uses_all_my_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normally, when you open a selection of files into a new page, the current file domain is preserved. For duplicates filters, you usually want to search in "combined local file domains", so this sticks that. If you need domain-specific duplicates pages and know what you are doing, you can turn this off.' ) )
         
         duplicates_filter_page_panel = ClientGUICommon.StaticBox( self, 'duplicates filter page' )
         
@@ -88,7 +88,7 @@ class DuplicatesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Set to "all my files" when hitting "Open files in a new duplicates filter page":', self._open_files_to_duplicate_filter_uses_all_my_files ) )
+        rows.append( ( 'Set to "combined local file domains" when hitting "Open files in a new duplicates filter page":', self._open_files_to_duplicate_filter_uses_all_my_files ) )
         
         gridbox = ClientGUICommon.WrapInGrid( open_panel, rows )
         

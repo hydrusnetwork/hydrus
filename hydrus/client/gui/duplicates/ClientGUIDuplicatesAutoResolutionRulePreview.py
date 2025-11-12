@@ -41,7 +41,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             True
         )
         
-        self._potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( 256 ) # just a nice hint
+        self._potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( 250 ) # just a nice hint
         
         self._fetch_pairs_job_status = ClientThreading.JobStatus( cancellable = True )
         
@@ -64,7 +64,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._search_results_label = ClientGUICommon.BetterStaticText( self._search_panel, label = 'ready to fetch pairs' )
         self._search_results_label.setWordWrap( True )
-        self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 256, min = 1, none_phrase = 'fetch all' )
+        self._num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._search_panel, 250, min = 1, none_phrase = 'fetch all' )
         
         self._pause_search_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self._PausePlaySearch )
         

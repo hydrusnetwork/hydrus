@@ -65,7 +65,7 @@ class TestComparatorOneFile( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
@@ -440,6 +440,84 @@ class TestComparatorRelativeFileInfo( unittest.TestCase ):
 
 class TestComparatorHardcoded( unittest.TestCase ):
     
+    _db: typing.Any = None
+    
+    @classmethod
+    def _clear_db( cls ):
+        
+        cls._delete_db()
+        
+        # class variable
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def _delete_db( cls ):
+        
+        cls._db.Shutdown()
+        
+        while not cls._db.LoopIsFinished():
+            
+            time.sleep( 0.1 )
+            
+        
+        db_filenames = list(cls._db._db_filenames.values())
+        
+        for filename in db_filenames:
+            
+            path = os.path.join( TestController.DB_DIR, filename )
+            
+            os.remove( path )
+            
+        
+        del cls._db
+        
+        TG.test_controller.ClearTestDB()
+        
+    
+    @classmethod
+    def setUpClass( cls ):
+        
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def tearDownClass( cls ):
+        
+        cls._delete_db()
+        
+    
+    def _read( self, action, *args, **kwargs ): return TestComparatorHardcoded._db.Read( action, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestComparatorHardcoded._db.Write( action, True, *args, **kwargs )
+    
+    def _do_file_import( self, name ):
+        
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', name ) )
+        
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
+        
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        TG.test_controller.client_files_manager.AddFile( file_import_job.GetHash(), file_import_job.GetMime(), file_import_job._temp_path, thumbnail_bytes = file_import_job._thumbnail_bytes )
+        
+        self._write( 'import_file', file_import_job )
+        
+        hash = file_import_job.GetHash()
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        return media_result
+        
+    
     def test_comparator_0_filetypes( self ):
         
         media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
@@ -518,6 +596,31 @@ class TestComparatorHardcoded( unittest.TestCase ):
         
         self.assertFalse( comparator.Test( media_result_a, media_result_c ) )
         self.assertFalse( comparator.Test( media_result_c, media_result_a ) )
+        
+    
+    def test_comparator_2_jpeg_quality( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'visual_dupe_original.jpg' )
+        media_result_b = self._do_file_import( 'visual_dupe_grunky.jpg' )
+        
+        #
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        self.assertFalse( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_c = self._do_file_import( 'muh_png.png' )
+        
+        self.assertFalse( comparator.Test( media_result_c, media_result_c ) )
         
     
 
@@ -919,7 +1022,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
@@ -950,7 +1053,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 5 ) )
@@ -982,7 +1085,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 5000000 ) )
@@ -1011,7 +1114,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 5000000 ) )
@@ -1027,7 +1130,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )
@@ -1056,7 +1159,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 5 ) )
@@ -1072,7 +1175,7 @@ class TestSelector( unittest.TestCase ):
         mc = ClientMetadataConditional.MetadataConditional()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             ClientSearchTagContext.TagContext(),
             predicates = [
                 ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )

@@ -67,6 +67,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
     
     def GetPotentialDuplicateIdPairsAndDistancesFragmentary( self, potential_duplicate_pairs_fragmentary_search: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances:
         
+        do_report_mode = HG.potential_duplicates_report_mode
+        
         # every single part of the fragementary search goes through this method at some point. it alters the fragmentary search in ways the caller cannot predict but will react to (e.g. just chips away or completes immediately)
         
         # we need to search the mass of potential duplicates using our search context, but we only want results from within the given pairs
@@ -82,26 +84,32 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             
             estimated_num_potential_based_rows_remaining = potential_duplicate_pairs_fragmentary_search.EstimatedNumRowsStillToSearch()
             
-            estimated_num_file_search_based_rows_total = max( potential_duplicate_pairs_fragmentary_search.EstimatedNumHits(), 1 )
+            estimated_num_file_search_based_hits_total = max( potential_duplicate_pairs_fragmentary_search.EstimatedNumHits(), 1 )
             
             # some quick and dirty profiling gave this very generous number, but it was pretty gonk because it was a small dev machine (15,000 rows) where everything was already in memory
             # often 4-8us per potential row
             # 1-4ms per file hit
-            # there are numerous problems with this since we aren't capturing overhead costs per job and edge case file results will have very large result counts and all that, but the report mode shows it so we'll profile it a bit and see how it feels
-            potential_to_file_search_work_magic_coefficient = 500.0
+            # 
+            # OK, here is real world data from rich clients:
+            # 20us per uncached potential row
+            # 1.5-15ms per file hit
+            # this still equals ~500x, so great stuff
+            #
+            # there are still numerous problems with this since we aren't capturing overhead costs per job and edge case file results will have very large result counts and all that (one dude had 29s per file hit, let's go), but there we go
+            how_many_potential_rows_of_work_to_do_one_file_hit = 500
             
-            if HG.potential_duplicates_report_mode:
+            if do_report_mode:
                 
-                HydrusData.Print( f'This does appear to be a low hit-rate search, and the magic weights are: {estimated_num_file_search_based_rows_total * potential_to_file_search_work_magic_coefficient} versus {estimated_num_potential_based_rows_remaining}')
+                HydrusData.Print( f'This does appear to be a low hit-rate search, and the magic weights are: {estimated_num_file_search_based_hits_total * how_many_potential_rows_of_work_to_do_one_file_hit} versus {estimated_num_potential_based_rows_remaining}')
                 
             
-            if estimated_num_file_search_based_rows_total * potential_to_file_search_work_magic_coefficient < estimated_num_potential_based_rows_remaining:
+            if estimated_num_file_search_based_hits_total * how_many_potential_rows_of_work_to_do_one_file_hit < estimated_num_potential_based_rows_remaining:
                 
                 do_file_based_search = True
                 
             
         
-        if HG.potential_duplicates_report_mode:
+        if do_report_mode:
             
             time_started = HydrusTime.GetNowPrecise()
             
@@ -210,14 +218,14 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                                 self._Execute( f'ANALYZE {temp_table_name_1};')
                                 self._Execute( f'ANALYZE {temp_table_name_2};')
                                 
-                                table_join_1 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id )'
-                                table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id )'
-                                table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id )'
+                                table_join_1 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
+                                table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id ) '
+                                table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id ) '
                                 table_join_1 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
                                 
-                                table_join_2 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id )'
-                                table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id )'
-                                table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id )'
+                                table_join_2 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
+                                table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id ) '
+                                table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id ) '
                                 table_join_2 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
                                 
                                 select_statements = [
@@ -243,14 +251,14 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                                     
                                     if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                                         
-                                        table_join_1 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id )'
-                                        table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id )'
-                                        table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id )'
+                                        table_join_1 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id ) '
+                                        table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id ) '
+                                        table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id ) '
                                         table_join_1 += f'CROSS JOIN {temp_table_name_1} AS file_results_2 ON ( duplicate_files_2.king_hash_id = file_results_2.hash_id )'
                                         
-                                        table_join_2 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id )'
-                                        table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id )'
-                                        table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id )'
+                                        table_join_2 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id ) '
+                                        table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id ) '
+                                        table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id ) '
                                         table_join_2 += f'CROSS JOIN {temp_table_name_1} AS file_results_2 ON ( duplicate_files_2.king_hash_id = file_results_2.hash_id )'
                                         
                                         select_statements = [
@@ -345,11 +353,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
             
         
-        if HG.potential_duplicates_report_mode:
-            
-            time_took = HydrusTime.GetNowPrecise() - time_started
+        if do_report_mode:
             
             try:
+                
+                time_took = HydrusTime.GetNowPrecise() - time_started
                 
                 if do_file_based_search:
                     
@@ -368,7 +376,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
             except:
                 
-                HydrusData.Print( 'Could not profile the fragmetary duplicates search!' )
+                HydrusData.Print( 'Could not profile the fragmentary duplicates search!' )
                 
             
         

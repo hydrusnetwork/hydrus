@@ -321,6 +321,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'replace_percent_twenty_with_space_in_gug_input' : False,
             'use_legacy_mpv_mediator' : False,
             'potential_duplicate_pairs_search_context_panel_stops_to_estimate' : True,
+            'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' : True,
             'manage_tags_show_deleted_mappings' : False,
             'mpv_destruction_test' : False,
         }
@@ -1256,7 +1257,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     from hydrus.client import ClientLocation
                     
-                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                     
                 
             except:

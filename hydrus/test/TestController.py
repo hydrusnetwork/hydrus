@@ -4,6 +4,7 @@ import os
 import threading
 import tempfile
 import time
+import typing
 import unittest
 
 from qtpy import QtCore as QC
@@ -88,6 +89,9 @@ tiniest_gif = b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\xFF\x00\x2C\x00\x00
 LOCAL_RATING_LIKE_SERVICE_KEY = HydrusData.GenerateKey()
 LOCAL_RATING_NUMERICAL_SERVICE_KEY = HydrusData.GenerateKey()
 LOCAL_RATING_INCDEC_SERVICE_KEY = HydrusData.GenerateKey()
+
+callable_P = typing.ParamSpec( 'callable_P' )
+callable_R = typing.TypeVar( 'callable_R' )
 
 class MockController( object ):
     
@@ -251,7 +255,7 @@ class Controller( object ):
         
         services.append( ClientServices.GenerateService( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' ) )
         services.append( ClientServices.GenerateService( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HC.HYDRUS_LOCAL_FILE_STORAGE, 'hydrus local file storage' ) )
-        services.append( ClientServices.GenerateService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files' ) )
+        services.append( ClientServices.GenerateService( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, HC.COMBINED_LOCAL_FILE_DOMAINS, 'combined local file domains' ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ) )
         services.append( ClientServices.GenerateService( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ) )
         services.append( ClientServices.GenerateService( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ) )
@@ -387,7 +391,7 @@ class Controller( object ):
         return HydrusData.GenerateKey()
         
     
-    def CallBlockingToQt( self, win, func, *args, **kwargs ):
+    def CallBlockingToQt( self, win, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
             
@@ -411,14 +415,21 @@ class Controller( object ):
         
         self.CallAfterQtSafe( win, qt_code, win, job_status )
         
+        done_event = job_status.GetDoneEvent()
+        
         while not job_status.IsDone():
+            
+            if not QP.isValid( win ):
+                
+                raise HydrusExceptions.QtDeadWindowException( 'Window died before job returned!' )
+                
             
             if HG.model_shutdown:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
             
-            time.sleep( 0.05 )
+            done_event.wait( 1.0 )
             
         
         if job_status.HasVariable( 'result' ):
@@ -438,6 +449,37 @@ class Controller( object ):
             
         
         raise HydrusExceptions.ShutdownException()
+        
+    
+    def CallBlockingToQtFireAndForgetNoResponse( self, win, func, *args, **kwargs ) -> None:
+        
+        try:
+            
+            self.CallBlockingToQt( win, func, *args, **kwargs )
+            
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException, HydrusExceptions.CancelledException ):
+            
+            pass
+            
+        
+    
+    def CallBlockingToQtTLW( self, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+        
+        main_tlw = self.GetMainTLW()
+        
+        if main_tlw is None:
+            
+            raise HydrusExceptions.ShutdownException( 'Could not find a TLW! I think the program is shutting down or never booted correct!' )
+            
+        
+        try:
+            
+            return self.CallBlockingToQt( main_tlw, func, *args, **kwargs )
+            
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            
+            raise HydrusExceptions.ShutdownException( 'Program is shutting down!' )
+            
         
     
     def CallToThread( self, callable, *args, **kwargs ):

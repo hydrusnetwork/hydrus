@@ -865,7 +865,7 @@ CLIENT_API_SERVICE_KEY: bytes = b'client api'
 
 TRASH_SERVICE_KEY: bytes = b'trash'
 
-COMBINED_LOCAL_MEDIA_SERVICE_KEY: bytes = b'all local media'
+COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY: bytes = b'all local media'
 HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY: bytes = b'all local files'
 
 COMBINED_FILE_SERVICE_KEY: bytes = b'all known files'

@@ -809,7 +809,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
     
-    applicable_media = [ m for m in media if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
+    applicable_media = [ m for m in media if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
     if action == HC.CONTENT_UPDATE_MOVE:
         
@@ -1294,7 +1294,7 @@ def UndeleteMedia( win, media ):
             
             if len( choice_tuples ) > 1:
                 
-                service = CG.client_controller.services_manager.GetService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                service = CG.client_controller.services_manager.GetService( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
                 choice_tuples.append( ( 'all the above', service, 'Undelete back to all services the files have been deleted from.' ) )
                 

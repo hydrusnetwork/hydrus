@@ -43,7 +43,7 @@ def CreatePageManagerDuplicateFilter(
     
     if location_context is None:
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
     
     if initial_predicates is None:
@@ -767,7 +767,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
             return self._variables[ 'location_context' ]
             
         
-        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
     
     def GetNumSeeds( self ):

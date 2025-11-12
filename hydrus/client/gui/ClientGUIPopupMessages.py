@@ -317,7 +317,7 @@ class PopupMessage( PopupWindow ):
             
             ( hashes, attached_files_label ) = result
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
             self._show_files_button.setEnabled( False )
             

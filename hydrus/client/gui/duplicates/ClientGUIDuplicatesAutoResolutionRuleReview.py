@@ -55,7 +55,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._refetch_pending_actions_button = ClientGUICommon.IconButton( self._pending_actions_panel, CC.global_icons().refresh, self._RefetchPendingActionPairs )
         self._refetch_pending_actions_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the pending pairs' ) )
         
-        self._pending_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._pending_actions_panel, 256, min = 1, none_phrase = 'fetch all' )
+        self._pending_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._pending_actions_panel, 250, min = 1, none_phrase = 'fetch all' )
         
         self._pending_actions_pair_list = ThumbnailPairList.ThumbnailPairListReviewPendingPreviewAutoResolutionAction( self._pending_actions_panel, rule )
         
@@ -73,7 +73,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._refetch_actioned_pairs_button = ClientGUICommon.IconButton( self._actioned_pairs_panel, CC.global_icons().refresh, self._RefetchActionedPairs )
         self._refetch_actioned_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the actioned pairs' ) )
         
-        self._actioned_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._actioned_pairs_panel, 256, min = 1, none_phrase = 'fetch all' )
+        self._actioned_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._actioned_pairs_panel, 250, min = 1, none_phrase = 'fetch all' )
         
         self._actioned_pairs_pair_list = ThumbnailPairList.ThumbnailPairListTakenAutoResolutionAction( self._actioned_pairs_panel )
         
@@ -88,7 +88,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._refetch_declined_pairs_button = ClientGUICommon.IconButton( self._declined_pairs_panel, CC.global_icons().refresh, self._RefetchDeclinedPairs )
         self._refetch_declined_pairs_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Refresh the declined pairs' ) )
         
-        self._declined_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._declined_pairs_panel, 256, min = 1, none_phrase = 'fetch all' )
+        self._declined_pairs_num_to_fetch = ClientGUICommon.NoneableSpinCtrl( self._declined_pairs_panel, 250, min = 1, none_phrase = 'fetch all' )
         
         self._declined_pairs_pair_list = ThumbnailPairList.ThumbnailPairListDeclinedAutoResolutionAction( self._declined_pairs_panel )
         
@@ -656,7 +656,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         canvas_frame = ClientGUICanvasFrame.CanvasFrame( self.window(), set_parent = True )
         
         page_key = HydrusData.GenerateKey()
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         media_results = [ media_result_1, media_result_2 ]
         
         media_results = [ mr for mr in media_results if mr.GetLocationsManager().IsLocal() ]

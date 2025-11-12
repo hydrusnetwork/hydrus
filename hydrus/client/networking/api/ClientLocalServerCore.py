@@ -27,6 +27,7 @@ from hydrus.core.networking import HydrusServerRequest
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientServices
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 from hydrus.client.metadata import ClientRatings
@@ -280,7 +281,7 @@ def GetServicesDict():
         HC.LOCAL_FILE_UPDATE_DOMAIN,
         HC.FILE_REPOSITORY,
         HC.HYDRUS_LOCAL_FILE_STORAGE,
-        HC.COMBINED_LOCAL_MEDIA,
+        HC.COMBINED_LOCAL_FILE_DOMAINS,
         HC.COMBINED_FILE,
         HC.COMBINED_TAG,
         HC.LOCAL_RATING_LIKE,
@@ -303,6 +304,8 @@ def GetServicesDict():
         
         if service.GetServiceType() in HC.STAR_RATINGS_SERVICES:
             
+            service = typing.cast( ClientServices.ServiceLocalRatingStars, service )
+            
             star_type = service.GetStarType()
             
             if star_type.HasShape():
@@ -318,6 +321,8 @@ def GetServicesDict():
             
         
         if service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL:
+            
+            service = typing.cast( ClientServices.ServiceLocalRatingNumerical, service )
             
             allows_zero = service.AllowZero()
             num_stars = service.GetNumStars()
@@ -669,7 +674,7 @@ def ParseClientAPISearchPredicates( request ) -> list[ ClientSearchPredicate.Pre
 
 def ParsePotentialDuplicatesSearchContext( request: HydrusServerRequest.HydrusRequest ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext:
     
-    location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+    location_context = ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
     
     tag_service_key_1 = request.parsed_request_args.GetValue( 'tag_service_key_1', bytes, default_value = CC.COMBINED_TAG_SERVICE_KEY )
     tag_service_key_2 = request.parsed_request_args.GetValue( 'tag_service_key_2', bytes, default_value = CC.COMBINED_TAG_SERVICE_KEY )

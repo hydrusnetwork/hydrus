@@ -967,10 +967,10 @@ class DB( HydrusDB.HydrusDB ):
             
             job_status.SetStatusText( 'looking for orphans' )
             
-            # actually important we do it in this order I guess, to potentially fix a file that is only in 'my files' and not in 'all my files' or 'hydrus local file storage'
+            # actually important we do it in this order I guess, to potentially fix a file that is only in 'my files' and not in 'combined local file domains' or 'hydrus local file storage'
             jobs = [
-                ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'all my files umbrella' ),
-                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.hydrus_local_file_storage_service_id, 'hydrus local file storage umbrella' )
+                ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_file_domains_service_id, 'combined local file domains umbrella' ),
+                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.hydrus_local_file_storage_service_id, 'hydrus local file storage umbrella' )
             ]
             
             for ( umbrella_components_service_types, umbrella_master_service_id, description ) in jobs:
@@ -1177,7 +1177,7 @@ class DB( HydrusDB.HydrusDB ):
             ( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ),
             ( CC.COMBINED_DELETED_FILE_SERVICE_KEY, HC.COMBINED_DELETED_FILE, 'deleted from anywhere' ),
             ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, HC.HYDRUS_LOCAL_FILE_STORAGE, 'hydrus local file storage' ),
-            ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files' ),
+            ( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, HC.COMBINED_LOCAL_FILE_DOMAINS, 'combined local file domains' ),
             ( CC.LOCAL_FILE_SERVICE_KEY, HC.LOCAL_FILE_DOMAIN, 'my files' ),
             ( CC.LOCAL_UPDATE_SERVICE_KEY, HC.LOCAL_FILE_UPDATE_DOMAIN, 'repository updates' ),
             ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ),
@@ -1647,7 +1647,7 @@ class DB( HydrusDB.HydrusDB ):
         if file_search_context is None:
             
             file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             )
             
         
@@ -1954,7 +1954,7 @@ class DB( HydrusDB.HydrusDB ):
         if file_search_context is None:
             
             file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             )
             
         
@@ -2069,7 +2069,7 @@ class DB( HydrusDB.HydrusDB ):
         job_status = None
     ):
         
-        all_my_files_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
+        combined_local_file_domains_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_domains_service_id, HC.CONTENT_STATUS_CURRENT )
         hydrus_local_file_storage_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.hydrus_local_file_storage_service_id, HC.CONTENT_STATUS_CURRENT )
         
         # get all sorts of stats and present them in ( timestamp, cumulative_num ) tuple pairs
@@ -2278,13 +2278,13 @@ class DB( HydrusDB.HydrusDB ):
             return file_history
             
         
-        if current_files_table_name == all_my_files_current_files_table_name:
+        if current_files_table_name == combined_local_file_domains_current_files_table_name:
             
             total_archiveable_count = len( current_timestamps )
             
         else:
             
-            ( total_archiveable_count, ) = self._Execute( f'SELECT COUNT( * ) FROM {current_files_table_name} CROSS JOIN {all_my_files_current_files_table_name} USING ( hash_id );' ).fetchone()
+            ( total_archiveable_count, ) = self._Execute( f'SELECT COUNT( * ) FROM {current_files_table_name} CROSS JOIN {combined_local_file_domains_current_files_table_name} USING ( hash_id );' ).fetchone()
             
         
         total_archive_files = total_archiveable_count - total_inbox_files
@@ -3372,7 +3372,7 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        if service_type in ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
+        if service_type in ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN, HC.FILE_REPOSITORY ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILES, HC.SERVICE_INFO_NUM_VIEWABLE_FILES, HC.SERVICE_INFO_TOTAL_SIZE, HC.SERVICE_INFO_NUM_DELETED_FILES }
             
@@ -3990,6 +3990,7 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicates_auto_resolution_commit_resolution_pair_passed' : self.modules_files_duplicates_auto_resolution_search.CommitResolutionPairPassed,
                 'duplicates_auto_resolution_deny_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.DenyPendingPairs,
                 'duplicates_auto_resolution_do_search_work' : self.modules_files_duplicates_auto_resolution_search.DoSearchWork,
+                'duplicate_auto_resolution_flip_pause_play' : self.modules_files_duplicates_auto_resolution_storage.FlipPausePlay,
                 'duplicates_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
                 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
                 'duplicates_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
@@ -7497,7 +7498,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( underpermitted_yet_set_to_permits_everything ) > 0:
                     
-                    do_permissions_stuff = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_permissions_stuff_593 )
+                    do_permissions_stuff = self._controller.CallBlockingToQtTLW( ask_what_to_do_permissions_stuff_593 )
                     
                     if do_permissions_stuff:
                         
@@ -7627,7 +7628,7 @@ class DB( HydrusDB.HydrusDB ):
                         return result == QW.QDialog.DialogCode.Accepted
                         
                     
-                    do_it = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_false_positive_modified_dates )
+                    do_it = self._controller.CallBlockingToQtTLW( ask_what_to_do_false_positive_modified_dates )
                     
                     if do_it:
                         
@@ -8053,7 +8054,7 @@ class DB( HydrusDB.HydrusDB ):
                             ClientGUIDialogsMessage.ShowInformation( CG.client_controller.GetMainTLW(), message )
                             
                         
-                        self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), notify_deleting_auto_resolution_rules )
+                        self._controller.CallBlockingToQtTLW( notify_deleting_auto_resolution_rules )
                         
                     
                     self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicate_files_auto_resolution_rules ( rule_id INTEGER PRIMARY KEY );' )
@@ -8175,7 +8176,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if not user_wants_us_to_leave_it_on:
                     
-                    results = self._GetServiceInfo( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                     
                     if results.get( HC.SERVICE_INFO_NUM_FILES, 0 ) > 10000:
                         
@@ -8323,7 +8324,7 @@ class DB( HydrusDB.HydrusDB ):
                             self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = rule_delete.GetName() )
                             
                         
-                        rule_keep.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED )
+                        rule_keep.SetPaused( True )
                         
                         self.modules_serialisable.SetJSONDump( rule_keep )
                         
@@ -8722,7 +8723,7 @@ class DB( HydrusDB.HydrusDB ):
                     if rule.GetAction() == HC.DUPLICATE_WORSE:
                         
                         rule.SetAction( HC.DUPLICATE_BETTER )
-                        rule.SetOperationMode( ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED )
+                        rule.SetPaused( True )
                         
                         self.modules_serialisable.SetJSONDump( rule )
                         
@@ -8930,7 +8931,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if len( hash_ids ) > 0:
                         
-                        do_transparency_recheck = self._controller.CallBlockingToQt( CG.client_controller.GetMainTLW(), ask_what_to_do_transparency_recheck_644, len( hash_ids ) )
+                        do_transparency_recheck = self._controller.CallBlockingToQtTLW( ask_what_to_do_transparency_recheck_644, len( hash_ids ) )
                         
                         if do_transparency_recheck:
                             
@@ -8967,7 +8968,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # prepped for v647
         if version == 646:
             
             try:
@@ -8979,6 +8979,53 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to rename "all local files" failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'pixiv file page api parser',
+                    'pixiv file page api parser (gets lower quality image if not logged in)'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        # prepped two weeks early
+        if version == 648:
+            
+            try:
+                
+                self._Execute( 'UPDATE services SET name = ? WHERE service_type = ? AND name = ?;', ( 'combined local file domains', HC.COMBINED_LOCAL_FILE_DOMAINS, 'all my files' ) )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to rename "all my files" failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

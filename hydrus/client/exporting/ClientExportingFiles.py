@@ -851,7 +851,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE and self._delete_from_client_after_export:
             
-            my_files_media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
+            my_files_media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
             
             reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
             
@@ -868,7 +868,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() for media_result in chunk_of_media_results }, reason = reason )
                 
-                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update ) )
+                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, content_update ) )
                 
             
         

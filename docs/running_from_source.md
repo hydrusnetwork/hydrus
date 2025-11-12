@@ -4,7 +4,9 @@ title: Running From Source
 
 # running from source
 
-I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. The program generally works better (better UI compatibility and mpv support) from source than from a built release. If none of the builds work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent), and since 2025-09 any macOS situation), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.
+I write the client and server entirely in [python](https://python.org), which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. The program generally works better (better UI compatibility and mpv support) from source than from a built release. If none of the builds work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu or a newer but more distant flavour of Linux, and since 2025-09 any macOS situation), it may be the only way you can get the program to run. Also, if you want to explore or modify the code, you will obviously need to do this.
+
+I generally recommend running from source if you can, especially on Linux.
 
 ## Simple Setup Guide
 
@@ -47,7 +49,7 @@ There are now setup scripts that make this easy. You do not need any python expe
             - Do `Enable file system caching`/Do not `Enable symbolic links`
             - Do not enable experimental stuff
         
-        Git should now be installed on your system. Any new terminal/command line/powershell window (shift+right-click on any folder and hit something like 'Open in terminal') now has the `git` command!
+        Git should now be installed on your system. Any _new_ terminal/command line/powershell window (right-click on any folder and hit something like 'Open in terminal') now has the `git` command!
         
     
     ??? warning "Windows 7"
@@ -57,24 +59,24 @@ There are now setup scripts that make this easy. You do not need any python expe
         
         Then, later, when you do the `git clone https://github.com/hydrusnetwork/hydrus` line, you will need to run `git checkout tags/v578`, which will rewind you to that point in time.
         
-        I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about setting up a Linux instance.
+        I can't promise anything though. The requirements.txt isn't perfect, and something else may break in future! You may like to think about moving to Linux.
         
-
-    If you do not know that you have Python, you probably do not. Let's check--right-click on any folder and select 'open in terminal' and copy/paste the following:
+    
+    If you do not know if you have Python, you probably do not. Let's check--right-click on any folder and select 'open in terminal' and copy/paste the following:
     
     `python --version`
     
-    If you get some nice python version information, you have python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+    If you get some nice python version information, you have python. Hydrus should be fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
     
     If you don't have python, we need to get it. Try 3.12 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
     
-    Once it is installed, then, _after installation is totally complete_, open up a new terminal (It needs to be a new terminal to catch your updated PATH) and copy/paste the following:
+    Once it is installed, then, _after installation is totally complete_, open up a new terminal (It needs to be a new terminal to catch your now-updated PATH) and copy/paste the following:
     
-    `python --version`
-    `python -m pip --version`
+    `python --version`  
+    `python -m pip --version`  
     `python -m venv --help`
     
-    If all these lines produce good output (no errors), you are good to go!
+    If all these produce good output (no errors), you are good to go!
 
 === "Linux"
 
@@ -90,16 +92,16 @@ There are now setup scripts that make this easy. You do not need any python expe
     
     `sudo pacman -S git`
     
-    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    You should already have a fairly new python. Hydrus is fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
-    `python3 -m pip --version`
+    `python3 -m pip --version`  
     `python3 -m venv --help`
     
     If it complains about either, you will need to install them. Try this:
     
-    `sudo apt install python3-pip`
+    `sudo apt install python3-pip`  
     `sudo apt install python3-venv`
 
 === "macOS"
@@ -114,7 +116,7 @@ There are now setup scripts that make this easy. You do not need any python expe
     
     `brew install git`
     
-    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on an even newer python, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
@@ -533,7 +535,7 @@ When running from source you may want to [build the hydrus help docs](about_docs
 
 ### Building Packages on Windows { id="windows_build" }
 
-_This info is old, ignore unless you have trouble._
+_This info is old, ignore unless you are desperate._
 
 Almost everything you get through pip is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, you have two choices:
 
@@ -554,11 +556,11 @@ choco install -y visualstudio2022buildtools
 choco install -y windows-sdk-10.0
 ```
 
-_Update:_ On Windows 11, I have had some trouble with the above. The VS2015 seems not to install any more. A basic stock Win 11 install with Python 3.10 or 3.11 is fine getting everything on our requirements, but freezing with PyInstaller may have trouble finding certain 'api-***.dll' files. I am now trying to figure this out with my latest dev machine as of 2024-01. If you try this, let me know what you find out! 
+_Update:_ On Windows 11, I have had some trouble with the above. The VS2015 seems not to install any more. A basic stock Win 11 install with Python 3.10 or 3.11 is fine getting everything on our requirements, but freezing with PyInstaller may have trouble finding certain 'api-***.dll' files. 
 
 ### Additional Windows Info { id="additional_windows" }
 
-This does not matter much any more, but in the old days, building modules like lz4 and lxml was a complete nightmare, and hooking up Visual Studio was even more difficult. [This page](http://www.lfd.uci.edu/~gohlke/pythonlibs/) has a lot of prebuilt binaries--I have found it very helpful many times.
+This does not matter much any more, but in the old days, building modules like lz4 and lxml was a nightmare, and hooking up Visual Studio was even more difficult. [This page](http://www.lfd.uci.edu/~gohlke/pythonlibs/) has a lot of prebuilt binaries--I have found it very helpful many times.
 
 I have a fair bit of experience with Windows python, so send me a mail if you need help.
 
@@ -566,8 +568,8 @@ I have a fair bit of experience with Windows python, so send me a mail if you ne
 
 I use Windows and Linux, but I have much more experience with Windows, and the program is most stable and clean there. I have very little experience with macOS, but I appreciate bug reports for any platform.
 
-My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, please do look through the source and ask me if you don't understand something.
+My coding style is unusual and unprofessional. Everything is pretty much hacked together. I'm constantly throwing new code together and then cleaning and overhauling it down the line. If you are interested in how things work, look through the source and please do ask me if you don't understand something.
 
-I work strictly alone, however. While I am very interested in bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on refactoring. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so feel free to fork and play around with things on your end as much as you like.
+I work strictly alone, however. While I am very interested in bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on refactoring. I know a lot of things are a mess. Everything I do is [WTFPL](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md), so you can fork and play around with things on your end as much as you like.
 
 [This DeepWiki AI Crawl](https://deepwiki.com/hydrusnetwork/hydrus) of the Hydrus Github repository is not totally comprehensive, but I was impressed with how generally accurate it is. It attributes more thought on my part than actually happened, hahaha, but you might like to check it if you want to poke around.

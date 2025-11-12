@@ -564,7 +564,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 for url in useful_urls:
                     
-                    CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_add_url, url )
+                    CG.client_controller.CallBlockingToQtTLW( qt_add_url, url )
                     
                 
             
@@ -590,7 +590,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = reason )
                     
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, content_update )
                     
                     self._controller.WriteSynchronous( 'content_updates', content_update_package )
                     

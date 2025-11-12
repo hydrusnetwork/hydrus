@@ -1,6 +1,5 @@
 import hashlib
 import os
-
 import signal
 import sys
 import threading
@@ -46,6 +45,9 @@ if not HG.twisted_is_broke:
     
     from twisted.internet import threads, reactor, defer
     
+
+callable_P = typing.ParamSpec( 'callable_P' )
+callable_R = typing.TypeVar( 'callable_R' )
 
 PubSubEventType = QP.registerEventType()
 
@@ -216,7 +218,7 @@ class Controller( HydrusController.HydrusController ):
         self.thumbnails_cache: typing.Optional[ ClientCaches.ThumbnailCache ] = None
         
         self.client_files_manager: typing.Optional[ ClientFilesManager.ClientFilesManager ] = None
-        self.services_manager = None
+        self.services_manager: typing.Optional[ ClientServices.ServicesManager ] = None
         
         Controller.my_instance = self
         
@@ -411,9 +413,9 @@ class Controller( HydrusController.HydrusController ):
         ClientGUIDialogsMessage.ShowInformation( self.gui, message )
         
     
-    def CallBlockingToQt( self, win, func, *args, **kwargs ):
+    def CallBlockingToQt( self, win, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
-        def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
+        def qt_code( job_status: ClientThreading.JobStatus ):
             
             try:
                 
@@ -429,9 +431,6 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_status.SetErrorException( e )
                 
-                #HydrusData.Print( 'CallBlockingToQt just caught this error:' )
-                #HydrusData.DebugPrint( traceback.format_exc() )
-                
             finally:
                 
                 job_status.Finish()
@@ -445,7 +444,7 @@ class Controller( HydrusController.HydrusController ):
         
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
-        self.CallAfterQtSafe( win, qt_code, win, job_status )
+        self.CallAfterQtSafe( win, qt_code, job_status )
         
         # I think in some cases with the splash screen we may actually be pushing stuff here after model shutdown
         # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
@@ -487,7 +486,38 @@ class Controller( HydrusController.HydrusController ):
         raise HydrusExceptions.ShutdownException()
         
     
-    def CallAfterQtSafe( self, qobject: QC.QObject, func, *args, **kwargs ):
+    def CallBlockingToQtFireAndForgetNoResponse( self, win, func, *args, **kwargs ) -> None:
+        
+        try:
+            
+            self.CallBlockingToQt( win, func, *args, **kwargs )
+            
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            
+            pass
+            
+        
+    
+    def CallBlockingToQtTLW( self, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+        
+        main_tlw = self.GetMainTLW()
+        
+        if main_tlw is None:
+            
+            raise HydrusExceptions.ShutdownException( 'Could not find a TLW! I think the program is shutting down or has not yet created a splash!' )
+            
+        
+        try:
+            
+            return self.CallBlockingToQt( main_tlw, func, *args, **kwargs )
+            
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            
+            raise HydrusExceptions.ShutdownException( 'Program is shutting down!' )
+            
+        
+    
+    def CallAfterQtSafe( self, qobject: QC.QObject, func, *args, **kwargs ) -> None:
         
         ClientGUICallAfter.CallAfter( self.call_after_catcher, qobject, func, *args, **kwargs )
         
@@ -582,7 +612,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToQt( self._splash, qt_code )
+            self.CallBlockingToQtTLW( qt_code )
             
             for i in range( 10, 0, -1 ):
                 
@@ -853,6 +883,8 @@ class Controller( HydrusController.HydrusController ):
                     return
                     
                 
+                service = typing.cast( ClientServices.ServiceRepository, service )
+                
                 self.frame_splash_status.SetSubtext( '{} processing'.format( service.GetName() ) )
                 
                 service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
@@ -990,7 +1022,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.gui is not None and QP.isValid( self.gui ):
                 
-                self.CallBlockingToQt( self.gui, prep_gui )
+                self.CallBlockingToQtFireAndForgetNoResponse( self.gui, prep_gui )
                 
             
         
@@ -1079,6 +1111,8 @@ class Controller( HydrusController.HydrusController ):
         services = self.services_manager.GetServices( HC.REPOSITORIES )
         
         for service in services:
+            
+            service = typing.cast( ClientServices.ServiceRepository, service )
             
             if service.CanDoIdleShutdownWork():
                 
@@ -1176,7 +1210,7 @@ class Controller( HydrusController.HydrusController ):
         
         while len( missing_subfolders ) > 0:
             
-            missing_subfolders = self.CallBlockingToQt( self._splash, qt_code, missing_subfolders )
+            missing_subfolders = self.CallBlockingToQtTLW( qt_code, missing_subfolders )
             
         
     
@@ -1480,7 +1514,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            self.CallBlockingToQt( self._splash, qt_code_password )
+            self.CallBlockingToQtTLW( qt_code_password )
             
         
         self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
@@ -1554,7 +1588,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        self.CallBlockingToQt( self._splash, qt_code_style )
+        self.CallBlockingToQtTLW( qt_code_style )
         
         self.ReinitGlobalSettings()
         
@@ -1568,7 +1602,7 @@ class Controller( HydrusController.HydrusController ):
             ClientGUIShortcuts.ShortcutsManager( shortcut_sets = shortcut_sets )
             
         
-        self.CallBlockingToQt( self._splash, qt_code_pregui )
+        self.CallBlockingToQtTLW( qt_code_pregui )
         
         from hydrus.client.gui import ClientGUIPopupMessages
         
@@ -1584,7 +1618,7 @@ class Controller( HydrusController.HydrusController ):
             self.ResetIdleTimer()
             
         
-        self.CallBlockingToQt( self._splash, qt_code_gui )
+        self.CallBlockingToQtTLW( qt_code_gui )
         
         # ShowText will hereafter popup as a message, as the GUI's popup message manager has overwritten the hooks
         
@@ -2339,6 +2373,8 @@ class Controller( HydrusController.HydrusController ):
                 return
                 
             
+            service = typing.cast( ClientServices.ServiceRestricted, service )
+            
             service.SyncAccount()
             
         
@@ -2365,6 +2401,8 @@ class Controller( HydrusController.HydrusController ):
                     
                     return
                     
+                
+                service = typing.cast( ClientServices.ServiceRepository, service )
                 
                 service.SyncRemote()
                 

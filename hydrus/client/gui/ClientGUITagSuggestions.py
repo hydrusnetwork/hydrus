@@ -498,7 +498,7 @@ class RelatedTagsPanel( QW.QWidget ):
         
         if self._just_do_local_files.IsOn():
             
-            file_service_key = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+            file_service_key = CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY
             
         else:
             

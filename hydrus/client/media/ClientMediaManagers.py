@@ -821,7 +821,7 @@ class LocationsManager( object ):
             
             # forced import time here to handle do_undelete, ensuring old timestamp is propagated
             
-            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
+            self._AddToService( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
             self._AddToService( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
             
         
@@ -897,7 +897,7 @@ class LocationsManager( object ):
             
             if not_in_a_local_service_any_more:
                 
-                self._DeleteFromService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, reason )
+                self._DeleteFromService( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, reason )
                 self._AddToService( CC.TRASH_SERVICE_KEY )
                 
             
@@ -1214,9 +1214,9 @@ class LocationsManager( object ):
                     reason = None
                     
                 
-                if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+                if service_key == CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY:
                     
-                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE_DOMAINS ) ):
                         
                         if s_k in self._current:
                             
@@ -1226,7 +1226,7 @@ class LocationsManager( object ):
                     
                 elif service_key == CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY:
                     
-                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
                         
                         if s_k in self._current:
                             
@@ -1241,7 +1241,7 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_UNDELETE:
                 
-                if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
+                if service_key == CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY:
                     
                     for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
                         

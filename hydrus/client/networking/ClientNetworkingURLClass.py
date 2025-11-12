@@ -275,7 +275,18 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self._raw_domains, self._domain_regexes, self.match_subdomains ).__hash__()
+        try:
+            
+            return ( self._raw_domains, self._domain_regexes, self.match_subdomains ).__hash__()
+            
+        except:
+            
+            last_ditch = repr( ( self._raw_domains, self._domain_regexes, self.match_subdomains ) )
+            
+            HydrusData.Print( f'Problem hashing a Domain Mask! The details are: {last_ditch}' )
+            
+            return last_ditch.__hash__()
+            
         
     
     def _GetSerialisableInfo( self ):
@@ -329,6 +340,20 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
         
         self._raw_domains = tuple( sorted( raw_domains ) )
         self._domain_regexes = tuple( sorted( domain_regexes ) )
+        
+        if not isinstance( self.keep_matched_subdomains, bool ):
+            
+            # catching some bitrot or other bad update that seems to have hit here for at least one user
+            
+            try:
+                
+                self.keep_matched_subdomains = bool( self.keep_matched_subdomains )
+                
+            except:
+                
+                self.keep_matched_subdomains = False
+                
+            
         
     
     def GetDomainRegexes( self ) -> list[ str ]:

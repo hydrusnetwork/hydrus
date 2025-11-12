@@ -225,6 +225,14 @@ This tool can be trusted in fully automatic rules at 'almost certainly' confiden
     
     If I can improve the visual duplicates test's accuracy, the percentage of easy duplicates it will cover will increase.
 
+### near-perfect jpegs vs pngs
+
+This is similar to 'pixel-perfect jpegs vs pngs', except it uses the 'visually similar' algorithm on the very high 'near-perfect' confidence. It detects jpegs that _are_ different to pngs, but in a way so minute and subtle that it is generally not visible to humans.
+
+Near-perfect is not the same as perfect, however. We can't be so certain on the providence, and vector images and flat UI screenshots tend to be a better fit in png. This rule has comparators to ensure we select the jpeg only when it is the same or larger resolution than the png, has a smaller filesize (to catch those clean and efficient screenshots, where the png filesize will plummet), and that we don't throw away a png with EXIF when the jpeg has none.
+
+I hope you are more confident in this whole system now. Please check out this rule and its search and comparison, then preview its results for your client, and decide if it works for you.
+
 ## future
 
 I'd like to make a few more comparators, mostly tag stuff since some users have specific workflows in mind for it. I may start thinking about the whole problem from the opposite angle, also, by detecting and actioning specific types of alternates.

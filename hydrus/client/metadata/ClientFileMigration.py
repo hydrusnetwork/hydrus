@@ -22,7 +22,7 @@ def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_res
     
     for media_result in media_results:
         
-        if not CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+        if not CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
             
             raise Exception( f'The file "{media_result.GetHash().hex()} is not in any local file domains, so I cannot copy!' )
             

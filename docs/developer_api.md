@@ -154,9 +154,9 @@ You can play around with this yourself by clicking 'multiple locations' in the c
 
 In extreme edge cases, these two can be mixed by populating both A and B selective, making a larger union of both current and deleted file records.
 
-Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like `all my files` or `hydrus local file storage`, please do. Otherwise, let me know what is running slow and I'll have a look at it.
+Please note that unions can be very very computationally expensive. If you can achieve what you want with a single file_service_key, two queries in a row with different service keys, or an umbrella like `combined local file domains` or `hydrus local file storage`, please do. Otherwise, let me know what is running slow and I'll have a look at it.
 
-'deleted from hydrus local file storage' includes all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from all my files' includes all of those physically deleted files _and_ the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!
+'deleted from hydrus local file storage' is all files that have been physically deleted (i.e. deleted from the trash) and not available any more for fetch file/thumbnail requests. 'deleted from combined local file domains' includes all of those physically deleted files _and_ the trash. If a file is deleted with the special 'do not leave a deletion record' command, then it won't show up in a 'deleted from file domain' search!
 
 'all known files' is a tricky domain. It converts much of the search tech to ignore where files actually are and look at the accompanying tag domain (e.g. all the files that have been tagged), and can sometimes be very expensive.
 
@@ -219,7 +219,7 @@ When it does this, it gives you this structure, typically under a `services` key
     "type_pretty" : "virtual combined local file service"
   },
   "616c6c206c6f63616c206d65646961" : {
-    "name" : "all my files",
+    "name" : "combined local file domains",
     "type" : 21,
     "type_pretty" : "virtual combined local media service"
   },
@@ -285,12 +285,12 @@ You won't see all of these, but the service `type` enum is:
 * 12 - the local booru -- you can ignore this
 * 13 - IPFS
 * 14 - trash
-* 15 - hydrus local file storage -- all files on hard disk ('all my files' + updates + trash) 
+* 15 - hydrus local file storage -- all files on hard disk ('combined local file domains' + updates + trash) 
 * 17 - file notes
 * 18 - Client API
 * 19 - deleted from anywhere -- you can ignore this
 * 20 - local updates -- a file domain to store repository update files in
-* 21 - all my files -- union of all local file domains
+* 21 - combined local file domains -- union of combined local file domains
 * 22 - a 'inc/dec' rating service with positive integer rating
 * 99 - server administration
 
@@ -563,7 +563,7 @@ Arguments (in JSON):
 }
 ```
 
-If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'hydrus local file storage', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
+If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'hydrus local file storage', 'combined local file domains', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
 
 Arguments (as bytes): 
 :   
@@ -606,7 +606,7 @@ Required Headers:
 Arguments (in JSON):
 :   
 *   [files](#parameters_files)
-*   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+*   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
 *   `reason`: (optional, string, the reason attached to the delete action)
 
 ```json title="Example request body"
@@ -619,14 +619,14 @@ Response:
 :   200 and no content.
 
 !!! note "Careful"
-    `all my files` and `hydrus local file storage` are different!
+    `combined local file domains` and `hydrus local file storage` are different!
     
-    - Deleting from `all my files` sends files straight to the trash, no matter how many local file services they are in.
-    - Deleting from `hydrus local file storage` removes files from the trash and triggers an immediate physical delete.
+    - Deleting from `combined local file domains` sends files straight to the trash, no matter how many local file services they are in.
+    - Deleting from `hydrus local file storage` removes files from any local domain, including trash, and triggers an immediate physical delete.
     
     Check [here](advanced_multiple_local_file_services.md#meta_file_domains) for more info.
 
-If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `all my files` and `hydrus local file storage` domains. It defaults to `all my files`, which will delete from all local services (i.e. force sending to trash). Sending `hydrus local file storage` on a file already in the trash will trigger a physical file delete. 
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet), or the umbrella `combined local file domains` and `hydrus local file storage` domains. It defaults to `combined local file domains`, which will delete from all local services (i.e. force-sending to trash). Sending `hydrus local file storage` on a file, be it already in the trash or not, will remove it from everywhere and trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
@@ -642,7 +642,7 @@ Required Headers:
 Arguments (in JSON):
 :   
 *   [files](#parameters_files)
-*   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+*   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
 
 ```json title="Example request body"
 {
@@ -653,7 +653,7 @@ Arguments (in JSON):
 Response: 
 :   200 and no content.
 
-This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records.
+This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'combined local file domains', undeletes to all the local file services for which there are deletion records.
 
 This operation will only occur on files that are currently in your file store (i.e. in 'hydrus local file storage', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!
 
@@ -714,7 +714,7 @@ This is only appropriate if the user has multiple local file services. It does t
 
 If you need to do a 'move' migrate, then please follow this command with a delete from wherever you need to remove from.
 
-If you try to add non-local files (specifically, files that are not in 'all my files'), or migrate to a file domain that is not a local file domain, then this will 400!
+If you try to add non-local files (specifically, files that are not currently in 'combined local file domains'), or migrate to a file domain that is not a local file domain, then this will 400!
 
 ### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
 
@@ -1206,7 +1206,7 @@ Required Headers: n/a
 Arguments:
 :   
     * `search`: (the tag text to search for, enter exactly what you would in the client UI)
-    * [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    * [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
     * `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all known tags_)
     * `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags, defaults to `storage`)
 
@@ -1214,7 +1214,7 @@ The `file domain` and `tag_service_key` perform the function of the file and tag
 
 The `tag_display_type` can be either `storage` (the default), which searches your file's stored tags, just as they appear in a 'manage tags' dialog, or `display`, which searches the sibling-processed tags, just as they appear in a normal file search page. In the example above, setting the `tag_display_type` to `display` could well combine the two kim possible tags and give a count of 3 or 4. 
 
-'all my files'/'all known tags' works fine for most cases, but a specific tag service or 'all known files'/'tag service' can work better for editing tag repository `storage` contexts, since it provides results just for that service, and for repositories, it gives tags for all the non-local files other users have tagged.
+'combined local file domains'/'all known tags' works fine for most cases, but a specific tag service or 'all known files'/'tag service' can work better for editing tag repository `storage` contexts, since it provides results just for that service, and for repositories, it gives tags for all the non-local files other users have tagged.
 
 Example request:
 :   
@@ -1730,8 +1730,8 @@ Required Headers: n/a
 Arguments (in percent-encoded JSON):
 :   
     *   `tags`: (a list of tags you wish to search for)
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
-    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _combined local file domains_)
     *   `include_current_tags`: (optional, bool, whether to search 'current' tags, defaults to `true`)
     *   `include_pending_tags`: (optional, bool, whether to search 'pending' tags, defaults to `true`)
     *   `file_sort_type`: (optional, integer, the results sort method, defaults to `2` for `import time`)
@@ -1857,7 +1857,7 @@ Makes:
 *   samus aran OR lara croft
 *   system:height > 1000
 
-The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'.
+The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'combined local file domains' and 'all known tags'.
 
 `include_current_tags` and `include_pending_tags` do the same as the buttons on the normal search interface. They alter the search of normal tags and tag-related system predicates like 'system:number of tags', including or discluding that type of tag from whatever the search is doing. If you set both of these to `false`, you'll often get no results.
 
@@ -2650,7 +2650,7 @@ Required Headers: n/a
 Arguments (in percent-encoded JSON):
 :   
     *   [files](#parameters_files)
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
 
 ``` title="Example request"
 /manage_file_relationships/get_file_relationships?hash=ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d
@@ -2685,7 +2685,7 @@ Response:
 
 **It is possible for the king to not be available.** Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. The regular hydrus potential duplicate pair commands always look at kings, so a group like this will not contribute to any 'potential duplicate pairs' count or filter fetch and so on. If you need to do your own clever manual lookups, `king_is_on_file_domain` lets you know if the king is on the file domain you set, and `king_is_local` lets you know if it is on the hard disk--if `king_is_local=true`, you can do a `/get_files/file` request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
 
-All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files', is usually most useful.
+All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including with any deleted files, which is often less useful than you would think. The default, 'combined local file domains', is usually most useful.
 
 A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.
 
@@ -2698,7 +2698,7 @@ The numbers are from a duplicate status enum, as so:
 
 Note that because of JSON constraints, these are the string versions of the integers since they are Object keys.
 
-All the hashes given here are in 'all my files', i.e. not in the trash. A file may have duplicates that have long been deleted, but, like the null king above, they will not show here.
+All the hashes given here are in 'combined local file domains', i.e. not in the trash. A file may have duplicates that have long been deleted, but, like the null king above, they will not show here.
 
 ### **GET `/manage_file_relationships/get_potentials_count`** { id="manage_file_relationships_get_potentials_count" }
 
@@ -2711,7 +2711,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -2761,7 +2761,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -2827,7 +2827,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -4080,8 +4080,8 @@ Restricted access:
 Arguments (in percent-encoded JSON):
 :   
     *   `tags`: (optional, a list of tags you wish to search for)
-    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
-    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all my files_)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _combined local file domains_)
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _combined local file domains_)
     
     ``` title="Example requests"
     /manage_database/mr_bones

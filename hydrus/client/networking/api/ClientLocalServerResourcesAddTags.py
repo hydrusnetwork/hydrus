@@ -277,7 +277,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
             
             autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
             
-            location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+            location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
             
             file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context )
             

@@ -999,7 +999,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     if CG.client_controller.new_options.GetBoolean( 'open_files_to_duplicate_filter_uses_all_my_files' ):
                         
-                        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                         
                     else:
                         
@@ -2010,6 +2010,8 @@ class CanvasPanelWithHovers( CanvasPanel ):
             
             service_key = numerical_service.GetServiceKey()
             
+            numerical_service = typing.cast( ClientServices.ServiceLocalRatingNumerical, numerical_service )
+            
             custom_pad = numerical_service.GetCustomPad()
             
             ( rating_state, rating ) = ClientRatings.GetNumericalStateFromMedia( ( self._current_media, ), service_key )
@@ -2291,25 +2293,38 @@ class CanvasWithHovers( Canvas ):
     
     def _DrawIndexAndZoom( self, painter: QG.QPainter ):
         
-        my_size = self.size()
+        painter.save()
         
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        # bottom-right index
-        
-        bottom_right_string = ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() )
-        
-        index_string = self._GetIndexString()
-        
-        if len( index_string ) > 0:
+        try:
             
-            bottom_right_string = '{} - {}'.format( bottom_right_string, index_string )
+            pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
             
-        
-        ( text_size, bottom_right_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, bottom_right_string )
-        
-        ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, bottom_right_string )
+            painter.setPen( QG.QPen( pen_colour ) )
+            
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            # bottom-right index
+            
+            bottom_right_string = ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() )
+            
+            index_string = self._GetIndexString()
+            
+            if len( index_string ) > 0:
+                
+                bottom_right_string = '{} - {}'.format( bottom_right_string, index_string )
+                
+            
+            ( text_size, bottom_right_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, bottom_right_string )
+            
+            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, my_height - text_size.height() - 3, bottom_right_string )
+            
+        finally:
+            
+            painter.restore()
+            
         
     
     def _DrawNotes( self, painter: QG.QPainter, current_y: int ):
@@ -2323,28 +2338,32 @@ class CanvasWithHovers( Canvas ):
             return
             
         
-        my_size = self.size()
-        
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        try:
-            
-            QFRAME_PADDING = self._right_notes_hover.frameWidth()
-            
-            ( NOTE_SPACING, NOTE_MARGIN ) = self._right_notes_hover.GetNoteSpacingAndMargin()
-            
-        except:
-            
-            QFRAME_PADDING = 2
-            ( NOTE_SPACING, NOTE_MARGIN ) = ( 2, 2 )
-            
-        
-        notes_width = int( my_width * ClientGUICanvasHoverFrames.SIDE_HOVER_PROPORTIONS ) - ( ( QFRAME_PADDING + NOTE_MARGIN ) * 2 )
-        
         painter.save()
         
         try:
+            
+            my_size = self.size()
+            
+            my_width = my_size.width()
+            my_height = my_size.height()
+            
+            try:
+                
+                QFRAME_PADDING = self._right_notes_hover.frameWidth()
+                
+                ( NOTE_SPACING, NOTE_MARGIN ) = self._right_notes_hover.GetNoteSpacingAndMargin()
+                
+            except:
+                
+                QFRAME_PADDING = 2
+                ( NOTE_SPACING, NOTE_MARGIN ) = ( 2, 2 )
+                
+            
+            notes_width = int( my_width * ClientGUICanvasHoverFrames.SIDE_HOVER_PROPORTIONS ) - ( ( QFRAME_PADDING + NOTE_MARGIN ) * 2 )
+            
+            pen_colour = self.GetColour( CC.COLOUR_MEDIA_TEXT )
+            
+            painter.setPen( QG.QPen( pen_colour ) )
             
             original_font = painter.font()
             
@@ -2631,6 +2650,8 @@ class CanvasWithHovers( Canvas ):
             for numerical_service in numerical_services:
                 
                 service_key = numerical_service.GetServiceKey()
+                
+                numerical_service = typing.cast( ClientServices.ServiceLocalRatingNumerical, numerical_service )
                 
                 custom_pad = numerical_service.GetCustomPad()
                 
@@ -3336,7 +3357,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
     else:
         
         # if we are in a weird search domain, then just say 'delete from all local'
-        deletee_file_service_keys = [ CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ]
+        deletee_file_service_keys = [ CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ]
         
     
     BLOCK_SIZE = 64
@@ -3480,7 +3501,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 possible_location_context_at_top = self._location_context.Duplicate()
                 
-                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
+                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN ) )
                 
                 if len( possible_location_context_at_top.current_service_keys ) > 0:
                     
@@ -3493,17 +3514,17 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
                 
-                all_my_files_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                combined_local_file_domains_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
                 if len( local_file_domain_service_keys ) > 1:
                     
-                    location_contexts_to_present_options_for.append( all_my_files_location_context )
+                    location_contexts_to_present_options_for.append( combined_local_file_domains_location_context )
                     
                 elif len( local_file_domain_service_keys ) == 1:
                     
-                    if all_my_files_location_context in location_contexts_to_present_options_for:
+                    if combined_local_file_domains_location_context in location_contexts_to_present_options_for:
                         
-                        location_contexts_to_present_options_for.remove( all_my_files_location_context )
+                        location_contexts_to_present_options_for.remove( combined_local_file_domains_location_context )
                         
                     
                 
@@ -3513,7 +3534,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 if only_allow_all_media_files:
                     
-                    location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) ]
+                    location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ]
                     
                 
                 for location_context in location_contexts_to_present_options_for:
@@ -3524,9 +3545,9 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                     if num_deletable > 0:
                         
-                        if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ):
+                        if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ):
                             
-                            location_label = 'all local file domains'
+                            location_label = 'combined local file domains'
                             
                         else:
                             

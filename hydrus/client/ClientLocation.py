@@ -12,7 +12,7 @@ def FilterOutRedundantMetaServices( list_of_service_keys: list[ bytes ] ):
     
     services_manager = CG.client_controller.services_manager
     
-    special_local_file_service_keys = { CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY }
+    special_local_file_service_keys = { CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY }
     
     if len( special_local_file_service_keys.intersection( list_of_service_keys ) ) <= 1:
         
@@ -26,16 +26,16 @@ def FilterOutRedundantMetaServices( list_of_service_keys: list[ bytes ] ):
     
     if len( local_file_service_keys.intersection( list_of_service_keys ) ) <= 1:
         
-        if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in list_of_service_keys:
+        if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in list_of_service_keys:
             
-            list_of_service_keys.remove( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            list_of_service_keys.remove( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
         
     
     return list_of_service_keys
     
 
-def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool, only_all_my_files_domains_allowed: bool ):
+def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool, only_combined_local_file_domains_allowed: bool ):
     
     # TODO: WOW the 'only_x' parameters here are awful!!! rewrite all this!
     # seems like it cascades, so set up an enum instead I think!
@@ -50,10 +50,10 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_im
         
         if len( services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) ) > 1 or advanced_mode:
             
-            service_types_in_order.append( HC.COMBINED_LOCAL_MEDIA )
+            service_types_in_order.append( HC.COMBINED_LOCAL_FILE_DOMAINS )
             
         
-        if not only_all_my_files_domains_allowed:
+        if not only_combined_local_file_domains_allowed:
             
             service_types_in_order.append( HC.LOCAL_FILE_TRASH_DOMAIN )
             
@@ -182,14 +182,14 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_HYDRUS_LOCAL_FILE_STORAGE ) )
             
         
-        if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in self.current_service_keys:
+        if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in self.current_service_keys:
             
-            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_MEDIA ) )
+            self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE_DOMAINS ) )
             
         
-        if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in self.deleted_service_keys:
+        if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in self.deleted_service_keys:
             
-            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_MEDIA ) )
+            self.deleted_service_keys = frozenset( ( service_key for service_key in self.deleted_service_keys if service_type_func( service_key ) not in HC.FILE_SERVICES_COVERED_BY_COMBINED_LOCAL_FILE_DOMAINS ) )
             
         
     
@@ -262,7 +262,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     
     def IsAllMediaFiles( self ):
         
-        return self.IsOneDomain() and CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in self.current_service_keys
+        return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in self.current_service_keys
         
     
     def IsEmpty( self ):

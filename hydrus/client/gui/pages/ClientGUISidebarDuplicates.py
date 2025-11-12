@@ -728,6 +728,15 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             self._filter_panel.PageHidden()
             
         
+        if page == self._duplicates_auto_resolution_panel:
+            
+            self._duplicates_auto_resolution_panel.PageShown()
+            
+        else:
+            
+            self._duplicates_auto_resolution_panel.PageHidden()
+            
+        
     
     def _RenamePreparationTabName( self, page_name: str ):
         
@@ -768,6 +777,10 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             
             self._filter_panel.PageHidden()
             
+        elif page == self._duplicates_auto_resolution_panel:
+            
+            self._duplicates_auto_resolution_panel.PageHidden()
+            
         
     
     def PageShown( self ):
@@ -779,6 +792,10 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         if page == self._filter_panel:
             
             self._filter_panel.PageShown()
+            
+        elif page == self._duplicates_auto_resolution_panel:
+            
+            self._duplicates_auto_resolution_panel.PageShown()
             
         
     

@@ -37,7 +37,7 @@ def ShowDialog( dialog_call: collections.abc.Callable, win: typing.Optional[ QW.
         
         qt_obj = CG.client_controller.app if win is None else win
         
-        CG.client_controller.CallBlockingToQt( qt_obj, dialog_call, win, title, message )
+        CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( qt_obj, dialog_call, win, title, message )
         
     
 

@@ -143,7 +143,7 @@ class HydrusResourceClientAPIRestrictedGetService( ClientLocalServerResources.Hy
             HC.LOCAL_FILE_UPDATE_DOMAIN,
             HC.FILE_REPOSITORY,
             HC.HYDRUS_LOCAL_FILE_STORAGE,
-            HC.COMBINED_LOCAL_MEDIA,
+            HC.COMBINED_LOCAL_FILE_DOMAINS,
             HC.COMBINED_FILE,
             HC.COMBINED_TAG,
             HC.LOCAL_RATING_LIKE,
@@ -231,7 +231,7 @@ class HydrusResourceClientAPIRestrictedGetServices( ClientLocalServerResources.H
             ( ( HC.LOCAL_FILE_UPDATE_DOMAIN, ), 'local_updates' ),
             ( ( HC.FILE_REPOSITORY, ), 'file_repositories' ),
             ( ( HC.HYDRUS_LOCAL_FILE_STORAGE, ), 'all_local_files' ), # legacy, so not 'hydrus_local_file_storage'
-            ( ( HC.COMBINED_LOCAL_MEDIA, ), 'all_local_media' ),
+            ( ( HC.COMBINED_LOCAL_FILE_DOMAINS, ), 'all_local_media' ),
             ( ( HC.COMBINED_FILE, ), 'all_known_files' ),
             ( ( HC.COMBINED_TAG, ), 'all_known_tags' ),
             ( ( HC.LOCAL_FILE_TRASH_DOMAIN, ), 'trash' )

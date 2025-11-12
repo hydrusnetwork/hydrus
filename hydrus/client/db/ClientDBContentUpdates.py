@@ -135,7 +135,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 
                 self.DeleteFiles( self.modules_services.trash_service_id, new_hash_ids )
                 
-                self.AddFiles( self.modules_services.combined_local_media_service_id, valid_rows )
+                self.AddFiles( self.modules_services.combined_local_file_domains_service_id, valid_rows )
                 self.AddFiles( self.modules_services.hydrus_local_file_storage_service_id, valid_rows )
                 
             
@@ -231,18 +231,13 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         
         if service_id == self.modules_services.hydrus_local_file_storage_service_id:
             
-            for local_file_service_id in local_file_service_ids:
-                
-                self.DeleteFiles( local_file_service_id, hash_ids, only_if_current = True )
-                
-            
-            self.DeleteFiles( self.modules_services.combined_local_media_service_id, hash_ids, only_if_current = True )
+            self.DeleteFiles( self.modules_services.combined_local_file_domains_service_id, hash_ids, only_if_current = True )
             
             self.DeleteFiles( self.modules_services.local_update_service_id, hash_ids, only_if_current = True )
             self.DeleteFiles( self.modules_services.trash_service_id, hash_ids, only_if_current = True )
             
         
-        if service_id == self.modules_services.combined_local_media_service_id:
+        if service_id == self.modules_services.combined_local_file_domains_service_id:
             
             for local_file_service_id in local_file_service_ids:
                 
@@ -347,7 +342,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 
                 if len( trashed_hash_ids ) > 0:
                     
-                    self.DeleteFiles( self.modules_services.combined_local_media_service_id, trashed_hash_ids )
+                    self.DeleteFiles( self.modules_services.combined_local_file_domains_service_id, trashed_hash_ids )
                     
                     delete_rows = [ ( hash_id, now_ms ) for hash_id in trashed_hash_ids ]
                     
@@ -381,7 +376,10 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         
         # push the info updates
         
-        self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
+        if len( service_info_updates ) > 0:
+            
+            self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
+            
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
@@ -527,7 +525,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                         
                                     
                                 
-                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.HYDRUS_LOCAL_FILE_STORAGE ):
+                                if service_type in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.HYDRUS_LOCAL_FILE_STORAGE ):
                                     
                                     if content_update.HasReason():
                                         
@@ -1240,7 +1238,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
     
     def UndeleteFiles( self, service_id, hash_ids ):
         
-        if service_id in ( self.modules_services.hydrus_local_file_storage_service_id, self.modules_services.combined_local_media_service_id, self.modules_services.trash_service_id ):
+        if service_id in ( self.modules_services.hydrus_local_file_storage_service_id, self.modules_services.combined_local_file_domains_service_id, self.modules_services.trash_service_id ):
             
             service_ids_to_do = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
             

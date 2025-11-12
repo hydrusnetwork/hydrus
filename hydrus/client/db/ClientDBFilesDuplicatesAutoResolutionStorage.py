@@ -307,7 +307,28 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._Reinit()
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
+        
+    
+    def FlipPausePlay( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+        
+        rule_id = rule.GetId()
+        
+        try:
+            
+            existing_rule = self._rule_ids_to_rules[ rule_id ]
+            
+        except:
+            
+            return
+            
+        
+        existing_rule.SetPaused( not existing_rule.IsPaused() )
+        
+        self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE, dump_name = existing_rule.GetName() )
+        self.modules_serialisable.SetJSONDump( rule )
+        
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def GetActionedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
@@ -482,6 +503,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             self._UpdateRuleCount( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED, num_added )
             
         
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
+        
     
     def MaintenanceFixOrphanPotentialPairs( self, pairs_to_sync_to = None, master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
         
@@ -580,7 +603,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             HydrusData.ShowText( 'All the duplicates auto-resolution potential pairs looked good--no orphans!' )
             
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def MaintenanceFixOrphanRules( self ):
@@ -633,12 +656,16 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             HydrusData.ShowText( 'All the duplicates auto-resolution rules looked good--no orphans!' )
             
         
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_duplicates_auto_resolution_new_rules' )
+        
     
     def MaintenanceRegenNumbers( self ):
         
         self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
         
         self._Reinit()
+        
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
         HydrusData.ShowText( 'Cached auto-resolution numbers cleared!' )
         
@@ -702,7 +729,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_added:
             
-            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
+            self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
             
         
     
@@ -742,7 +769,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_removed:
             
-            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
+            self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
             
         
     
@@ -778,7 +805,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if any_removed:
             
-            self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
+            self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
             
         
     
@@ -788,7 +815,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._MovePairsAcrossQueues( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def ResetRuleSearchProgress( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -797,7 +824,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._ResetRuleSearchProgress( rule_id )
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def ResetRuleTestProgress( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -806,7 +833,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._ResetRuleTestProgress( rule_id )
         
-        CG.client_controller.duplicates_auto_resolution_manager.Wake()
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def SetPairToPendingAction( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, smaller_media_id: int, larger_media_id: int, hash_id_a: int, hash_id_b: int ):
@@ -825,6 +852,8 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
             self._UpdateRuleCount( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION, num_added )
             
+        
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def SetPairsToSimpleQueue( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, pairs: collections.abc.Collection, status_to_set: int ):
@@ -864,7 +893,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             self._UpdateRuleCount( rule_id, status_to_set, num_added )
             
         
-        self._cursor_transaction_wrapper.pub_after_job( 'wake_duplicates_auto_resolution_manager_if_not_working' )
+        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
     
     def SetRules( self, rules_to_set: collections.abc.Collection[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ], master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):

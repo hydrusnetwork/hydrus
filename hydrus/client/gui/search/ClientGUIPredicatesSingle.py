@@ -3091,7 +3091,7 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite(
             self,
             self._AutoCompleteEntersTags,
-            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+            ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
             CC.COMBINED_TAG_SERVICE_KEY
         )
         

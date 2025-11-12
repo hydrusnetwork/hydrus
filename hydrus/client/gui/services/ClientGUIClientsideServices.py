@@ -2376,7 +2376,7 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         
         text = HydrusNumbers.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
         
-        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.FILE_REPOSITORY ):
+        if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.HYDRUS_LOCAL_FILE_STORAGE, HC.FILE_REPOSITORY ):
             
             num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
             
@@ -3606,7 +3606,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             try:
                 
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
                 for ( multihash, num_files, total_size, note ) in shares:
                     

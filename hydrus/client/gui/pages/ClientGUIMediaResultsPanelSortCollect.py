@@ -928,7 +928,7 @@ class MediaSortControl( QW.QWidget ):
         media_sort = self._GetCurrentSort()
         
         # note we can't support this in 'all known files', but we don't make a song and dance about it here because it is advanced anyway
-        if media_sort.CanSortAtDBLevel( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) ):
+        if media_sort.CanSortAtDBLevel( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ):
             
             tt = 'This sort type is simple enough that if your search has a "system:limit is n", the database will be able to select the nth tallest/smallest/whatever according to your sort.'
             

@@ -74,7 +74,7 @@ class HydrusResourceClientAPIRestrictedManageServicesCommitPending( HydrusResour
                 
             
         
-        CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it )
+        CG.client_controller.CallBlockingToQtTLW( do_it )
         
         body_dict = {}
         

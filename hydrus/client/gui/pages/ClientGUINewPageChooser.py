@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
@@ -94,7 +95,9 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self.setMinimumWidth( width )
         self.setMinimumHeight( height )
         
-        self._petition_service_keys = [ service.GetServiceKey() for service in CG.client_controller.services_manager.GetServices( HC.REPOSITORIES ) if True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
+        repositories: list[ ClientServices.ServiceRepository ] = CG.client_controller.services_manager.GetServices( HC.REPOSITORIES )
+        
+        self._petition_service_keys = [ service.GetServiceKey() for service in repositories if True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
         
         self._InitButtons( 'home' )
         
@@ -257,11 +260,11 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
                 
                 if self._controller.new_options.GetBoolean( 'show_all_my_files_on_page_chooser_at_top' ):
                     
-                    entries.insert( 0, ( 'page_query', CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+                    entries.insert( 0, ( 'page_query', CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
                     
                 else: 
                     
-                    entries.append( ( 'page_query', CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+                    entries.append( ( 'page_query', CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
                 
             
             entries.append( ( 'page_query', CC.TRASH_SERVICE_KEY ) )

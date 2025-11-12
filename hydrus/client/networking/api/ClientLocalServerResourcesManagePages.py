@@ -51,7 +51,7 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
         
         try:
             
-            CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it, page_key, media_results )
+            CG.client_controller.CallBlockingToQtTLW( do_it, page_key, media_results )
             
         except HydrusExceptions.DataMissing as e:
             
@@ -77,7 +77,7 @@ class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClien
         
         try:
             
-            CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it, page_key )
+            CG.client_controller.CallBlockingToQtTLW( do_it, page_key )
             
         except HydrusExceptions.DataMissing as e:
             
@@ -98,7 +98,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPages( HydrusResourceClient
             return CG.client_controller.gui.GetCurrentSessionPageAPIInfoDict()
             
         
-        page_info_dict = CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it )
+        page_info_dict = CG.client_controller.CallBlockingToQtTLW( do_it )
         
         body_dict = { 'pages' : page_info_dict }
         
@@ -123,7 +123,7 @@ class HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( HydrusResourceCli
         
         simple = request.parsed_request_args.GetValue( 'simple', bool, default_value = True )
         
-        page_info_dict = CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it, page_key, simple )
+        page_info_dict = CG.client_controller.CallBlockingToQtTLW( do_it, page_key, simple )
         
         if page_info_dict is None:
             
@@ -153,7 +153,7 @@ class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceCli
         
         try:
             
-            CG.client_controller.CallBlockingToQt( CG.client_controller.gui, do_it, page_key )
+            CG.client_controller.CallBlockingToQtTLW( do_it, page_key )
             
         except HydrusExceptions.DataMissing as e:
             

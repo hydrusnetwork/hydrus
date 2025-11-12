@@ -1677,9 +1677,10 @@ class ListBox( QW.QScrollArea ):
     
     def _GetCopyableTagStrings( self, command, include_parents = False, collapse_ors = False ):
         
-        only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        only_selected = command in ( COPY_SELECTED_TAGS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES )
         with_counts = command in ( COPY_ALL_TAGS_WITH_COUNTS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_TAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
-        only_subtags = command in ( COPY_ALL_SUBTAGS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS )
+        only_subtags = command in ( COPY_ALL_SUBTAGS, COPY_ALL_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS, COPY_SELECTED_SUBTAGS_WITH_COUNTS, COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES )
+        switch_to_underscores = command == COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES
         
         if only_selected:
             
@@ -1711,7 +1712,12 @@ class ListBox( QW.QScrollArea ):
             copyable_tag_strings.remove( '' )
             
         
-        if not with_counts:
+        if switch_to_underscores:
+            
+            copyable_tag_strings = [ subtag.replace( ' ', '_' ) for subtag in copyable_tag_strings ]
+            
+        
+        if switch_to_underscores or not with_counts:
             
             copyable_tag_strings = HydrusLists.DedupeList( copyable_tag_strings )
             
@@ -2942,6 +2948,7 @@ COPY_SELECTED_SUBTAGS = 4
 COPY_SELECTED_SUBTAGS_WITH_COUNTS = 5
 COPY_ALL_SUBTAGS = 6
 COPY_ALL_SUBTAGS_WITH_COUNTS = 7
+COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES = 8
 
 class ListBoxTags( ListBox ):
     
@@ -2991,7 +2998,7 @@ class ListBoxTags( ListBox ):
     
     def _GetCurrentLocationContext( self ):
         
-        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        return ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
     
     def _GetCurrentPagePredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
@@ -3353,14 +3360,16 @@ class ListBoxTags( ListBox ):
         copy_menu = ClientGUIMenus.GenerateMenu( menu )
         
         selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
-        selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
-        
-        selected_copyable_tag_strings_with_parents = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, include_parents = True )
-        selected_copyable_tag_strings_with_collapsed_ors = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, collapse_ors = True )
         
         selection_string = ''
         
         if len( selected_copyable_tag_strings ) > 0:
+            
+            selected_copyable_subtag_strings_set = set( self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS ) )
+            selected_copyable_subtag_strings_with_underscores_set = set( self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES ) )
+            
+            selected_copyable_tag_strings_with_parents = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, include_parents = True )
+            selected_copyable_tag_strings_with_collapsed_ors = self._GetCopyableTagStrings( COPY_SELECTED_TAGS, collapse_ors = True )
             
             if len( selected_copyable_tag_strings ) == 1:
                 
@@ -3375,23 +3384,40 @@ class ListBoxTags( ListBox ):
             
             sub_selection_string = None
             
-            if len( selected_copyable_subtag_strings ) > 0:
+            if len( selected_copyable_subtag_strings_set ) > 0:
                 
-                if len( selected_copyable_subtag_strings ) == 1:
+                if selected_copyable_subtag_strings_set != set( selected_copyable_tag_strings ):
                     
-                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
-                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
+                    if len( selected_copyable_subtag_strings_set ) == 1:
                         
-                        ( sub_selection_string, ) = selected_copyable_subtag_strings
+                        ( sub_selection_string, ) = selected_copyable_subtag_strings_set
                         
                         ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
                         
+                    else:
+                        
+                        sub_selection_string = '{} selected subtags'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_subtag_strings_set ) ) )
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                        
                     
-                else:
+            
+            if len( selected_copyable_subtag_strings_with_underscores_set ) > 0:
+                
+                if selected_copyable_subtag_strings_with_underscores_set != selected_copyable_subtag_strings_set:
                     
-                    sub_selection_string = '{} selected subtags'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                    if len( selected_copyable_subtag_strings_with_underscores_set ) == 1:
+                        
+                        ( sub_selection_string_underscores, ) = selected_copyable_subtag_strings_with_underscores_set
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string_underscores, 'Copy the selected subtag to your clipboard, with underscores.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES )
+                        
+                    else:
+                        
+                        sub_selection_string_underscores = '{} selected subtags with underscores'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_subtag_strings_with_underscores_set ) ) )
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string_underscores, 'Copy the selected subtags to your clipboard, with underscores.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS_WITH_UNDERSCORES )
+                        
                     
                 
             

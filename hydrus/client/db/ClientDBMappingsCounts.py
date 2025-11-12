@@ -82,7 +82,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
         
         # the version was earlier here but we updated when adding combined delete files and ipfs to these tables
-        version = 486 if file_service_id == self.modules_services.combined_local_media_service_id else 465
+        version = 486 if file_service_id == self.modules_services.combined_local_file_domains_service_id else 465
         
         table_dict[ table_name ] = ( 'CREATE TABLE IF NOT EXISTS {} ( tag_id INTEGER PRIMARY KEY, current_count INTEGER, pending_count INTEGER );', version )
         

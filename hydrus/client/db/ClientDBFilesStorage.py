@@ -436,7 +436,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         service_ids_to_nums_cleared = {}
         
-        local_non_trash_service_types = { HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN }
+        local_non_trash_service_types = { HC.HYDRUS_LOCAL_FILE_STORAGE, HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN }
         
         local_non_trash_service_ids = self.modules_services.GetServiceIds( local_non_trash_service_types )
         

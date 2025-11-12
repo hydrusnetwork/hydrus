@@ -56,8 +56,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             page_key = HydrusData.GenerateKey()
             
         
-        self._tag_autocomplete_1 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context_1, allow_all_known_files = False, only_allow_local_file_domains = True, only_allow_all_my_files_domains = True, synchronised = synchronised, force_system_everything = True )
-        self._tag_autocomplete_2 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context_2, allow_all_known_files = False, only_allow_local_file_domains = True, only_allow_all_my_files_domains = True, synchronised = synchronised, force_system_everything = True )
+        self._tag_autocomplete_1 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context_1, allow_all_known_files = False, only_allow_local_file_domains = True, only_allow_combined_local_file_domains = True, allow_multiple_file_domains = False, synchronised = synchronised, force_system_everything = True )
+        self._tag_autocomplete_2 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context_2, allow_all_known_files = False, only_allow_local_file_domains = True, only_allow_combined_local_file_domains = True, allow_multiple_file_domains = False, synchronised = synchronised, force_system_everything = True )
         
         self._dupe_search_type = ClientGUICommon.BetterChoice( self )
         
@@ -85,6 +85,14 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         check_manager.AddNotifyCall( self.NotifyCountOptionsChanged )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'try to state an estimate of final count rather than counting everything', 'You can choose to have this panel produce an exact count every time, or stop early and estimate.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
+        
+        tt = 'If the incremental search is getting a very low hit-rate (like 5 out of 750,000 pairs), it is usually faster for the database to just run the file searches and then cross-reference.'
+        tt += '\n\n'
+        tt += 'In complicated edge cases, this optimisation has very bad performance, so if you see a block or two of work and then your search halts for 30+ seconds, you can turn it off here.'
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'allow single slow search optimisation when seeing low hit-rate', tt, check_manager ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         
@@ -405,7 +413,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             
             tooltip_override = 'The number on the left is how many pairs are in the system; on the right is how many match your current search.'
             tooltip_override += '\n\n'
-            tooltip_override += 'A system:everything search in "all my files" at a distance of 8+ should find ~100%. Do not worry if there are a couple of loose pairs you cannot find--they are probably in the trash, waiting to be deleted.'
+            tooltip_override += 'A system:everything search in "combined local file domains" at a distance of 8+ should find ~100%. Do not worry if there are a couple of loose pairs you cannot find--they are probably in the trash, waiting to be deleted.'
             
         
         self._num_potential_duplicate_pairs_label.setText( text )

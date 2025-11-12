@@ -9,6 +9,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusStaticDir
@@ -123,7 +124,14 @@ def log_handler( loglevel, component, message ):
         
         probably_crashy = True in probably_crashy_tests
         
-        CG.client_controller.CallBlockingToQt( CG.client_controller.gui, EmergencyDumpOutGlobal, probably_crashy, f'{component}: {message}' )
+        try:
+            
+            CG.client_controller.CallBlockingToQtTLW( EmergencyDumpOutGlobal, probably_crashy, f'{component}: {message}' )
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
         
     
     HydrusData.DebugPrint( '[MPV {}] {}: {}'.format( loglevel, component, message ) )
@@ -1432,12 +1440,24 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     self.update()
                     
                 
-                def errback_ui_cleanup_callable():
+                def errback_callable( etype, value, tb ):
+                    
+                    if etype == HydrusExceptions.FileMissingException:
+                        
+                        hash = media.GetHash()
+                        
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Missing File!', f'This file, "{hash.hex()}", is missing!' )
+                        
+                    else:
+                        
+                        HydrusData.ShowText( 'Unknown MPV File Load Error:' )
+                        HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+                        
                     
                     self.SetMedia( None )
                     
                 
-                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
                 
                 job.start()
                 

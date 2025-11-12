@@ -54,25 +54,7 @@ class AsyncQtJob( object ):
             
         except Exception as e:
             
-            ( etype, value, tb ) = sys.exc_info()
-            
-            if self._errback_callable is None:
-                
-                c = self._DefaultErrback
-                
-            else:
-                
-                c = self._errback_callable
-                
-            
-            try:
-                
-                CG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
-                
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
-                
-                return
-                
+            self._HandleErrback( e )
             
             return
             
@@ -83,28 +65,62 @@ class AsyncQtJob( object ):
             
         except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
             
-            return
+            pass
             
         except Exception as e:
             
-            ( etype, value, tb ) = sys.exc_info()
+            self._HandleErrback( e )
             
-            if self._errback_callable is None:
-                
-                c = self._DefaultErrback
-                
-            else:
-                
-                c = self._errback_callable
-                
+            return
+            
+        
+    
+    def _HandleErrback( self, e: Exception ):
+        
+        ( etype, value, tb ) = sys.exc_info()
+        
+        we_have_reported_ok = False
+        
+        if self._errback_callable is not None:
             
             try:
                 
-                CG.client_controller.CallBlockingToQt( self._win, c, etype, value, tb )
+                CG.client_controller.CallBlockingToQt( self._win, self._errback_callable, etype, value, tb )
+                
+                we_have_reported_ok = True
                 
             except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
                 
-                return
+                pass
+                
+            except Exception as e_reporting:
+                
+                HydrusData.ShowText( 'Trying to show an async error using a custom callable caused a problem:' )
+                HydrusData.ShowException( e_reporting )
+                
+            
+        
+        if not we_have_reported_ok:
+            
+            try:
+                
+                CG.client_controller.CallBlockingToQtTLW( self._DefaultErrback, etype, value, tb )
+                
+                we_have_reported_ok = True
+                
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                pass
+                
+            except Exception as e_last_chance:
+                
+                HydrusData.ShowText( 'Trying to show an async error using the default errback caused a problem:' )
+                HydrusData.ShowException( e_last_chance )
+                
+                HydrusData.ShowText( 'Here is the actual error we wanted to show:' )
+                HydrusData.ShowException( e )
+                
+                we_have_reported_ok = True
                 
             
         

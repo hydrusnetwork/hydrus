@@ -75,7 +75,7 @@ def QtLoadPDF( path: str ):
 
 def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, int] ) -> bytes:
     
-    def qt_code():
+    def qt_code() -> bytes:
         
         try:
             
@@ -104,7 +104,7 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, 
             
         
     
-    return CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_code )
+    CG.client_controller.CallBlockingToQtTLW( qt_code )
     
 
 HydrusPDFHandling.GenerateThumbnailNumPyFromPDFPath = GenerateThumbnailNumPyFromPDFPath
@@ -113,7 +113,7 @@ PDF_ASSUMED_DPI = 300
 
 def GetHumanReadableEmbeddedMetadata( path ) -> str:
     
-    def qt_code():
+    def qt_code() -> str:
         
         try:
             
@@ -146,7 +146,7 @@ def GetHumanReadableEmbeddedMetadata( path ) -> str:
         return '\n'.join( result_components )
         
     
-    return CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_code )
+    return CG.client_controller.CallBlockingToQtTLW( qt_code )
     
 
 def HasHumanReadableEmbeddedMetadata( path ) -> bool:
@@ -210,7 +210,7 @@ def GetPDFInfo( path: str ):
         return ( num_words, ( width, height ) )
         
     
-    return CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_code )
+    return CG.client_controller.CallBlockingToQtTLW( qt_code )
     
 
 def GetPDFModifiedTimestampMS( path ):
@@ -237,7 +237,7 @@ def GetPDFModifiedTimestampMS( path ):
         return modified_timestamp_ms
         
     
-    return CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_code )
+    return CG.client_controller.CallBlockingToQtTLW( qt_code )
     
 
 def GetPDFResolutionFromDocument( document ):

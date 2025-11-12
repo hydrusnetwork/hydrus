@@ -108,7 +108,7 @@ def MakeSomeFakePetitions( service_key: bytes ):
                         ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT, 256 ),
                     ]
                     
-                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                     
                     search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, predicates = predicates )
                     
@@ -935,7 +935,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                         
                     
                 
-                CG.client_controller.CallBlockingToQt( self, qt_set_petitions_summary, response[ 'petitions_summary' ] )
+                CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_set_petitions_summary, response[ 'petitions_summary' ] )
                 
             except HydrusExceptions.NotFoundException:
                 
@@ -949,7 +949,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                 
             finally:
                 
-                CG.client_controller.CallBlockingToQt( self, qt_done )
+                CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_done )
                 
             
         
@@ -1748,7 +1748,14 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
             
             while True:
                 
-                ( fetch_petition_header, outgoing_petition ) = CG.client_controller.CallBlockingToQt( self, qt_get_work )
+                try:
+                    
+                    ( fetch_petition_header, outgoing_petition ) = CG.client_controller.CallBlockingToQt( self, qt_get_work )
+                    
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    
+                    return
+                    
                 
                 if fetch_petition_header is None and outgoing_petition is None:
                     
@@ -1783,14 +1790,18 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                         
                     except HydrusExceptions.NotFoundException:
                         
-                        CG.client_controller.CallBlockingToQt( self, qt_petition_fetch_404, fetch_petition_header )
+                        CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_petition_fetch_404, fetch_petition_header )
+                        
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                        
+                        return
                         
                     except Exception as e:
                         
                         HydrusData.ShowText( 'Failed to fetch a petition!' )
                         HydrusData.ShowException( e )
                         
-                        CG.client_controller.CallBlockingToQt( self, qt_petition_fetch_failed, fetch_petition_header )
+                        CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_petition_fetch_failed, fetch_petition_header )
                         
                     
                 
@@ -1858,12 +1869,16 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                         
                         CG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
                         
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                        
+                        return
+                        
                     except Exception as e:
                         
                         HydrusData.ShowText( 'Failed to upload a petition!' )
                         HydrusData.ShowException( e )
                         
-                        CG.client_controller.CallBlockingToQt( self, qt_petition_clear_failed, outgoing_petition )
+                        CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_petition_clear_failed, outgoing_petition )
                         
                     
                 

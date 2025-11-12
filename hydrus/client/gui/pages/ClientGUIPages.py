@@ -3649,7 +3649,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if page is None:
             
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
             page = self.NewPageQuery( location_context, initial_hashes = hashes, page_name = page_name, on_deepest_notebook = True, select_page = False )
             

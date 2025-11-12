@@ -34,7 +34,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        self._location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        self._location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         self._presentation_status = PRESENTATION_STATUS_ANY_GOOD
         self._presentation_inbox = PRESENTATION_INBOX_AGNOSTIC
         
@@ -174,7 +174,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                 
             
             serialisable_location_context = location_context.GetSerialisableTuple()

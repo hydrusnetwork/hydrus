@@ -53,7 +53,7 @@ class TestDaemons( unittest.TestCase ):
             #
             
             file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-                ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ),
+                ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ),
                 ClientSearchTagContext.TagContext(),
                 predicates = [
                     ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = { HC.IMAGE_JPEG } )

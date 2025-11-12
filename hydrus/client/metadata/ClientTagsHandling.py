@@ -40,7 +40,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         
         if service_key == CC.DEFAULT_LOCAL_TAG_SERVICE_KEY:
             
-            self._write_autocomplete_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            self._write_autocomplete_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
             
         else:
             

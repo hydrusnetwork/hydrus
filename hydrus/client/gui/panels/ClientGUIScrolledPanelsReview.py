@@ -1823,7 +1823,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         panel_vbox = QP.VBoxLayout()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         )
         
         page_key = b'mr bones placeholder'
@@ -2371,7 +2371,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_all_media_files.setEnabled( False )
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context )
         
@@ -2555,7 +2555,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         panel_vbox = QP.VBoxLayout()
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext(
-            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         )
         
         page_key = b'mr bones placeholder'
@@ -2938,7 +2938,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_fsc = self._tag_autocomplete.GetFileSearchContext()
         
-        special_message_is_appropriate = len( current_fsc.GetPredicates() ) == 0 and current_fsc.GetLocationContext() == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        special_message_is_appropriate = len( current_fsc.GetPredicates() ) == 0 and current_fsc.GetLocationContext() == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
         
         if special_message_is_appropriate:
             

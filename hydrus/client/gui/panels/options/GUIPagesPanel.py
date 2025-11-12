@@ -36,12 +36,12 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._show_all_my_files_on_page_chooser = QW.QCheckBox( self._opening_and_closing_panel )
         self._show_all_my_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will only show if you have more than one local file domain.' ) )
         self._show_all_my_files_on_page_chooser_at_top = QW.QCheckBox( self._opening_and_closing_panel )
-        self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "all my files" at the top of the page chooser, to better see it if you have many local file domains.' ) )
+        self._show_all_my_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "combined local file domains" at the top of the page chooser, to better see it if you have many local file domains.' ) )
         
         self._show_local_files_on_page_chooser = QW.QCheckBox( self._opening_and_closing_panel )
         self._show_local_files_on_page_chooser.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you do not know what this is, you do not want it!' ) )
         self._show_local_files_on_page_chooser_at_top = QW.QCheckBox( self._opening_and_closing_panel )
-        self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "local files" at the top of the page chooser (above "all my files" as well, if it is present).' ) )
+        self._show_local_files_on_page_chooser_at_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Put "hydrus local file storage" at the top of the page chooser (above "combined local file domains" as well, if it is present).' ) )
         
         self._close_page_focus_goes = ClientGUICommon.BetterChoice( self._opening_and_closing_panel )
         
@@ -157,9 +157,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Put new page tabs on: ', self._default_new_page_goes ) )
-        rows.append( ( 'In new page chooser, show "all my files" if appropriate:', self._show_all_my_files_on_page_chooser ) )
+        rows.append( ( 'In new page chooser, show "combined local file domains" if appropriate:', self._show_all_my_files_on_page_chooser ) )
         rows.append( ( '  Put it at the top:', self._show_all_my_files_on_page_chooser_at_top ) )
-        rows.append( ( 'In new page chooser, show "local files":', self._show_local_files_on_page_chooser ) )
+        rows.append( ( 'In new page chooser, show "hydrus local file storage":', self._show_local_files_on_page_chooser ) )
         rows.append( ( '  Put it at the top:', self._show_local_files_on_page_chooser_at_top ) )
         rows.append( ( 'When closing the current tab, move focus: ', self._close_page_focus_goes ) )
         rows.append( ( 'Confirm when closing any page: ', self._confirm_all_page_closes ) )

@@ -95,7 +95,7 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
         
         tag_service_key = ClientLocalServerCore.ParseTagServiceKey( request )
         

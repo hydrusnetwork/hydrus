@@ -197,7 +197,7 @@ class TestSerialisables( unittest.TestCase ):
         
         local_times_manager = ClientMediaManagers.TimesManager()
         
-        current_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 123000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
+        current_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 123000, CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY : 123000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
         
         local_times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
         
@@ -213,8 +213,8 @@ class TestSerialisables( unittest.TestCase ):
         
         deleted_times_manager = ClientMediaManagers.TimesManager()
         
-        deleted_to_previously_imported_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 10000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 118000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 118000 }
-        deleted_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 120000, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 120000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
+        deleted_to_previously_imported_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 10000, CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY : 118000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 118000 }
+        deleted_to_timestamps_ms = { CC.LOCAL_FILE_SERVICE_KEY : 120000, CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY : 120000, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY : 123000 }
         
         deleted_times_manager.SetDeletedTimestampsMS( deleted_to_timestamps_ms )
         deleted_times_manager.SetPreviouslyImportedTimestampsMS( deleted_to_previously_imported_timestamps_ms )
@@ -309,7 +309,7 @@ class TestSerialisables( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { local_hash_empty }, reason = file_deletion_reason ) )
+        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { local_hash_empty }, reason = file_deletion_reason ) )
         
         HF.compare_content_update_packages( self, result[0], content_update_package )
         
@@ -340,7 +340,7 @@ class TestSerialisables( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
+        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
         
         HF.compare_content_update_packages( self, result[1], content_update_package )
         
@@ -359,7 +359,7 @@ class TestSerialisables( unittest.TestCase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
+        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { other_local_hash_has_values }, reason = file_deletion_reason ) )
         
         HF.compare_content_update_packages( self, result[1], content_update_package )
         

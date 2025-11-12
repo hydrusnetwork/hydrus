@@ -44,7 +44,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 11
+    SERIALISABLE_VERSION = 12
     
     def __init__( self ):
         
@@ -64,7 +64,8 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._automatic_archive = False
         self._associate_primary_urls = True
         self._associate_source_urls = True
-        self._do_content_updates_on_already_in_db_files = True
+        self._do_archive_on_already_in_db_files = True
+        self._do_import_destinations_on_already_in_db_files = False
         self._presentation_import_options = PresentationImportOptions.PresentationImportOptions()
         
         try:
@@ -73,7 +74,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
         except:
             
-            fallback = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+            fallback = CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY
             
         
         self._import_destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( fallback )
@@ -88,7 +89,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         serialisable_filetype_filter_predicate = self._filetype_filter_predicate.GetSerialisableTuple()
         
         pre_import_options = ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
-        post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_content_updates_on_already_in_db_files )
+        post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_archive_on_already_in_db_files, self._do_import_destinations_on_already_in_db_files )
         serialisable_presentation_import_options = self._presentation_import_options.GetSerialisableTuple()
         
         return ( pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default )
@@ -99,7 +100,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         ( pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default ) = serialisable_info
         
         ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
-        ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_content_updates_on_already_in_db_files ) = post_import_options
+        ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_archive_on_already_in_db_files, self._do_import_destinations_on_already_in_db_files ) = post_import_options
         self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
         
         self._filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate )
@@ -324,6 +325,22 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             return ( 11, new_serialisable_info )
             
         
+        if version == 11:
+            
+            ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default ) = old_serialisable_info
+            
+            ( automatic_archive, associate_primary_urls, associate_source_urls, do_content_updates_on_already_in_db_files ) = post_import_options
+            
+            do_archive_on_already_in_db_files = do_content_updates_on_already_in_db_files
+            do_import_destinations_on_already_in_db_files = False # I vacillated on what to set this as, but let's default to non-annoying
+            
+            post_import_options = ( automatic_archive, associate_primary_urls, associate_source_urls, do_archive_on_already_in_db_files, do_import_destinations_on_already_in_db_files )
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
+            
+            return ( 12, new_serialisable_info )
+            
+        
     
     def AllowsDecompressionBombs( self ):
         
@@ -446,36 +463,38 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        if not self._do_content_updates_on_already_in_db_files:
+        if self._do_import_destinations_on_already_in_db_files:
             
-            return content_update_package
             
-        
-        destination_location_context = self.GetDestinationLocationContext()
-        
-        desired_file_service_keys = destination_location_context.current_service_keys
-        current_file_service_keys = media_result.GetLocationsManager().GetCurrent()
-        
-        file_service_keys_to_add_to = set( desired_file_service_keys ).difference( current_file_service_keys )
-        
-        if len( file_service_keys_to_add_to ) > 0:
+            destination_location_context = self.GetDestinationLocationContext()
             
-            file_info_manager = media_result.GetFileInfoManager()
-            now_ms = HydrusTime.GetNowMS()
+            desired_file_service_keys = destination_location_context.current_service_keys
+            current_file_service_keys = media_result.GetLocationsManager().GetCurrent()
             
-            for service_key in file_service_keys_to_add_to:
+            file_service_keys_to_add_to = set( desired_file_service_keys ).difference( current_file_service_keys )
+            
+            if len( file_service_keys_to_add_to ) > 0:
                 
-                content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
+                file_info_manager = media_result.GetFileInfoManager()
+                now_ms = HydrusTime.GetNowMS()
+                
+                for service_key in file_service_keys_to_add_to:
+                    
+                    content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
+                    
                 
             
         
         #
         
-        if self.AutomaticallyArchives():
+        if self._do_archive_on_already_in_db_files:
             
-            hashes = { media_result.GetHash() }
-            
-            content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
+            if self.AutomaticallyArchives():
+                
+                hashes = { media_result.GetHash() }
+                
+                content_update_package.AddContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
+                
             
         
         return content_update_package
@@ -486,9 +505,14 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._import_destination_location_context
         
     
-    def GetDoContentUpdatesOnAlreadyInDBFiles( self ) -> bool:
+    def GetDoArchiveOnAlreadyInDBFiles( self ) -> bool:
         
-        return self._do_content_updates_on_already_in_db_files
+        return self._do_archive_on_already_in_db_files
+        
+    
+    def GetDoImportDestinationsOnAlreadyInDBFiles( self ) -> bool:
+        
+        return self._do_import_destinations_on_already_in_db_files
         
     
     def GetPresentationImportOptions( self ) -> PresentationImportOptions.PresentationImportOptions:
@@ -608,9 +632,14 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._is_default = value
         
     
-    def SetDoContentUpdatesOnAlreadyInDBFiles( self, value ):
+    def SetDoArchiveOnAlreadyInDBFiles( self, value ):
         
-        self._do_content_updates_on_already_in_db_files = value
+        self._do_archive_on_already_in_db_files = value
+        
+    
+    def SetDoImportDestinationsOnAlreadyInDBFiles( self, value ):
+        
+        self._do_import_destinations_on_already_in_db_files = value
         
     
     def SetPostImportOptions( self, automatic_archive: bool, associate_primary_urls: bool, associate_source_urls: bool ):

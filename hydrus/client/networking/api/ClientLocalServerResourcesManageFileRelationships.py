@@ -27,7 +27,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsGetRelationships( 
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
+        location_context = ClientLocalServerCore.ParseLocationContext( request, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) )
         
         hashes = ClientLocalServerCore.ParseHashes( request )
         
@@ -295,11 +295,11 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 for media_result in deletee_media_results:
                     
-                    if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+                    if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                         
-                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
+                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, content_update )
                         
                     
                 

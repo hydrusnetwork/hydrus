@@ -788,7 +788,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+            if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
                 
                 delete_lock_applies = not media_result.GetLocationsManager().inbox and CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
                 
@@ -809,7 +809,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                 
-                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, content_update )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY, content_update )
                 
             
         

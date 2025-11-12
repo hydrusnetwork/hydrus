@@ -894,9 +894,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._permitted_action_choices.append( ( text, ( deletee_file_service_key, content_update_packages, save_reason, hashes_physically_deleted, text ) ) )
                     
-                    deletee_file_service_key = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY
+                    deletee_file_service_key = CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY
                     
-                    h = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
+                    h = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
                     
                     content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in HydrusLists.SplitListIntoChunks( h, 16 ) ]
                     
