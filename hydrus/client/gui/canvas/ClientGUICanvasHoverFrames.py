@@ -55,7 +55,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._rating_state = None
         self._rating = None
         self._iconsize = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC )
-        self._iconpad = QC.QSize( round( ClientGUIPainterShapes.PAD_PX ), round( ClientGUIPainterShapes.PAD_PX / 2 ) ) if icon_pad is None else icon_pad
+        self._iconpad = QC.QSize( int( ClientGUIPainterShapes.PAD_PX ), int( ClientGUIPainterShapes.PAD_PX / 2 ) ) if icon_pad is None else icon_pad
         
         self._hashes = set()
         
