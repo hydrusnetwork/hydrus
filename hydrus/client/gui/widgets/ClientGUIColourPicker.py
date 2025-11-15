@@ -116,6 +116,8 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
 
 class ColourPickerButton( QW.QPushButton ):
     
+    colourChanged = QC.Signal()
+    
     def __init__( self, parent = None ):
         
         super().__init__( parent )
@@ -130,7 +132,9 @@ class ColourPickerButton( QW.QPushButton ):
     def SetColour( self, colour ):
         
         self._colour = colour
-
+        
+        self.colourChanged.emit()
+        
         self._UpdatePixmap()
         
 
