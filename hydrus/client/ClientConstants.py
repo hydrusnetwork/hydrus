@@ -875,3 +875,5 @@ COMBINED_DELETED_FILE_SERVICE_KEY: bytes = b'all deleted files'
 COMBINED_TAG_SERVICE_KEY: bytes = b'all known tags'
 
 TEST_SERVICE_KEY: bytes = b'test service'
+
+PREVIEW_RATINGS_SERVICE_KEY: bytes = b'ratings preview object service'
