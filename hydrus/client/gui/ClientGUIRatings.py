@@ -719,11 +719,11 @@ class RatingIncDecExample( RatingIncDecControl ):
         
         if self.isEnabled():
             
-            DrawIncDec( painter, 1, 1, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
             
         else:
             
-            DrawIncDec( painter, 1, 1, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
             
         
     
@@ -1277,19 +1277,20 @@ class RatingNumericalExample( RatingNumericalControl ):
     
 class RatingPreviewServiceWrapper:
     
-    def __init__( self, original_service_key: bytes, test_service_key: bytes = CC.PREVIEW_RATINGS_SERVICE_KEY ):
+    def __init__( self, original_service_key: bytes, test_service_key: bytes = CC.PREVIEW_RATINGS_SERVICE_KEY, service_type = None, dictionary = None ):
         
         self._original_service_key = original_service_key
         self._service_key = test_service_key
+        self._service_type = service_type
         
         self._test_service = None
-        self._service_type = HydrusData.HC.TEST_SERVICE
-        self._modifiable_dict = None
+        self._modifiable_dict = dictionary
         
-        if CG.client_controller.services_manager.ServiceExists( self._original_service_key ):
+        if not CG.client_controller.services_manager.ServiceExists( self._original_service_key ):
             
-            self._CloneFromOriginal()
+            self._original_service_key = CC.PREVIEW_RATINGS_SERVICE_KEY
             
+        self._CloneFromOriginal()
         
     
     def _CloneColours( self, service_key: bytes ):
@@ -1311,11 +1312,11 @@ class RatingPreviewServiceWrapper:
         
         rating_service = CG.client_controller.services_manager.GetService( self._original_service_key )
         
-        self._service_type = rating_service.GetServiceType()
+        self._service_type = rating_service.GetServiceType() if self._service_type is None else self._service_type
         
         self._service_name = 'example service templated from ' + rating_service.GetName()
         
-        self._modifiable_dict = rating_service.GetSerialisableDictionary()
+        self._modifiable_dict = rating_service.GetSerialisableDictionary() if self._modifiable_dict is None else self._modifiable_dict
         
         self._ReloadExampleService()
         
@@ -1328,6 +1329,32 @@ class RatingPreviewServiceWrapper:
     def GetServiceKey( self ):
         
         return self._service_key
+        
+    
+    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> QW.QWidget:
+        
+        if self._service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
+            
+            return RatingIncDecExample( parent, self._service_key, canvas_type )
+            
+        elif self._service_type == ClientGUICommon.HC.LOCAL_RATING_LIKE:
+            
+            return RatingLikeExample( parent, self._service_key, canvas_type )
+            
+        elif self._service_type == ClientGUICommon.HC.LOCAL_RATING_NUMERICAL:
+            
+            return RatingNumericalExample( parent, self._service_key, canvas_type )
+            
+        else:
+            
+            raise Exception( 'Unknown rating service type!' )
+        
+    
+    def SetLiveData( self, k, v ):
+        
+        self._modifiable_dict[ k ] = v
+        
+        self._ReloadExampleService()
         
     
     def SetServiceTemplate( self, service_key: bytes ):
