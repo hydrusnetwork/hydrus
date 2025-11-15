@@ -31,6 +31,7 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIPanels
+from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -380,18 +381,20 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._service_type in HC.RATINGS_SERVICES:
             
-            self._panels.append( EditServiceRatingsSubPanel( self, self._service_type, self._dictionary ) )
+            ratings_live_settings_preview = EditServiceRatingSettingExamplePanel( self, self._service_key, self._service_type, self._dictionary )
+            
+            self._panels.append( EditServiceRatingsSubPanel( self, self._service_type, self._dictionary, ratings_live_settings_preview ) )
             
             if self._service_type in HC.STAR_RATINGS_SERVICES:
                 
-                self._panels.append( EditServiceStarRatingsSubPanel( self, self._dictionary ) )
+                self._panels.append( EditServiceStarRatingsSubPanel( self, self._dictionary, ratings_live_settings_preview ) )
                 
                 if self._service_type == HC.LOCAL_RATING_NUMERICAL:
                     
-                    self._panels.append( EditServiceRatingsNumericalSubPanel( self, self._dictionary ) )
+                    self._panels.append( EditServiceRatingsNumericalSubPanel( self, self._dictionary, ratings_live_settings_preview ) )
                     
                 
-            
+            self._panels.append( ratings_live_settings_preview )
         
         if self._service_type == HC.IPFS:
             
@@ -1299,9 +1302,53 @@ class EditServiceTagSubPanel( ClientGUICommon.StaticBox ):
         
     
 
+class EditServiceRatingSettingExamplePanel( ClientGUICommon.StaticBox ):
+    
+    SetExampleData = QC.Signal( str, object )
+    
+    def __init__( self, parent, original_service, service_type, dictionary ):
+        
+        super().__init__( parent, 'example display', can_expand = True, start_expanded = True)
+        
+        self._rating_example_service = ClientGUIRatings.RatingPreviewServiceWrapper( original_service, CC.PREVIEW_RATINGS_SERVICE_KEY, service_type, dictionary )
+        
+        self._rating_example_display_thumbnails = self._rating_example_service.GetWidget( None, self )
+        self._rating_example_display_media_viewer = self._rating_example_service.GetWidget( CC.CANVAS_MEDIA_VIEWER, self )
+        self._rating_example_display_preview_window = self._rating_example_service.GetWidget( CC.CANVAS_PREVIEW, self )
+        self._rating_example_display_dialog = self._rating_example_service.GetWidget( CC.CANVAS_DIALOG, self )
+        
+        self.SetExampleData.connect( self._rating_example_service.SetLiveData, QC.Qt.ConnectionType.QueuedConnection )
+        self.SetExampleData.connect( self._UpdateWidgets )
+        
+        #
+        
+        rows = []
+        
+        rows.append( [ 'Thumbnails', 'Media Viewer', 'Preview Window', 'Dialog (Default)' ] )
+        rows.append( [ self._rating_example_display_thumbnails, self._rating_example_display_media_viewer, self._rating_example_display_preview_window, self._rating_example_display_dialog ] )
+        
+        gridbox = ClientGUICommon.WrapInTable( self, list( zip( *rows ) ) )
+        
+        self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+    
+    def _UpdateWidgets( self, key_to_set, new_val ):
+        
+        self._rating_example_display_thumbnails.UpdateSize()
+        self._rating_example_display_media_viewer.UpdateSize()
+        self._rating_example_display_preview_window.UpdateSize()
+        self._rating_example_display_dialog.UpdateSize()
+        
+    
+    def GetValue( self ):
+        
+        return {}
+        
+    
+
 class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, service_type, dictionary ):
+    def __init__( self, parent, service_type, dictionary, preview_widget ):
         
         super().__init__( parent, 'rating display' )
         
@@ -1391,12 +1438,26 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         self._show_in_thumbnail.clicked.connect( self._UpdateControls )
         
+        self._preview_widget = preview_widget
+        
+        for ( border_ctrl, fill_ctrl ) in self._colour_ctrls.values():
+            
+            border_ctrl.colourChanged.connect( self._UpdatePreviewExample )
+            fill_ctrl.colourChanged.connect( self._UpdatePreviewExample )
+            
+        
         self._UpdateControls()
         
     
     def _UpdateControls( self ):
         
         self._show_in_thumbnail_even_when_null.setEnabled( self._show_in_thumbnail.isChecked() )
+        
+    
+    def _UpdatePreviewExample( self ):
+        
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'colours', self.GetValue()[ 'colours' ] )()
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'colours', self.GetValue()[ 'colours' ] )()
         
     
     def GetValue( self ):
@@ -1427,13 +1488,15 @@ class EditServiceRatingsSubPanel( ClientGUICommon.StaticBox ):
 
 class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, dictionary ):
+    def __init__( self, parent, dictionary, preview_widget ):
         
         super().__init__( parent, 'rating shape' )
         
         menu_template_items = []
         
         page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_RATINGS )
+        
+        self._preview_widget = preview_widget
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the ratings help', 'Open the help page for ratings.', page_func ) )
         
@@ -1522,14 +1585,14 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
             rows.append( ( 'svg: ', self._rating_svg ) )
             
         
-        # preview here, ideally a manipulable fake control, or maybe we need to be more clever with num_stars in a numerical rating
-        # fake bitmaps can also be fine
-        # scaling size dynamically would also be nice, or at least showing what the current sizes are for media viewer, thumbs, and default 12px for anywhere else
-        
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         self.Add( help_hbox, CC.FLAGS_ON_RIGHT )
         self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._shape_or_svg.radioBoxChanged.connect( self._UpdatePreviewExample )
+        self._shape.currentIndexChanged.connect( self._UpdatePreviewExample )
+        self._rating_svg.currentIndexChanged.connect( self._UpdatePreviewExample )
         
         self._UpdateControls()
         
@@ -1542,6 +1605,12 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         self._shape.setEnabled( selection == 'shape' )
         self._rating_svg.setEnabled( selection == 'rating_svg' )
+        
+    
+    def _UpdatePreviewExample( self ):
+        
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'shape', self.GetValue()[ 'shape' ] )()
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'rating_svg', self.GetValue()[ 'rating_svg' ] )()
         
     
     def GetValue( self ):
@@ -1578,7 +1647,7 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
 
 class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, dictionary ):
+    def __init__( self, parent, dictionary, preview_widget ):
         
         super().__init__( parent, 'numerical ratings' )
         
@@ -1613,6 +1682,19 @@ class EditServiceRatingsNumericalSubPanel( ClientGUICommon.StaticBox ):
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
         self.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self._preview_widget = preview_widget
+        
+        self._num_stars.valueChanged.connect( self._UpdatePreviewExample )
+        self._custom_pad.valueChanged.connect( self._UpdatePreviewExample )
+        self._draw_fraction.currentIndexChanged.connect( self._UpdatePreviewExample )
+        
+    
+    def _UpdatePreviewExample( self ):
+        
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'num_stars', self.GetValue()[ 'num_stars' ] )()
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'custom_pad', self.GetValue()[ 'custom_pad' ] )()
+        HydrusData.Call( self._preview_widget.SetExampleData.emit, 'show_fraction_beside_stars', self.GetValue()[ 'show_fraction_beside_stars' ] )()
         
     
     def GetValue( self ):
