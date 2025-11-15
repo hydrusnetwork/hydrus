@@ -538,6 +538,14 @@ class ServiceLocalRating( Service ):
             return self._colours[ rating_state ]
             
         
+    def GetColours( self ):
+        
+        with self._lock:
+            
+            return dict( self._colours )
+            
+        
+    
 
     def GetShowInThumbnail( self ):
         
@@ -631,29 +639,6 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
             
         
     
-class ServiceLocalRatingLike( ServiceLocalRatingStars ):
-    
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
-        
-        if rating is None:
-            
-            return 'not set'
-            
-        elif isinstance( rating, ( float, int ) ):
-            
-            if rating < 0.5:
-                
-                return 'dislike'
-                
-            elif rating >= 0.5:
-                
-                return 'like'
-                
-            
-        
-        return 'unknown'
-        
-    
     def ConvertRatingStateToString( self, rating_state: int ):
         
         if rating_state == ClientRatings.LIKE:
@@ -678,6 +663,31 @@ class ServiceLocalRatingLike( ServiceLocalRatingStars ):
             
         
     
+
+class ServiceLocalRatingLike( ServiceLocalRatingStars ):
+    
+    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+        
+        if rating is None:
+            
+            return 'not set'
+            
+        elif isinstance( rating, ( float, int ) ):
+            
+            if rating < 0.5:
+                
+                return 'dislike'
+                
+            elif rating >= 0.5:
+                
+                return 'like'
+                
+            
+        
+        return 'unknown'
+        
+    
+
 class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
     
     def _GetSerialisableDictionary( self ):
@@ -3243,6 +3253,7 @@ class ServicesManager( object ):
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
         self._keys_to_services[ CC.TEST_SERVICE_KEY ] = GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
+        self._keys_to_services[ CC.PREVIEW_RATINGS_SERVICE_KEY ] = GenerateService( CC.PREVIEW_RATINGS_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'preview rating object service' ) #contains all possible ratings data
         
         key = lambda s: s.GetName().lower()
         
@@ -3405,6 +3416,18 @@ class ServicesManager( object ):
         with self._lock:
             
             return service_key in self._keys_to_services
+            
+        
+    
+    def SetTestServiceData( self, service_key: bytes, service_type: int, data: dict, name: str = 'test service' ):
+        
+        with self._lock:
+            
+            if service_key not in [ CC.TEST_SERVICE_KEY, CC.PREVIEW_RATINGS_SERVICE_KEY ]:
+                
+                raise HydrusExceptions.TooComplicatedM8( 'Please don\'t directly set any non system services!' )
+                
+            self._keys_to_services[ service_key ] = GenerateService( service_key, service_type, name, data )
             
         
     
