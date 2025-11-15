@@ -1,12 +1,15 @@
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui import ClientGUIRatings
 
 class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
@@ -24,7 +27,6 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._media_viewer_rating_icon_size_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set size in pixels for like, numerical, and inc/dec rating icons for clicking on. This will be used for both width and height of the square icons.' ) )
         self._media_viewer_rating_incdec_height_px = ClientGUICommon.BetterDoubleSpinBox( media_viewer_rating_panel, min = 2.0, max = 255.0 )
         self._media_viewer_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set height in pixels for inc/dec rectangles in the media viewer. Width will be dynamic based on the rating. It is limited to be between twice and half of the normal ratings icons sizes.' ) )
-        
         
         thumbnail_ratings_panel = ClientGUICommon.StaticBox( self, 'thumbnails' )
         
@@ -71,19 +73,100 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        self._example_star_service = ClientGUIRatings.RatingPreviewServiceWrapper( self._new_options.GetKey( 'options_ratings_panel_template_service_key' ), CC.PREVIEW_RATINGS_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL )
+        self._example_incdec_service = ClientGUIRatings.RatingPreviewServiceWrapper( CC.PREVIEW_RATINGS_SERVICE_KEY )
+         
+        self._media_viewer_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._media_viewer_incdec_example = ClientGUIRatings.RatingIncDecExample( self, self._example_incdec_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._thumbnail_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._thumbnail_incdec_example = ClientGUIRatings.RatingIncDecExample( self, self._example_incdec_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._preview_window_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._preview_window_incdec_example = ClientGUIRatings.RatingIncDecExample( self, self._example_incdec_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._dialog_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        self._dialog_incdec_example = ClientGUIRatings.RatingIncDecExample( self, self._example_incdec_service.GetServiceKey(), CC.CANVAS_DIALOG )
+        
+        self._media_viewer_example_rating_sizes = QP.VBoxLayout()
+        QP.AddToLayout( self._media_viewer_example_rating_sizes, self._media_viewer_star_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        QP.AddToLayout( self._media_viewer_example_rating_sizes, self._media_viewer_incdec_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        
+        self._thumbnail_example_rating_sizes = QP.VBoxLayout()
+        QP.AddToLayout( self._thumbnail_example_rating_sizes, self._thumbnail_star_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        QP.AddToLayout( self._thumbnail_example_rating_sizes, self._thumbnail_incdec_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        
+        self._preview_window_example_rating_sizes = QP.VBoxLayout( 0, 8 )
+        QP.AddToLayout( self._preview_window_example_rating_sizes, self._preview_window_star_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        QP.AddToLayout( self._preview_window_example_rating_sizes, self._preview_window_incdec_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        
+        self._dialog_example_rating_sizes = QP.VBoxLayout()
+        QP.AddToLayout( self._dialog_example_rating_sizes, self._dialog_star_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        QP.AddToLayout( self._dialog_example_rating_sizes, self._dialog_incdec_example, None, QC.Qt.AlignmentFlag.AlignLeft  )
+        
+        self._media_viewer_rating_icon_size_px.editingFinished.connect(
+            lambda: self._media_viewer_star_example.UpdateSize( QC.QSize( int( self._media_viewer_rating_icon_size_px.value() ), int( self._media_viewer_rating_icon_size_px.value() ) ) )
+        )
+        self._media_viewer_rating_incdec_height_px.editingFinished.connect(
+            lambda: self._media_viewer_incdec_example.UpdateSize( QC.QSize( int( self._media_viewer_rating_incdec_height_px.value() ), int( self._media_viewer_rating_incdec_height_px.value() ) ) )
+        )
+        self._preview_window_rating_icon_size_px.editingFinished.connect(
+            lambda: self._preview_window_star_example.UpdateSize( QC.QSize( int( self._preview_window_rating_icon_size_px.value() ), int( self._preview_window_rating_icon_size_px.value() ) ) )
+        )
+        self._preview_window_rating_incdec_height_px.editingFinished.connect(
+            lambda: self._preview_window_incdec_example.UpdateSize( QC.QSize( int( self._preview_window_rating_incdec_height_px.value() ), int( self._preview_window_rating_incdec_height_px.value() ) ) )
+        )
+        self._draw_thumbnail_rating_icon_size_px.editingFinished.connect(
+            lambda: self._thumbnail_star_example.UpdateSize( QC.QSize( int( self._draw_thumbnail_rating_icon_size_px.value() ), int( self._draw_thumbnail_rating_icon_size_px.value() ) ) )
+        )
+        self._draw_thumbnail_rating_incdec_height_px.editingFinished.connect(
+            lambda: self._thumbnail_incdec_example.UpdateSize( QC.QSize( int( self._draw_thumbnail_rating_incdec_height_px.value() ), int( self._draw_thumbnail_rating_incdec_height_px.value() ) ) )
+        )
+        self._dialog_rating_icon_size_px.editingFinished.connect(
+            lambda: self._dialog_star_example.UpdateSize( QC.QSize( int( self._dialog_rating_icon_size_px.value() ), int( self._dialog_rating_icon_size_px.value() ) ) )
+        )
+        self._dialog_rating_incdec_height_px.editingFinished.connect( 
+            lambda: self._dialog_incdec_example.UpdateSize( QC.QSize( int( self._dialog_rating_incdec_height_px.value() ), int( self._dialog_rating_incdec_height_px.value() ) ) )
+        )
+        
+        example_select_panel = ClientGUICommon.StaticBox( self, 'choose rating service style to display for examples', can_expand = True, start_expanded = True )
+        
+        self._service_template_dropdown = ClientGUICommon.BetterChoice( example_select_panel )
+        
+        for service in CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ) ):
+            
+            self._service_template_dropdown.addItem( service.GetName(), service.GetServiceKey() )
+            
+        self._service_template_dropdown.currentIndexChanged.connect( lambda: self._example_star_service.SetServiceTemplate( self._service_template_dropdown.GetValue() ) )
+        self._service_template_dropdown.currentIndexChanged.connect( self._UpdateWidgets )
+        
+        #
+        
         self._media_viewer_rating_icon_size_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_icon_size_px' ) )
         self._media_viewer_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'media_viewer_rating_incdec_height_px' ) )
+        self._media_viewer_rating_icon_size_px.editingFinished.emit()
+        self._media_viewer_rating_incdec_height_px.editingFinished.emit()
         
         self._draw_thumbnail_rating_background.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_rating_background' ) )
         self._draw_thumbnail_numerical_ratings_collapsed_always.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_numerical_ratings_collapsed_always' ) )
         self._draw_thumbnail_rating_icon_size_px.setValue( self._new_options.GetFloat( 'draw_thumbnail_rating_icon_size_px' ) )
-        self._draw_thumbnail_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'thumbnail_rating_incdec_height_px' )  )
+        self._draw_thumbnail_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'thumbnail_rating_incdec_height_px' ) )
+        self._draw_thumbnail_rating_icon_size_px.editingFinished.emit()
+        self._draw_thumbnail_rating_incdec_height_px.editingFinished.emit()
         
         self._preview_window_rating_icon_size_px.setValue( self._new_options.GetFloat( 'preview_window_rating_icon_size_px' ) )
         self._preview_window_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'preview_window_rating_incdec_height_px' ) )
+        self._preview_window_rating_icon_size_px.editingFinished.emit()
+        self._preview_window_rating_incdec_height_px.editingFinished.emit()
         
         self._dialog_rating_icon_size_px.setValue( self._new_options.GetFloat( 'dialog_rating_icon_size_px' ) )
         self._dialog_rating_incdec_height_px.setValue( self._new_options.GetFloat( 'dialog_rating_incdec_height_px' ) )
+        self._dialog_rating_icon_size_px.editingFinished.emit()
+        self._dialog_rating_incdec_height_px.editingFinished.emit()
+        
+        
+        for w in ( self._media_viewer_incdec_example, self._thumbnail_incdec_example, self._preview_window_incdec_example, self._dialog_incdec_example ):
+            
+            w.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Preferred )
+            w.adjustSize()
+            
         
         #
         
@@ -91,6 +174,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Media viewer like/dislike and numerical rating icon size:', self._media_viewer_rating_icon_size_px ) )
         rows.append( ( 'Media viewer inc/dec rating icon height:', self._media_viewer_rating_incdec_height_px ) )
+        rows.append( ( 'Media viewer size examples (click to test):', self._media_viewer_example_rating_sizes ) )
         
         media_viewer_rating_gridbox = ClientGUICommon.WrapInGrid( media_viewer_rating_panel, rows )
         media_viewer_rating_panel.Add( media_viewer_rating_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -99,6 +183,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Preview window like/dislike and numerical rating icon size:', self._preview_window_rating_icon_size_px ) )
         rows.append( ( 'Preview window inc/dec rating icon height:', self._preview_window_rating_incdec_height_px ) )
+        rows.append( ( 'Preview window size examples (click to test):', self._preview_window_example_rating_sizes ) )
         
         preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_window_rating_panel, rows )
         preview_window_rating_panel.Add( preview_hovers_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -109,6 +194,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Thumbnail inc/dec rating height: ', self._draw_thumbnail_rating_incdec_height_px ) )
         rows.append( ( 'Give thumbnail ratings a flat background: ', self._draw_thumbnail_rating_background ) )
         rows.append( ( 'Always draw thumbnail numerical ratings collapsed: ', self._draw_thumbnail_numerical_ratings_collapsed_always ) )
+        rows.append( ( 'Thumbnail size examples (click to test):', self._thumbnail_example_rating_sizes ) )
         
         thumbnail_ratings_gridbox = ClientGUICommon.WrapInGrid( thumbnail_ratings_panel, rows )
         thumbnail_ratings_panel.Add( thumbnail_ratings_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -117,10 +203,18 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Dialogs like/dislike and numerical rating icon size:', self._dialog_rating_icon_size_px ) )
         rows.append( ( 'Dialogs inc/dec rating height:', self._dialog_rating_incdec_height_px ) )
+        rows.append( ( 'Dialog size examples (click to test):', self._dialog_example_rating_sizes ) )
         
         manage_ratings_gridbox = ClientGUICommon.WrapInGrid( manage_ratings_popup_panel, rows )
         
         manage_ratings_popup_panel.Add( manage_ratings_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'Select rating service for styling numerical stars:', self._service_template_dropdown ) )
+        
+        service_template_select_gridbox = ClientGUICommon.WrapInGrid( example_select_panel, rows )
+        example_select_panel.Add( service_template_select_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -132,6 +226,8 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         thumbnail_ratings_gridbox.setColumnStretch(1, 1)
         manage_ratings_gridbox.setColumnStretch(0, 1)
         manage_ratings_gridbox.setColumnStretch(1, 1)
+        service_template_select_gridbox.setColumnStretch(0, 1)
+        service_template_select_gridbox.setColumnStretch(1, 1)
         
         vbox = QP.VBoxLayout()
         
@@ -139,6 +235,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         QP.AddToLayout( vbox, preview_window_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, thumbnail_ratings_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, manage_ratings_popup_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, example_select_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 0 )
         self.setLayout( vbox )
@@ -160,6 +257,18 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._draw_thumbnail_rating_incdec_height_px.setMaximum( new_value * 2 )
         self._draw_thumbnail_rating_incdec_height_px.setMinimum( new_value * 0.5 )
+        
+    
+    def _UpdateWidgets( self ):
+        
+        self._media_viewer_star_example.UpdateSize( QC.QSize( int( self._media_viewer_rating_icon_size_px.value() ), int( self._media_viewer_rating_icon_size_px.value() ) ) )
+        self._media_viewer_incdec_example.UpdateSize( QC.QSize( int( self._media_viewer_rating_incdec_height_px.value() ), int( self._media_viewer_rating_incdec_height_px.value() ) ) )
+        self._thumbnail_star_example.UpdateSize( QC.QSize( int( self._draw_thumbnail_rating_icon_size_px.value() ), int( self._draw_thumbnail_rating_icon_size_px.value() ) ) )
+        self._thumbnail_incdec_example.UpdateSize( QC.QSize( int( self._draw_thumbnail_rating_incdec_height_px.value() ), int( self._draw_thumbnail_rating_incdec_height_px.value() ) ) )
+        self._preview_window_star_example.UpdateSize( QC.QSize( int( self._preview_window_rating_icon_size_px.value() ), int( self._preview_window_rating_icon_size_px.value() ) ) )
+        self._preview_window_incdec_example.UpdateSize( QC.QSize( int( self._preview_window_rating_incdec_height_px.value() ), int( self._preview_window_rating_incdec_height_px.value() ) ) )
+        self._dialog_star_example.UpdateSize( QC.QSize( int( self._dialog_rating_icon_size_px.value() ), int( self._dialog_rating_icon_size_px.value() ) ) )
+        self._dialog_incdec_example.UpdateSize( QC.QSize( int( self._dialog_rating_incdec_height_px.value() ), int( self._dialog_rating_incdec_height_px.value() ) ) )
         
     
     def UpdateOptions( self ):
