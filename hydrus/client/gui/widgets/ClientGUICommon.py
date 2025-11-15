@@ -137,6 +137,65 @@ def WrapInGrid( parent, rows, expand_text = False, expand_single_widgets = False
     return gridbox
     
 
+def WrapInTable( parent, rows, spacing = 2, expand_text = False, expand_single_widgets = False ):
+    
+    text_flags = CC.FLAGS_EXPAND_BOTH_WAYS if expand_text else CC.FLAGS_ON_LEFT
+    control_flags = CC.FLAGS_CENTER_PERPENDICULAR if expand_single_widgets else CC.FLAGS_EXPAND_SIZER_PERPENDICULAR
+    columns = 1
+    padded_rows = []
+    
+    for row in rows:
+        
+        if HydrusLists.IsAListLikeCollection( row ):
+            
+            columns = max( columns, len( row ) )
+            
+        else:
+            
+            columns = max( columns, 1 )
+            
+        
+    gridbox = QP.GridLayout( cols = columns, spacing = spacing )
+    
+    for row in rows:
+        
+        if HydrusLists.IsAListLikeCollection( row ):
+            
+            padded_row = list( row ) + [ '' ] * ( columns - len( row ) )
+            
+        else:
+            
+            padded_row = [ row ] + [ '' ] * ( columns - 1 )
+            
+        padded_rows.append( padded_row )
+        
+    
+    
+    for display_row in padded_rows:
+        
+        for i in range( len( display_row ) ):
+            
+            item = display_row[ i ]
+            
+            if isinstance( item, str ):
+                
+                display_cell = BetterStaticText( parent, item )
+                
+                QP.AddToLayout( gridbox, display_cell, text_flags )
+                
+            elif isinstance( item, BetterStaticText ):
+                
+                QP.AddToLayout( gridbox, item, text_flags )
+                
+            else:
+                
+                QP.AddToLayout( gridbox, item, control_flags )
+                
+            
+        
+    return gridbox
+    
+
 def WrapInText( control, parent, text, object_name = None ):
     
     hbox = QP.HBoxLayout()
