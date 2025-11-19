@@ -90,7 +90,9 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         if page:
             
-            CG.client_controller.gui._notebook.ShowPage( page )
+            page_key = page.GetPageKey()
+            
+            CG.client_controller.gui.ShowPage( page_key )
             
             self.result_ids_to_pages = {}
             
@@ -102,12 +104,12 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_ids_to_pages = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui._notebook or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_all_pages' ) ):
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_all_pages' ) ):
             
             return
             
         
-        tab_widget = CG.client_controller.gui._notebook
+        tab_widget = CG.client_controller.gui.GetTopLevelNotebook()
         
         # helper function to traverse tab tree and generate entries
         def get_child_tabs( tab_widget: QW.QTabWidget, parent_name: str ) -> list:
@@ -476,12 +478,12 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         self.result_ids_to_pages = {}
         self.menu = None
         
-        if not CG.client_controller.gui or not CG.client_controller.gui._notebook:
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook():
             
             return
             
         
-        media_page = CG.client_controller.gui._notebook.GetCurrentMediaPage()
+        media_page = CG.client_controller.gui.GetNotebookCurrentPage()
         
         if not media_page or not media_page._media_panel:
             

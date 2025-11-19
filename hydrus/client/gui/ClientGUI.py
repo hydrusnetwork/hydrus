@@ -7757,6 +7757,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return mpv_widget
         
     
+    def GetTopLevelNotebook( self ):
+        
+        return self._notebook
+        
+    def GetNotebookCurrentPage( self ):
+        
+        return self._notebook.GetCurrentMediaPage()
+        
+    
     def GetPageFromPageKey( self, page_key ):
         
         return self._notebook.GetPageFromPageKey( page_key )
