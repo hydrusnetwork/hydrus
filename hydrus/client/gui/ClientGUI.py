@@ -669,6 +669,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._locator.addProvider( ClientGUILocatorSearchProviders.CalculatorSearchProvider() )
         self._locator.addProvider( ClientGUILocatorSearchProviders.MainMenuSearchProvider() )
         self._locator.addProvider( ClientGUILocatorSearchProviders.MediaMenuSearchProvider() )
+        self._locator.addProvider( ClientGUILocatorSearchProviders.PagesHistorySearchProvider() )
         self._locator.addProvider( ClientGUILocatorSearchProviders.PagesSearchProvider() )
         self._locator_widget = QLocator.QLocatorWidget( self,
             width = 800,
@@ -7773,6 +7774,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return page.GetAPIInfoDict( simple )
             
+        
+    
+    def GetPagesHistory( self ):
+        
+        return self._page_nav_history.GetHistory()
         
     
     def GetTotalPageCounts( self ):

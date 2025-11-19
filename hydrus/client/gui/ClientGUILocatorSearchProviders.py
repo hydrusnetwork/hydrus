@@ -7,6 +7,7 @@ from html import escape
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.core import HydrusNumbers
 
 def highlight_result_text( result_text: str, query_text: str ):
     
@@ -68,32 +69,32 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_id_counter = 0
         self.result_ids_to_pages = {}
-
-
+        
+    
     def title( self ):
         
         return "Pages"
-
-
+        
+    
     # How many preallocated result widgets should be created (so that we don't have to recreate the entire result list on each search)
     # Should be larger than the average expected result count
     def suggestedReservedItemCount( self ):
         
         return 32
-
-
+        
+    
     # Called when the user activates a result
     def resultSelected( self, resultID: int ):
         
         page = self.result_ids_to_pages.get( resultID, None )
-
+        
         if page:
-
+            
             CG.client_controller.gui._notebook.ShowPage( page )
             
             self.result_ids_to_pages = {}
-
-
+            
+        
     # Should generate a list of QLocatorSearchResults
     def processQuery( self, query: str, context, jobID: int ):
         
@@ -101,7 +102,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_ids_to_pages = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui._notebook:
+        if not CG.client_controller.gui or not CG.client_controller.gui._notebook or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_all_pages' ) ):
             
             return
             
@@ -163,7 +164,12 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     result.extend( get_child_tabs( widget, widget.GetName() ) )
                     
                 
-
+            
+            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_page_results' ) > 0:
+                
+                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_page_results' ) ]
+                
+            
             return result
             
         
@@ -178,7 +184,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
     # When this is called, it means that the Locator/LocatorWidget is done with these jobs and no results will be activated either
     # So if any still-in-progress search can be stopped and any resources associated with these jobs can be freed
     def stopJobs( self, jobs: list ):
-
+        
         self.result_ids_to_pages = {}
         
         
@@ -191,7 +197,113 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
     def titleIconPath( self ):
         
         return str() #TODO fill this in
-
+        
+    
+class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
+    
+    def __init__( self, parent = None ):
+        
+        super().__init__( parent )
+        
+        self.result_id_counter = 0
+        self.result_ids_to_page_keys = {}
+        
+    
+    def title( self ):
+        
+        return "Recent Tab History"
+        
+    
+    # How many preallocated result widgets should be created (so that we don't have to recreate the entire result list on each search)
+    # Should be larger than the average expected result count
+    def suggestedReservedItemCount( self ):
+        
+        return 32
+        
+    
+    def resultSelected( self, resultID: int ):
+        
+        page_key = self.result_ids_to_page_keys.get( resultID, None )
+        
+        if page_key:
+            
+            CG.client_controller.gui.ShowPage( page_key )
+            
+            self.result_ids_to_page_keys = {}
+            
+        
+    # Should generate a list of QLocatorSearchResults
+    def processQuery( self, query: str, context, jobID: int ):
+        
+        query_casefold = query.casefold()
+        
+        self.result_ids_to_page_keys = {}
+        self.result_id_counter = 0
+        
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_history' ) ):
+            
+            return
+            
+        
+        history_data = CG.client_controller.gui.GetPagesHistory()
+        
+        from hydrus.client.gui.pages import ClientGUIPages
+        
+        def get_history_tabs( history_data: list ):
+            
+            result = []
+            
+            for i in range( len( history_data ) - 1, -1, -1 ):
+                
+                page_key, page_name = history_data[ i ]
+                
+                if query_casefold in page_name.casefold():
+                    
+                    primary_text = highlight_result_text( page_name, query )
+                    secondary_text =  HydrusNumbers.IntToPrettyOrdinalString( self.result_id_counter + 1 ) + ' page in history'
+                    
+                    icon_filename = 'thumbnails.png'
+                    
+                    result.append( QLocatorSearchResult( self.result_id_counter, icon_filename, icon_filename, True, [ primary_text, secondary_text ] ) )
+                    
+                    self.result_ids_to_page_keys[ self.result_id_counter ] = page_key
+                    
+                    self.result_id_counter += 1
+                    
+                
+            
+            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_history_results' ) > 0:
+                
+                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_history_results' ) ]
+                
+            
+            return result
+            
+        
+        tab_data = get_history_tabs( history_data )
+        
+        if tab_data:
+            
+            self.resultsAvailable.emit( jobID, tab_data )
+            
+        
+    
+    def stopJobs( self, jobs: list ):
+        
+        self.result_ids_to_page_keys = {}
+        
+        
+    # Should the title item be visible in the result list
+    def hideTitle( self ):
+        
+        return False
+        
+        
+    def titleIconPath( self ):
+        
+        return str() #TODO fill this in
+        
+    
 
 class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
     
