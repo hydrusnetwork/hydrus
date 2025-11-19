@@ -372,6 +372,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._last_drag_pos = None
         self._current_drag_is_touch = False
         self._last_motion_pos = QC.QPoint( 0, 0 )
+        self._last_geometry = QC.QRect( 0, 0, 0, 0 )
         
         self._media_container.readyForNeighbourPrefetch.connect( self._PrefetchNeighbours )
         
@@ -694,29 +695,47 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            media_container_size = self._media_container.size()
+            if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES and not self._new_options.GetBoolean( 'media_viewer_recenter_media_on_window_resize' ):
+                
+                self._media_container.ZoomMaintainingZoom( self._current_media )
+                
+                #we now do extra work to maintain the center point of the media fixed in the same place relative to the screen
+                
+                window_geom = self.window().geometry()
+                
+                if self._last_geometry.topLeft() != window_geom.topLeft():
+                    
+                    delta = self._last_geometry.topLeft() - window_geom.topLeft()
+                    
+                    self._media_container.MoveDelta( delta )
+                    
+                    self._last_geometry = window_geom
+                    
+                
             
-            if my_size != media_container_size:
+            else:
                 
-                if self._new_options.GetBoolean( 'media_viewer_lock_current_zoom_type' ):
-                    
-                    self._media_container.ZoomToZoomType()
-                    
-                elif self._new_options.GetBoolean( 'media_viewer_lock_current_zoom' ):
-                    
-                    self._media_container.ZoomMaintainingZoom( self._current_media )
-                    
-                else:
-                    
-                    self._media_container.ZoomReinit()
-                    
+                media_container_size = self._media_container.size()
                 
-                #always reset center on window resize
-                #if not self._new_options.GetBoolean( 'media_viewer_lock_current_pan' ):
-                
-                self._media_container.ResetCenterPosition()
-                
-                self.EndDrag()
+                if my_size != media_container_size:
+                    
+                    if self._new_options.GetBoolean( 'media_viewer_lock_current_zoom_type' ):
+                        
+                        self._media_container.ZoomToZoomType()
+                        
+                    elif self._new_options.GetBoolean( 'media_viewer_lock_current_zoom' ):
+                        
+                        self._media_container.ZoomMaintainingZoom( self._current_media )
+                        
+                    else:
+                        
+                        self._media_container.ZoomReinit()
+                        
+                    
+                    self._media_container.ResetCenterPosition()
+                    
+                    self.EndDrag()
+                    
                 
             
         
