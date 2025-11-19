@@ -58,6 +58,23 @@ def GetStaticPathWithResult( sub_path: str, force_install_dir = False ):
     return ( os.path.join( INSTALL_STATIC_DIR, sub_path ), False )
     
 
+def GetSVGPath( name, userdir = HC.USERPATH_SVG_ICON ):
+    
+    svg_path = os.path.join( INSTALL_STATIC_DIR, userdir, name + '.svg' ) 
+    
+    if os.path.exists( svg_path ):
+        
+        return svg_path
+        
+    
+    svg_path = GetStaticIconPath( name )
+    
+    if os.path.exists( svg_path ):
+        
+        return svg_path
+        
+    
+
 def ListStaticDirFilePaths( sub_dir_path: str ):
     
     user_path = GetStaticPath( sub_dir_path )

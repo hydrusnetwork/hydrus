@@ -3253,7 +3253,7 @@ class ServicesManager( object ):
         self._keys_to_services = { service.GetServiceKey() : service for service in services }
         
         self._keys_to_services[ CC.TEST_SERVICE_KEY ] = GenerateService( CC.TEST_SERVICE_KEY, HC.TEST_SERVICE, 'test service' )
-        self._keys_to_services[ CC.PREVIEW_RATINGS_SERVICE_KEY ] = GenerateService( CC.PREVIEW_RATINGS_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'preview rating object service' ) #contains all possible ratings data
+        self._keys_to_services[ CC.PREVIEW_RATINGS_SERVICE_KEY ] = GenerateService( CC.PREVIEW_RATINGS_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'preview rating object service' )
         
         key = lambda s: s.GetName().lower()
         

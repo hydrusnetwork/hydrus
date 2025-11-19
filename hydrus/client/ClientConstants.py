@@ -682,6 +682,7 @@ class GlobalIcons( object ):
     def __init__( self ):
         
         self.user_icons = {}
+        self.user_svg_paths = {}
         
         self._Reinitialise()
         
@@ -829,7 +830,7 @@ class GlobalIcons( object ):
         
         self.user_icons = {}
         
-        for path in HydrusStaticDir.ListStaticDirFilePaths( 'star_shapes' ):
+        for path in HydrusStaticDir.ListStaticDirFilePaths( HC.USERPATH_SVG_ICON ):
             
             ( d, filename ) = os.path.split( path )
             
@@ -838,6 +839,7 @@ class GlobalIcons( object ):
                 name = os.path.splitext( filename )[0]
                 
                 self.user_icons[ name ] = QG.QIcon( path )
+                self.user_svg_paths[ name ] = path
                 
             
         

@@ -124,6 +124,8 @@ READ_BLOCK_SIZE = 256 * 1024
 
 lifetimes = [ ( 'one month', 30 * 86400 ), ( 'three months', 3 * 30 * 86400 ), ( 'six months', 6 * 30 * 86400 ), ( 'one year', 365 * 86400 ), ( 'two years', 2 * 365 * 86400 ), ( 'five years', 5 * 365 * 86400 ), ( 'does not expire', None ) ]
 
+USERPATH_SVG_ICON = 'star_shapes'
+
 # some typing stuff
 
 noneable_int = typing.Optional[ int ]
