@@ -90,6 +90,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disable_page_tab_dnd.setToolTip( ClientGUIFunctions.WrapToolTip( 'Trying to debug some client hangs!' ) )
         
+        self._page_nav_history_max_entries = ClientGUICommon.BetterSpinBox( self._navigation_and_dnd, min=1, max=1000 )
+        self._page_nav_history_max_entries.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of entries to display in the tab navigation history menu under pages->history.' ) )
+        
         #
         
         self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
@@ -146,6 +149,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disable_page_tab_dnd.setChecked( self._new_options.GetBoolean( 'disable_page_tab_dnd' ) )
         
+        self._page_nav_history_max_entries.setValue( self._new_options.GetInteger( 'page_nav_history_max_entries' ) )
+        
         self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
         
         self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
@@ -182,6 +187,7 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
         rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
         rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
+        rows.append( ( 'Maximum entries to show in page navigation history: ', self._page_nav_history_max_entries ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
         
@@ -275,6 +281,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'wheel_scrolls_tab_bar', self._wheel_scrolls_tab_bar.isChecked() )
         
         self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
+        
+        self._new_options.SetInteger( 'page_nav_history_max_entries', self._page_nav_history_max_entries.value() )
         
         HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
         
