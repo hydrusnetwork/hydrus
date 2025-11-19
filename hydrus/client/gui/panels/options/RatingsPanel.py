@@ -130,10 +130,11 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._service_template_dropdown = ClientGUICommon.BetterChoice( example_select_panel )
         
-        for service in CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ) ):
+        for service in CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL ) ):
             
             self._service_template_dropdown.addItem( service.GetName(), service.GetServiceKey() )
             
+        self._service_template_dropdown.SetValue( self._new_options.GetKey( 'options_ratings_panel_template_service_key' ) )
         self._service_template_dropdown.currentIndexChanged.connect( lambda: self._example_star_service.SetServiceTemplate( self._service_template_dropdown.GetValue() ) )
         self._service_template_dropdown.currentIndexChanged.connect( self._UpdateWidgets )
         

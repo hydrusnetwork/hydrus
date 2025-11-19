@@ -1,5 +1,6 @@
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusStaticDir
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
@@ -265,6 +266,96 @@ class HydrusResourceClientAPIRestrictedGetServices( ClientLocalServerResources.H
         body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedGetServiceRatingSVG( ClientLocalServerResources.HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckAtLeastOnePermission(
+            (
+                ClientAPI.CLIENT_API_PERMISSION_ADD_FILES,
+                ClientAPI.CLIENT_API_PERMISSION_EDIT_RATINGS,
+                ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
+                ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
+                ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
+                ClientAPI.CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
+                ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES
+            )
+        )
+        
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        allowed_service_types = {
+            HC.LOCAL_RATING_LIKE,
+            HC.LOCAL_RATING_NUMERICAL,
+        }
+        
+        if 'service_key' in request.parsed_request_args:
+            
+            service_key = request.parsed_request_args.GetValue( 'service_key', bytes )
+            
+        elif 'service_name' in request.parsed_request_args:
+            
+            service_name = request.parsed_request_args.GetValue( 'service_name', str )
+            
+            try:
+                
+                service_key = CG.client_controller.services_manager.GetServiceKeyFromName( allowed_service_types, service_name )
+                
+            except HydrusExceptions.DataMissing:
+                
+                raise HydrusExceptions.NotFoundException( 'Sorry, did not find a service with name "{}"!'.format( service_name ) )
+                
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, you need to give a service_key or service_name!' )
+            
+        
+        try:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a service with key "{}"!'.format( service_key.hex() ) )
+            
+        
+        if service.GetServiceType() not in allowed_service_types:
+            
+            raise HydrusExceptions.BadRequestException( 'This type of service cannot have a SVG associated with it!' )
+            
+        
+        try:
+            
+            star_type = service.GetStarType()
+            
+            if star_type.HasRatingSVG():
+                
+                svg_name = star_type.GetRatingSVG()
+                
+                svg_path = HydrusStaticDir.GetSVGPath( svg_name )
+                
+                svg_file = open( svg_path, 'rb' )
+                
+                svg_content = svg_file.read()
+                
+            else:
+                
+                raise HydrusExceptions.NotFoundException( 'Rating service "{}" does not use a SVG icon!'.format( service.GetName() ) )
+                
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.ServerException( 'There was a problem getting or reading the SVG file "{}" for rating service "{}", at path "{}"! Error follows: {}'.format( svg_name, service.GetName(), svg_path, str(e) ) )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.IMAGE_SVG, body = svg_content )
         
         return response_context
         
