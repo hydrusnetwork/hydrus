@@ -1641,7 +1641,12 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( num_string ) > 0:
             
-            page_name += f' ({num_string})'
+            if isinstance( page, PagesNotebook ):
+                
+                page_name += f' ({num_string}) ↓'
+            else:
+                
+                page_name += f' ({num_string})'
             
         
         safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )
