@@ -112,6 +112,9 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._preview_default_zoom_type_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can override the default zoom if you like.' ) )
         
+        self._media_viewer_recenter_media_on_window_resize = QW.QCheckBox( media_panel )
+        self._media_viewer_recenter_media_on_window_resize.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, when you resize the media viewer window, the media inside it will stay exactly as it is with respect to location and size. This is useful if you want to resize the window while zoomed-in to look at details. While checked, media will re-center and zoom itself as normal whenever a media viewer window is resized.' ) )
+        
         #
         
         system_panel = ClientGUICommon.StaticBox( self, 'system' )
@@ -166,6 +169,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
 
         self._media_viewer_default_zoom_type_override.SetValue( self._new_options.GetInteger( 'media_viewer_default_zoom_type_override' ) )
         self._preview_default_zoom_type_override.SetValue( self._new_options.GetInteger( 'preview_default_zoom_type_override' ) )
+        self._media_viewer_recenter_media_on_window_resize.setChecked( self._new_options.GetBoolean( 'media_viewer_recenter_media_on_window_resize' ) )
         
         self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
         self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
@@ -199,6 +203,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Media zooms:', self._media_zooms ) )
         rows.append( ( 'Media Viewer default zoom:', self._media_viewer_default_zoom_type_override ) )
         rows.append( ( 'Preview Viewer default zoom:', self._preview_default_zoom_type_override ) )
+        rows.append( ( 'Re-center media on window resize:', self._media_viewer_recenter_media_on_window_resize ) )
         rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
         rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
         rows.append( ( 'LEGACY DEBUG: Use legacy mpv communication method:', self._use_legacy_mpv_mediator ) )
@@ -477,6 +482,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
 
         self._new_options.SetInteger( 'media_viewer_default_zoom_type_override', self._media_viewer_default_zoom_type_override.GetValue() )
         self._new_options.SetInteger( 'preview_default_zoom_type_override', self._preview_default_zoom_type_override.GetValue() )
+        self._new_options.SetBoolean( 'media_viewer_recenter_media_on_window_resize', self._media_viewer_recenter_media_on_window_resize.isChecked() )
         
         self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
         self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )
