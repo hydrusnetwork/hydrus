@@ -234,7 +234,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_tags: ClientDBMaster.ClientDBMasterTags,
         modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings,
-        modules_files_storage: ClientDBFilesStorage,
+        modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts,
         modules_tag_search: ClientDBTagSearch.ClientDBTagSearch
     ):
@@ -2807,7 +2807,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         num_frames = row[1]
                         duration_ms = row[2]
                         
-                        if num_frames is None or duration_ms is None or num_frames == 0 or duration_ms == 0:
+                        if num_frames is None or duration_ms is None or num_frames <= 0 or duration_ms <= 0:
                             
                             return -1
                             

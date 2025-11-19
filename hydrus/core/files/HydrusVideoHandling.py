@@ -1051,7 +1051,16 @@ class VideoRendererFFMPEG( object ):
                         return self.read_frame()
                         
                     
-                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Unable to render that video! Please send it to hydrus dev so he can look at it!' )
+                    if HC.RUNNING_FROM_SOURCE:
+                        
+                        message = 'Unable to render that video! Please ensure your FFMPEG is updated (hit _help->about_ to check version), and if it the file still fails, please send it to hydrus dev so he can look at it!'
+                        
+                    else:
+                        
+                        message = 'Unable to render that video! Please send it to hydrus dev so he can look at it!'
+                        
+                    
+                    raise HydrusExceptions.DamagedOrUnusualFileException( message )
                     
                 
                 result = self.lastread

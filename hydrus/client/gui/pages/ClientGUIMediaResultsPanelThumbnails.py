@@ -21,6 +21,7 @@ from hydrus.client import ClientServices
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
@@ -39,6 +40,8 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientRatings
 
 FRAME_DURATION_60FPS = 1.0 / 60
+
+WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = False
 
 class ThumbnailWaitingToBeDrawn( object ):
     
@@ -667,6 +670,26 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
             
             virtual_height = max( virtual_height, my_height )
+            
+            MAX_HEIGHT = getattr( QW, 'QWIDGETSIZE_MAX', 16777215 ) # 2^24-1
+            
+            if virtual_height > MAX_HEIGHT:
+                
+                global WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING
+                
+                if not WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING:
+                    
+                    message = f'Hey, it looks like this thumbnail view is very very very tall. I want to make it {HydrusNumbers.ToHumanInt( virtual_height )} pixels tall, but Qt only supports a max virtual scroll height of {HydrusNumbers.ToHumanInt( MAX_HEIGHT )} pixels.'
+                    message += '\n\n'
+                    message += 'This page will handle ctrl+a and do its math correct (albeit slowly!), but you will not be able to scroll down all the way. This situation is probably not stable and you should rethink your query (e.g. adding a system:limit and doing the job in batches) before there is a real problem.'
+                    message += '\n\n'
+                    message += 'You will not see this message again this program boot.'
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, message )
+                    
+                    WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = True
+                    
+                
             
             virtual_size = QC.QSize( virtual_width, virtual_height )
             

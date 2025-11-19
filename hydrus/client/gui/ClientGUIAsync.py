@@ -33,7 +33,16 @@ class AsyncQtJob( object ):
         message += '\n' * 2
         message += 'Error summary: {}'.format( value )
         
-        ClientGUIDialogsMessage.ShowCritical( self._win, 'Error', message )
+        if QP.isValid( self._win ):
+            
+            win_to_use = self._win
+            
+        else:
+            
+            win_to_use = CG.client_controller.GetMainTLW()
+            
+        
+        ClientGUIDialogsMessage.ShowCritical( win_to_use, 'Error', message )
         
         if self._errback_ui_cleanup_callable is not None:
             
@@ -330,6 +339,14 @@ class FastThreadToGUIUpdater( object ):
                     CG.client_controller.CallAfterQtSafe( self._win, self.QtDoIt )
                     
                 
+            
+        
+    
+    def IsWorking( self ) -> bool:
+        
+        with self._lock:
+            
+            return self._is_working
             
         
     

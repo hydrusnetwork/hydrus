@@ -1466,7 +1466,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        self._Execute( f'DELETE FROM {temp_tag_ids_table_name} WHERE tag_id IN ( SELECT tag_id FROM {tags_table_name} WHERE namespaced_id = ? );', ( namespace_id, ) )
+                        self._Execute( f'DELETE FROM {temp_tag_ids_table_name} WHERE tag_id IN ( SELECT tag_id FROM {tags_table_name} WHERE namespace_id = ? );', ( namespace_id, ) )
                         
                     
                 

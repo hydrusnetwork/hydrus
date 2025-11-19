@@ -10,7 +10,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusText
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -20,6 +19,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
@@ -927,55 +927,34 @@ def AddServiceKeysToMenu( menu, service_keys, submenu_name, description, bare_ca
     ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
     
 
-def StartOtherHashesMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton, md5_menu_item: QW.QAction, sha1_menu_item: QW.QAction, sha512_menu_item: QW.QAction ):
+def StartOtherHashMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton, menu_item: QW.QAction, hash_type: str ):
+    
+    hash = media.GetHash()
     
     def work_callable():
         
-        hash = media.GetHash()
+        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', hash_type )
         
-        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'md5' )
-        
-        if hash in hashes_to_other_hashes:
-            
-            md5_hash = hashes_to_other_hashes[ hash ]
-            
-            md5_menu_item.setText( f'md5 ({md5_hash.hex()})' )
-            
-        else:
-            
-            md5_menu_item.setText( 'md5 (unknown)' )
-            
-        
-        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'sha1' )
-        
-        if hash in hashes_to_other_hashes:
-            
-            sha1_hash = hashes_to_other_hashes[ hash ]
-            
-            sha1_menu_item.setText( f'sha1 ({sha1_hash.hex()})' )
-            
-        else:
-            
-            sha1_menu_item.setText( 'sha1 (unknown)' )
-            
-        
-        hashes_to_other_hashes = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', 'sha512' )
-        
-        if hash in hashes_to_other_hashes:
-            
-            sha512_hash = hashes_to_other_hashes[ hash ]
-            
-            sha512_menu_item.setText( f'sha512 ({HydrusText.ElideText( sha512_hash.hex(), 64, elide_center = True )})' )
-            
-        else:
-            
-            sha512_menu_item.setText( 'sha512 (unknown)' )
-            
+        return hashes_to_other_hashes
         
     
-    def publish_callable( result ):
+    def publish_callable( hashes_to_other_hashes: dict[ bytes, bytes ] ):
         
-        pass
+        if not QP.isValid( menu_item ):
+            
+            return
+            
+        
+        if hash in hashes_to_other_hashes:
+            
+            desired_hash = hashes_to_other_hashes[ hash ]
+            
+            menu_item.setText( f'{hash_type} ({desired_hash.hex()})' )
+            
+        else:
+            
+            menu_item.setText( f'{hash_type} (unknown)' )
+            
         
     
     job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable )
@@ -1107,7 +1086,9 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
         sha1_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
         sha512_menu_item = ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
         
-        StartOtherHashesMenuFetch( share_menu, focused_media, md5_menu_item, sha1_menu_item, sha512_menu_item )
+        StartOtherHashMenuFetch( copy_hash_menu, focused_media, md5_menu_item, 'md5' )
+        StartOtherHashMenuFetch( copy_hash_menu, focused_media, sha1_menu_item, 'sha1' )
+        StartOtherHashMenuFetch( copy_hash_menu, focused_media, sha512_menu_item, 'sha512' )
         
         file_info_manager = focused_media.GetMediaResult().GetFileInfoManager()
         

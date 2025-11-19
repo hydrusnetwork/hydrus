@@ -1555,15 +1555,21 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                 
             
-            if not did_work:
+            if did_work:
                 
-                self._wake_event.wait( 600 )
+                wake_event = self._wake_from_work_sleep_event
+                wait_time = 0.5
                 
-                self._wake_event.clear()
+            else:
+                
+                wake_event = self._wake_from_idle_sleep_event
+                wait_time = 600
                 
             
-            # a small delay here is helpful for the forcemaintenance guy to have a chance to step in on reset
-            time.sleep( 1 )
+            wake_event.wait( wait_time )
+            
+            self._wake_from_work_sleep_event.clear()
+            self._wake_from_idle_sleep_event.clear()
             
         
     
@@ -1644,8 +1650,8 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._controller.Write( 'file_maintenance_add_jobs_hashes', hashes, job_type, time_can_start )
             
-            self._wake_event.set()
-            
+        
+        self.WakeIfNotWorking()
         
     
     def ScheduleJobHashIds( self, hash_ids, job_type, time_can_start = 0 ):
@@ -1654,7 +1660,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._controller.Write( 'file_maintenance_add_jobs', hash_ids, job_type, time_can_start )
             
-            self._wake_event.set()
-            
+        
+        self.WakeIfNotWorking()
         
     

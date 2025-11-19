@@ -225,6 +225,67 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )
         
     
+    def test_type_duration( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '<', 200 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        media_result_pass_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_GIF )
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        
+        media_result_pass_1.GetFileInfoManager().duration_ms = 190
+        media_result_pass_2.GetFileInfoManager().duration_ms = None
+        media_result_fail.GetFileInfoManager().duration_ms = 250
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass_1 ) )
+        self.assertTrue( pred.TestMediaResult( media_result_pass_2 ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_framerate( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '<', 29 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        media_result_pass_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_GIF )
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        
+        media_result_pass_1.GetFileInfoManager().duration_ms = 3000
+        media_result_pass_2.GetFileInfoManager().duration_ms = None
+        media_result_fail.GetFileInfoManager().duration_ms = 3000
+        
+        media_result_pass_1.GetFileInfoManager().num_frames = 30 # 10fps
+        media_result_pass_2.GetFileInfoManager().num_frames = None
+        media_result_fail.GetFileInfoManager().num_frames = 90 # 30fps
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass_1 ) )
+        self.assertTrue( pred.TestMediaResult( media_result_pass_2 ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_num_frames( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '<', 300 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass_1 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        media_result_pass_2 = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_GIF )
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.ANIMATION_GIF )
+        
+        media_result_pass_1.GetFileInfoManager().num_frames = 150
+        media_result_pass_2.GetFileInfoManager().num_frames = None
+        media_result_fail.GetFileInfoManager().num_frames = 450
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass_1 ) )
+        self.assertTrue( pred.TestMediaResult( media_result_pass_2 ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
     def test_type_exif( self ):
         
         pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF )
@@ -251,6 +312,99 @@ class TestPredicateTesting( unittest.TestCase ):
         
         media_result_pass.GetFileInfoManager().has_exif = False
         media_result_fail.GetFileInfoManager().has_exif = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_audio( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_audio = True
+        media_result_fail.GetFileInfoManager().has_audio = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_audio = False
+        media_result_fail.GetFileInfoManager().has_audio = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_forced_filetype( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().original_mime = HC.IMAGE_JPEG
+        media_result_pass.GetFileInfoManager().mime = HC.APPLICATION_ZIP
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_fail.GetFileInfoManager().original_mime = HC.IMAGE_JPEG
+        media_result_fail.GetFileInfoManager().mime = HC.APPLICATION_ZIP
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_transparency( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_transparency = True
+        media_result_fail.GetFileInfoManager().has_transparency = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_transparency = False
+        media_result_fail.GetFileInfoManager().has_transparency = True
         
         self.assertTrue( pred.TestMediaResult( media_result_pass ) )
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )
@@ -353,6 +507,183 @@ class TestPredicateTesting( unittest.TestCase ):
         
         self.assertTrue( pred.TestMediaResult( media_result_fail ) )
         self.assertFalse( pred.TestMediaResult( media_result_pass ) )
+        
+    
+    def test_type_num_tags_all( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, value = ( '*', '=', 2 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'scarf', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_num_tags_namespace( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, value = ( '', '=', 2 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'scarf', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'gloves', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:test', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:another test', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_num_tags_namespace_wildcard( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS, value = ( 'c*', '=', 2 ) )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'character:a different guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'gloves', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG, include_some_tags = False )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:test', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:another test', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
         
     
     def test_type_num_urls( self ):
@@ -682,6 +1013,320 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )
         
     
+    def test_regular_tag( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'skirt' )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'skirt', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'trousers', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'skirt', inclusive = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'trousers', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'skirt', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_regular_namespace( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, value = 'creator' )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:no', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, value = 'creator', inclusive = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:no', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_regular_namespace_wildcard( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, value = 'cre*r' )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:no', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_NAMESPACE, value = 'crea*r', inclusive = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'series:no', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'creator:a cool guy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_regular_wildcard( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, value = 'h*y' )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'happy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, value = 'c*l*d:*g' )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'complicated:tag', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'complicated:hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, value = 'h*y', inclusive = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'happy', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_WILDCARD, value = 'c*l*d:*g', inclusive = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_pass.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'complicated:hat', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        
+        media_result_fail = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        
+        media_result_fail.GetTagsManager().ProcessContentUpdate(
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            ClientContentUpdates.ContentUpdate(
+                HC.CONTENT_TYPE_MAPPINGS,
+                HC.ADD,
+                ( 'complicated:tag', ( media_result_pass.GetHash(), ) )
+            )
+        )
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
 
 class TestPredicateValueExtraction( unittest.TestCase ):
     
@@ -724,12 +1369,31 @@ class TestPredicateValueExtraction( unittest.TestCase ):
         
         # duration
         
+        fake_media_result.GetFileInfoManager().duration_ms = 350
+        
         system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION )
         
         self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
         self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().duration_ms )
         
+        # framerate
+        
+        fake_media_result.GetFileInfoManager().duration_ms = 350
+        fake_media_result.GetFileInfoManager().num_frames = 600
+        
+        system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE )
+        
+        self.assertTrue( system_predicate.CanExtractValueFromMediaResult() )
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().GetFramerate() )
+        
+        fake_media_result.GetFileInfoManager().duration_ms = None
+        fake_media_result.GetFileInfoManager().num_frames = None
+        
+        self.assertEqual( system_predicate.ExtractValueFromMediaResult( fake_media_result ), fake_media_result.GetFileInfoManager().GetFramerate() )
+        
         # num_frames
+        
+        fake_media_result.GetFileInfoManager().num_frames = 460
         
         system_predicate = ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_FRAMES )
         

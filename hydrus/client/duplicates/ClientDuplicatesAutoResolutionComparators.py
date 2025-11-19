@@ -300,8 +300,8 @@ class PairComparatorRelativeFileInfo( PairComparator ):
     
     def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
         
-        value_a = self._system_predicate.ExtractValueFromMediaResult( media_result_a )
-        value_b = self._system_predicate.ExtractValueFromMediaResult( media_result_b )
+        value_a = self._system_predicate.ExtractComparableValueFromMediaResult( media_result_a )
+        value_b = self._system_predicate.ExtractComparableValueFromMediaResult( media_result_b )
         
         if value_a is None or value_b is None:
             

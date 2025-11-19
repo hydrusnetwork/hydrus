@@ -154,6 +154,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return self._id.__hash__()
         
     
+    def __repr__( self ) -> str:
+        
+        return f'Duplicates Auto-Resolution Rule: {self._name} ({self._id})'
+        
+    
     def _GetSerialisableInfo( self ):
         
         serialisable_potential_duplicates_search_context = self._potential_duplicates_search_context.GetSerialisableTuple()
@@ -1420,9 +1425,20 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     wait_time = self._GetRestTime( expected_work_period, actual_work_period, still_work_to_do )
                     
                 
+                if still_work_to_do:
+                    
+                    wake_event = self._wake_from_work_sleep_event
+                    
+                else:
+                    
+                    wake_event = self._wake_from_idle_sleep_event
+                    
+                
             else:
                 
                 wait_time = 10
+                
+                wake_event = self._wake_from_idle_sleep_event
                 
             
             FORCED_WAIT_PERIOD = 0.1
@@ -1435,9 +1451,10 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                 wait_time -= FORCED_WAIT_PERIOD
                 
             
-            self._wake_event.wait( wait_time )
+            wake_event.wait( wait_time )
             
-            self._wake_event.clear()
+            self._wake_from_work_sleep_event.clear()
+            self._wake_from_idle_sleep_event.clear()
             
         
     
@@ -1562,11 +1579,14 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         self._currently_searching_rule = rule
                         
                     
-                    ( still_work_to_do_here, matching_pairs_produced_here ) = CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_do_search_work', rule )
-                    
-                    if still_work_to_do_here:
+                    while rule.HasSearchWorkToDo():
                         
-                        still_work_to_do = True
+                        ( still_work_to_do_here, matching_pairs_produced_here ) = CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_do_search_work', rule )
+                        
+                        if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                            
+                            return True
+                            
                         
                     
                 finally:
@@ -1577,18 +1597,10 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         
                     
                 
-            
-            if HydrusTime.TimeHasPassedFloat( time_to_stop ):
-                
-                return True
-                
-            
-        
-        for rule in rules:
-            
-            if rule.IsPaused():
-                
-                continue
+                if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                    
+                    return True
+                    
                 
             
             if rule.HasResolutionWorkToDo():
@@ -1599,8 +1611,6 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         self._currently_resolving_rule = rule
                         
-                    
-                    still_work_to_do_here = True
                     
                     previous_pair = None
                     
@@ -1643,13 +1653,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         if HydrusTime.TimeHasPassedFloat( time_to_stop ):
                             
-                            break
+                            return True
                             
-                        
-                    
-                    if still_work_to_do_here:
-                        
-                        still_work_to_do = True
                         
                     
                 finally:
@@ -1796,15 +1801,5 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
         
         self.Wake()
-        
-    
-    def WakeIfNotWorking( self ):
-        
-        # hacky little thing to stop a completed work loop from waking us immediately after
-        
-        if not self._edit_work_lock.locked():
-            
-            self.Wake()
-            
         
     

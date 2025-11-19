@@ -82,26 +82,23 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     if num_frames is not None:
         
-        if duration_ms is None or duration_ms == 0 or num_frames == 0:
+        framerate = media_result.GetFileInfoManager().GetFramerate()
+        
+        if framerate is None:
             
             framerate_insert = ''
             
+        elif framerate < 1:
+            
+            framerate_insert = ', {:.2f}fps'.format( framerate )
+            
+        elif framerate < 10:
+            
+            framerate_insert = ', {:.1f}fps'.format( framerate )
+            
         else:
             
-            fps = num_frames / HydrusTime.SecondiseMSFloat( duration_ms )
-            
-            if fps < 1:
-                
-                framerate_insert = ', {:.2f}fps'.format( fps )
-                
-            elif fps < 10:
-                
-                framerate_insert = ', {:.1f}fps'.format( fps )
-                
-            else:
-                
-                framerate_insert = f', {round( fps )}fps'
-                
+            framerate_insert = f', {round( framerate )}fps'
             
         
         info_string += f' ({HydrusNumbers.ToHumanInt( num_frames )} frames{framerate_insert})'

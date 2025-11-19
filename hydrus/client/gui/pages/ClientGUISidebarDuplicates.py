@@ -531,7 +531,7 @@ class PreparationPanel( QW.QWidget ):
         
         self._maintenance_status_updater.update()
         
-        CG.client_controller.potential_duplicates_manager.Wake()
+        CG.client_controller.potential_duplicates_manager.WakeIfNotWorking()
         
     
     def _RegenerateMaintenanceNumbers( self ):

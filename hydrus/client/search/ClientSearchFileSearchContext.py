@@ -57,8 +57,6 @@ class FileSystemPredicates( object ):
         
         self._file_viewing_stats_predicates = []
         
-        new_options = CG.client_controller.new_options
-        
         for predicate in system_predicates:
             
             predicate_type = predicate.GetType()

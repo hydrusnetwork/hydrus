@@ -2061,9 +2061,10 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 self._big_pauser.Pause()
                 
-                self._wake_event.wait( wait_time )
+                self._wake_from_work_sleep_event.wait( wait_time )
                 
-                self._wake_event.clear()
+                self._wake_from_work_sleep_event.clear()
+                self._wake_from_idle_sleep_event.clear()
                 
             
         finally:
@@ -2125,8 +2126,8 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 self._UpdateSubscriptionInfo( subscription )
                 
             
-            self._wake_event.set()
-            
+        
+        self.Wake()
         
     
     def ShowSnapshot( self ):

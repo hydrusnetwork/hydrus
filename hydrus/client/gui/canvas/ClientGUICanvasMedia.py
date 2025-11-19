@@ -1358,7 +1358,7 @@ class AnimationBar( QW.QWidget ):
         
         duration_ms = media.GetDurationMS()
         
-        if duration_ms is None and isinstance(media_window, Animation):
+        if duration_ms is None and isinstance( media_window, Animation ):
             
             duration_ms = media_window.GetDurationMS()
             

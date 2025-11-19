@@ -371,17 +371,27 @@ PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_WIDTH,
     PREDICATE_TYPE_SYSTEM_HEIGHT,
+    PREDICATE_TYPE_SYSTEM_DURATION,
+    PREDICATE_TYPE_SYSTEM_FRAMERATE,
+    PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_NUM_URLS,
+    PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
+    PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY,
+    PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
     PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
     PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
     PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
     PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
     PREDICATE_TYPE_OR_CONTAINER,
+    PREDICATE_TYPE_NAMESPACE,
+    PREDICATE_TYPE_WILDCARD,
+    PREDICATE_TYPE_TAG
 ]
 
 # this has useful order
@@ -392,6 +402,7 @@ PREDICATE_TYPES_WE_CAN_EXTRACT_FROM_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_HEIGHT,
     PREDICATE_TYPE_SYSTEM_NUM_PIXELS,
     PREDICATE_TYPE_SYSTEM_DURATION,
+    PREDICATE_TYPE_SYSTEM_FRAMERATE,
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     PREDICATE_TYPE_SYSTEM_NUM_URLS,
@@ -400,6 +411,20 @@ PREDICATE_TYPES_WE_CAN_EXTRACT_FROM_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
     PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME
 ]
+
+def compile_wildcard_tag_into_re( wildcard: str ):
+    
+    regular_parts_of_wildcard = wildcard.split( '*' )
+    
+    escaped_parts_of_wildcard = [ re.escape( part ) for part in regular_parts_of_wildcard ]
+    
+    # \A is start of string
+    # \Z is end of string
+    
+    wildcard_re_text = r'\A' + '.*'.join( escaped_parts_of_wildcard ) + r'\Z'
+    
+    return re.compile( wildcard_re_text )
+    
 
 class Predicate( HydrusSerialisable.SerialisableBase ):
     
@@ -886,6 +911,18 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type in PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS
         
     
+    def ExtractComparableValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> typing.Optional[ float ]:
+        
+        result = self.ExtractValueFromMediaResult( media_result )
+        
+        if result is None and self.ExtractValueOfNoneIsValidButZero():
+            
+            result = 0
+            
+        
+        return result
+        
+    
     def ExtractValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> typing.Optional[ float ]:
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
@@ -916,6 +953,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
             
             return media_result.GetFileInfoManager().duration_ms
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+            
+            return media_result.GetFileInfoManager().GetFramerate()
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
             
@@ -949,6 +990,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             raise NotImplementedError( f'The given predicate, "{self.ToString()}", cannot extract a value from a media result! You should not be able to get into this situation, so please contact hydev with details.' )
             
+        
+    
+    def ExtractValueOfNoneIsValidButZero( self ):
+        
+        return self._predicate_type not in (
+            PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
+            PREDICATE_TYPE_SYSTEM_MODIFIED_TIME,
+            PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME,
+            PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME,
+        )
         
     
     def GetCopy( self ):
@@ -1067,7 +1118,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE ):
             
-            return Predicate( self._predicate_type, not self._value )
+            if self._value is None: # weird default that sometimes kicks in, means 'yes, has'
+                
+                value = True
+                
+            else:
+                
+                value = self._value
+                
+            
+            return Predicate( self._predicate_type, not value )
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
             
@@ -1433,6 +1493,26 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return number_test.Test( media_result.GetFileInfoManager().width )
             
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            return number_test.Test( media_result.GetFileInfoManager().duration_ms )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            framerate = media_result.GetFileInfoManager().GetFramerate()
+            
+            return number_test.Test( framerate )
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
+            
+            number_test: ClientNumberTest.NumberTest = self._value
+            
+            return number_test.Test( media_result.GetFileInfoManager().num_frames )
+            
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
             
             inclusive_hack = self._value is None or self._value is True
@@ -1450,6 +1530,49 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             inclusive_hack = self._value is None or self._value is True
             
             return media_result.GetFileInfoManager().has_human_readable_embedded_metadata == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().has_audio == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().FiletypeIsForced() == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().has_transparency == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
+            
+            ( namespace, operator, value ) = self._value
+            
+            number_test = ClientNumberTest.NumberTest.STATICCreateFromCharacters( operator, value )
+            
+            tags = media_result.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            
+            if namespace == '*':
+                
+                pertinent_tags = tags
+                
+            elif '*' in namespace:
+                
+                re_rule = compile_wildcard_tag_into_re( namespace + ':*' )
+                
+                pertinent_tags = { tag for tag in tags if re_rule.match( tag ) is not None }
+                
+            else:
+                
+                pertinent_tags = { tag for tag in tags if HydrusTags.SplitTag( tag )[0] == namespace }
+                
+            
+            return number_test.Test( len( pertinent_tags ) )
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
             
@@ -1674,6 +1797,59 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return not we_found_it
+                
+            
+        elif self._predicate_type in ( PREDICATE_TYPE_NAMESPACE, PREDICATE_TYPE_WILDCARD, PREDICATE_TYPE_TAG ):
+            
+            tags_manager = media_result.GetTagsManager()
+            
+            tags = tags_manager.GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            
+            if self._predicate_type == PREDICATE_TYPE_TAG:
+                
+                tag = self._value
+                
+                inclusive_result = tag in tags
+                
+            elif self._predicate_type == PREDICATE_TYPE_NAMESPACE:
+                
+                namespace = self._value
+                
+                if '*' in namespace:
+                    
+                    re_rule = compile_wildcard_tag_into_re( namespace + ':*' )
+                    
+                    inclusive_result = True in ( re_rule.match( tag ) is not None for tag in tags )
+                    
+                else:
+                    
+                    inclusive_result = True in ( namespace == t_namespace for ( t_namespace, t_subtag ) in ( HydrusTags.SplitTag( tag ) for tag in tags ) )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_WILDCARD:
+                
+                # there are a bunch of possible ways to handle this, with ConvertTagToSearchable and such
+                # at the db level, however, things are pretty simple and strict
+                # let's keep it KISS here too
+                
+                wildcard = self._value
+                
+                re_rule = compile_wildcard_tag_into_re( wildcard )
+                
+                inclusive_result = True in ( re_rule.match( tag ) is not None for tag in tags )
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown tag predicate type!' )
+                
+            
+            if self._inclusive:
+                
+                return inclusive_result
+                
+            else:
+                
+                return not inclusive_result
                 
             
         elif self._predicate_type == PREDICATE_TYPE_OR_CONTAINER:

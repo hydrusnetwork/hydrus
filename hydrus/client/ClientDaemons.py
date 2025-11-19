@@ -134,13 +134,19 @@ class ManagerWithMainLoop( object ):
         # but otherwise this guy should take more responsibility for the mainloop code, and the subclasses should basically only implement 'dojob()' for the loop proper
         # one logical implementation!
         
+        # I think we want one master self._Wait command that takes time took and work_still_to_do/work_done, which is what a work packet should return to our mainloop
+        # that sleep guy decides which sleep to do and such
+        
+        # note it looks like we'll need a 'CleanUpAfterMainLoop' guy in a finally, so Subs at least can clean up
+        
         self._controller = controller
         
         self._pre_loop_wait_time = pre_loop_wait_time
         
         self._lock = threading.Lock()
         
-        self._wake_event = threading.Event()
+        self._wake_from_work_sleep_event = threading.Event()
+        self._wake_from_idle_sleep_event = threading.Event()
         self._shutdown = False
         self._mainloop_is_finished = False
         self._serious_error_encountered = False
@@ -176,6 +182,7 @@ class ManagerWithMainLoop( object ):
             time_to_start = HydrusTime.GetNowFloat() + self._pre_loop_wait_time
             
         
+        # stupid wait here because we are in init and a failure to launch may not trigger nice wake signals as things are unwound
         while not HydrusTime.TimeHasPassedFloat( time_to_start ):
             
             with self._lock:
@@ -183,9 +190,9 @@ class ManagerWithMainLoop( object ):
                 self._CheckShutdown()
                 
             
-            self._wake_event.wait( 1 )
+            self._wake_from_idle_sleep_event.wait( 1 )
             
-            if self._wake_event.is_set():
+            if self._wake_from_idle_sleep_event.is_set():
                 
                 break
                 
@@ -245,6 +252,12 @@ class ManagerWithMainLoop( object ):
     
     def Wake( self ):
         
-        self._wake_event.set()
+        self._wake_from_work_sleep_event.set()
+        self._wake_from_idle_sleep_event.set()
+        
+    
+    def WakeIfNotWorking( self ):
+        
+        self._wake_from_idle_sleep_event.set()
         
     

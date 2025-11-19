@@ -657,6 +657,8 @@ class EditPairComparatorOneFilePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
+        CG.client_controller.CallAfterQtSafe( self, ClientGUIFunctions.SetFocusLater, self._metadata_conditional )
+        
     
     def GetValue( self ):
         
@@ -875,6 +877,14 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             self._system_predicate.addItem( predicate.ToString(), predicate )
             
         
+        self._warning_label = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
+        self._warning_label.setWordWrap( True )
+        self._warning_label.setVisible( False )
+        
+        self._system_pred_types_to_warning_label_texts = {
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE : 'Framerate is an approximation (e.g. it might be calculated as 30.05fps for one file but 29.98fps for another), so be careful with < and > here. Best to try for some padding, like "A framerate > 1.1x B".'
+        }
+        
         self._time_panel = QW.QWidget( self )
         
         allowed_operators = [
@@ -971,6 +981,39 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         
         #
         
+        self._fuzzy_panel = QW.QWidget( self )
+        
+        allowed_operators = [
+            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT
+        ]
+        
+        self._fuzzy_number_test = ClientGUINumberTest.NumberTestWidget(
+            self._fuzzy_panel,
+            allowed_operators = allowed_operators,
+            swap_in_string_for_value = 'B'
+        )
+        
+        self._fuzzy_multiplier = QW.QDoubleSpinBox( self._fuzzy_panel )
+        self._fuzzy_multiplier.setDecimals( 2 )
+        self._fuzzy_multiplier.setSingleStep( 0.01 )
+        self._fuzzy_multiplier.setMinimum( -10000 )
+        self._fuzzy_multiplier.setMaximum( 10000 )
+        
+        self._fuzzy_multiplier.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._fuzzy_multiplier, 11 ) )
+        
+        self._fuzzy_multiplier.setValue( 1.00 )
+        
+        self._fuzzy_delta = ClientGUICommon.BetterSpinBox( self._fuzzy_panel, min = -100000000, max = 100000000 )
+        
+        self._fuzzy_delta.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._fuzzy_delta, 13 ) )
+        
+        self._fuzzy_delta.setValue( 0 )
+        
+        #
+        
         self._live_value_st = ClientGUICommon.BetterStaticText( self )
         
         #
@@ -1014,12 +1057,26 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         
         #
         
+        rows = []
+        
+        rows.append( ( 'operator: ', self._fuzzy_number_test ) )
+        rows.append( ( 'multiplier (optional): ', self._fuzzy_multiplier ) )
+        rows.append( ( 'delta (optional)', self._fuzzy_delta ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._fuzzy_panel, rows )
+        
+        self._fuzzy_panel.setLayout( gridbox )
+        
+        #
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._system_predicate, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._warning_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._time_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._duration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._normal_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._fuzzy_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._live_value_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 0 )
@@ -1034,6 +1091,10 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         self._duration_number_test.valueChanged.connect( self._UpdateLabel )
         self._duration_multiplier.valueChanged.connect( self._UpdateLabel )
         self._duration_delta.timeDeltaChanged.connect( self._UpdateLabel )
+        
+        self._fuzzy_number_test.valueChanged.connect( self._UpdateLabel )
+        self._fuzzy_multiplier.valueChanged.connect( self._UpdateLabel )
+        self._fuzzy_delta.valueChanged.connect( self._UpdateLabel )
         
         self._normal_number_test.valueChanged.connect( self._UpdateLabel )
         self._normal_multiplier.valueChanged.connect( self._UpdateLabel )
@@ -1056,7 +1117,7 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         )
         
         we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
-        
+        we_fuzzy_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE
         if we_time_pred:
             
             self._time_number_test.SetValue( pair_comparator.GetNumberTest() )
@@ -1069,6 +1130,13 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             
             self._duration_multiplier.setValue( pair_comparator.GetMultiplier() )
             self._duration_delta.SetValue( HydrusTime.SecondiseMS( pair_comparator.GetDelta() ) )
+            
+        elif we_fuzzy_pred:
+            
+            self._fuzzy_number_test.SetValue( pair_comparator.GetNumberTest() )
+            
+            self._fuzzy_multiplier.setValue( pair_comparator.GetMultiplier() )
+            self._fuzzy_delta.setValue( pair_comparator.GetDelta() )
             
         else:
             
@@ -1097,7 +1165,7 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
     
     def _UpdateWidgets( self ):
         
-        system_predicate = self._system_predicate.GetValue()
+        system_predicate: ClientSearchPredicate.Predicate = self._system_predicate.GetValue()
         
         we_time_pred = system_predicate.GetType() in (
             ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_IMPORT_TIME,
@@ -1108,11 +1176,20 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         
         we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
         
+        we_fuzzy_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE
+        
         self._time_panel.setVisible( we_time_pred )
         
         self._duration_panel.setVisible( we_duration_pred )
         
-        self._normal_panel.setVisible( not ( we_time_pred or we_duration_pred ) )
+        self._fuzzy_panel.setVisible( we_fuzzy_pred )
+        
+        self._normal_panel.setVisible( not ( we_time_pred or we_duration_pred or we_fuzzy_pred ) )
+        
+        warning_label = self._system_pred_types_to_warning_label_texts.get( system_predicate.GetType(), '' )
+        
+        self._warning_label.setText( warning_label )
+        self._warning_label.setVisible( warning_label != '' )
         
         self._UpdateLabel()
         
@@ -1130,6 +1207,8 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
         
         we_duration_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION
         
+        we_fuzzy_pred = system_predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FRAMERATE
+        
         if we_time_pred:
             
             number_test = self._time_number_test.GetValue()
@@ -1143,6 +1222,13 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             
             multiplier = self._duration_multiplier.value()
             delta = HydrusTime.MillisecondiseS( self._duration_delta.GetValue() )
+            
+        elif we_fuzzy_pred:
+            
+            number_test = self._fuzzy_number_test.GetValue()
+            
+            multiplier = self._fuzzy_multiplier.value()
+            delta = self._fuzzy_delta.value()
             
         else:
             

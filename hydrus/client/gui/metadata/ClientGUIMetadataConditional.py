@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -23,8 +24,180 @@ from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchTagContext
 from hydrus.client.search import ClientSearchPredicate
 
-# TODO: This guy shares a bunch with the Read dude, so figure out a shared superclass that has include current/pending and such! 
-# FileSearchContext isn't all there is
+def ResultsFetch(
+    win: QW.QWidget,
+    job_status: ClientThreading.JobStatus,
+    prefetch_callable,
+    results_callable,
+    parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText,
+    file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+    results_cache: ClientSearchAutocomplete.PredicateResultsCache,
+    under_construction_or_predicate,
+):
+    
+    results = []
+    
+    if parsed_autocomplete_text.IsEmpty():
+        
+        results = [
+            ClientSearchPredicate.Predicate( predicate_type = predicate_type )
+            for predicate_type
+            in [
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_DURATION,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH, # TODO: add ratio and num pixels and collapse and reorder this to 'system:dimensions'
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TIME,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_URLS,
+            ]
+        ]
+        
+    else:
+        
+        # TODO: This is mostly a botched copy of ReadFetch, so obviously this could get merged a little, somewhere, in a nice way
+        
+        if parsed_autocomplete_text.IsValidSystemPredicate():
+            
+            results = parsed_autocomplete_text.GetValidSystemPredicates()
+            
+            results = [ predicate for predicate in results if predicate.CanTestMediaResult() ]
+            
+        else:
+            
+            # user has typed a tag-like thing
+            
+            tag_context = file_search_context.GetTagContext()
+            
+            tag_service_key = tag_context.service_key
+            
+            if not parsed_autocomplete_text.IsAcceptableForTagSearches():
+                
+                matches = []
+                
+            else:
+                
+                strict_search_text = parsed_autocomplete_text.GetSearchText( False )
+                autocomplete_search_text = parsed_autocomplete_text.GetSearchText( True )
+                
+                allow_auto_wildcard_conversion = True
+                
+                is_explicit_wildcard = parsed_autocomplete_text.IsExplicitWildcard( allow_auto_wildcard_conversion )
+                
+                if is_explicit_wildcard:
+                    
+                    cache_valid = False
+                    
+                else:
+                    
+                    cache_valid = results_cache.CanServeTagResults( parsed_autocomplete_text, False )
+                    
+                
+                if cache_valid:
+                    
+                    matches = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
+                    
+                else:
+                    
+                    exact_match_predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status )
+                    
+                    small_exact_match_search = ClientGUIACDropdown.ShouldDoExactSearch( parsed_autocomplete_text )
+                    
+                    if small_exact_match_search:
+                        
+                        results_cache = ClientSearchAutocomplete.PredicateResultsCacheTag( exact_match_predicates, strict_search_text, True )
+                        
+                        matches = results_cache.FilterPredicates( tag_service_key, strict_search_text )
+                        
+                    else:
+                        
+                        exact_match_matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, exact_match_predicates )
+                        
+                        exact_match_matches = ClientSearchPredicate.SortPredicates( exact_match_matches )
+                        
+                        allow_auto_wildcard_conversion = True
+                        
+                        ClientGUIACDropdown.InsertTagPredicates( exact_match_matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
+                        
+                        include_unusual_predicate_types = True
+                        
+                        ClientGUIACDropdown.InsertOtherPredicatesForRead( exact_match_matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
+                        
+                        ClientGUIACDropdown.AppendLoadingPredicate( exact_match_matches, 'loading full results' )
+                        
+                        CG.client_controller.CallAfterQtSafe( win, prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
+                        
+                        #
+                        
+                        search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
+                        
+                        predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                        
+                        if job_status.IsCancelled():
+                            
+                            return
+                            
+                        
+                        if is_explicit_wildcard:
+                            
+                            matches = ClientSearchAutocomplete.FilterPredicatesBySearchText( tag_service_key, autocomplete_search_text, predicates )
+                            
+                        else:
+                            
+                            results_cache = ClientSearchAutocomplete.PredicateResultsCacheTag( predicates, strict_search_text, False )
+                            
+                            matches = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
+                            
+                        
+                    
+                
+                if job_status.IsCancelled():
+                    
+                    return
+                    
+                
+                matches = ClientSearchPredicate.SortPredicates( matches )
+                
+                if not parsed_autocomplete_text.inclusive:
+                    
+                    for match in matches:
+                        
+                        match.SetInclusive( False )
+                        
+                    
+                
+            
+            allow_auto_wildcard_conversion = True
+            
+            matches = HydrusLists.FastIndexUniqueList( matches )
+            
+            ClientGUIACDropdown.InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
+            
+            include_unusual_predicate_types = True
+            
+            ClientGUIACDropdown.InsertOtherPredicatesForRead( matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
+            
+            if job_status.IsCancelled():
+                
+                return
+                
+            
+            CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
+            
+        
+    
+    if under_construction_or_predicate is not None:
+        
+        ClientGUIACDropdown.PutAtTopOfMatches( results, under_construction_or_predicate )
+        
+    
+    CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, results )
+    
+
 class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutocompleteDropdownTagsFileSearchContextORCapable ):
     
     def __init__( self, parent: QW.QWidget, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
@@ -234,53 +407,20 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutocompleteD
     
     def _StartSearchResultsFetchJob( self, job_status ):
         
+        fsc = self.GetFileSearchContext()
+        
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
-        results = []
-        
-        if parsed_autocomplete_text.IsEmpty():
+        if self._under_construction_or_predicate is None:
             
-            results = [
-                ClientSearchPredicate.Predicate( predicate_type = predicate_type )
-                for predicate_type
-                in [
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_INBOX,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_ARCHIVE,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_WIDTH,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HEIGHT,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_URLS,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED,
-                    ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TIME
-                ]
-            ]
+            under_construction_or_predicate = None
             
-            # replace this with file properties at a convenient future juncture when we support has audio, duration, forced filetype, and transparency
-            results.extend(
-                [
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = True ),
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, value = False ),
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = True ),
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, value = False ),
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, value = True ),
-                    ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, value = False )
-                ]
-            )
+        else:
             
-        elif parsed_autocomplete_text.IsValidSystemPredicate():
-            
-            results = parsed_autocomplete_text.GetValidSystemPredicates()
-            
-            results = [ predicate for predicate in results if predicate.CanTestMediaResult() ]
+            under_construction_or_predicate = self._under_construction_or_predicate.Duplicate()
             
         
-        if self._under_construction_or_predicate is not None:
-            
-            ClientGUIACDropdown.PutAtTopOfMatches( results, self._under_construction_or_predicate )
-            
-        
-        CG.client_controller.CallAfterQtSafe( self, self.SetFetchedResults, job_status, parsed_autocomplete_text, self._results_cache, results )
+        CG.client_controller.CallToThread( ResultsFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, fsc, self._results_cache, under_construction_or_predicate )
         
     
     def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
@@ -328,6 +468,8 @@ class EditMetadataConditionalPanel( ClientGUICommon.StaticBox ):
         self._ac_panel = AutoCompleteDropdownMetadataConditional( self, metadata_conditional.GetFileSearchContext() )
         
         self.Add( self._ac_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setFocusProxy( self._ac_panel )
         
     
     def GetValue( self ) -> ClientMetadataConditional.MetadataConditional:

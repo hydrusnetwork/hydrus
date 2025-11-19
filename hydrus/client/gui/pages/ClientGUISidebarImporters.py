@@ -320,7 +320,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._import_options_button.SetTagImportOptions( tag_import_options )
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
-        self._set_options_to_queries_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToGalleryImports )
+        self._set_options_to_queries_button = ClientGUICommon.BetterButton( self, 'update selected with current options', self._SetOptionsToGalleryImports )
         self._set_options_to_queries_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Each query has its own file limit and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some downloaders in your selection differ with what the page currently has. Clicking here will update the selected queries with whatever the page currently has.' ) )
         self._set_options_to_queries_button.setVisible( False )
         
@@ -337,13 +337,8 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._gallery_downloader_panel.Add( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        import_buttons_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( import_buttons_hbox, self._import_options_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( import_buttons_hbox, self._set_options_to_queries_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._gallery_downloader_panel.Add( import_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._gallery_downloader_panel.Add( self._set_options_to_queries_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1447,7 +1442,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._import_options_button.SetTagImportOptions( tag_import_options )
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
-        self._set_options_to_watchers_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToWatchers )
+        self._set_options_to_watchers_button = ClientGUICommon.BetterButton( self, 'update selected with current options', self._SetOptionsToWatchers )
         self._set_options_to_watchers_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Each watcher has its own checker and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some watchers in your selection differ with what the page currently has. Clicking here will update the selected watchers with whatever the page currently has.' ) )
         self._set_options_to_watchers_button.setVisible( False )
         
@@ -1466,13 +1461,8 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        import_buttons_hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( import_buttons_hbox, self._import_options_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( import_buttons_hbox, self._set_options_to_watchers_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._watchers_panel.Add( import_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        self._watchers_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._watchers_panel.Add( self._set_options_to_watchers_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         

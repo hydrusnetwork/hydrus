@@ -245,9 +245,10 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                 total_hashes_in_this_run = 0
                 total_successful_hashes_in_this_run = 0
                 
-                self._wake_event.wait( 5 )
+                self._wake_from_idle_sleep_event.wait( 5 )
                 
-                self._wake_event.clear()
+                self._wake_from_work_sleep_event.clear()
+                self._wake_from_idle_sleep_event.clear()
                 
                 continue
                 

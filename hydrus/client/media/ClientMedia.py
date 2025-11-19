@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusBlurhash
 
 from hydrus.client import ClientConstants as CC
@@ -1787,6 +1788,30 @@ class MediaCollection( MediaList, Media ):
         return self._file_viewing_stats_manager
         
     
+    def GetFramerate( self ):
+        
+        duration_ms = self.GetDurationMS()
+        num_frames = self.GetNumFrames()
+        
+        # I wanted to do `num_frames <= 1`, but it caused complications in db search, so KISS
+        
+        if duration_ms is None or duration_ms == 0 or num_frames is None or num_frames <= 0:
+            
+            return None
+            
+        else:
+            
+            try:
+                
+                return num_frames / HydrusTime.SecondiseMSFloat( duration_ms )
+                
+            except:
+                
+                return None
+                
+            
+        
+    
     def GetHash( self ):
         
         display_media = self.GetDisplayMedia()
@@ -1973,6 +1998,11 @@ class MediaSingleton( Media ):
     def GetFileViewingStatsManager( self ):
         
         return self._media_result.GetFileViewingStatsManager()
+        
+    
+    def GetFramerate( self ):
+        
+        return self._media_result.GetFileInfoManager().GetFramerate()
         
     
     def GetHash( self ):
@@ -2585,21 +2615,16 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    num_frames = x.GetNumFrames()
+                    framerate = x.GetFramerate()
                     
-                    if num_frames is None or num_frames == 0:
+                    if framerate is None:
                         
                         return -1
                         
-                    
-                    duration_ms = x.GetDurationMS()
-                    
-                    if duration_ms is None or duration_ms == 0:
+                    else:
                         
-                        return -1
+                        return framerate
                         
-                    
-                    return num_frames / duration_ms
                     
                 
             elif sort_data == CC.SORT_FILES_BY_NUM_COLLECTION_FILES:

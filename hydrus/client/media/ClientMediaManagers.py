@@ -108,6 +108,25 @@ class FileInfoManager( object ):
         return self.original_mime is not None
         
     
+    def GetFramerate( self ):
+        
+        if self.duration_ms is None or self.duration_ms <= 0 or self.num_frames is None or self.num_frames <= 0:
+            
+            return None
+            
+        else:
+            
+            try:
+                
+                return self.num_frames / HydrusTime.SecondiseMSFloat( self.duration_ms )
+                
+            except:
+                
+                return None
+                
+            
+        
+    
     def GetOriginalMime( self ):
         
         if self.FiletypeIsForced():

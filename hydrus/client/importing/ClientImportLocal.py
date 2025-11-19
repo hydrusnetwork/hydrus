@@ -1529,9 +1529,10 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
                 wait_period = self._GetTimeUntilNextWork()
                 
             
-            self._wake_event.wait( wait_period )
+            self._wake_from_idle_sleep_event.wait( wait_period )
             
-            self._wake_event.clear()
+            self._wake_from_work_sleep_event.clear()
+            self._wake_from_idle_sleep_event.clear()
             
         
     

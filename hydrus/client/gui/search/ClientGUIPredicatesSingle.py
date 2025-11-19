@@ -833,8 +833,10 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_NOT_EQUAL,
             ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO,
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
         ]
         
         self._number_test = ClientGUITime.NumberTestWidgetDuration( self, allowed_operators = allowed_operators, appropriate_absolute_plus_or_minus_default = 30000, appropriate_percentage_plus_or_minus_default = 5 )
@@ -1101,11 +1103,9 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         allowed_operators = [
             ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_LESS_THAN_OR_EQUAL_TO,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
             ClientNumberTest.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN,
-            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN_OR_EQUAL_TO
+            ClientNumberTest.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
         self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
@@ -1120,6 +1120,15 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         #
         
+        vbox = QP.VBoxLayout()
+        
+        label = 'Framerate is approximate. A "30fps" file may actually be 30.005fps internally.\nIf you use < or >, include some padding: "> 59", not "> 60".'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_CENTER_PERPENDICULAR )
@@ -1127,7 +1136,9 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         hbox.addStretch( 0 )
         
-        self.setLayout( hbox )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.setLayout( vbox )
         
         self.setFocusProxy( self._number_test )
         

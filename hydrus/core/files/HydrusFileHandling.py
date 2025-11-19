@@ -859,7 +859,8 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
             elif mime == HC.UNDETERMINED_JXL:
                 
-                if HydrusVideoHandling.FileIsAnimated( path ):
+                # disabled animated jxl for now--ffmpeg getting in an infinite loop!
+                if False: #HydrusVideoHandling.FileIsAnimated( path ):
                     
                     return HC.ANIMATION_JXL
                     

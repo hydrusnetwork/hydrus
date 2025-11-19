@@ -15,7 +15,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._is_working_hard = False
         
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
-        self._controller.sub( self, 'Wake', 'notify_deferred_delete_database_maintenance_new_work' )
+        self._controller.sub( self, 'WakeIfNotWorking', 'notify_deferred_delete_database_maintenance_new_work' )
         
     
     def _AbleToDoBackgroundMaintenance( self ):
@@ -167,8 +167,18 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     wait_period = self._GetWaitPeriod( expected_work_period, actual_work_period, still_work_to_do )
                     
                 
+                if still_work_to_do:
+                    
+                    wake_event = self._wake_from_work_sleep_event
+                    
+                else:
+                    
+                    wake_event = self._wake_from_idle_sleep_event
+                    
+                
             else:
                 
+                wake_event = self._wake_from_idle_sleep_event
                 wait_period = 600
                 
             
@@ -182,9 +192,10 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 wait_period -= FORCED_WAIT_PERIOD
                 
             
-            self._wake_event.wait( wait_period )
+            wake_event.wait( wait_period )
             
-            self._wake_event.clear()
+            self._wake_from_work_sleep_event.clear()
+            self._wake_from_idle_sleep_event.clear()
             
         
     

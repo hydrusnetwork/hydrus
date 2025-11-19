@@ -862,7 +862,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._last_attempted_dropdown_width = 0
         
-        self._text_ctrl.textChanged.connect( self.EventText )
+        self._text_ctrl.textChanged.connect( self.NotifyTagTextInputChanged )
         
         self._text_ctrl.installEventFilter( self )
         
@@ -937,7 +937,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._current_fetch_job_status = None
         
-        self._schedule_results_refresh_job = None
+        self._refresh_results_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateSearchResults )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'tags_autocomplete' ], alternate_filter_target = self._text_ctrl )
         
@@ -973,7 +973,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         CG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
         
-        self._ScheduleResultsRefresh( 0.0 )
+        self._refresh_results_updater.Update()
         
         CG.client_controller.CallLaterQtSafe( self, 0.05, 'hide/show dropdown', self._DropdownHideShow )
         
@@ -1015,7 +1015,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._text_ctrl.blockSignals( False )
         
-        self._ScheduleResultsRefresh( 0.0 )
+        self._refresh_results_updater.Update()
         
     
     def _GetParsedAutocompleteText( self ) -> ClientSearchAutocomplete.ParsedAutocompleteText:
@@ -1049,12 +1049,9 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _DueAutoRefresh( self ):
         
-        if self._schedule_results_refresh_job is not None:
+        if self._refresh_results_updater.IsWorking():
             
-            if not self._schedule_results_refresh_job.IsWorkComplete():
-                
-                return False
-                
+            return False
             
         
         return HydrusTime.TimeHasPassed( self._time_results_last_set + 300 )
@@ -1106,16 +1103,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _ScheduleResultsRefresh( self, delay ):
-        
-        if self._schedule_results_refresh_job is not None:
-            
-            self._schedule_results_refresh_job.Cancel()
-            
-        
-        self._schedule_results_refresh_job = CG.client_controller.CallLaterQtSafe( self, delay, 'a/c results refresh', self._UpdateSearchResults )
-        
-    
     def _SetupTopListBox( self ):
         
         pass
@@ -1125,7 +1112,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._results_cache = ClientSearchAutocomplete.PredicateResultsCacheInit()
         
-        self._ScheduleResultsRefresh( 0.0 )
+        self._refresh_results_updater.Update()
         
     
     def _SetResultsToList( self, results, parsed_autocomplete_text ):
@@ -1217,8 +1204,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _UpdateSearchResults( self ):
         
-        self._schedule_results_refresh_job = None
-        
         self._CancelSearchResultsFetchJob()
         
         self._current_fetch_job_status = ClientThreading.JobStatus( cancellable = True )
@@ -1241,13 +1226,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     def DoDropdownHideShow( self ):
         
         self._DropdownHideShow()
-        
-    
-    def EventCloseDropdown( self, event ):
-        
-        CG.client_controller.gui.close()
-        
-        return True
         
     
     def eventFilter( self, watched, event ):
@@ -1471,30 +1449,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return False
         
     
-    def EventText( self, new_text ):
-        
-        num_chars = len( self._text_ctrl.text() )
-        
-        if num_chars == 0:
-            
-            self._ScheduleResultsRefresh( 0.0 )
-            
-        else:
-            
-            parsed_autocomplete_text = self._GetParsedAutocompleteText()
-            
-            if parsed_autocomplete_text.GetTagAutocompleteOptions().FetchResultsAutomatically():
-                
-                self._ScheduleResultsRefresh( 0.0 )
-                
-            
-            if self._dropdown_notebook.currentWidget() != self._search_results_list:
-                
-                self.MoveNotebookPageFocus( index = 0 )
-                
-            
-        
-    
     def GetColour( self, colour_type ):
         
         new_options = CG.client_controller.new_options
@@ -1544,12 +1498,27 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def REPEATINGPageUpdate( self ):
+    def NotifyTagTextInputChanged( self, new_text ):
         
-        # we could do _GetParsedAutocompleteText to be neat here, but the IsEmpty test is just this, so let's optimise for this frequently-consulted method
-        if self._DueAutoRefresh() and self._text_ctrl.text() == '':
+        num_chars = len( self._text_ctrl.text() )
+        
+        if num_chars == 0:
             
-            self._ScheduleResultsRefresh( 0.0 )
+            self._refresh_results_updater.Update()
+            
+        else:
+            
+            parsed_autocomplete_text = self._GetParsedAutocompleteText()
+            
+            if parsed_autocomplete_text.GetTagAutocompleteOptions().FetchResultsAutomatically():
+                
+                self._refresh_results_updater.Update()
+                
+            
+            if self._dropdown_notebook.currentWidget() != self._search_results_list:
+                
+                self.MoveNotebookPageFocus( index = 0 )
+                
             
         
     
@@ -1584,7 +1553,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if action == CAC.SIMPLE_AUTOCOMPLETE_FORCE_FETCH:
                     
-                    self._ScheduleResultsRefresh( 0.0 )
+                    self._refresh_results_updater.Update()
                     
                 elif input_is_empty and action in ( CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT, CAC.SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_RIGHT ):
                     
@@ -1633,6 +1602,13 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return command_processed
         
     
+    def resizeEvent( self, event ):
+        
+        self._DropdownHideShow()
+        
+        super().resizeEvent( event )
+        
+    
     def SetForceDropdownHide( self, value ):
         
         self._force_dropdown_hide = value
@@ -1640,11 +1616,13 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._DropdownHideShow()
         
     
-    def resizeEvent( self, event ):
+    def REPEATINGPageUpdate( self ):
         
-        self._DropdownHideShow()
-        
-        super().resizeEvent( event )
+        # we could do _GetParsedAutocompleteText to be neat here, but the IsEmpty test is just this, so let's optimise for this frequently-consulted method
+        if self._DueAutoRefresh() and self._text_ctrl.text() == '':
+            
+            self._refresh_results_updater.Update()
+            
         
     
     def get_hta_background( self ):
@@ -3039,14 +3017,6 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         return command_processed
         
     
-    def SetFetchedResults( self, job_status: ClientThreading.JobStatus, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, results_cache: ClientSearchAutocomplete.PredicateResultsCache, results: list ):
-        
-        if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
-            
-            super().SetFetchedResults( job_status, parsed_autocomplete_text, results_cache, results )
-            
-        
-    
     def SetFileSearchContext( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ):
         
         self._ClearInput()
@@ -3601,8 +3571,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     def _StartSearchResultsFetchJob( self, job_status ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
-        
-        tag_service_key = self._tag_context_button.GetValue().service_key
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = self._tag_context_button.GetValue() )
         

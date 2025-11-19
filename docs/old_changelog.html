@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_648"><a href="#version_648">version 648</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>I have disabled animated jxl parsing. some/many jxls are causing ffmpeg to go into an infinite loop when I ask it to see if the file is animated. I will harden the ffmpeg calling system and fix this for next week</li>
+                        <li>the 'update selected with current options' buttons that appear in the gallery and watcher download pages now pop in below the import options rather than squashing in beside. before, just clicking the 'file limit' checkbox with some of the list selected would often cause the sidebar width to overflow and make a horizontal scrollbar etc..</li>
+                        <li>system:duration now allows 'equal' and 'not equal'</li>
+                        <li>system:framerate no longer allows 'less/greater than or equal to' in its edit panel, and there is a label mentioning how fuzzy framerate is. the hardcoded quick-select framerate system preds in the 'system:duration' panel are now +/-1. I used to have a hack in the db search code to handle the fuzziness, but that was removed when I moved to the new number test system. I have not yet decided, but I may change all framerate calculations to be to the nearest integer, since that's pretty much what we display in UI</li>
+                        <li>fixed an error-raising typo when the database is trying to do a large db job based on a tag filter that has a namespace blacklisted. an example of this would be a `tags-&gt;migrate tags` for 'all tags except title: tags'</li>
+                        <li>if a user loads up a thumbnail grid that wants to have a virtual height greater than the Qt max (~16.7 million pixels, 2^24-1), I now pop up a one-time warning about it. these pages 'work' for ctrl+a type stuff, but you can't scroll below the magic line, and I suspect they are unstable</li>
+                        <li>fixed an instabality bug in the regular file right-click menu, when non-sha2356 hashes are async-populated in the menu after a db fetch (issue #1908)</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>'test A or B' comparators now support the spectrum of normal tag predicates: tags, namespace:anything, and wildcards. all their negated versions are also supported (-creator:anything, etc..). the search domain here is fixed at 'combined local file domains'/'all known tags'</li>
+                        <li>'test A or B' comparators now support 'system:number of tags'. it works on 'all known tags'</li>
+                        <li>'test A or B' comparators now support 'system:duration', 'system:framerate', and 'system:num frames', all under the 'system:duration' stub in the edit panel</li>
+                        <li>'test A or B' comparators now support 'has audio', 'has forced filetype', and 'has transparency', and 'has duration', and all the 'has/has no' guys are now collapsed to the regular 'system:file properties' like in a normal search</li>
+                        <li>'system:known url' and 'system:num urls' are collapsed in the edit panel down to 'system:urls'</li>
+                        <li>'test A against B' comparators now support 'system:framerate'. a note in the edit panel reminds that these numbers are blurry, so you need padding</li>
+                        <li>the various 'test A against B' tests that are non-time based now accept a null value for a property and treat it as zero for comparisons. for instance, an image with null duration will now have less duration than a video with duration 3s. previously, if either file had a null value for the system pred in question, the comparator would fail, which is not how the rest of the search tech works in the program</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>fixed an instability bug in the new async defaulterrback handling when the main window has died</li>
+                        <li>if the user is running from source, the 'ffmpeg failed to render' exception now recommends that users try updating ffmpeg before doing anything else</li>
+                        <li>I cleaned up some autocomplete dropdown behind the scenes stuff. these guys have been rewritten and reworked so many times, they aren't beautiful</li>
+                        <li>all framerate calculations on media results now happen in one central location</li>
+                        <li><h3>boring duplicates auto-resolution stuff</h3></li>
+                        <li>the duplicates manager is now stricter about the order it clears work. it now clears the search work and then immediately the resolution work for each rule in clever-alphabetical turn. no more interleaved work</li>
+                        <li>the duplicates manager can now pack more search work into each work slot, and it reports the 'searching' state for a rule more reliably</li>
+                        <li>my mainloop daemons now have two sleep modes and differentiated wake signals to ensure they take forced breaks more reliably. I'm hoping to finally quash the problem of some workers (like duplicates auto-resolution) waking up too early and thus working far too hard when there are lots of other things (e.g. import queues) telling them there are various updates</li>
+                        <li>similarly, the potential pair discovery manager now uses this nicer wake system and will not hammer potential discovery work while file imports are going on. it previously had a system that said 'if caught up, ok to hammer'. now it keeps pace with its maintenance work time preferences, waking immediately if idle but otherwise smoothing out a rush of new work over a few seconds rather than going bananas</li>
+                        <li>duplicate auto-resolution rules now render themselves to a nice string with name and id when in various debugging modes</li>
+                        <li>when you open a one-file comparator edit dialog, the focus now starts on the tag text input box</li>
+                        <li>added unit tests for the normal tag metadata conditional file tests</li>
+                        <li>added unit tests for the num_tags metadata conditional file tests</li>
+                        <li>added unit tests for duration, framerate, num_frames metadata conditional file tests</li>
+                        <li>added unit tests for framerate media result value extraction</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_647"><a href="#version_647">version 647</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
