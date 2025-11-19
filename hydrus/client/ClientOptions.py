@@ -540,6 +540,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'preview_default_zoom_type_override' : ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPE_DEFAULT_FOR_FILETYPE,
             'export_filename_character_limit' : 220,
             'file_has_transparency_strictness' : HydrusImageColours.HAS_TRANSPARENCY_STRICTNESS_HUMAN,
+            'page_nav_history_max_entries' : 100,
         }
         
         self._dictionary[ 'floats' ] = {

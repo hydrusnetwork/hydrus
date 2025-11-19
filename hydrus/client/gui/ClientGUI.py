@@ -6801,6 +6801,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def _SetPagesHistoryClear( self ):
+        
+        self._page_nav_history.CleanPages( {} )
+        
+        self._menu_updater_set_pages_history_dirty.Update()
+        
+    
     def _SetPagesHistoryDirty( self ):
         
         self._pages_history_dirty = True
@@ -7207,7 +7214,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             for i, ( page_key, page_name ) in enumerate( reversed( self._page_nav_history.GetHistory() ) ):
                 
-                if i > 99: #let's set a maximum size of history to be displayed in the menu
+                if i >= CG.client_controller.new_options.GetInteger( 'page_nav_history_max_entries' ):
                     
                     break
                     
@@ -7221,6 +7228,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     history_menuitem.setFont( font )
                     
                 
+            ClientGUIMenus.AppendSeparator( self._page_nav_history_menu )
+            ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, 'Clear History', 'Clear the in-memory page nav history.', self._SetPagesHistoryClear )
             
             self._pages_history_dirty = False
             
