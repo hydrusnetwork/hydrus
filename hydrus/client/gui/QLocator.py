@@ -499,21 +499,29 @@ class QLocatorWidget(QW.QWidget):
         p = QG.QPainter(self)
         self.style().drawPrimitive(QW.QStyle.PE_Widget, opt, p, self)
 
-    def providerAdded(self, title: str, titleIconPath: str, suggestedReservedItemCount: int, hideTitle: bool):
+    def providerAdded( self, title: str, titleIconPath: str, suggestedReservedItemCount: int, hideTitle: bool ):
+        
         newTitleWidget = QLocatorTitleWidget(title, titleIconPath, self.titleHeight, hideTitle)
+        
         self.visibleResultItemCounts.append(0)
         self.reservedItemCounts.append(suggestedReservedItemCount)
+        
         self.titleItems.append(newTitleWidget)
         self.resultLayout.addWidget(newTitleWidget)
+        
         newTitleWidget.setVisible(False)
 
         self.resultItems.append([])
+        
         for i in range(suggestedReservedItemCount):
+            
             newWidget = QLocatorResultWidget(self.searchEdit, self.resultHeight, self.primaryTextWidth, self.secondaryTextWidth, self)
             self.setupResultWidget(newWidget)
             self.resultItems[-1].append(newWidget)
             self.resultLayout.addWidget(newWidget)
             newWidget.setVisible(False)
+            
+        
 
     def setEscapeShortcuts(self, shortcuts):
         for escapeShortcut in self.escapeShortcuts:
@@ -561,12 +569,16 @@ class QLocatorWidget(QW.QWidget):
         self.queryTimer.setInterval(msec)
 
     def start(self):
+        
         self.clear()
         self.updateAlignment()
         self.show()
+        
         self.searchEdit.setFocus()
+        
         self.searchEdit.textEdited.emit("") # pylint: disable=E1101
-
+        
+    
     def finish(self, doNotStopJobs: bool = False):
         self.queryTimer.stop()
         if self.locator and self.currentJobIds and not doNotStopJobs: self.locator.stopJobs(self.currentJobIds)
@@ -765,25 +777,40 @@ class QLocatorWidget(QW.QWidget):
         widget.setDefaultStylingEnabled(self.defaultStylingEnabled)
 
 class QLocator(QC.QObject):
+    
     providerAdded = QC.Signal(str, str, int, bool)
     resultsAvailable = QC.Signal(int, int)
+    
     def __init__(self, parent):
         super().__init__(parent)
+        
         self.providers = []
-        self.currentJobs = {}
+        self.providers_order = []
         self.savedProviderData = {}
+        
+        self.currentJobs = {}
         self.jobIDCounter = 0
+        
         self.iconPathFactory = None
+        
     
-    def addProvider(self, provider) -> None:
+    def addProvider( self, provider ) -> None:
+        
         self.providers.append(provider)
+        
         provider.setParent(self)
-        provider.resultsAvailable.connect(self.handleItemUpdate)
-        self.providerAdded.emit(provider.title(), self.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle())
-
+        
+        provider.resultsAvailable.connect( self.handleItemUpdate )
+        
+        self.providerAdded.emit( provider.title(), self.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle() )
+        
+    
     def provider(self, idx: int):
+        
         if idx >= 0 and idx <= len(self.providers):
+            
             return self.providers[idx]
+            
         return None
         
     
@@ -807,16 +834,24 @@ class QLocator(QC.QObject):
         
         self.iconPathFactory = iconPathFactory
         
-
+    
     def query(self, queryText: str, context) -> list:
+        
         jobIDs = []
+        
         for i in range(len(self.providers)):
+            
             self.currentJobs[self.jobIDCounter] = i
+            
             jobIDs.append(self.jobIDCounter)
+            
             self.providers[i].processQuery(queryText, context, self.jobIDCounter)
+            
             self.jobIDCounter += 1
+            
         return jobIDs
-
+    
+    
     def activateResult(self, provider: int, id: int) -> None:
         if provider >= 0 and provider < len(self.providers):
             self.providers[provider].resultSelected(id)
