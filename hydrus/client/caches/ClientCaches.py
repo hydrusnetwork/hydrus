@@ -155,7 +155,7 @@ class ImageRendererCache( object ):
         '''
         for media_result in media_result_iterable:
             hash = media_result.GetHash()
-            self._pinned.Add(hash)
+            self._pinned.add(hash)
     
     def UnpinAll(self):
         '''Clear hashes previously protected by Pin()'''

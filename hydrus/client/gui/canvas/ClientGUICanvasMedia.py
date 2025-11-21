@@ -1564,7 +1564,7 @@ class MediaContainer( QW.QWidget ):
     def _DestroyOrHideThisMediaWindow( self, media_window ):
         
         if media_window is not None:
-            self.controller.images_cache.UnpinAll()
+            CG.client_controller.images_cache.UnpinAll()
             launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, QtMediaPlayer )
             
             media_window.removeEventFilter( self._additional_event_filter )
