@@ -3206,6 +3206,8 @@ class CanvasMediaList( CanvasWithHovers ):
             
         
         images_cache = CG.client_controller.images_cache
+        images_cache.UnpinAll()
+        images_cache.Pin([next,previous])
         
         for ( media, delay ) in to_render:
             
