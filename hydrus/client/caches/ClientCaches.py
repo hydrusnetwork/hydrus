@@ -138,6 +138,7 @@ class ImageRendererCache( object ):
         cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
         self._data_cache = ClientCachesBase.DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
+        self._pinned=set()
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Clear', 'clear_image_cache' )
@@ -148,11 +149,23 @@ class ImageRendererCache( object ):
         
         self._data_cache.Clear()
         
+    def Pin(self, media_result_iterable):
+        '''
+        Prevent important hashes from being dropped from the cache. Clear() will still drop these.
+        '''
+        for media_result in media_result_iterable:
+            hash = media_result.GetHash()
+            self._pinned.Add(hash)
+    
+    def UnpinAll(self):
+        '''Clear hashes previously protected by Pin()'''
+        self._pinned.clear()
+        
     
     def ClearSpecificFiles( self, hashes ):
         
         for hash in hashes:
-            
+            if hash in self._pinned: continue
             self._data_cache.DeleteData( hash )
             
         
@@ -172,8 +185,10 @@ class ImageRendererCache( object ):
             # we are no longer going to let big lads flush the whole cache. they can render on demand
             
             image_cache_storage_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_storage_limit_percentage' )
+            acceptable_size = image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() * ( image_cache_storage_limit_percentage / 100 )
             
-            if image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() * ( image_cache_storage_limit_percentage / 100 ):
+            #A pinned hash will be neeeded imminently so skip normal size checking.
+            if (key in self._pinned) or acceptable_size :
                 
                 self._data_cache.AddData( key, image_renderer )
                 
