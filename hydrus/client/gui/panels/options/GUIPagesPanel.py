@@ -114,6 +114,12 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._rename_page_of_pages_on_send = QW.QCheckBox( self._page_names_panel )
         self._rename_page_of_pages_on_send.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you \'send this page down\' or \'send pages to the right\' to a new page of pages, should it also automatically prompt you to rename it?' ) )
         
+        self._decorate_page_of_pages_tab_names = QW.QCheckBox( self._page_names_panel )
+        self._decorate_page_of_pages_tab_names.setToolTip( ClientGUIFunctions.WrapToolTip( 'Suffix the display names of \'page of pages\' tabs with a little arrow or other marker to help them stand out in a long row of tabs.' ) )
+        self._page_of_pages_decorator = QW.QLineEdit( self._page_names_panel )
+        self._page_of_pages_decorator.setToolTip( ClientGUIFunctions.WrapToolTip( 'The little string that will be added to the end of \'page of pages\' tab names.' ) )
+        self._page_of_pages_decorator.setMaxLength( 10 )
+        
         #
         
         self._show_all_my_files_on_page_chooser.setChecked( self._new_options.GetBoolean( 'show_all_my_files_on_page_chooser' ) )
@@ -139,6 +145,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._rename_page_of_pages_on_pick_new.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ) )
         self._rename_page_of_pages_on_send.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_send' ) )
+        
+        self._decorate_page_of_pages_tab_names.setChecked( self._new_options.GetBoolean( 'decorate_page_of_pages_tab_names' ) )
+        self._page_of_pages_decorator.setText( self._new_options.GetString( 'page_of_pages_decorator' ) )
         
         self._page_drop_chase_normally.setChecked( self._new_options.GetBoolean( 'page_drop_chase_normally' ) )
         self._page_drop_chase_with_shift.setChecked( self._new_options.GetBoolean( 'page_drop_chase_with_shift' ) )
@@ -203,6 +212,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
         rows.append( ( 'Automatically prompt to rename new \'page of pages\' after creation: ', self._rename_page_of_pages_on_pick_new ) )
         rows.append( ( '  Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
+        rows.append( ( 'Suffix \'page of pages\' tab names with a decorator string: ', self._decorate_page_of_pages_tab_names ) )
+        rows.append( ( '  Decorator string: ', self._page_of_pages_decorator ) )
         
         page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
         
@@ -224,6 +235,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
+        self._decorate_page_of_pages_tab_names.clicked.connect( self._UpdateControls )
+        self._UpdateControls()
+        
         #
         
         rows = []
@@ -244,6 +258,11 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
+        
+    
+    def _UpdateControls( self ):
+        
+        self._page_of_pages_decorator.setEnabled( self._decorate_page_of_pages_tab_names.isChecked() )
         
     
     def UpdateOptions( self ):
@@ -269,6 +288,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
         self._new_options.SetBoolean( 'rename_page_of_pages_on_pick_new', self._rename_page_of_pages_on_pick_new.isChecked() )
         self._new_options.SetBoolean( 'rename_page_of_pages_on_send', self._rename_page_of_pages_on_send.isChecked() )
+        
+        self._new_options.SetBoolean( 'decorate_page_of_pages_tab_names', self._decorate_page_of_pages_tab_names.isChecked() )
+        self._new_options.SetString( 'page_of_pages_decorator', self._page_of_pages_decorator.text() )
         
         self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
         self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )

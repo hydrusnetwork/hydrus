@@ -172,6 +172,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'import_page_progress_display' : True,
             'rename_page_of_pages_on_pick_new' : False,
             'rename_page_of_pages_on_send' : False,
+            'decorate_page_of_pages_tab_names' : True,
             'process_subs_in_random_order' : True,
             'ac_select_first_with_count' : False,
             'saving_sash_positions_on_exit' : True,
@@ -645,7 +646,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'last_incremental_tagging_namespace' : 'page',
             'last_incremental_tagging_prefix' : '',
             'last_incremental_tagging_suffix' : '',
-            'last_options_window_panel' : 'gui'
+            'last_options_window_panel' : 'gui',
+            'page_of_pages_decorator' : ' \u2193',
         }
         
         self._dictionary[ 'string_list' ] = {
