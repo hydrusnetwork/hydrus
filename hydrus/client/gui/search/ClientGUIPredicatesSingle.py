@@ -2196,6 +2196,72 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
     
 
+class PredicateSystemRatingAny( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent: QW.QWidget, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+        
+        super().__init__( parent )
+        
+        name = 'any service'
+        
+        name_st = ClientGUICommon.BetterStaticText( self, name )
+        
+        name_st.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
+        
+        choice_tuples = [
+            ( 'has rating or count', 'was rated' ),
+            ( 'no rating and no count', 'never rated' ),
+        ]
+        
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._choice.SetValue( '' )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        
+        self._UpdateControls()
+        
+    
+    def _UpdateControls( self ):
+        
+        pass
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( '=', 'rated' ) )
+        
+    
+    def GetPredicates( self ):
+        
+        choice = self._choice.GetValue()
+        
+        operator = '='
+        
+        if choice == 'was rated':
+            
+            rating = 'was rated'
+            
+        elif choice == 'never rated':
+            
+            rating = 'never rated'
+            
+        
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( operator, rating ) )
+        
+        return [ predicate ]
+        
+    
+
 class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):

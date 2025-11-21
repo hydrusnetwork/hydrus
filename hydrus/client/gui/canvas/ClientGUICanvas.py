@@ -1511,6 +1511,8 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         
                     elif self.CANVAS_TYPE in CC.CANVAS_MEDIA_VIEWER_TYPES:
                         
+                        self._last_geometry = self.window().geometry()
+                        
                         maintain_zoom = self._new_options.GetBoolean( 'media_viewer_lock_current_zoom' )
                         maintain_zoom_type = not maintain_zoom and self._new_options.GetBoolean( 'media_viewer_lock_current_zoom_type' )
                         maintain_pan = self._new_options.GetBoolean( 'media_viewer_lock_current_pan' )

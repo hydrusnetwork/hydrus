@@ -1271,7 +1271,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         for zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
             
-            def on_zoom_clicked( checked, zoom = zoom_type ):
+            def on_zoom_clicked( zoom = zoom_type ):
                 
                 if new_options.GetBoolean( 'media_viewer_set_default_viewer_zoom_type_from_menu' ):
                     

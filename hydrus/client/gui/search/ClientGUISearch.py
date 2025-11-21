@@ -779,13 +779,15 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumWords, predicate ) )
             
-        elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:
+        elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:# or predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED
             
             services_manager = CG.client_controller.services_manager
             
             rating_services = services_manager.GetServices( HC.RATINGS_SERVICES )
             
             if len( rating_services ) > 0:
+                
+                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingAny, predicate ) )
                 
                 for service_type_in_order in [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ]:
                     
