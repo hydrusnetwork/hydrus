@@ -484,6 +484,11 @@ class Page( QW.QWidget ):
         CG.client_controller.ReleasePageKey( self._page_key )
         
     
+    def EnterPredicates( self, predicates ):
+        
+        self._sidebar.EnterPredicates( self._page_key, predicates )
+        
+        
     def EventPreviewUnsplit( self, event ):
         
         QP.Unsplit( self._search_preview_split, self._preview_panel )
@@ -3294,7 +3299,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return True
         
     
-    def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
+    def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ) -> Page:
         
         current_page = self.currentWidget()
         

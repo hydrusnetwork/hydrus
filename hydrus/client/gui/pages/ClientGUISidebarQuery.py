@@ -105,6 +105,9 @@ class SystemHashLockPanel( ClientGUICommon.StaticBox ):
 
 class SidebarQuery( ClientGUISidebarCore.Sidebar ):
     
+    searchQueryGrown = QC.Signal( list )
+    searchQueryShrunk = QC.Signal( list )
+    
     def __init__( self, parent, page, page_manager: ClientGUIPageManager.PageManager ):
         
         super().__init__( parent, page, page_manager )
@@ -122,6 +125,10 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         synchronised = self._page_manager.GetVariable( 'synchronised' )
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, media_callable = self._page.GetMedia, synchronised = synchronised, show_lock_search_button = True )
+        
+        self.my_predicates = None
+        self.searchQueryGrown.connect( CG.client_controller.gui.SetPredicateHistoryAdded, QC.Qt.ConnectionType.QueuedConnection )
+        self.searchQueryShrunk.connect( CG.client_controller.gui.SetPredicateHistoryRemoved, QC.Qt.ConnectionType.QueuedConnection )
         
         self._tag_autocomplete.searchCancelled.connect( self._CancelSearch )
         
@@ -382,6 +389,11 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         self._query_job_status.Cancel()
         
     
+    def EnterPredicates( self, page_key, predicates ):
+        
+        self._tag_autocomplete.EnterPredicates( page_key, predicates )
+        
+    
     def GetPredicates( self ):
         
         return self._tag_autocomplete.GetPredicates()
@@ -507,6 +519,24 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
+        if self.my_predicates != file_search_context.GetPredicates():
+            
+            old_preds = set( self.my_predicates )
+            new_preds = set( file_search_context.GetPredicates() )
+            
+            added = list( new_preds - old_preds )
+            removed = list( old_preds - new_preds )
+            
+            if len( added ) > 0:
+                
+                self.searchQueryGrown.emit( added )
+                
+            if len( removed ) > 0:
+                
+                self.searchQueryShrunk.emit( removed )
+                
+            self.my_predicates = file_search_context.GetPredicates()
+        
         self._page_manager.SetVariable( 'file_search_context', file_search_context.Duplicate() )
         
         self.locationChanged.emit( file_search_context.GetLocationContext() )
@@ -567,9 +597,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         file_search_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
-        initial_predicates = file_search_context.GetPredicates()
+        self.my_predicates = file_search_context.GetPredicates()
         
-        if len( initial_predicates ) > 0 and not file_search_context.IsComplete():
+        if len( self.my_predicates ) > 0 and not file_search_context.IsComplete():
             
             CG.client_controller.CallAfterQtSafe( self, self.RefreshQuery )
             

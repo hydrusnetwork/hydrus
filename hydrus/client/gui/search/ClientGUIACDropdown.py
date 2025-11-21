@@ -2977,6 +2977,18 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         return it_changed
         
     
+    def EnterPredicates( self, page_key, predicates: set[ ClientSearchPredicate.Predicate ] ):
+        
+        if page_key == self._page_key:
+            
+            self._predicates_listbox.EnterPredicates( page_key, predicates )
+            
+            #self._file_search_context.SetPredicates( self._predicates_listbox.GetPredicates() )
+            
+            #self._SignalNewSearchState()
+            
+        
+    
     def GetPredicates( self ) -> set[ ClientSearchPredicate.Predicate ]:
         
         return self._file_search_context.GetPredicates()

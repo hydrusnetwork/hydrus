@@ -261,6 +261,11 @@ class Sidebar( QW.QScrollArea ):
         pass
         
     
+    def EnterPredicates( self, predicates = None ):
+        
+        pass
+        
+    
     def GetDefaultEmptyMediaResultsPanel( self, win: QW.QWidget ) -> ClientGUIMediaResultsPanel.MediaResultsPanel:
         
         panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( win, self._page_key, self._page_manager, [] )

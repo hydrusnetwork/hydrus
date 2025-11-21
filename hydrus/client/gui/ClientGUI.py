@@ -536,6 +536,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._closed_pages = []
         
+        self._predicate_history_added_to_search = []
+        self._predicate_history_removed_from_search = []
+        
         self._lock = threading.Lock()
         
         self._delayed_dialog_lock = threading.Lock()
@@ -3134,6 +3137,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         def loading_callable():
             
             self._menubar_undo_closed_pages_submenu.setEnabled( False )
+            self._menubar_undo_searching_submenu.setEnabled( False )
             
         
         def work_callable( args ):
@@ -3145,13 +3149,15 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             have_closed_pages = len( self._closed_pages ) > 0
             
+            have_undo_searches = len( self._predicate_history_added_to_search ) > 0 or len( self._predicate_history_removed_from_search ) > 0
+            
             undo_manager = self._controller.GetManager( 'undo' )
             
             ( undo_string, redo_string ) = undo_manager.GetUndoRedoStrings()
             
             have_undo_stuff = undo_string is not None or redo_string is not None
             
-            if have_closed_pages or have_undo_stuff:
+            if have_closed_pages or have_undo_stuff or have_undo_searches:
                 
                 self._menubar_undo_undo.setVisible( undo_string is not None )
                 
@@ -3168,10 +3174,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                 
                 self._menubar_undo_closed_pages_submenu.setEnabled( True )
+                self._menubar_undo_searching_submenu.setEnabled( True )
                 
                 self._menubar_undo_closed_pages_submenu.clear()
+                self._menubar_undo_searching_submenu.clear()
                 
                 self._menubar_undo_closed_pages_submenu.menuAction().setVisible( have_closed_pages )
+                self._menubar_undo_searching_submenu.menuAction().setVisible( have_undo_searches )
                 
                 if have_closed_pages:
                     
@@ -3195,9 +3204,55 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         ClientGUIMenus.AppendMenuItem( self._menubar_undo_closed_pages_submenu, name, 'Restore this page.', self._UnclosePage, index )
                         
                     
-                
+                if have_undo_searches:
+                    
+                    tooltip = ' behaviour may not match menu label, depending on the active predicates in the visible page.'
+                    
+                    if len( self._predicate_history_added_to_search ) > 0:
+                        
+                        added_to_search_menu = ClientGUIMenus.GenerateMenu( self._menubar_undo_searching_submenu )
+                        
+                        args = []
+                        
+                        for ( i, predicate ) in enumerate( self._predicate_history_added_to_search ):
+                            
+                            args.append( ( i, predicate.ToString(), predicate ) )
+                            
+                        args.reverse()
+                        
+                        for ( index, name, predicate ) in args:
+                            
+                            ClientGUIMenus.AppendMenuItem( added_to_search_menu, name, 'undo adding this search term.' + tooltip, self._UndoSearchPredAdd, index )
+                            
+                        
+                        ClientGUIMenus.AppendMenu( self._menubar_undo_searching_submenu, added_to_search_menu, 'addition' )
+                        
+                    if len( self._predicate_history_removed_from_search ) > 0:
+                        
+                        removed_from_search_menu = ClientGUIMenus.GenerateMenu( self._menubar_undo_searching_submenu )
+                        
+                        args = []
+                        
+                        for ( i, predicate ) in enumerate( self._predicate_history_removed_from_search ):
+                            
+                            args.append( ( i, predicate.ToString(), predicate ) )
+                            
+                        args.reverse()
+                        
+                        for ( index, name, predicate ) in args:
+                            
+                            ClientGUIMenus.AppendMenuItem( removed_from_search_menu, name, 'undo removing this search term.' + tooltip, self._UndoSearchPredRemove, index )
+                            
+                        
+                        ClientGUIMenus.AppendMenu( self._menubar_undo_searching_submenu, removed_from_search_menu, 'removal' )
+                        
+                    
+                    ClientGUIMenus.AppendMenuItem( self._menubar_undo_searching_submenu, 'clear all' + HC.UNICODE_ELLIPSIS, 'Remove all search history from memory.', self.AskToDeleteAllSearchPredHistory )
+                    
+                    self._menubar_undo_searching_submenu.addSeparator()
+                    
             
-            self._menubar_undo_submenu.menuAction().setEnabled( have_closed_pages or have_undo_stuff )
+            self._menubar_undo_submenu.menuAction().setEnabled( have_closed_pages or have_undo_stuff or have_undo_searches )
             
         
         return ClientGUIAsync.AsyncQtUpdater( 'undo menu', self, loading_callable, work_callable, publish_callable )
@@ -3990,6 +4045,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
         self._menubar_undo_closed_pages_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenu( menu, self._menubar_undo_closed_pages_submenu, 'closed pages' )
+        
+        self._menubar_undo_searching_submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenu( menu, self._menubar_undo_searching_submenu, 'searching' )
         
         return ( menu, '&undo' )
         
@@ -7177,6 +7236,33 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.pub( 'notify_new_pages' )
         
     
+    def _UndoSearchPredAdd( self, index ):
+        
+        predicate = self._predicate_history_added_to_search[ index ]
+        
+        page = self._notebook.GetCurrentMediaPage()
+        
+        if page is not None:
+            
+            page.EnterPredicates( [ predicate ] )
+            
+            self._predicate_history_added_to_search.pop( index )
+            
+        
+    def _UndoSearchPredRemove( self, index ):
+        
+        predicate = self._predicate_history_removed_from_search[ index ]
+        
+        page = self._notebook.GetCurrentMediaPage()
+        
+        if page is not None:
+            
+            page.EnterPredicates( [ predicate ] )
+            
+            self._predicate_history_removed_from_search.pop( index )
+            
+        
+    
     def _UpdateMenuPagesCountIfDirty( self ):
         
         if self._pages_count_dirty:
@@ -7413,6 +7499,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if result == QW.QDialog.DialogCode.Accepted:
             
             self.DeleteAllClosedPages()
+            
+        
+    
+    def AskToDeleteAllSearchPredHistory( self ):
+        
+        message = 'Clear the entire search predicate history? This cannot be undone.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._predicate_history_added_to_search.clear()
+            self._predicate_history_removed_from_search.clear()
+            
+            self._menu_updater_undo.update()
             
         
     
@@ -8865,6 +8966,31 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def SetStatusBarDirtyDB( self ):
         
         self._statusbar_db_thread_updater.Update()
+        
+    
+    def SetPredicateHistoryAdded( self, predicates ):
+        
+        for pred in predicates:
+            
+            if pred in self._predicate_history_added_to_search:
+                
+                self._predicate_history_added_to_search.remove( pred )
+            
+            self._predicate_history_added_to_search.append( pred )
+        
+        self._menu_updater_undo.update()
+        
+    def SetPredicateHistoryRemoved( self, predicates ):
+        
+        for pred in predicates:
+            
+            if pred in self._predicate_history_removed_from_search:
+                
+                self._predicate_history_removed_from_search.remove( pred )
+            
+            self._predicate_history_removed_from_search.append( pred )
+        
+        self._menu_updater_undo.update()
         
     
     def ShowPage( self, page_key ):
