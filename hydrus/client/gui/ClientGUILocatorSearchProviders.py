@@ -7,7 +7,38 @@ from html import escape
 from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusNumbers
+
+def GetSearchProvider( provider: int ) -> typing.Optional[ QAbstractLocatorSearchProvider ]:
+    
+    if provider == CC.COMMAND_PALETTE_PROVIDER_CALCULATOR:
+        
+        return CalculatorSearchProvider()
+        
+    if provider == CC.COMMAND_PALETTE_PROVIDER_MAIN_MENU:
+        
+        return MainMenuSearchProvider()
+        
+    if provider == CC.COMMAND_PALETTE_PROVIDER_MEDIA_MENU:
+        
+        return MediaMenuSearchProvider()
+        
+    if provider == CC.COMMAND_PALETTE_PROVIDER_PAGES:
+        
+        return PagesSearchProvider()
+        
+    if provider == CC.COMMAND_PALETTE_PROVIDER_PAGES_HISTORY:
+        
+        return PagesHistorySearchProvider()
+        
+    if provider == CC.COMMAND_PALETTE_PROVIDER_FAVOURITE_SEARCH:
+        
+        return FavSearchesSearchProvider()
+        
+    
+    return None
+    
 
 def highlight_result_text( result_text: str, query_text: str ):
     
@@ -40,27 +71,120 @@ def highlight_result_text( result_text: str, query_text: str ):
 
 # Subclass for customizing icon paths
 class CalculatorSearchProvider( QCalculatorSearchProvider ):
-
+    
     def __init__( self, parent = None ):
         
         super().__init__( parent )
         
-
+        
     def titleIconPath( self ):
         
         return str()
-
         
+    
     def selectedIconPath( self ):
-
-        return str()
-
         
+        return str()
+        
+    
     def iconPath( self ):
-
-        return str()
-
         
+        return str()
+        
+    
+
+class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
+    
+    def __init__( self, parent = None ):
+        
+        super().__init__( parent )
+        
+        self.result_id_counter = 0
+        self.result_ids_to_fav_searches = {}
+        
+    
+    def title( self ):
+        
+        return "Favourite Searches"
+        
+    
+    def suggestedReservedItemCount( self ):
+        
+        return 8
+        
+    
+    def resultSelected( self, resultID: int ):
+        
+        fav_search = self.result_ids_to_fav_searches.get( resultID, None )
+        
+        if fav_search:
+            
+            current_media_page = CG.client_controller.gui.GetNotebookCurrentPage()
+            
+            current_media_page.ActivateFavouriteSearch( fav_search )
+            
+            self.result_ids_to_fav_searches = {}
+            
+        
+    
+    def processQuery( self, query: str, context, jobID: int ):
+        
+        query_casefold = query.casefold()
+        
+        self.result_ids_to_fav_searches = {}
+        
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_favourite_searches' ) ):
+            
+            return
+            
+        
+        fav_searches = CG.client_controller.favourite_search_manager.GetFavouriteSearchRows()
+        
+        result = []
+        #file_search_context, synchronised, media_sort, media_collect are unused
+        for ( folder, name, _, _, _, _ ) in fav_searches:
+            
+            if query_casefold in name.casefold():
+                
+                primary_text = highlight_result_text( name, query )
+                secondary_text = 'favourite search'
+                
+                icon_filename = 'search.png'
+                
+                result.append( QLocatorSearchResult( self.result_id_counter, icon_filename, icon_filename, True, [ primary_text, secondary_text ] ) )
+                
+                self.result_ids_to_fav_searches[ self.result_id_counter ] = ( folder, name )
+                
+                self.result_id_counter += 1
+                
+            
+        
+        if result:
+            
+            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_favourite_searches_results' ) > 0:
+                
+                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_favourite_searches_results' ) ]
+                
+            
+            self.resultsAvailable.emit( jobID, result )
+            
+        
+    def stopJobs( self, jobs: list ):
+        
+        self.result_ids_to_pages = {}
+        
+    
+    def hideTitle( self ):
+        
+        return False
+        
+        
+    def titleIconPath( self ):
+        
+        return str()
+        
+    
+
 class PagesSearchProvider( QAbstractLocatorSearchProvider ):
     
     def __init__( self, parent = None ):

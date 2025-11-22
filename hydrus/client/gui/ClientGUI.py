@@ -668,12 +668,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         # TODO: Rework this to StacicIconPath and change the fetch to name not name.png
         self._locator.setIconPathFactory( HydrusStaticDir.GetStaticPath )
         
-        # TODO: make configurable which providers + order
-        self._locator.addProvider( ClientGUILocatorSearchProviders.CalculatorSearchProvider() )
-        self._locator.addProvider( ClientGUILocatorSearchProviders.MainMenuSearchProvider() )
-        self._locator.addProvider( ClientGUILocatorSearchProviders.MediaMenuSearchProvider() )
-        self._locator.addProvider( ClientGUILocatorSearchProviders.PagesHistorySearchProvider() )
-        self._locator.addProvider( ClientGUILocatorSearchProviders.PagesSearchProvider() )
+        for provider in CC.command_palette_provider_str_lookup.keys():
+            
+            self._locator.addProvider( ClientGUILocatorSearchProviders.GetSearchProvider( provider ) )
+            
+        
         self._locator_widget = QLocator.QLocatorWidget( self,
             width = 800,
             resultHeight = 36,
@@ -686,6 +685,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._locator_widget.setLocator( self._locator )
         self._locator_widget.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._locator_widget.setEscapeShortcuts( [ QG.QKeySequence( QC.Qt.Key.Key_Escape ) ] )
+        self._locator_widget.updateOptions() #apply order of providers from user setting
         # self._locator_widget.setQueryTimeout( 100 ) # how much to wait before starting a search after user edit. default 0
         
         #
@@ -6861,13 +6861,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _SetPagesHistoryClear( self ):
-        
-        self._page_nav_history.CleanPages( {} )
-        
-        self._menu_updater_set_pages_history_dirty.Update()
-        
-    
     def _SetPagesHistoryDirty( self ):
         
         self._pages_history_dirty = True
@@ -6876,6 +6869,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._UpdateMenuPagesHistoryIfDirty()
             
+        
+    
+    def _SetPagesHistoryEmpty( self ):
+        
+        self._page_nav_history.CleanPages( {} )
+        
+        self._menu_updater_set_pages_history_dirty.Update()
         
     
     def _SetSearchFocus( self ):
@@ -7316,7 +7316,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
             ClientGUIMenus.AppendSeparator( self._page_nav_history_menu )
-            ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, 'Clear History', 'Clear the in-memory page nav history.', self._SetPagesHistoryClear )
+            ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, 'Clear History', 'Clear the in-memory page nav history.', self._SetPagesHistoryEmpty )
             
             self._pages_history_dirty = False
             
@@ -8168,6 +8168,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_database.update()
         self._menu_updater_services.update()
         self._menu_updater_tags.update()
+        self._locator_widget.updateOptions()
         
     
     def NotifyNewPages( self ):

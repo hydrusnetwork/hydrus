@@ -392,6 +392,7 @@ class QLocatorWidget(QW.QWidget):
     finished = QC.Signal()
     def __init__(self, parent = None, width: int = 600, resultHeight: int = 36, titleHeight: int = 36, primaryTextWidth: int = 320, secondaryTextWidth: int = 200, maxVisibleItemCount: int = 8):
         super().__init__(parent)
+        
         self.alignment = QC.Qt.AlignmentFlag.AlignCenter
         self.resultHeight = resultHeight
         self.titleHeight = titleHeight
@@ -402,6 +403,7 @@ class QLocatorWidget(QW.QWidget):
         self.reservedItemCounts = []
         self.visibleResultItemCounts = []
         self.currentJobIds = []
+        self.providerDisplayOrder = []
         self.titleItems = []
         self.resultItems = []
         self.escapeShortcuts = []
@@ -602,36 +604,95 @@ class QLocatorWidget(QW.QWidget):
                 self.providerAdded(provider.title(), self.locator.getIconPath( provider.titleIconPath() ), provider.suggestedReservedItemCount(), provider.hideTitle())
 
     def handleResultsAvailable(self, providerIndex: int, jobID: int) -> None:
+        
         data = self.locator.getResult(jobID)
-        self.titleItems[providerIndex].updateData(len(data))
-        if not self.titleItems[providerIndex].shouldRemainHidden:
-            self.setResultVisible(self.titleItems[providerIndex], len(data) != 0)
-        if len(data): self.resultList.setVisible(True)
-
-        if len(data) > len(self.resultItems[providerIndex]):
+        data_length = len( data )
+        
+        self.titleItems[ providerIndex ].updateData( data_length )
+        
+        if not self.titleItems[ providerIndex ].shouldRemainHidden and providerIndex in self.providerDisplayOrder:
+            
+            self.setResultVisible( self.titleItems[ providerIndex ], data_length != 0 )
+            
+        
+        if data_length:
+            
+            self.resultList.setVisible(True)
+            
+        
+        if data_length > len( self.resultItems[ providerIndex ] ):
+            
             titleItemIdx = 0
-            for i in range(self.resultLayout.count()):
-                if self.resultLayout.itemAt(i).widget() == self.titleItems[providerIndex]: break
+            
+            for i in range( self.resultLayout.count() ):
+                
+                if self.resultLayout.itemAt(i).widget() == self.titleItems[providerIndex]: 
+                    break
+                
                 titleItemIdx += 1
+                
+            
             i = len(self.resultItems[providerIndex])
-            while i < len(data):
+            
+            while i < data_length:
+                
                 newWidget = QLocatorResultWidget(self.searchEdit, self.resultHeight, self.primaryTextWidth, self.secondaryTextWidth, self)
+                
                 self.setupResultWidget(newWidget)
-                self.resultLayout.insertWidget(titleItemIdx + i + 1, newWidget)
-                self.resultItems[providerIndex].append(newWidget)
+                
+                self.resultLayout.insertWidget( titleItemIdx + i + 1, newWidget )
+                self.resultItems[ providerIndex ].append( newWidget )
+                
                 i += 1
-
-        for i in range(len(self.resultItems[providerIndex])):
-            if i < len(data):
-                self.resultItems[providerIndex][i].updateData(providerIndex, data[i])
-                if not self.resultItems[providerIndex][i].isVisible():
-                    self.setResultVisible(self.resultItems[providerIndex][i], True)
+                
+            
+        
+        for i in range( len( self.resultItems[ providerIndex ] ) ):
+            
+            if i < data_length:
+                
+                self.resultItems[ providerIndex ][ i ].updateData( providerIndex, data[ i ] )
+                
+                if not self.resultItems[ providerIndex ][ i ].isVisible() and providerIndex in self.providerDisplayOrder:
+                    
+                    self.setResultVisible( self.resultItems[ providerIndex ][ i ], True )
+                    
+                
             else:
-                if self.resultItems[providerIndex][i].isVisible():
-                    self.setResultVisible(self.resultItems[providerIndex][i], False)
-
+                
+                if self.resultItems[ providerIndex ][ i ].isVisible():
+                    
+                    self.setResultVisible( self.resultItems[ providerIndex ][ i ], False )
+                    
+                
+        try:
+            #this is where we reorganize the widgets based on the desired display order. items removed by the user are already hidden based on "providerIndex in self.providerDisplayOrder" above
+            desired_widget_order = []
+            
+            for provider_idx in self.providerDisplayOrder:
+                
+                desired_widget_order.append( self.titleItems[ provider_idx ] )
+                desired_widget_order.extend( self.resultItems[ provider_idx ] )
+                
+            
+            for widget in desired_widget_order:
+                
+                self.resultLayout.removeWidget( widget )
+                
+            
+            for idx, widget in enumerate( desired_widget_order ):
+                
+                self.resultLayout.insertWidget( idx, widget )
+                
+            
+        except Exception:
+            
+            pass
+            
+        
         self.updateResultListHeight()
-
+        
+    
     def queryLocator(self, query: str) -> None:
         if not self.locator: return
         if self.currentJobIds:
@@ -754,7 +815,15 @@ class QLocatorWidget(QW.QWidget):
             if isinstance(widget, QLocatorResultWidget):
                 self.visibleResultItemCounts[widget.providerIndex] += 1
             widget.setVisible(True)
-
+        
+    
+    def updateOptions( self ):
+        
+        import hydrus.client.ClientGlobals as CG
+        
+        self.providerDisplayOrder = CG.client_controller.new_options.GetIntegerList( 'command_palette_provider_order' )
+        
+    
     def updateResultListHeight(self):
         pos = self.pos()
         visibleHeight = self.getVisibleHeight()
@@ -785,7 +854,6 @@ class QLocator(QC.QObject):
         super().__init__(parent)
         
         self.providers = []
-        self.providers_order = []
         self.savedProviderData = {}
         
         self.currentJobs = {}

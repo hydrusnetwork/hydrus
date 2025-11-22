@@ -362,6 +362,11 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         self._UpdateSystemLockedVisibilityAndControls()
         
     
+    def ActivateFavouriteSearch( self, fav_search: tuple[ str, str ] ):
+        
+        return self._tag_autocomplete.ActivateFavouriteSearch(fav_search)
+        
+    
     def ConnectMediaResultsPanelSignals( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         
         super().ConnectMediaResultsPanelSignals( media_panel )

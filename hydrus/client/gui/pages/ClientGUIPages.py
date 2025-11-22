@@ -414,6 +414,11 @@ class Page( QW.QWidget ):
         clean_up_old_panel()
         
     
+    def ActivateFavouriteSearch( self, fav_search: tuple[ str, str ] ):
+        
+        self._sidebar.ActivateFavouriteSearch( fav_search )
+        
+    
     def AddMediaResults( self, media_results ):
         
         if self._initialised:

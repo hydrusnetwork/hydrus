@@ -289,6 +289,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_show_page_of_pages' : False,
             'command_palette_initially_show_all_pages' : True,
             'command_palette_initially_show_history' : True,
+            'command_palette_initially_show_favourite_searches' : False,
             'command_palette_show_main_menu' : False,
             'command_palette_show_media_menu' : False,
             'disallow_media_drags_on_duration_media' : False,
@@ -544,8 +545,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'export_filename_character_limit' : 220,
             'file_has_transparency_strictness' : HydrusImageColours.HAS_TRANSPARENCY_STRICTNESS_HUMAN,
             'page_nav_history_max_entries' : 100,
-            'command_palette_limit_page_results': 0,
-            'command_palette_limit_history_results': 10,
+            'command_palette_limit_page_results' : 0,
+            'command_palette_limit_history_results' : 10,
+            'command_palette_limit_favourite_searches_results' : 0,
         }
         
         self._dictionary[ 'floats' ] = {
@@ -658,7 +660,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         }
         
         self._dictionary[ 'integer_list' ] = {
-            'file_viewing_stats_interesting_canvas_types' : [ CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_CLIENT_API ]
+            'file_viewing_stats_interesting_canvas_types' : [ CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_CLIENT_API ],
+            'command_palette_provider_order' : [ CC.COMMAND_PALETTE_PROVIDER_CALCULATOR, CC.COMMAND_PALETTE_PROVIDER_MAIN_MENU, CC.COMMAND_PALETTE_PROVIDER_MEDIA_MENU, CC.COMMAND_PALETTE_PROVIDER_PAGES_HISTORY, CC.COMMAND_PALETTE_PROVIDER_PAGES ],
         }
         
         #

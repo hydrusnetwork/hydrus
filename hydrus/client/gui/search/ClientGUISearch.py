@@ -779,7 +779,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumWords, predicate ) )
             
-        elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:# or predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED
+        elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:
             
             services_manager = CG.client_controller.services_manager
             
