@@ -2445,13 +2445,33 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        ( query_exclude_ratings, query_args ) = self._BuildExcludeQueryRatings( file_search_context )
+        # ( query_exclude_ratings, query_args ) = self._BuildExcludeQueryRatings( file_search_context )
         
-        if query_exclude_ratings:
+        # if query_exclude_ratings:
             
-            query_hash_ids.difference_update( self._STI( self._Execute( query_exclude_ratings, query_args ) ) )
+        #     query_hash_ids.difference_update( self._STI( self._Execute( query_exclude_ratings, query_args ) ) )
             
         
+        #original exclude way follows
+        #here is the original code for simpleratings
+        for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
+            
+            service_id = self.modules_services.GetServiceId( service_key )
+            
+            if value == 'not rated':
+                
+                query_hash_ids.difference_update( self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ) )
+                
+        
+        # note the new code for advancedratings. if this code executes, any simpleratings excludes are redundant, because all will be excluded
+        
+        for ( operator, value ) in system_predicates.GetAdvancedRatingsPredicates():
+            
+            if value == 'never rated': #negative processing
+                
+               query_hash_ids = self._DoAdvancedRatingPredicate( operator, value, query_hash_ids, job_status = job_status )
+                
+            
         
         if king_filter is not None and not king_filter:
             
