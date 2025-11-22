@@ -43,6 +43,22 @@ COLOUR_MEDIA_BACKGROUND = 10
 COLOUR_MEDIA_TEXT = 11
 COLOUR_TAGS_BOX = 12
 
+COMMAND_PALETTE_PROVIDER_CALCULATOR = 0
+COMMAND_PALETTE_PROVIDER_MAIN_MENU = 1
+COMMAND_PALETTE_PROVIDER_MEDIA_MENU = 2
+COMMAND_PALETTE_PROVIDER_PAGES = 3
+COMMAND_PALETTE_PROVIDER_PAGES_HISTORY = 4
+COMMAND_PALETTE_PROVIDER_FAVOURITE_SEARCH = 5
+
+command_palette_provider_str_lookup = { #hey the order of this matters and gets overriden by user ordering only at display, so only add to the end of this list okay
+    COMMAND_PALETTE_PROVIDER_CALCULATOR : 'calculator',
+    COMMAND_PALETTE_PROVIDER_MAIN_MENU : 'main menu',
+    COMMAND_PALETTE_PROVIDER_MEDIA_MENU : 'media menu',
+    COMMAND_PALETTE_PROVIDER_PAGES : 'open pages',
+    COMMAND_PALETTE_PROVIDER_PAGES_HISTORY : 'page history',
+    COMMAND_PALETTE_PROVIDER_FAVOURITE_SEARCH : 'favourite searches',
+}
+
 DISCRIMINANT_INBOX = 0
 DISCRIMINANT_LOCAL = 1
 DISCRIMINANT_NOT_LOCAL = 2
@@ -682,6 +698,7 @@ class GlobalIcons( object ):
     def __init__( self ):
         
         self.user_icons = {}
+        self.user_svg_paths = {}
         
         self._Reinitialise()
         
@@ -829,7 +846,7 @@ class GlobalIcons( object ):
         
         self.user_icons = {}
         
-        for path in HydrusStaticDir.ListStaticDirFilePaths( 'star_shapes' ):
+        for path in HydrusStaticDir.ListStaticDirFilePaths( HC.USERPATH_SVG_ICON ):
             
             ( d, filename ) = os.path.split( path )
             
@@ -838,6 +855,7 @@ class GlobalIcons( object ):
                 name = os.path.splitext( filename )[0]
                 
                 self.user_icons[ name ] = QG.QIcon( path )
+                self.user_svg_paths[ name ] = path
                 
             
         
@@ -875,3 +893,5 @@ COMBINED_DELETED_FILE_SERVICE_KEY: bytes = b'all deleted files'
 COMBINED_TAG_SERVICE_KEY: bytes = b'all known tags'
 
 TEST_SERVICE_KEY: bytes = b'test service'
+
+PREVIEW_RATINGS_SERVICE_KEY: bytes = b'ratings preview object service'

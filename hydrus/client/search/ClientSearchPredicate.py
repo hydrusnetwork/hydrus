@@ -75,6 +75,7 @@ PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE = 51
 PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
 PREDICATE_TYPE_SYSTEM_URLS = 53
 PREDICATE_TYPE_SYSTEM_TAG_ADVANCED = 54
+PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 55
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -103,6 +104,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
+    PREDICATE_TYPE_SYSTEM_RATING_ADVANCED,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA,
     PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
@@ -125,7 +127,7 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_URLS,
     PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
     PREDICATE_TYPE_SYSTEM_TIME,
-    PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE
+    PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
 }
 
 def ConvertSpecificFiletypesToSummary( specific_mimes: collections.abc.Collection[ int ], only_searchable = True ) -> collections.abc.Collection[ int ]:
@@ -346,6 +348,7 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_SYSTEM_LIMIT,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
+    PREDICATE_TYPE_SYSTEM_RATING_ADVANCED,
     PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     PREDICATE_TYPE_SYSTEM_NUM_NOTES,
     PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
@@ -541,6 +544,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 serialisable_value = ( operator, value, service_key.hex() )
                 
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                ( operator, value ) = self._value
+                
+                serialisable_value = ( operator, value )
+                
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
                 ( hashes, max_hamming ) = self._value
@@ -623,6 +632,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 ( operator, value, service_key ) = serialisable_value
                 
                 self._value = ( operator, value, bytes.fromhex( service_key ) )
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                ( operator, value ) = serialisable_value
+                
+                self._value = ( operator, value )
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
@@ -1222,7 +1237,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 return Predicate( self._predicate_type, ( '>', val, service_key ) )
                 
             
-        
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+            
+            ( operator, val ) = self._value
+            
+            if val == 'was rated':
+                
+                return Predicate( self._predicate_type, ( operator, 'never rated' ) )
+                
+            elif val == 'never rated':
+                
+                return Predicate( self._predicate_type, ( operator, 'was rated' ) )
+                
+            
         return None
         
     
@@ -2423,6 +2450,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     connector = ' is ' if self._inclusive else ' is not '
                     
                     base += connector + mime_text
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                base = 'any rating'
+                
+                if self._value is not None:
+                    
+                    ( operator, value ) = self._value
+                    
+                    base = f'{value}'
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:

@@ -787,6 +787,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( rating_services ) > 0:
                 
+                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingAny, predicate ) )
+                
                 for service_type_in_order in [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ]:
                     
                     for rating_service in rating_services:

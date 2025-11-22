@@ -233,6 +233,11 @@ class Sidebar( QW.QScrollArea ):
         self._page_manager.SetVariable( 'media_sort', media_sort )
         
     
+    def ActivateFavouriteSearch( self, fav_search = None ):
+        
+        pass
+        
+    
     def ConnectMediaResultsPanelSignals( self, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         
         if self._current_selection_tags_list is not None:
@@ -257,6 +262,11 @@ class Sidebar( QW.QScrollArea ):
         
     
     def CleanBeforeDestroy( self ):
+        
+        pass
+        
+    
+    def EnterPredicates( self, predicates = None ):
         
         pass
         

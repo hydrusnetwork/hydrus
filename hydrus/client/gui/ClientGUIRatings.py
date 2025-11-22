@@ -56,7 +56,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating, s
             
         if pad_size is None:
             
-            pad_size = QC.QSize( round( min( size.width() / PAD_PX, PAD_PX ) ), PAD_PX ) #allow X pad to go smaller, Y pad as normal
+            pad_size = QC.QSize( int( min( size.width() / PAD_PX, PAD_PX ) ), PAD_PX ) #allow X pad to go smaller, Y pad as normal
             
         
         text = HydrusNumbers.ToHumanInt( rating )
@@ -295,11 +295,11 @@ def GetIconSize( canvas_type, service_type = ClientGUICommon.HC.LOCAL_RATING_LIK
     
     if service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
         
-        return QC.QSize( round( rating_incdec_height_px * 2 ), round( rating_incdec_height_px ) )
+        return QC.QSize( int( rating_incdec_height_px * 2 ), int( rating_incdec_height_px ) )
         
     else:
         
-        return QC.QSize( round( rating_icon_size_px ), round( rating_icon_size_px ) )
+        return QC.QSize( int( rating_icon_size_px ), int( rating_icon_size_px ) )
         
     
 
@@ -319,7 +319,7 @@ def GetIncDecSize( box_height, rating_number ) -> QC.QSize:
             #box_width += ( box_height - 1 ) * ( digits - 3 )
             
         
-    return QC.QSize( round( box_width ), round( box_height ) )
+    return QC.QSize( int( box_width ), int( box_height ) )
     
 
 def GetNumericalFractionText( rating_state, stars ):
@@ -499,7 +499,7 @@ class RatingIncDec( QW.QWidget ):
         self._rating_state = ClientRatings.SET
         self._rating = 0
         
-        self.UpdateSize()
+        self.valueChanged.connect( lambda: self.UpdateSize( self._icon_size ) )
         
     
     def _Draw( self, painter ):
@@ -641,9 +641,16 @@ class RatingIncDec( QW.QWidget ):
         return QC.QSize( self._icon_size.width(), self._icon_size.height() + STAR_PAD.height() )
         
     
-    def UpdateSize( self ):
+    def UpdateSize( self, size: QC.QSize = None ):
         
-        self._icon_size = GetIncDecSize( GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC ).height(), self._rating )
+        if size is None:
+            
+            self._icon_size = GetIncDecSize( GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_INCDEC ).height(), self._rating )
+            
+        else: 
+            
+            self._icon_size = GetIncDecSize( size.height(), self._rating )
+            
         
         self.updateGeometry()
         
@@ -651,23 +658,7 @@ class RatingIncDec( QW.QWidget ):
         
     
 
-class RatingIncDecDialog( RatingIncDec ):
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self.isEnabled():
-            
-            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
-            
-        else:
-            
-            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
-            
-        
+class RatingIncDecControl( RatingIncDec ):
     
     def GetRating( self ):
         
@@ -696,6 +687,44 @@ class RatingIncDecDialog( RatingIncDec ):
         self._UpdateTooltip()
         
         self.UpdateSize()
+        
+    
+
+class RatingIncDecDialog( RatingIncDecControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
+            
+        else:
+            
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
+            
+        
+    
+
+class RatingIncDecExample( RatingIncDecControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating, self._icon_size - QC.QSize( 1, 0 ) )
+            
+        else:
+            
+            DrawIncDec( painter, 0, 0, self._service_key, ClientRatings.NULL, 0, self._icon_size - QC.QSize( 1, 0 ) )
+            
         
     
 
@@ -805,9 +834,16 @@ class RatingLike( QW.QWidget ):
         self._UpdateTooltip()
         
     
-    def UpdateSize( self ):
+    def UpdateSize( self, size: QC.QSize = None ):
         
-        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_LIKE )
+        if size is None:
+            
+            self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_LIKE )
+            
+        else: 
+            
+            self._icon_size = size
+            
         
         self.setMinimumSize( QC.QSize( self._icon_size.width() + STAR_PAD.width(), self._icon_size.height() + STAR_PAD.height() ) )
         
@@ -815,23 +851,7 @@ class RatingLike( QW.QWidget ):
         
     
 
-class RatingLikeDialog( RatingLike ):
-    
-    def _Draw( self, painter ):
-        
-        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
-        
-        painter.eraseRect( painter.viewport() )
-        
-        if self.isEnabled():
-            
-            DrawLike( painter, round( PAD_PX / 2 ), 1, self._service_key, self._rating_state, self._icon_size )
-            
-        else:
-            
-            DrawLike( painter, round( PAD_PX / 2 ), 1, self._service_key, ClientRatings.NULL, self._icon_size)
-            
-        
+class RatingLikeControl( RatingLike ):
     
     def EventLeftDown( self, event ):
         
@@ -866,6 +886,42 @@ class RatingLikeDialog( RatingLike ):
         self.update()
         
     
+
+class RatingLikeDialog( RatingLikeControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawLike( painter, round( PAD_PX / 2 ), 1, self._service_key, self._rating_state, self._icon_size )
+            
+        else:
+            
+            DrawLike( painter, round( PAD_PX / 2 ), 1, self._service_key, ClientRatings.NULL, self._icon_size)
+            
+        
+    
+class RatingLikeExample( RatingLikeControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawLike( painter, round( PAD_PX / 2 ), round( PAD_PX / 2 ), self._service_key, self._rating_state, self._icon_size )
+            
+        else:
+            
+            DrawLike( painter, round( PAD_PX / 2 ), round( PAD_PX / 2 ), self._service_key, ClientRatings.NULL, self._icon_size)
+            
+        
 
 class RatingNumerical( QW.QWidget ):
     
@@ -1101,9 +1157,19 @@ class RatingNumerical( QW.QWidget ):
         self._UpdateTooltip()
         
     
-    def UpdateSize( self ):
+    def UpdateSize( self, size: QC.QSize = None ):
         
-        self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_NUMERICAL )
+        if size is None:
+            
+            self._icon_size = GetIconSize( self._canvas_type, ClientGUICommon.HC.LOCAL_RATING_NUMERICAL )
+            
+        else: 
+            
+            self._icon_size = size
+            self._custom_pad = CG.client_controller.services_manager.GetService( self._service_key ).GetCustomPad()
+            self._num_stars = CG.client_controller.services_manager.GetService( self._service_key ).GetNumStars()
+            self._draw_fraction = CG.client_controller.services_manager.GetService( self._service_key ).GetShowFractionBesideStars()
+            
         
         my_width = GetNumericalWidth( self._service_key, self._icon_size.width(), self._custom_pad, False, self._rating_state, self._rating )
         
@@ -1184,7 +1250,120 @@ class RatingNumericalDialog( RatingNumericalControl ):
             DrawNumerical( painter, 1, round( PAD_PX / 2 ), self._service_key, ClientRatings.NULL, 0.0, size = self._icon_size )
             
         
-        self.UpdateSize()
         self.updateGeometry()
+        
+    
+
+class RatingNumericalExample( RatingNumericalControl ):
+    
+    def _Draw( self, painter ):
+        
+        painter.setBackground( QG.QBrush( QP.GetBackgroundColour( self.parentWidget() ) ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        if self.isEnabled():
+            
+            DrawNumerical( painter, round( PAD_PX / 2 ), round( PAD_PX / 2 ), self._service_key, self._rating_state, self._rating, size = self._icon_size )
+            
+        else:
+            
+            DrawNumerical( painter, round( PAD_PX / 2 ), round( PAD_PX / 2 ), self._service_key, ClientRatings.NULL, 0.0, size = self._icon_size )
+            
+        
+        self.updateGeometry()
+        
+    
+    
+class RatingPreviewServiceWrapper:
+    
+    def __init__( self, original_service_key: bytes, test_service_key: bytes = CC.PREVIEW_RATINGS_SERVICE_KEY, service_type = None, dictionary = None ):
+        
+        self._original_service_key = original_service_key
+        self._service_key = test_service_key
+        self._service_type = service_type
+        
+        self._test_service = None
+        self._modifiable_dict = dictionary
+        
+        if not CG.client_controller.services_manager.ServiceExists( self._original_service_key ):
+            
+            self._original_service_key = CC.PREVIEW_RATINGS_SERVICE_KEY
+            
+        self._CloneFromOriginal()
+        
+    
+    def _CloneColours( self, service_key: bytes ):
+        
+        colours = CG.client_controller.services_manager.GetService( service_key ).GetColours()
+        
+        self._modifiable_dict[ 'colours' ] = colours
+        
+    
+    def _CloneShape( self, service_key: bytes ):
+        
+        star_type = ClientRatings.GetStarType( service_key )
+        
+        self._modifiable_dict[ 'shape' ] = star_type.GetShape()
+        self._modifiable_dict[ 'rating_svg' ] = star_type.GetRatingSVG()
+        
+    
+    def _CloneFromOriginal( self ):
+        
+        rating_service = CG.client_controller.services_manager.GetService( self._original_service_key )
+        
+        self._service_type = rating_service.GetServiceType() if self._service_type is None else self._service_type
+        
+        self._service_name = 'example service templated from ' + rating_service.GetName()
+        
+        self._modifiable_dict = rating_service.GetSerialisableDictionary() if self._modifiable_dict is None else self._modifiable_dict
+        
+        self._ReloadExampleService()
+        
+    
+    def _ReloadExampleService( self ):
+        
+        self._test_service = CG.client_controller.services_manager.SetTestServiceData( self._service_key, self._service_type, self._modifiable_dict, self._service_name )
+        
+    
+    def GetServiceKey( self ):
+        
+        return self._service_key
+        
+    
+    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> QW.QWidget:
+        
+        if self._service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
+            
+            return RatingIncDecExample( parent, self._service_key, canvas_type )
+            
+        elif self._service_type == ClientGUICommon.HC.LOCAL_RATING_LIKE:
+            
+            return RatingLikeExample( parent, self._service_key, canvas_type )
+            
+        elif self._service_type == ClientGUICommon.HC.LOCAL_RATING_NUMERICAL:
+            
+            return RatingNumericalExample( parent, self._service_key, canvas_type )
+            
+        else:
+            
+            raise Exception( 'Unknown rating service type!' )
+        
+    
+    def SetLiveData( self, k, v ):
+        
+        self._modifiable_dict[ k ] = v
+        
+        self._ReloadExampleService()
+        
+    
+    def SetServiceTemplate( self, service_key: bytes ):
+        
+        CG.client_controller.new_options.SetKey( 'options_ratings_panel_template_service_key' , service_key )
+        
+        self._CloneColours( service_key )
+        self._CloneShape( service_key )
+        
+        self._ReloadExampleService()
         
     

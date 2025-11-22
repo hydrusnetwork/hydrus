@@ -414,6 +414,11 @@ class Page( QW.QWidget ):
         clean_up_old_panel()
         
     
+    def ActivateFavouriteSearch( self, fav_search: tuple[ str, str ] ):
+        
+        self._sidebar.ActivateFavouriteSearch( fav_search )
+        
+    
     def AddMediaResults( self, media_results ):
         
         if self._initialised:
@@ -484,6 +489,11 @@ class Page( QW.QWidget ):
         CG.client_controller.ReleasePageKey( self._page_key )
         
     
+    def EnterPredicates( self, predicates ):
+        
+        self._sidebar.EnterPredicates( self._page_key, predicates )
+        
+        
     def EventPreviewUnsplit( self, event ):
         
         QP.Unsplit( self._search_preview_split, self._preview_panel )
@@ -1641,7 +1651,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( num_string ) > 0:
             
-            page_name += f' ({num_string})'
+            if isinstance( page, PagesNotebook ) and CG.client_controller.new_options.GetBoolean( 'decorate_page_of_pages_tab_names' ):
+                
+                name_decorator = CG.client_controller.new_options.GetString( 'page_of_pages_decorator' )
+                
+                page_name += f' ({num_string}){name_decorator}'
+                
+            else:
+                
+                page_name += f' ({num_string})'
             
         
         safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )
@@ -3289,7 +3307,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return True
         
     
-    def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
+    def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ) -> Page:
         
         current_page = self.currentWidget()
         

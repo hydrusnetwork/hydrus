@@ -90,6 +90,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disable_page_tab_dnd.setToolTip( ClientGUIFunctions.WrapToolTip( 'Trying to debug some client hangs!' ) )
         
+        self._page_nav_history_max_entries = ClientGUICommon.BetterSpinBox( self._navigation_and_dnd, min=1, max=1000 )
+        self._page_nav_history_max_entries.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of entries to display in the tab navigation history menu under pages->history.' ) )
+        
         #
         
         self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
@@ -110,6 +113,12 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._rename_page_of_pages_on_pick_new.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you create a new \'page of pages\' from the new page picker, should it automatically prompt you to give it a name other than \'pages\'?' ) )
         self._rename_page_of_pages_on_send = QW.QCheckBox( self._page_names_panel )
         self._rename_page_of_pages_on_send.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you \'send this page down\' or \'send pages to the right\' to a new page of pages, should it also automatically prompt you to rename it?' ) )
+        
+        self._decorate_page_of_pages_tab_names = QW.QCheckBox( self._page_names_panel )
+        self._decorate_page_of_pages_tab_names.setToolTip( ClientGUIFunctions.WrapToolTip( 'Suffix the display names of \'page of pages\' tabs with a little arrow or other marker to help them stand out in a long row of tabs.' ) )
+        self._page_of_pages_decorator = QW.QLineEdit( self._page_names_panel )
+        self._page_of_pages_decorator.setToolTip( ClientGUIFunctions.WrapToolTip( 'The little string that will be added to the end of \'page of pages\' tab names.' ) )
+        self._page_of_pages_decorator.setMaxLength( 10 )
         
         #
         
@@ -137,6 +146,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._rename_page_of_pages_on_pick_new.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_pick_new' ) )
         self._rename_page_of_pages_on_send.setChecked( self._new_options.GetBoolean( 'rename_page_of_pages_on_send' ) )
         
+        self._decorate_page_of_pages_tab_names.setChecked( self._new_options.GetBoolean( 'decorate_page_of_pages_tab_names' ) )
+        self._page_of_pages_decorator.setText( self._new_options.GetString( 'page_of_pages_decorator' ) )
+        
         self._page_drop_chase_normally.setChecked( self._new_options.GetBoolean( 'page_drop_chase_normally' ) )
         self._page_drop_chase_with_shift.setChecked( self._new_options.GetBoolean( 'page_drop_chase_with_shift' ) )
         self._page_drag_change_tab_normally.setChecked( self._new_options.GetBoolean( 'page_drag_change_tab_normally' ) )
@@ -145,6 +157,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._wheel_scrolls_tab_bar.setChecked( self._new_options.GetBoolean( 'wheel_scrolls_tab_bar' ) )
         
         self._disable_page_tab_dnd.setChecked( self._new_options.GetBoolean( 'disable_page_tab_dnd' ) )
+        
+        self._page_nav_history_max_entries.setValue( self._new_options.GetInteger( 'page_nav_history_max_entries' ) )
         
         self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
         
@@ -182,6 +196,7 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
         rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
         rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
+        rows.append( ( 'Maximum entries to show in page navigation history: ', self._page_nav_history_max_entries ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
         
@@ -197,6 +212,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Show import page x/y progress after its name: ', self._import_page_progress_display ) )
         rows.append( ( 'Automatically prompt to rename new \'page of pages\' after creation: ', self._rename_page_of_pages_on_pick_new ) )
         rows.append( ( '  Also automatically prompt when sending some pages to one: ', self._rename_page_of_pages_on_send ) )
+        rows.append( ( 'Suffix \'page of pages\' tab names with a decorator string: ', self._decorate_page_of_pages_tab_names ) )
+        rows.append( ( '  Decorator string: ', self._page_of_pages_decorator ) )
         
         page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
         
@@ -218,6 +235,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._page_names_panel.Add( page_names_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
+        self._decorate_page_of_pages_tab_names.clicked.connect( self._UpdateControls )
+        self._UpdateControls()
+        
         #
         
         rows = []
@@ -238,6 +258,11 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
+        
+    
+    def _UpdateControls( self ):
+        
+        self._page_of_pages_decorator.setEnabled( self._decorate_page_of_pages_tab_names.isChecked() )
         
     
     def UpdateOptions( self ):
@@ -264,6 +289,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'rename_page_of_pages_on_pick_new', self._rename_page_of_pages_on_pick_new.isChecked() )
         self._new_options.SetBoolean( 'rename_page_of_pages_on_send', self._rename_page_of_pages_on_send.isChecked() )
         
+        self._new_options.SetBoolean( 'decorate_page_of_pages_tab_names', self._decorate_page_of_pages_tab_names.isChecked() )
+        self._new_options.SetString( 'page_of_pages_decorator', self._page_of_pages_decorator.text() )
+        
         self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
         self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )
         
@@ -275,6 +303,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'wheel_scrolls_tab_bar', self._wheel_scrolls_tab_bar.isChecked() )
         
         self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
+        
+        self._new_options.SetInteger( 'page_nav_history_max_entries', self._page_nav_history_max_entries.value() )
         
         HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
         

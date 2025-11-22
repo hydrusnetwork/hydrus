@@ -1061,6 +1061,74 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file query', cursor )
         
     
+    def _BuildExcludeQueryRatings( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext ) -> tuple[ str, set ]:
+        
+        query = 'SELECT hash_id FROM local_ratings'
+        params = []
+        
+        flag = None
+        
+        system_predicates = file_search_context.GetSystemPredicates()
+        
+        for ( operator, value ) in system_predicates.GetAdvancedRatingsPredicates():
+            
+            if value == 'never rated':
+                
+                query = 'SELECT DISTINCT hash_id FROM local_ratings'
+                
+                flag = 1
+                
+            
+        
+        for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
+            
+            if value == 'not rated' and not flag:
+                
+                service_id = self.modules_services.GetServiceId( service_key )
+                
+                params.append( service_id )
+                
+            elif value == 'rated' and flag:
+                
+                service_id = self.modules_services.GetServiceId( service_key )
+                
+                params.append( service_id )
+                
+            
+        
+        if len( params ) > 0:
+            
+            services_str = ', '.join( '?' for _ in params )
+            
+            if flag == 1:
+                #get hash ids in the service; check for any other services that have those hash ids and exclude the hash ids with matches
+                params.extend( params ) #we also need to double up params, since we use the services str twice in the query
+                
+                query += f''' WHERE hash_id NOT IN (
+    SELECT h.hash_id
+    FROM local_ratings h
+    WHERE h.service_id IN ( {services_str} )
+      AND NOT EXISTS (
+          SELECT 1
+          FROM local_ratings x
+          WHERE x.hash_id = h.hash_id
+            AND x.service_id NOT IN ( {services_str} )
+      )
+)'''
+            else:
+                
+                query += f' WHERE service_id IN ( {services_str} )'
+                
+            return query, params
+        
+        elif flag:
+            
+            return query, params
+            
+        
+        return None, None
+        
+    
     def _DoAdvancedTagPredicate(
         self,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
@@ -1124,6 +1192,33 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         
         return result
+        
+    
+    def _DoAdvancedRatingPredicate( self, operator, value, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+        
+        cancelled_hook = None
+        
+        if job_status is not None:
+            
+            cancelled_hook = job_status.IsCancelled
+            
+        
+        if operator == '=':
+            
+            if value == 'was rated':
+                
+                rating_hash_ids = self._STI( self._ExecuteCancellable( 'SELECT DISTINCT hash_id FROM local_ratings;', '', cancelled_hook ) )
+                
+                query_hash_ids = intersection_update_qhi( query_hash_ids, rating_hash_ids )
+                
+            
+            elif value == 'never rated':
+                
+                query_hash_ids.difference_update( self._STI( self._Execute( 'SELECT DISTINCT hash_id FROM local_ratings;', '' ) ) )
+                
+            
+        
+        return query_hash_ids
         
     
     def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
@@ -1678,6 +1773,14 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         ( query_hash_ids, have_cross_referenced_file_locations ) = self._DoTimestampPreds( file_search_context, query_hash_ids, have_cross_referenced_file_locations, job_status = job_status )
         
         query_hash_ids = self._DoSimpleRatingPreds( file_search_context, query_hash_ids, job_status = job_status )
+        
+        for ( operator, value ) in system_predicates.GetAdvancedRatingsPredicates():
+            
+            if value == 'was rated': #positive processing
+                
+               query_hash_ids = self._DoAdvancedRatingPredicate( operator, value, query_hash_ids, job_status = job_status )
+                
+            
         
         #
         
@@ -2342,6 +2445,15 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
+        # ( query_exclude_ratings, query_args ) = self._BuildExcludeQueryRatings( file_search_context )
+        
+        # if query_exclude_ratings:
+            
+        #     query_hash_ids.difference_update( self._STI( self._Execute( query_exclude_ratings, query_args ) ) )
+            
+        
+        #original exclude way follows
+        #here is the original code for simpleratings
         for ( operator, value, service_key ) in system_predicates.GetRatingsPredicates():
             
             service_id = self.modules_services.GetServiceId( service_key )
@@ -2349,6 +2461,15 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             if value == 'not rated':
                 
                 query_hash_ids.difference_update( self._STI( self._Execute( 'SELECT hash_id FROM local_ratings WHERE service_id = ?;', ( service_id, ) ) ) )
+                
+        
+        # note the new code for advancedratings. if this code executes, any simpleratings excludes are redundant, because all will be excluded
+        
+        for ( operator, value ) in system_predicates.GetAdvancedRatingsPredicates():
+            
+            if value == 'never rated': #negative processing
+                
+               query_hash_ids = self._DoAdvancedRatingPredicate( operator, value, query_hash_ids, job_status = job_status )
                 
             
         

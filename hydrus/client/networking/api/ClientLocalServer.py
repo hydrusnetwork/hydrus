@@ -48,6 +48,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'verify_access_key', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedAccountVerify( self._service, self._client_requests_domain ) )
         root.putChild( b'get_services', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedGetServices( self._service, self._client_requests_domain ) )
         root.putChild( b'get_service', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedGetService( self._service, self._client_requests_domain ) )
+        root.putChild( b'get_service_rating_svg', ClientLocalServerResourcesAccess.HydrusResourceClientAPIRestrictedGetServiceRatingSVG( self._service, self._client_requests_domain ) )
         
         add_files = notFound()
         

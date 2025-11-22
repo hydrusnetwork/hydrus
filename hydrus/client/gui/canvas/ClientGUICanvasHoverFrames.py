@@ -55,7 +55,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         self._rating_state = None
         self._rating = None
         self._iconsize = ClientGUIRatings.GetIconSize( self._canvas_type, HC.LOCAL_RATING_INCDEC )
-        self._iconpad = QC.QSize( round( ClientGUIPainterShapes.PAD_PX ), round( ClientGUIPainterShapes.PAD_PX / 2 ) ) if icon_pad is None else icon_pad
+        self._iconpad = QC.QSize( int( ClientGUIPainterShapes.PAD_PX ), int( ClientGUIPainterShapes.PAD_PX / 2 ) ) if icon_pad is None else icon_pad
         
         self._hashes = set()
         
@@ -1271,11 +1271,21 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         for zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
             
+            def on_zoom_clicked( checked = None, zoom = zoom_type ):
+                
+                if new_options.GetBoolean( 'media_viewer_set_default_viewer_zoom_type_from_menu' ):
+                    
+                    new_options.SetInteger( 'media_viewer_default_zoom_type_override', zoom )
+                    
+            
             label = ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ zoom_type ]
             description = ClientGUICanvasMedia.media_viewer_zoom_type_description_lookup[ zoom_type ]
             simple_command = ClientGUICanvasMedia.media_viewer_zoom_type_to_cac_simple_commands[ zoom_type ]
             
-            ClientGUIMenus.AppendMenuCheckItem( menu, label, description, self._current_zoom_type == zoom_type, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( simple_command ) )
+            zoom_clickable = ClientGUIMenus.AppendMenuCheckItem( menu, label, description, self._current_zoom_type == zoom_type, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( simple_command ) )
+            
+            zoom_clickable.triggered.connect( on_zoom_clicked )
+            
             
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -1283,6 +1293,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendMenuCheckItem( menu, 'try to lock current size', 'Try to preserve the zoom ratio between visual media. Useful when trying to compare duplicates.', new_options.GetBoolean( 'media_viewer_lock_current_zoom' ), flip_background_boolean, 'media_viewer_lock_current_zoom' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current zoom type', 'Prevent the zoom level from changing when switching images.', new_options.GetBoolean( 'media_viewer_lock_current_zoom_type' ), flip_background_boolean, 'media_viewer_lock_current_zoom_type' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'lock current pan', 'Prevent the panning position from changing when switching images. Useful when trying to compare duplicates.', new_options.GetBoolean( 'media_viewer_lock_current_pan' ), flip_background_boolean, 'media_viewer_lock_current_pan' )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'set default zoom type from this menu', 'Set the default media zoom type, i.e. for all viewer windows, only if selected from this menu directly (not by zoom shortcut).', new_options.GetBoolean( 'media_viewer_set_default_viewer_zoom_type_from_menu' ), flip_background_boolean, 'media_viewer_set_default_viewer_zoom_type_from_menu' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'recenter media on window resize', 'Uncheck to lock the media in the same place and size while you resize the window. This can also be set in the normal \'media playback\' options panel.', new_options.GetBoolean( 'media_viewer_recenter_media_on_window_resize' ), flip_background_boolean, 'media_viewer_recenter_media_on_window_resize' )
         
         CGC.core().PopupMenu( self, menu )
         
