@@ -786,7 +786,13 @@ class QLocatorWidget(QW.QWidget):
                 j += 1
             k = self.reservedItemCounts[i]
             while k < resultItemCount:
-                self.resultLayout.takeAt(titleIndex + self.reservedItemCounts[i] + 1).widget().deleteLater()
+                layout_item = self.resultLayout.takeAt(titleIndex + self.reservedItemCounts[i] + 1)
+                
+                if layout_item is not None:
+                    
+                    layout_item.widget().deleteLater()
+                    
+                
                 k += 1
             self.resultItems[i] = self.resultItems[i][:self.reservedItemCounts[i]]
 
