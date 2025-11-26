@@ -1203,7 +1203,7 @@
   <span class="md-ellipsis">
     
   
-    Multiple Local File Services
+    Multiple Local File Domains
   
 
     
@@ -2563,6 +2563,17 @@
     <span class="md-ellipsis">
       
         GET /get_services
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_service_rating_svg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /get_service_rating_svg
       
     </span>
   </a>
@@ -4131,6 +4142,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#get_service_rating_svg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /get_service_rating_svg
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -5392,7 +5414,7 @@ Accept: application/json
 <span class="w">  </span><span class="nt">&quot;c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my tags&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example tag repo&quot;</span><span class="p">,</span>
@@ -5417,28 +5439,28 @@ Accept: application/json
 <span class="w">  </span><span class="nt">&quot;616c6c206c6f63616c2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus local file storage&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local file service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;616c6c206c6f63616c206d65646961&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;combined local file domains&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local media service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local media domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;616c6c206b6e6f776e2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all known files&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined file service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;616c6c206b6e6f776e2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all known tags&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined tag service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined tag domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating like service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local like/dislike rating service&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;circle&quot;</span>
+<span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;svg&quot;</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating numerical service&quot;</span><span class="p">,</span>
@@ -5464,7 +5486,7 @@ Accept: application/json
 <p>All services have these properties:</p>
 <ul>
 <li><code>name</code> - A mutable human-friendly name like 'my tags'. You can use this to present the service to the user--they should recognise it.</li>
-<li><code>type</code> - An integer enum saying whether the service is a local tag service or like/dislike rating service or whatever. This cannot change.</li>
+<li><code>type</code> - An integer enum saying whether the service is a local tag domain or like/dislike rating or whatever. This cannot change.</li>
 <li><code>service_key</code> - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases 64 characters. This cannot change, and it is how we will refer to different services.</li>
 </ul>
 <p>This <code>service_key</code> is important. A user can rename their services, so <code>name</code> is not an excellent identifier, and definitely not something you should save to any permanent config file.</p>
@@ -5745,7 +5767,7 @@ Accept: application/json
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my tags&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;6c6f63616c2074616773&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag domain&quot;</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div></dd>
@@ -5773,6 +5795,33 @@ Accept: application/json
 <p class="admonition-title">Note</p>
 <p>If you do the request and look at the actual response, you will see a lot more data under different keys--this is deprecated, and will be deleted in 2024. If you use the old structure, please move over!</p>
 </div>
+<h3 id="get_service_rating_svg"><strong>GET <code>/get_service_rating_svg</code></strong><a class="headerlink" href="#get_service_rating_svg" title="Permanent link">&para;</a></h3>
+<p><em>Ask the client for the SVG star shape for a ratings service. Use this when a rating service in <a href="#services_object">The Services Object</a> has a <code>star_shape</code> of <code>svg</code>.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<dl>
+<dt>Arguments:</dt>
+<dd>
+<ul>
+<li><code>service_name</code>: (selective, string, the name of the service)</li>
+<li><code>service_key</code>: (selective, hex string, the service key of the service)</li>
+</ul>
+</dd>
+<dt>Example requests:</dt>
+<dd><div class="highlight"><span class="filename">Example requests</span><pre><span></span><code>/get_service_rating_svg?service_name=example%20local%20rating%20like%20service
+/get_service_rating_svg?service_key=74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c
+</code></pre></div></dd>
+<dt>Response:</dt>
+<dd>Returns an image/svg+xml to be rendered by a browser.</dd>
+</dl>
+<p><div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="err">Content-Type: image/svg+xml</span>
+</code></pre></div>
+<div class="highlight"><pre><span></span><code>&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; xml:space=&quot;preserve&quot; width=&quot;512&quot; height=&quot;512&quot;&gt;&lt;path d=&quot;M364.842 44.305c-37.937.575-72.915 18.49-91.705 51.035-1.088-.989-10.822 25.476-20.965 26.664-9.396 1.1-11.295-14.946-18.06-23.934-36.163-48.039-101.573-66.684-160.33-32.76C15.022 99.236-.822 164.909 21.985 220.544c28.648 69.88 35.985 82.604 121.912 192 8.38 10.668 49.137 47.437 95.221 53.812 36.165 7.366 79.734-15.941 121.496-55.474 48.473-45.886 122.43-145.012 134.79-195.97 13.98-57.64-3.18-118.407-61.938-152.33-22.035-12.722-45.863-18.621-68.625-18.276zM174.088 206.77c8.45-.295 16.45 5.9 18.9 15.256l.325 1.235c2.8 10.692-2.744 21.343-12.428 23.879l-70.822 18.545c-9.685 2.535-19.738-4.03-22.538-14.723l-.322-1.234c-2.8-10.693 2.744-21.342 12.428-23.877l70.824-18.545a16.613 16.613 0 0 1 3.633-.536zm163.824 5.34c1.207.043 2.424.218 3.635.535l70.822 18.547c9.684 2.536 15.228 13.185 12.428 23.877l-.322 1.233c-2.8 10.692-12.85 17.26-22.534 14.724l-70.826-18.547c-9.684-2.535-15.227-13.186-12.428-23.878l.325-1.235c2.45-9.356 10.45-15.551 18.9-15.256zm-122.168 60.965c1.075.021 2.217.702 3.227 2.408 1.468 2.483 2.659 7.136 4.285 10.23 1.626 3.096 3.688 4.633 5.681 5.542 1.994.909 3.916 1.187 6.713.715 2.798-.472 6.47-1.696 9.407-3.27 2.937-1.573 5.14-3.494 7.185-5.33 2.046-1.836 3.936-3.585 5.877-3.463 1.94.123 3.932 2.114 6.223 4.055 2.29 1.94 4.877 3.83 7.78 5.21a26.974 26.974 0 0 0 9.458 2.518c3.34.263 6.803-.086 10.09-.855 3.287-.77 6.4-1.96 8.97-2.711 2.57-.752 4.598-1.066 6.434-.926 1.836.14 3.48.735 4.266 1.96.787 1.223.717 3.075 0 4.841s-2.082 3.444-4.652 5.07c-2.57 1.626-6.346 3.2-9.458 4.272-3.11 1.072-5.557 1.642-8.793 1.828-3.235.185-7.26-.013-10.828-.508-3.567-.495-6.677-1.287-9.228-2.242-2.552-.955-4.547-2.072-6.235-3.934-1.687-1.862-3.067-4.467-4.746-4.59-1.678-.122-3.653 2.238-6.232 4.118-2.579 1.88-5.763 3.279-8.945 4.363-3.182 1.084-6.363 1.852-9.563 1.555-3.2-.298-6.414-1.661-9.037-3.2-2.623-1.538-4.652-3.253-6.453-5.7-1.801-2.449-3.375-5.63-4.406-8.637-1.032-3.008-1.522-5.841-1.225-8.149.297-2.308 1.38-4.09 2.797-4.824.443-.23.92-.356 1.408-.346z&quot; style=&quot;display:inline;opacity:1;stroke-width:2.71885;stroke-linecap:round;stroke-linejoin:round;fill:#000&quot;/&gt;&lt;/svg&gt;
+</code></pre></div></p>
+<p>If the service does not exist or doesn't actually have an SVG for its icon, you will get the corresponding error.</p>
 <h2 id="importing_and_deleting_files">Importing and Deleting Files<a class="headerlink" href="#importing_and_deleting_files" title="Permanent link">&para;</a></h2>
 <h3 id="add_files_add_file"><strong>POST <code>/add_files/add_file</code></strong><a class="headerlink" href="#add_files_add_file" title="Permanent link">&para;</a></h3>
 <p><em>Tell the client to import a file.</em></p>
@@ -5855,7 +5904,7 @@ Accept: application/json
 <p class="admonition-title">Careful</p>
 <p><code>combined local file domains</code> and <code>hydrus local file storage</code> are different!</p>
 <ul>
-<li>Deleting from <code>combined local file domains</code> sends files straight to the trash, no matter how many local file services they are in.</li>
+<li>Deleting from <code>combined local file domains</code> sends files straight to the trash, no matter how many local file domains they are in.</li>
 <li>Deleting from <code>hydrus local file storage</code> removes files from any local domain, including trash, and triggers an immediate physical delete.</li>
 </ul>
 <p>Check <a href="advanced_multiple_local_file_services.html#meta_file_domains">here</a> for more info.</p>
@@ -5888,7 +5937,7 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>200 and no content.</dd>
 </dl>
-<p>This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'combined local file domains', undeletes to all the local file services for which there are deletion records.</p>
+<p>This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'combined local file domains', undeletes to all the local file domains for which there are deletion records.</p>
 <p>This operation will only occur on files that are currently in your file store (i.e. in 'hydrus local file storage', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!</p>
 <h3 id="add_files_clear_file_deletion_record"><strong>POST <code>/add_files/clear_file_deletion_record</code></strong><a class="headerlink" href="#add_files_clear_file_deletion_record" title="Permanent link">&para;</a></h3>
 <p><em>Tell the client to forget that it once deleted files.</em></p>
@@ -5945,7 +5994,7 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>200 and no content.</dd>
 </dl>
-<p>This is only appropriate if the user has multiple local file services. It does the same as the media <em>files-&gt;add to-&gt;domain</em> menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.</p>
+<p>This is only appropriate if the user has multiple local file domains. It does the same as the media <em>files-&gt;add to-&gt;domain</em> menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.</p>
 <p>If you need to do a 'move' migrate, then please follow this command with a delete from wherever you need to remove from.</p>
 <p>If you try to add non-local files (specifically, files that are not currently in 'combined local file domains'), or migrate to a file domain that is not a local file domain, then this will 400!</p>
 <h3 id="add_files_archive_files"><strong>POST <code>/add_files/archive_files</code></strong><a class="headerlink" href="#add_files_archive_files" title="Permanent link">&para;</a></h3>
@@ -6470,8 +6519,8 @@ Accept: application/json
 <p>Also, you can use either '...to_tags', which is simple and add-only, or '...to_actions_to_tags', which is more complicated and allows you to remove/petition or rescind pending content.</p>
 <p>The permitted 'actions' are:</p>
 <ul>
-<li>0 - Add to a local tag service.</li>
-<li>1 - Delete from a local tag service.</li>
+<li>0 - Add to a local tag domain.</li>
+<li>1 - Delete from a local tag domain.</li>
 <li>2 - Pend to a tag repository.</li>
 <li>3 - Rescind a pend from a tag repository.</li>
 <li>4 - Petition from a tag repository. (This is special)</li>
@@ -9160,7 +9209,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 12, 2025 21:10:41 UTC">November 12, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 26, 2025 21:51:35 UTC">November 26, 2025</span>
   </span>
 
     

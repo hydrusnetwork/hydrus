@@ -27,7 +27,7 @@
     
     
       
-        <title>Multiple Local File Services - hydrus network</title>
+        <title>Multiple Local File Domains - hydrus network</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#multiple_local_file_services" class="md-skip">
+        <a href="#multiple_local_file_domains" class="md-skip">
           Skip to content
         </a>
       
@@ -107,7 +107,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Multiple Local File Services
+              Multiple Local File Domains
             
           </span>
         </div>
@@ -1215,7 +1215,7 @@
   <span class="md-ellipsis">
     
   
-    Multiple Local File Services
+    Multiple Local File Domains
   
 
     
@@ -1233,7 +1233,7 @@
   <span class="md-ellipsis">
     
   
-    Multiple Local File Services
+    Multiple Local File Domains
   
 
     
@@ -2805,7 +2805,7 @@
   
 
 
-<h1 id="multiple_local_file_services">multiple local file services<a class="headerlink" href="#multiple_local_file_services" title="Permanent link">&para;</a></h1>
+<h1 id="multiple_local_file_domains">multiple local file domains<a class="headerlink" href="#multiple_local_file_domains" title="Permanent link">&para;</a></h1>
 <p>The client lets you store your files in different overlapping partitions. This can help management workflows and privacy.</p>
 <h2 id="the_problem">what's the problem?<a class="headerlink" href="#the_problem" title="Permanent link">&para;</a></h2>
 <p>Most of us end up storing all sorts of things in our clients, often from different parts of our lives. With everything in the same 'my files' domain, some personal photos might be sitting right beside nsfw content, a bunch of wallpapers, and thousands of comic pages. Different processing jobs, like 'go through those old vidya screenshots I imported' and 'filter my subscription files' and 'load up my favourite pictures of babes' all operate on the same gigantic list of files and must be defined through careful queries of tags, ratings, and other file metadata to separate what you want from what you don't.</p>
@@ -2819,7 +2819,7 @@
 <p><img alt="" src="images/mlfs_venn_simple.png" /></p>
 <p>Changing the tag domain to 'PTR' or 'all known tags' would make for a different blue circle with a different intersection of search results ('PTR' probably has a lot more 'pretty dress', although maybe not for your files, and 'all known tags', being the union of all the blue circles, will make the same or larger intersection).</p>
 <p>This idea of dynamically intersecting domains is very important to hydrus. Each service stands on its own, and the 'my tags' domain is not linked to 'my files'. It does not care where its tagged files are. When you delete a file, no tags are changed. But when you delete a file, the 'file domain' circle will shrink, and that may change the search results in the intersection.</p>
-<p>With <em>multiple local file services</em>, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.</p>
+<p>With <em>multiple local file domains</em>, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.</p>
 <p>You can add and remove them under <em>services-&gt;manage services</em>:</p>
 <p><img alt="" src="images/mlfs_manage_services.png" /></p>
 <h2 id="sfw">what does this actually mean?<a class="headerlink" href="#sfw" title="Permanent link">&para;</a></h2>
@@ -2832,7 +2832,7 @@
 <p><img alt="" src="images/mlfs_menu_info.png" /></p>
 <p>Also note that these files now have two 'delete' commands. You will be presented with more complicated delete and undelete dialogs for files in multiple services. Files only end up in the trash when they are no longer in any local file domain.</p>
 <p>You can be happy that any search in this new domain--for tags or files--is not going to provide any unexpected surprises. You can also do 'system:everything', 'system:limit=64' for a random sample, or any other simple search predicate for browsing, and the search should run fast and safe.</p>
-<p>If you want to try multiple local file services out, I recommend this split to start off. If you don't like it, you can delete 'sfw' later with no harm done.</p>
+<p>If you want to try multiple local file domains out, I recommend this split to start off. If you don't like it, you can delete 'sfw' later with no harm done.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>While 'add to y' copies the files, 'move from x to y' deletes the files from the original location. They get a delete timestamp ("deleted from my files 5 minutes ago"), and they can be undeleted or 'added' back, and they will get their old import timestamp back. </p>
@@ -2844,7 +2844,7 @@
 <p>In the future, I expect to have more ways to move files around, particularly integration into the archive/delete filter, and ideally a 'file migration' system that will allow larger operations such as 'add all the files in search x to place y'.</p>
 <p>I also expect to write a system to easily merge clients together. Several users already run several different clients to get their 'my files' separation (e.g. a sfw client and a nsfw client), and now we have this tech supported in one client, it makes a lot of efficiency sense to merge them together. </p>
 <p>Note that when you select a file domain, you can select 'multiple locations'. This provides the union of whichever domains you like. Tag counts will be correct but imprecise, often something like 'blonde hair (2-5)', meaning 'between two and five files', due to the complexity of quickly counting within these complicated domains.</p>
-<p>As soon as you add another local file service, you will also see a 'combined local file domains' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. </p>
+<p>As soon as you add another local file domain, you will also see a 'combined local file domains' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. </p>
 <p>This whole system is new. I will keep working on it, including better 'at a glance' indications of which files are where (current thoughts are custom thumbnail border colours and little indicator icons). Let me know how you get on with it!</p>
 <h2 id="meta_file_domains">advanced: a word on the meta file domains<a class="headerlink" href="#meta_file_domains" title="Permanent link">&para;</a></h2>
 <p>If you are in <em>help-&gt;advanced mode</em>, your file search file domain selectors will see 'all known files'. This domain is similar to 'all known tags', but it is not useful for normal browsing. It represents not filtering your tag services by any file list, fetching all tagged file results regardless of what your client knows about them.</p>
@@ -2906,7 +2906,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 12, 2025 21:10:41 UTC">November 12, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 26, 2025 21:51:35 UTC">November 26, 2025</span>
   </span>
 
     
