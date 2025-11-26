@@ -213,9 +213,11 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer, **kwargs ):
         
+        tag_display_type = CG.client_controller.new_options.GetInteger( 'tag_list_tag_display_type_sidebar' )
+        
         self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags', CC.TAG_PRESENTATION_SEARCH_PAGE )
         
-        self._current_selection_tags_list = ClientGUISidebarCore.ListBoxTagsMediaSidebar( self._current_selection_tags_box, self._page_manager, self._page_key, tag_autocomplete = self._tag_autocomplete )
+        self._current_selection_tags_list = ClientGUISidebarCore.ListBoxTagsMediaSidebar( self._current_selection_tags_box, self._page_manager, self._page_key, tag_display_type = tag_display_type, tag_autocomplete = self._tag_autocomplete )
         
         self._current_selection_tags_box.SetTagsBox( self._current_selection_tags_list )
         

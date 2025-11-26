@@ -114,7 +114,7 @@ But what happens if you want to search for multiple creators? You might be tempt
 
 Let's assume you want to search bunch of 'creator' tags on the PTR. What you will do is:
 
-*   Create a new 'local tag service' in _manage services_ called 'my parent favourites'. This will hold our subjective parents without uploading anything to the PTR.
+*   Create a new 'local tag domain' in _manage services_ called 'my parent favourites'. This will hold our subjective parents without uploading anything to the PTR.
 *   Go to _tags->manage where tag siblings and parents apply_ and add 'my parent favourites' as the top priority for parents, leaving 'PTR' as second priority.
 *   Under _tags->manage tag parents_, on your 'my parent favourites' service, add:
     

@@ -17,6 +17,7 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientServices
 from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -24,6 +25,7 @@ from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.metadata import ClientGUITime
+from hydrus.client.gui.services import ClientGUIServiceSpecifier
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
@@ -2196,67 +2198,114 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
     
 
-class PredicateSystemRatingAny( PanelPredicateSystemSingle ):
+class PredicateSystemRatingAdvanced( PanelPredicateSystemSingle ):
     
     def __init__( self, parent: QW.QWidget, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
         
         super().__init__( parent )
         
-        name = 'any service'
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        name_st = ClientGUICommon.BetterStaticText( self, name )
-        
-        name_st.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
+        ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = predicate.GetValue()
         
         choice_tuples = [
-            ( 'has rating or count', 'was rated' ),
-            ( 'no rating and no count', 'never rated' ),
+            ( 'all', HC.LOGICAL_OPERATOR_ALL ),
+            ( 'any', HC.LOGICAL_OPERATOR_ANY ),
+            ( 'only', HC.LOGICAL_OPERATOR_ONLY ),
         ]
         
-        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        self._logical_choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        tt = '"only" here means that all the ratings set on the left will be (rated/not rated) and all the remainder on the right will be (not rated/rated).\n\nUse it to do "find the files that are rated this way and no other way" without having to stack up two finicky competing "all x has/no rating" predicates.'
+        self._logical_choice.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._choice.SetValue( '' )
+        self._service_specifier_primary = ClientGUIServiceSpecifier.ServiceSpecifierButton( self, service_specifier_primary, HC.LOCAL_RATINGS_SERVICES )
+        
+        self._secondary_panel = QW.QWidget( self )
+        
+        of_label = ClientGUICommon.BetterStaticText( self._secondary_panel, label = ' amongst ' )
+        
+        self._service_specifier_secondary = ClientGUIServiceSpecifier.ServiceSpecifierButton( self, service_specifier_secondary, HC.LOCAL_RATINGS_SERVICES )
+        
+        choice_tuples = [
+            ( 'rated', True ),
+            ( 'not rated', False ),
+        ]
+        
+        self._rated_choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
+        
+        self._logical_choice.SetValue( logical_operator )
+        self._rated_choice.SetValue( rated )
         
         #
         
+        secondary_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( secondary_hbox, of_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( secondary_hbox, self._service_specifier_secondary, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._secondary_panel.setLayout( secondary_hbox )
+        
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, name_st, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._logical_choice, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._service_specifier_primary, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._secondary_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._rated_choice, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
         
-        self._choice.radioBoxChanged.connect( self._UpdateControls )
+        self._logical_choice.radioBoxChanged.connect( self._UpdateControls )
+        
+        self._service_specifier_primary.valueChanged.connect( self._MakeSureSecondaryIsLargeEnough )
+        self._service_specifier_secondary.valueChanged.connect( self._MakeSureSecondaryIsLargeEnough )
         
         self._UpdateControls()
         
     
+    def _MakeSureSecondaryIsLargeEnough( self ):
+        
+        service_specifier_primary = self._service_specifier_primary.GetValue()
+        service_specifier_secondary = self._service_specifier_secondary.GetValue()
+        
+        primary_keys = service_specifier_primary.GetSpecificKeys()
+        secondary_keys = service_specifier_secondary.GetSpecificKeys()
+        
+        if not primary_keys.issubset( secondary_keys ):
+            
+            service_specifier_secondary = ClientServices.ServiceSpecifier( service_keys = secondary_keys.union( primary_keys ) )
+            
+            self._service_specifier_secondary.SetValue( service_specifier_secondary )
+            
+        
+    
     def _UpdateControls( self ):
         
-        pass
+        self._secondary_panel.setVisible( self._logical_choice.GetValue() == HC.LOGICAL_OPERATOR_ONLY )
         
     
     def GetDefaultPredicate( self ):
         
-        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( '=', 'rated' ) )
+        logical_operator = HC.LOGICAL_OPERATOR_ANY
+        service_specifier_primary = ClientServices.ServiceSpecifier( service_types = set( HC.LOCAL_RATINGS_SERVICES ) )
+        service_specifier_secondary = ClientServices.ServiceSpecifier( service_types = set( HC.LOCAL_RATINGS_SERVICES ) )
+        rated = True
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) )
         
     
     def GetPredicates( self ):
         
-        choice = self._choice.GetValue()
+        logical_operator = self._logical_choice.GetValue()
+        service_specifier_primary = self._service_specifier_primary.GetValue()
+        service_specifier_secondary = self._service_specifier_secondary.GetValue()
+        rated = self._rated_choice.GetValue()
         
-        operator = '='
-        
-        if choice == 'was rated':
+        if logical_operator == HC.LOGICAL_OPERATOR_ONLY and service_specifier_primary == service_specifier_secondary:
             
-            rating = 'was rated'
-            
-        elif choice == 'never rated':
-            
-            rating = 'never rated'
+            logical_operator = HC.LOGICAL_OPERATOR_ALL
             
         
-        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( operator, rating ) )
+        predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) )
         
         return [ predicate ]
         

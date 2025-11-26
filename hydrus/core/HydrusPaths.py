@@ -6,7 +6,6 @@ import send2trash
 import shlex
 import shutil
 import stat
-import subprocess
 import threading
 import time
 import traceback
@@ -15,10 +14,10 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusSubprocess
+from hydrus.core.processes import HydrusThreading
 
 def stat_is_file( path_stat: os.stat_result ):
     
@@ -823,18 +822,14 @@ def LaunchDirectory( path ):
                 
                 cmd = [ 'open', path ]
                 
-            
-            # setsid call un-childs this new process
-            
-            sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
-            
-            preexec_fn = getattr( os, 'setsid', None )
+            else:
+                
+                raise NotImplementedError( 'Unknown platform!' )
+                
             
             HydrusData.CheckProgramIsNotShuttingDown()
             
-            process = subprocess.Popen( cmd, preexec_fn = preexec_fn, **sbp_kwargs )
-            
-            HydrusThreading.SubprocessCommunicate( process )
+            HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True )
             
         
     
@@ -844,6 +839,7 @@ def LaunchDirectory( path ):
     
     thread.start()
     
+
 def LaunchFile( path, launch_path = None ):
     
     def do_it( launch_path ):
@@ -861,19 +857,13 @@ def LaunchFile( path, launch_path = None ):
             
             complete_launch_path = launch_path.replace( '%path%', path )
             
-            hide_terminal = False
-            
             if HC.PLATFORM_WINDOWS:
                 
                 cmd = complete_launch_path
                 
-                preexec_fn = None
-                
             else:
                 
                 cmd = shlex.split( complete_launch_path )
-                
-                preexec_fn = getattr( os, 'setsid', None )
                 
             
             if HG.subprocess_report_mode:
@@ -885,31 +875,9 @@ def LaunchFile( path, launch_path = None ):
             
             try:
                 
-                sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( hide_terminal = hide_terminal, text = True )
-                
                 HydrusData.CheckProgramIsNotShuttingDown()
                 
-                process = subprocess.Popen( cmd, preexec_fn = preexec_fn, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
-                
-                ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
-                
-                if HG.subprocess_report_mode:
-                    
-                    if stdout is None and stderr is None:
-                        
-                        HydrusData.ShowText( 'No stdout or stderr came back.' )
-                        
-                    
-                    if stdout is not None:
-                        
-                        HydrusData.ShowText( 'stdout: ' + repr( stdout ) )
-                        
-                    
-                    if stderr is not None:
-                        
-                        HydrusData.ShowText( 'stderr: ' + repr( stderr ) )
-                        
-                    
+                HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True, hide_terminal = False )
                 
             except Exception as e:
                 
@@ -1468,14 +1436,14 @@ def OpenFileLocation( path ):
             
             raise NotImplementedError( 'Haiku cannot open file locations!' )
             
-        
-        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( hide_terminal = False )
+        else:
+            
+            raise NotImplementedError( 'Unknown platform!' )
+            
         
         HydrusData.CheckProgramIsNotShuttingDown()
         
-        process = subprocess.Popen( cmd, **sbp_kwargs )
-        
-        HydrusThreading.SubprocessCommunicate( process )
+        HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True )
         
     
     thread = threading.Thread( target = do_it )

@@ -392,6 +392,10 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemFileViewingStatsViewtime( self, predicate ) )
                     
                 
+            elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PredicateSystemRatingAdvanced( self, predicate ) )
+                
             elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:
                 
                 rating_preds.append( predicate )
@@ -787,7 +791,10 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( rating_services ) > 0:
                 
-                editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingAny, predicate ) )
+                if len( rating_services ) > 1:
+                    
+                    editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PredicateSystemRatingAdvanced, predicate ) )
+                    
                 
                 for service_type_in_order in [ HC.LOCAL_RATING_LIKE, HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ]:
                     

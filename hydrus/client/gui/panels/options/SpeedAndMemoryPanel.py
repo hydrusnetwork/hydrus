@@ -61,7 +61,7 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._image_cache_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 20, max = 50 )
+        self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 10, max = 50 )
         
         tt = 'This option sets how much of the cache can go towards one image. If an image\'s total size (usually width x height x 3) is too large compared to the cache, it should not be cached or it will just flush everything else out in one stroke.'
         
@@ -73,25 +73,19 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._image_cache_storage_limit_percentage_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 5, max = 25 )
+        self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 10, max = 50 )
         
-        tt = 'If you are browsing many big files, this option stops the prefetcher from overloading your cache by loading up seven or more gigantic images that each competitively flush each other out and need to be re-rendered over and over.'
+        tt = 'If you are browsing many big files and have large previous/next values to prefetch, this option caps the amount that will actually be prefetched, stopping the prefetcher from overloading and churning your cache by loading up seven or more gigantic images that each competitively flush each other out and need to be re-rendered over and over. For each media viewer, the prefetcher will only schedule this estimated amount of memory to be pre-rendered, and no further.'
         
         self._image_cache_prefetch_limit_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
         
-        tt = 'This represents the typical size we are talking about at this percentage level. Could be wider or taller, but overall should have the same number of pixels. Anything smaller will be pre-fetched, anything larger will be loaded on demand. If you want images bigger than this to load fast as you browse, increase the total image cache size and/or the max % value permitted.'
+        tt = 'This represents the overall prefetch we can accomodate at this percentage level. Files could be wider or taller, but any total prefetch (e.g. 3 back, 5 forward) will be capped to this amount (say 1 back, 2 forward). A particularly large file will block any prefetch, so check the max size too.'
         
         self._image_cache_prefetch_limit_percentage_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         prefetch_panel = ClientGUICommon.StaticBox( self, 'image prefetch', can_expand = True, start_expanded = False )
-        
-        self._media_viewer_prefetch_delay_base_ms = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 2000 )
-        
-        tt = 'How long to wait, after the current image is rendered, to start rendering neighbours. Does not matter so much any more, but if you have CPU lag, you can try boosting it a bit.'
-        
-        self._media_viewer_prefetch_delay_base_ms.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 50 )
         self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 50 )
@@ -167,7 +161,6 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._video_buffer_size.SetValue( self._new_options.GetInteger( 'video_buffer_size' ) )
         
-        self._media_viewer_prefetch_delay_base_ms.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
         self._media_viewer_prefetch_num_previous.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_previous' ) )
         self._media_viewer_prefetch_num_next.setValue( self._new_options.GetInteger( 'media_viewer_prefetch_num_next' ) )
         self._duplicate_filter_prefetch_num_pairs.setValue( self._new_options.GetInteger( 'duplicate_filter_prefetch_num_pairs' ) )
@@ -253,7 +246,7 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Memory reserved for image cache:', fullscreens_sizer ) )
         rows.append( ( 'Image cache timeout:', self._image_cache_timeout ) )
         rows.append( ( 'Maximum image size (in % of cache) that can be cached:', image_cache_storage_sizer ) )
-        rows.append( ( 'Maximum image size (in % of cache) that will be prefetched:', image_cache_prefetch_sizer ) )
+        rows.append( ( 'Maximum % of cache that will be prefetched per media viewer:', image_cache_prefetch_sizer ) )
         
         gridbox = ClientGUICommon.WrapInGrid( image_cache_panel, rows )
         
@@ -265,11 +258,10 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Base ms delay for Media Viewer neighbour render prefetch:', self._media_viewer_prefetch_delay_base_ms ) )
         rows.append( ( 'Num previous to prefetch in Media Viewer:', self._media_viewer_prefetch_num_previous ) )
         rows.append( ( 'Num next to prefetch in Media Viewer:', self._media_viewer_prefetch_num_next ) )
         rows.append( ( 'Num pairs to prefetch in Duplicate Filter:', self._duplicate_filter_prefetch_num_pairs ) )
-        rows.append( ( 'Prefetch numbers exceed typical cache size?:', self._prefetch_label_warning ) )
+        rows.append( ( 'Prefetch numbers exceed cache prefetch limit?', self._prefetch_label_warning ) )
         
         gridbox = ClientGUICommon.WrapInGrid( prefetch_panel, rows )
         
@@ -390,7 +382,7 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
         
-        self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), ClientData.ResolutionToPrettyString( resolution ) ) )
+        self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or a ~{} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), ClientData.ResolutionToPrettyString( resolution ) ) )
         
         num_pixels = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 ) / 3
         
@@ -398,23 +390,44 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         unit_length = unit_square ** 0.5
         
-        resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
+        big_resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
         
-        self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), ClientData.ResolutionToPrettyString( resolution ) ) )
+        unit_square = ( num_pixels / 4 ) / ( 16 * 9 )
+        
+        unit_length = unit_square ** 0.5
+        
+        small_resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
+        
+        self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels: 5x ~{}, max ~{}'.format( HydrusNumbers.ToHumanInt( num_pixels ), ClientData.ResolutionToPrettyString( small_resolution ), ClientData.ResolutionToPrettyString( big_resolution ) ) )
         
         #
+        
+        image_1080p = 1080 * 1920 * 3
+        image_4k = 2160 * 3840 * 3
+        
+        available_prefetch_bytes = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 )
         
         num_prefetch_media_viewer = 1 + self._media_viewer_prefetch_num_previous.value() + self._media_viewer_prefetch_num_next.value()
         num_prefetch_duplicate_filter = 2 + ( self._duplicate_filter_prefetch_num_pairs.value() * 2 )
         
-        if num_prefetch_media_viewer > image_cache_estimate // 2:
+        if num_prefetch_media_viewer * image_1080p > available_prefetch_bytes:
             
-            label = 'Yes! Reduce Media Viewer prefetch or increase your image cache!'
+            label = 'Yes! You could not prefetch this number of 1080p images in the media viewer!'
             object_name = 'HydrusWarning'
             
-        elif num_prefetch_duplicate_filter > image_cache_estimate // 2:
+        elif num_prefetch_media_viewer * image_4k > available_prefetch_bytes:
             
-            label = 'Yes! Reduce Duplicate Filter prefetch or increase your image cache!'
+            label = 'Somewhat--you could not prefetch this number of 4k images in the media viewer.'
+            object_name = 'HydrusWarning'
+            
+        elif num_prefetch_duplicate_filter * image_1080p > available_prefetch_bytes:
+            
+            label = 'Yes! You could not prefetch this number of 1080p images in the duplicate filter.'
+            object_name = 'HydrusWarning'
+            
+        elif num_prefetch_duplicate_filter * image_4k > available_prefetch_bytes:
+            
+            label = 'Somewhat--you could not prefetch this number of 4k images in the duplicate filter.'
             object_name = 'HydrusWarning'
             
         else:
@@ -482,7 +495,6 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetInteger( 'ideal_tile_dimension', self._ideal_tile_dimension.value() )
         
-        self._new_options.SetInteger( 'media_viewer_prefetch_delay_base_ms', self._media_viewer_prefetch_delay_base_ms.value() )
         self._new_options.SetInteger( 'media_viewer_prefetch_num_previous', self._media_viewer_prefetch_num_previous.value() )
         self._new_options.SetInteger( 'media_viewer_prefetch_num_next', self._media_viewer_prefetch_num_next.value() )
         self._new_options.SetInteger( 'duplicate_filter_prefetch_num_pairs', self._duplicate_filter_prefetch_num_pairs.value() )

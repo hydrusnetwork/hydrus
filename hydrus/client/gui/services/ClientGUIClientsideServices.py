@@ -343,6 +343,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         return True
         
     
+
 class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, service, auto_account_creation_service_key = None ):
@@ -4014,7 +4015,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
     
     def _UndeleteAll( self ):
         
-        message = 'This will instruct your database to restore all files currently in the trash to all the local file services they have been in.'
+        message = 'This will instruct your database to restore all files currently in the trash to all the local file domains they have been in.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
         

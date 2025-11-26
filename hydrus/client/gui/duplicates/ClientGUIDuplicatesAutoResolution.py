@@ -1368,9 +1368,12 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_DUPLICATES_AUTO_RESOLUTION_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
-        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 12, model, use_simple_delete = True, activation_callback = self._ReviewActions )
+        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 6, model, use_simple_delete = True, activation_callback = self._ReviewActions )
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
+        
+        self._duplicates_auto_resolution_rules_st = ClientGUICommon.BetterStaticText( self, label = f'initialising{HC.UNICODE_ELLIPSIS}' )
+        self._have_loaded_rules_once = False
         
         self._duplicates_auto_resolution_rules_panel.AddIconButton( CC.global_icons().pause, self._PausePlayRules, tooltip = 'pause/play', enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
@@ -1394,6 +1397,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
         
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
@@ -1662,6 +1666,11 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         def loading_callable():
             
+            if not self._have_loaded_rules_once:
+                
+                self._duplicates_auto_resolution_rules_panel.setEnabled( False )
+                
+            
             pass
             
         
@@ -1674,7 +1683,19 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         def publish_callable( rules ):
             
+            if not self._have_loaded_rules_once:
+                
+                self._duplicates_auto_resolution_rules_panel.setEnabled( True )
+                self._duplicates_auto_resolution_rules_st.setVisible( False )
+                
+            
             self._duplicates_auto_resolution_rules.SetData( rules )
+            
+            ideal_rows = len( rules )
+            ideal_rows = max( 4, ideal_rows )
+            ideal_rows = min( ideal_rows, 24 )
+            
+            self._duplicates_auto_resolution_rules.ForceHeight( ideal_rows )
             
         
         return ClientGUIAsync.AsyncQtUpdater( 'review auto-resolution rules fetch', self, loading_callable, work_callable, publish_callable )

@@ -55,6 +55,11 @@ class EdgeMap( ClientCachesBase.CacheableObject ):
         return 4 * EDGE_MAP_NORMALISED_RESOLUTION[0] * EDGE_MAP_NORMALISED_RESOLUTION[1] * 3
         
     
+    def IsFinishedLoading( self ):
+        
+        return True
+        
+    
 
 class LabHistograms( ClientCachesBase.CacheableObject ):
     
@@ -69,6 +74,11 @@ class LabHistograms( ClientCachesBase.CacheableObject ):
         
         # float32
         return 4 * LAB_HISTOGRAM_NUM_BINS * 3
+        
+    
+    def IsFinishedLoading( self ):
+        
+        return True
         
     
     def IsInteresting( self ):
@@ -97,6 +107,11 @@ class VisualData( ClientCachesBase.CacheableObject ):
         return self.alpha_hist is not None
         
     
+    def IsFinishedLoading( self ):
+        
+        return True
+        
+    
     def IsInteresting( self ):
         
         return self.lab_histograms.IsInteresting()
@@ -121,6 +136,11 @@ class VisualDataTiled( ClientCachesBase.CacheableObject ):
     def GetEstimatedMemoryFootprint( self ) -> int:
         
         return sum( ( histogram.GetEstimatedMemoryFootprint() for histogram in self.histograms ) ) + self.edge_map.GetEstimatedMemoryFootprint()
+        
+    
+    def IsFinishedLoading( self ):
+        
+        return True
         
     
     def ResolutionIsTooLow( self ):

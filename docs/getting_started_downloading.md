@@ -141,7 +141,7 @@ A few of the options have more information if you hover over them.
 :    See the [files section on filtering](getting_started_files.md#inbox_and_archive) for the first option, the other two have information if you hover over them.
 
 ### Tag Parsing
-By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
+By default, hydrus now starts with a local tag domain called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
 
 ![](images/tag_import_options_default.png)
 

@@ -7,8 +7,8 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusText
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.metadata import ClientContentUpdates

@@ -7,6 +7,89 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 649](https://github.com/hydrusnetwork/hydrus/releases/tag/v649)
+
+### big user submission
+
+* a user has sent in a large set of command palette, page navigation, and rating updates--
+* when you edit a rating service in `services->manage services`, there is now a live and interactable rating widget that updates to show your chosen shapes and colours!
+* when you edit the rating sizes in `options->ratings`, there are similar live rating widgets that will dynamically resize to the widths and heights you choose!
+* under `options->command palette`, you can now add your 'page history' to the initial results
+* under `options->command palette`, you can now add your 'favourite searches' to the initial results! I love how this works
+* you can also limit the number of search results, which appears to reduce command palette lag significantly on clients with many hundreds of pages
+* and you can also re-order the results by their type
+* under `pages->history`, you can now clear the history
+* `options->gui pages` now allows you to limit the number of pages kept in the history
+* the media viewer's zoom options menu has even more granular control over remembering zoom options with a new setting to allow updating the default settings by clicking the menu (rather than it being transient to that media viewer instance)
+* there's also a "do not recenter media on window resize" option (allowing you to now turn this behaviour off), and in `options->media playback` too
+* 'page of pages' now automatically put a ` ↓` suffix at the end of their name label. you can change the suffix or turn it off under `options->pages`,
+
+### user client api
+
+* the user also added `/get_service_rating_svg` to the Client API, which lets you pull the svg used for a rating. there is help for this
+* I wrote a unit test for this
+* Client API version is now 83
+
+### misc
+
+* every ffmpeg call we make now flags ffmpeg to fail on the first error. we encountered a not-fun issue a week ago when certain JpegXLs were putting ffmpeg into an infinite error loop on a 'is animated' pre-import test. this loop is now broken instantly, but if a similar issue comes up, all external process calls also now cancel out if they take longer than (usually) fifteen seconds. I am not sure how prevalent errors are in normal videos, so let me know if many new videos suddenly get no thumbnails or something. this might be something we eventually want to tune (issue #1912)
+* the animated jxl test is re-activated
+* I renamed the confusing 'all my files' to 'combined local file domains' for new users a couple weeks ago. nothing exploded, so all existing users are being renamed today
+* across the program, the places where you locally store files and tags are now called 'local file/tag _domain_'. there was a mix of 'service' and 'domain' before, and I am trying to harmonise
+* fixed some traceback errors related to middle-clicking stub system predicates (like 'system:rating' in the initial file auto-complete dropdown), where it wasn't checking for the stub status and couldn't navigate what to do next
+* fixed importing pdfs (or any other file format) if the thumbnail creation fails silently with a null result
+* the archive/delete and duplicate filters, which have a 'want to commit all this?' interstitial dialog on close, no longer tell the parent media window to focus the current media before the interstitial is finished. previously, if you started this process while looking at a video, you'd suddenly get that video playing in the background while thinking about hitting 'commit', and if you decided to cancel out and go back to filtering, the underlying thumbnail page would still have that video highlighted. since the archive/delete job often clears out processed thumbnails right after, this would IRL be a small blip of noise and CPU as the video was loaded and then unloaded. I'm pretty sure this was the cause of the odd mpv lock-up we had a few weeks ago when testing out the new mpv async interface, because of a quick mpv swish before I had code to handle early unload. anyway, this annoyance should be fixed now--the 'play this mediia' signal is sent only on a confirmed media viewer close signal. I brushed up the specific logic about which media to send from an archive/delete, too--depending on which files are set to hide after processing, it'll try and send a different appropriave focus media, often none at all
+* `options->tag presentation` has a pair of advanced new options that set the default 'tag display type' of the normal page sidebar taglist and the media viewer taglist. I also fixed a rendering bug with this experimental system; changing the tag display type of a taglist now corrects the 'render for user' state for things like whether to display namespaces or custom namespace separators no matter what the starting state of the list was
+
+### clever rating search
+
+* in system:rating, if you have more than one rating service, there is now a powerful compound 'advanced rating' predicate. it lets you do 'system:all of x are rated' and 'system:any of x are rated', where x is a new widget that lets you select all rating services, just like/dislike, numerical, and/or inc/dec, or individual services in a checkbox list. there is also 'system:only x (amongst y) are rated', where y is a different set of rating services where all of x need to be rated but none of the remainder of y can be rated, with the classical example being x being one rating service and y being all of them, for finding files that are only rated on that service
+* all these support 'not rated' too, so you can now find files that have no rating anywhere, somewhere, or within a specific selection (e.g. system:'only favourites not rated out of all my like/dislike ratings')
+* I assembled this system through sheer force of will and there may be bugs. let me know how it goes
+* if you enter 'only x amongst x rated', i.e. with an uninteresting y, it swaps in 'all x rated'. there are probably some more optimisations if you enter certain one-service edge cases
+* I may be convinced to add an 'only-or' variant, but only if there is a real scenario for it and we can come up with clean nomenclature
+
+### duplicates
+
+* the auto-resolution rules review list (in a normal duplicates page) now grows and shrinks depending on the number of rules
+* on the first load of a page's auto-resolution rules, the list panel now starts disabled and there's a little 'initialising...' text
+
+### subprocess improvements
+
+* all subprocess calls (when hydrus opens another program, like ffmpeg, or asks your system to open a file externally) now happen in one place with cleaner code and better error handling
+* subprocess calls that launch a potentially long-lived program that we don't care much to talk to again, like an external music player run from 'open externally', now hand the process handles to a maintenance list to be polled every few minutes in normal memory maintenance. should be cleaner reaping and fewer zombies in non-Windows environments
+* all subprocess calls that we do care for an answer from now have a timeout. if they exceed that time, they are terminated, killed, reaped, and stdout and stderr reported nicely
+* all ffmpeg file metadata calls now have special handling for timeout problems, generally raising the 'damaged or unusual file' exception, which lets thumbnail gen and so on know to use a default thumb. timeout is usually 15 seconds
+* wrote a separate wrapper for subprocess calls that stream data over a longer time (video, PCM rendering). these use a context manager to ensure the process is terminated and reaped cleanly and also support timeout errors on each individual pipe chunk read
+* the calls that create streaming ffmpeg renderers for some more unusual thumbnail gen jobs now properly close the underlying process cleanly
+* all subprocess debug reporting mode stuff now happens in all cases
+
+### better image prefetching
+
+* a different user sent in some ideas for smarter image prefetching/pinning, particularly to deal with very-full-cache situations (like when you scroll through ten 12,000x14,000 images), and I worked on it a bit. I ended up not using the pinning for now, but I've improved prefetch intelligence significantly
+* when canvases do a neighbour prefetch, they now only perform one prefetch render at a time, alternating with next/previous/next/previous. if any of the prior prefetches are still rendering, we wait until they are done before we start another one. this saves time and memory, improves nearest-next availability when files are slow to load, and improves stability in extreme cases
+* the prefetch medias are now submitted and weighed together in order every time, and if doing the next prefetch load would cause the total prefetch size to exceed the percentage allowed in 'speed and memory', we stop prefetching at that point. this stops excessive cache churn when we have lots of extremely-large-file prefetch going on. this saves time, memory, and improves stability in extreme cases
+* the 'how much cache size to prefetch' option in 'speed and memory' is altered as a result. it is no longer per file, but for the whole prefetch and the allowed settable range is expanded. the default value is increased from 15% to 25%, and any user who has an existing value less than 25% will be bumped up. with the default options (25% of 1GB image cache), this means about 10x 4k images
+* the 'are your prefetch numbers good?' bit in the next section now gives warnings for explicit 1080p/4k counts, so, if you are set to prefetch 4 total files, and they and the current file at 4k would exceed the prefetch threshold, it'll tell you
+* the main image prefetch routine also now explicitly asks the cache if it can free up easy space to fit a new prefetch in before firing the prefetch request. images that are currently rendering are counted as 'not easy to free'. this will stop the cache churning when there's big stuff already hitting the CPU
+* cache logic is generally improved a little bit
+* there are still issues when scrolling through a selection of very large images quickly. the next step here is going to be a 'max number of images rendering at once' setting and render slots and, finally, nicer 'rendering...' loading status in the media viewer on the image you are currently looking at for when things are taking a while
+* the old 'delay neighbour prefetching by this base millisecond delay' option no longer does anything and is retired
+* fixed an issue where in rare maintenance/cache reset commands, hydrus data caches could be maintaining a fifo record for an item that was already specifically deleted
+
+### boring stuff
+
+* broke the master file search query in the database into constituent parts (the top level was 1,100 lines, now 250)
+* wrote a simple search-state object to better track some bool flags throughout a file search
+* lots of general cleanup around here
+* shuffled some things around to make certain complicated and exclusive searches work faster
+* a new safety hook now catches when a search fails to initialise its file domain correctly. the search now returns 0 results and you get a popup about it once per boot
+* wrote a new 'service specifier' object to handle some 'here's a bunch of services' storage stuff in a nice-to-serialise way, and wrote an edit panel and button for it
+* some db jobs that line many cancellable things up one after another (e.g. file search) will now cancel a bit faster
+* all image prefetch code is now done in the same location
+* shufled some subprocess stuff around to a new HydrusSubprocessing file
+* refactored my process, subprocess, and threading code to a new 'processes' module
+
 ## [Version 648](https://github.com/hydrusnetwork/hydrus/releases/tag/v648)
 
 ### misc
@@ -539,52 +622,3 @@ title: Changelog
 * if a dupe filter page does not find pairs to show in the 'show some random pairs' button, the page state (used mostly in client api reporting atm) is now correctly reset from 'loading' to 'normal'
 * renamed a bunch of patchwork 'work_time'/'time_it_took' variables in my different daemons to 'actual/expected_work_period'
 * the mixed duplicate pair factory now takes its 'no more than' value during init, decoupling it from the options
-
-## [Version 639](https://github.com/hydrusnetwork/hydrus/releases/tag/v639)
-
-### misc
-
-* `system:number of tags` and `system:tag as number` have a nicer new namespace selection widget
-* fixed the duplicate filter group mode finding a new group after the previous group was resolved. I messed this up in last week's rewrite and it slipped through testing
-* huge multi-column lists handle large selections much more efficiently, particularly when they have lots of buttons. all the various logic that handles 'should this accompanying button be enabled?' and so on now uses calls that work much faster when there are thousands of items selected. in my tests, a sublist with 5,000 test items now updates to a new selection in under 30ms--previously it was about a second. similarly, pasting all those items to a new list now takes about six seconds, whereas previously it was locking up for ages and ages, perhaps forever (issue #1737)
-* fixed an issue where the 'move media files' dialog was saying all files were in their ideal location if the thumbnail location override was not set. this was happening because an error was being quashed over-eagerly. if this dialog has a similar problem in future, you might get some spammy reports, but it'll show. also a side thing, the 'set' button of the thumbnail location override no longer disables if you have a path set--feel free to move it to a new location in one step mate
-* the system that positions windows off the topLeft corner of their parent is now more forgiving of unusual window manager frame geometry. if you kept getting 'hey I just rescued a window from ( 24, -14 )'-style popups every time you open the options off a maximised main GUI, let me know what happens now--are your dialogs appearing offscreen, auto-repositioning to (0, 0), or is everything good now?
-* if you are feeling clever and can get an OR predicate into the duplicates auto-resolution 'test A or B' comparator, it now works! I'll brush up the UI in future to make it easy to enter an OR here (issue #1790)
-
-### potential duplicates discovery
-
-* I have overhauled the daemon that looks for new potential duplicate pairs. this guy no longer searches for pairs during shutdown maintenance (I'm generally trying to retire shutdown work), but you can now tell it to run in idle and/or normal time, with separate work/rest settings under `options->maintenance and processing`
-* your settings here will mostly reset to defaults this week, sorry! default is to run in idle time but not active time, with some conservative work/rest ratios
-* a critical section of database code that finds outstanding eligible files to perform the similar files search on is now optimised for clients with larger numbers of files. there will be a one-time CPU cost for each search distance you run at, and thereafter this thing should run like greased lightning even if you have millions of files, reducing per-job overhead for all similar files search
-* when you force work through the duplicate page 'preparation' tab, it now works through a pause/play button and there is no separate work popup; it now just updates the bar in front of you
-* I'm interested to know how 'run in normal time' feels for clients that have a lot of imports going on. I haven't gone for instant reaction to new files yet, but if it is idling with all other work done it'll get to any new files within about ten seconds, and the auto-resolution system _will_ react instantly to new potential duplicate pairs. might be laggy, might be cool, might be confusing as files in downloader pages are deleted before your eyes. the super ideal here would be to collapse the whole operation into the single import job and return something like 'file was duplicate' instead of 'already in db' as the import status, but we'll see how this does
-* the 'reset potential search' cog-button task now resets the search for all eligible files. previously, I was trying to be cute and only reset search for files that previously found a potential pair, but the, say, ~37% filled progress bar after reset was confusing and not actually what the maintenance task wanted. KISS
-
-### profile mode
-
-* `help->debug->profiling->profile mode` now works on Python 3.12+. newer version of python are more strict about how profiling operates in a multi-threaded environment, and hydrus's profiling now obeys these rules. it turns out hydrus was always getting some _slightly_ gonk numbers here in busy multi-threaded situations, or at least many jobs were being truncated, which explains some inexplicable results I've seen over the years
-* profile mode is now split into four exclusive types--client api, db, threads, and ui. the menu and html help are updated to talk about these. most users will want 'db'
-* 'threads' and 'client api' profiles will sometimes include a bunch of truncated 'EXCLUSIVE: (job) ran in 17ms'. this is me salvaging a difficult situation with a still-useful number. don't worry about it!
-* Python 3.12+ adds some cool tools here, and I expect to expand to some 'profile everything going on mate' modes in future to capture deep Qt things my specific modes do not
-* there's an ancient shortcut for 'turn profile mode on'. this now does 'db' profile mode; it'll probably do something else later, or I'll retire it
-
-### boring stuff
-
-* if you boot the client or server in a python environment that does not have the requirements.txt stuff installed, the client now recognises this and gives a nicer error saying 'hey, I think you need to reinstall/activate your venv', rather than the old 'hey you don't have yaml' error
-* tweaked the client's critical boot error handling so that it shows a nicer english error message first and then the full traceback in a second dialog
-* added some unit tests for OR predicates within Metadata Conditionals
-* fixed a deprecated unit test call. thanks to the user who pointed this out. this is not the first time this specific thing happened, so I'm switching up my testing regime to catch this in future
-
-### boring overhauls and refactoring
-
-* wrote a new MainLoop Manager for the potential duplicates search and some maintenance and numbers caching
-* overhauled the potential duplicates search tree maintenance call to have less overhead and be happier working in tiny chunks. it is now continually maintained throughout search work
-* wrote a count cache for the shape search store for the new daemon (previously it counted manually); it is updated as the underlying store changes
-* hooked up new notification paths for new shape search counts or brance rebalancing work. these paths are simple and comprehensive, so the new guy should be a bit more reliable for unusual file maintenance jobs and so on that may alter the search space a little
-* added some safety code to the new similar files search daemon to stop an infinite loop if the search record store has non-searchable items for some reason
-* cleaned up the Duplicates Page Sidebar maintenance page a bunch. there was just a ton of cruft to go through
-* to untangle some imports, moved duplicate score and visual duplicates gubbins out of `ClientDuplicates.py` to a new `ClientDuplicatesComparisonStatements.py`
-* collected pretty much all the profiling and query planner gubbins like start time and job count and printing tech from `HydrusController.py` and `HydrusGlobals.py` to `HydrusProfiling.py`. I cleaned a bunch of it up along the way
-* brushed up some of the database migration help r.e. missing locations and the pre-boot repair dialog
-* the core `CallAfter` method used by many thread-to-Qt comms is a tiny bit more stable/thread-safe
-* misc linting work, including clearing out some legacy unresolved references

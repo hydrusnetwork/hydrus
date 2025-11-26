@@ -5,10 +5,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -819,6 +819,11 @@ class JpegQuality( ClientCachesBase.CacheableObject ):
     def GetEstimatedMemoryFootprint( self ) -> int:
         
         return 64 # w/e
+        
+    
+    def IsFinishedLoading( self ):
+        
+        return True
         
     
 

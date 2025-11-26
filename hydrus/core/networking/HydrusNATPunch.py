@@ -1,17 +1,17 @@
 import os
 import shutil
 import socket
-import subprocess
 import threading
 import traceback
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusProcess
 from hydrus.core import HydrusText
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusSubprocess
+
+# TODO: unwind all this, the notes about upnpc, all that. it is obsolete
 
 # the _win32, _linux, _osx stuff here is legacy, from when I used to bundle these exes. this cause anti-virus false positive wew
 
@@ -89,22 +89,16 @@ def GetExternalIP():
         
         cmd = [ UPNPC_PATH, '-l' ]
         
-        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
-        
         HydrusData.CheckProgramIsNotShuttingDown()
         
         try:
             
-            p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+            ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = 30 )
             
         except FileNotFoundError:
             
             RaiseMissingUPnPcError( 'fetch external IP' )
             
-        
-        HydrusThreading.WaitForProcessToFinish( p, 30 )
-        
-        ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
         
         if stderr is not None and len( stderr ) > 0:
             
@@ -151,22 +145,16 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     cmd = [ UPNPC_PATH, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
-    
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = 30 )
         
     except FileNotFoundError:
         
         RaiseMissingUPnPcError( 'add UPnP port forward' )
         
-    
-    HydrusThreading.WaitForProcessToFinish( p, 30 )
-    
-    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     AddUPnPMappingCheckResponse( internal_client, internal_port, external_port, protocol, stdout, stderr )
     
@@ -215,22 +203,16 @@ def GetUPnPMappings():
     
     cmd = [ UPNPC_PATH, '-l' ]
     
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
-    
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = 30 )
         
     except FileNotFoundError:
         
         RaiseMissingUPnPcError( 'get current UPnP port forward mappings' )
         
-    
-    HydrusThreading.WaitForProcessToFinish( p, 30 )
-    
-    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     if stderr is not None and len( stderr ) > 0:
         
@@ -329,22 +311,16 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     cmd = [ UPNPC_PATH, '-d', str( external_port ), protocol ]
     
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
-    
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        p = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = 30 )
         
     except FileNotFoundError:
         
         RaiseMissingUPnPcError( 'remove UPnP port forward' )
         
-    
-    HydrusThreading.WaitForProcessToFinish( p, 30 )
-    
-    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( p )
     
     if stderr is not None and len( stderr ) > 0:
         

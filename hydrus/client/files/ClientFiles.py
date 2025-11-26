@@ -221,26 +221,33 @@ def HasTransparency( path, mime, duration_ms = None, num_frames = None, resoluti
                 renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, resolution )
                 
             
-            we_checked_for_just_alpha_channel = False
-            
-            for i in range( num_frames ):
+            try:
                 
-                numpy_image = renderer.read_frame()
+                we_checked_for_just_alpha_channel = False
                 
-                if not we_checked_for_just_alpha_channel:
+                for i in range( num_frames ):
                     
-                    if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+                    numpy_image = renderer.read_frame()
+                    
+                    if not we_checked_for_just_alpha_channel:
                         
-                        return False
+                        if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+                            
+                            return False
+                            
+                        
+                        we_checked_for_just_alpha_channel = True
                         
                     
-                    we_checked_for_just_alpha_channel = True
+                    if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):
+                        
+                        return True
+                        
                     
                 
-                if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):
-                    
-                    return True
-                    
+            finally:
+                
+                renderer.close()
                 
             
         

@@ -7,13 +7,13 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusBlurhash
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
@@ -137,8 +137,11 @@ class ImageRendererCache( object ):
         cache_size = self._controller.new_options.GetInteger( 'image_cache_size' )
         cache_timeout = self._controller.new_options.GetInteger( 'image_cache_timeout' )
         
+        # there was a good user submission about 'pinned', which may be something to explore again in future
+        # I looked into adding pin tech to the datacache itself. not a bad idea, but I'm not sure how to handle various overflow events, so that needs careful thought
+        # the problem is not so much the caching atm, but the overflows
+        
         self._data_cache = ClientCachesBase.DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
-        self._pinned=set()
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Clear', 'clear_image_cache' )
@@ -149,23 +152,11 @@ class ImageRendererCache( object ):
         
         self._data_cache.Clear()
         
-    def Pin(self, media_result_iterable):
-        '''
-        Prevent important hashes from being dropped from the cache. Clear() will still drop these.
-        '''
-        for media_result in media_result_iterable:
-            hash = media_result.GetHash()
-            self._pinned.add(hash)
-    
-    def UnpinAll(self):
-        '''Clear hashes previously protected by Pin()'''
-        self._pinned.clear()
-        
     
     def ClearSpecificFiles( self, hashes ):
         
         for hash in hashes:
-            if hash in self._pinned: continue
+            
             self._data_cache.DeleteData( hash )
             
         
@@ -187,8 +178,7 @@ class ImageRendererCache( object ):
             image_cache_storage_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_storage_limit_percentage' )
             acceptable_size = image_renderer.GetEstimatedMemoryFootprint() < self._data_cache.GetSizeLimit() * ( image_cache_storage_limit_percentage / 100 )
             
-            #A pinned hash will be neeeded imminently so skip normal size checking.
-            if (key in self._pinned) or acceptable_size :
+            if acceptable_size:
                 
                 self._data_cache.AddData( key, image_renderer )
                 
@@ -216,25 +206,74 @@ class ImageRendererCache( object ):
         self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
         
     
-    def PrefetchImageRenderer( self, media_result: ClientMediaResult.MediaResult ):
+    def PrefetchImageRenderers( self, media_results: list[ ClientMediaResult.MediaResult ] ):
         
-        ( width, height ) = media_result.GetResolution()
-        
-        if width is None or height is None:
-            
-            return
-            
-        
-        # essentially, we are not going to prefetch giganto images any more. they can render on demand and not mess our queue
-        
+        image_cache_storage_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_storage_limit_percentage' )
         image_cache_prefetch_limit_percentage = self._controller.new_options.GetInteger( 'image_cache_prefetch_limit_percentage' )
         
-        if width * height * 3 < self._data_cache.GetSizeLimit() * ( image_cache_prefetch_limit_percentage / 100 ):
+        cache_size = self._data_cache.GetSizeLimit()
+        
+        single_file_size_we_are_ok_with = cache_size * ( image_cache_storage_limit_percentage / 100 )
+        total_size_we_are_ok_with = cache_size * ( image_cache_prefetch_limit_percentage / 100 )
+        total_size_we_have_prefetched_here = 0
+        
+        for media_result in media_results:
             
-            self.GetImageRenderer( media_result )
+            hash = media_result.GetHash()
+            
+            key = hash
+            
+            result = self._data_cache.GetIfHasData( key )
+            
+            if result is not None:
+                
+                image_renderer = typing.cast( ClientRendering.ImageRenderer, result )
+                
+                if image_renderer.IsReady():
+                    
+                    total_size_we_have_prefetched_here += image_renderer.GetEstimatedMemoryFootprint()
+                    
+                else:
+                    
+                    return # we are still rendering a guy, no desire to add more work right now
+                    
+                
+            else:
+                
+                # ok, here's a guy to do
+                
+                ( width, height ) = media_result.GetResolution()
+                
+                if width is None or height is None:
+                    
+                    return
+                    
+                
+                expected_size = width * height * 3
+                
+                if total_size_we_have_prefetched_here + expected_size > total_size_we_are_ok_with:
+                    
+                    return # ok, this prefetch is pretty bulky
+                    
+                
+                if expected_size > single_file_size_we_are_ok_with:
+                    
+                    return # ok this guy is too bulky to save
+                    
+                
+                successful = self._data_cache.TryToFlushEasySpaceForPrefetch( expected_size )
+                
+                if successful:
+                    
+                    self.GetImageRenderer( media_result )
+                    
+                
+                return
+                
             
         
     
+
 class ImageTileCache( object ):
     
     def __init__( self, controller: "CG.ClientController.Controller" ):

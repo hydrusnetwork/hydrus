@@ -75,7 +75,8 @@ PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE = 51
 PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
 PREDICATE_TYPE_SYSTEM_URLS = 53
 PREDICATE_TYPE_SYSTEM_TAG_ADVANCED = 54
-PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 55
+PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY = 55 # not using
+PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 66
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -544,11 +545,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 serialisable_value = ( operator, value, service_key.hex() )
                 
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY:
                 
                 ( operator, value ) = self._value
                 
                 serialisable_value = ( operator, value )
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = self._value
+                
+                serialisable_service_specifier_primary = service_specifier_primary.GetSerialisableTuple()
+                serialisable_service_specifier_secondary = service_specifier_secondary.GetSerialisableTuple()
+                
+                serialisable_value = ( logical_operator, serialisable_service_specifier_primary, serialisable_service_specifier_secondary, rated )
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
@@ -633,11 +643,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 self._value = ( operator, value, bytes.fromhex( service_key ) )
                 
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY:
                 
                 ( operator, value ) = serialisable_value
                 
                 self._value = ( operator, value )
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                ( logical_operator, serialisable_service_specifier_primary, serialisable_service_specifier_secondary, rated ) = serialisable_value
+                
+                service_specifier_primary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_primary )
+                service_specifier_secondary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_secondary )
+                
+                self._value = ( logical_operator, service_specifier_primary, service_specifier_secondary, rated )
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES:
                 
@@ -1111,145 +1130,187 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def GetInverseCopy( self ):
         
-        if self._predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE:
+        try:
             
-            return Predicate( PREDICATE_TYPE_SYSTEM_INBOX )
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_INBOX:
-            
-            return Predicate( PREDICATE_TYPE_SYSTEM_ARCHIVE )
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL:
-            
-            return Predicate( PREDICATE_TYPE_SYSTEM_NOT_LOCAL )
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL:
-            
-            return Predicate( PREDICATE_TYPE_SYSTEM_LOCAL )
-            
-        elif self._predicate_type in ( PREDICATE_TYPE_TAG, PREDICATE_TYPE_NAMESPACE, PREDICATE_TYPE_WILDCARD ):
-            
-            return Predicate( self._predicate_type, self._value, not self._inclusive )
-            
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE ):
-            
-            if self._value is None: # weird default that sometimes kicks in, means 'yes, has'
+            if self._predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE:
                 
-                value = True
+                return Predicate( PREDICATE_TYPE_SYSTEM_INBOX )
                 
-            else:
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_INBOX:
                 
-                value = self._value
+                return Predicate( PREDICATE_TYPE_SYSTEM_ARCHIVE )
                 
-            
-            return Predicate( self._predicate_type, not value )
-            
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
-            
-            number_test: ClientNumberTest.NumberTest = self._value
-            
-            if number_test is not None:
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL:
                 
-                if number_test.IsZero():
+                return Predicate( PREDICATE_TYPE_SYSTEM_NOT_LOCAL )
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL:
+                
+                return Predicate( PREDICATE_TYPE_SYSTEM_LOCAL )
+                
+            elif self._predicate_type in ( PREDICATE_TYPE_TAG, PREDICATE_TYPE_NAMESPACE, PREDICATE_TYPE_WILDCARD ):
+                
+                return Predicate( self._predicate_type, self._value, not self._inclusive )
+                
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE ):
+                
+                if self._value is None: # weird default that sometimes kicks in, means 'yes, has'
                     
-                    return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) )
+                    value = True
                     
-                elif number_test.IsAnythingButZero():
+                else:
                     
-                    return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) )
+                    value = self._value
                     
                 
+                return Predicate( self._predicate_type, not value )
+                
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
+                
+                if self._value is None:
+                    
+                    return None
+                    
+                
+                number_test: ClientNumberTest.NumberTest = self._value
+                
+                if number_test is not None:
+                    
+                    if number_test.IsZero():
+                        
+                        return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) )
+                        
+                    elif number_test.IsAnythingButZero():
+                        
+                        return Predicate( self._predicate_type, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) )
+                        
+                    
+                
+                return None
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
+                
+                return Predicate( self._predicate_type, not self._value )
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
+                
+                if self._value is None:
+                    
+                    return None
+                    
+                
+                operator, *dims = self._value
+                
+                # the taller/wider swap here is imperfect, and when we change to a NumberTest or whatever, we'd then have >=, <=
+                if operator == 'taller than':
+                    
+                    return Predicate( self._predicate_type, ( 'wider than', *dims ) )
+                    
+                elif operator == 'wider than':
+                    
+                    return Predicate( self._predicate_type, ( 'taller than', *dims ) )
+                    
+                elif operator == '=':
+                    
+                    return Predicate( self._predicate_type, ( HC.UNICODE_NOT_EQUAL, *dims ) )
+                    
+                elif operator == HC.UNICODE_NOT_EQUAL:
+                    
+                    return Predicate( self._predicate_type, ( '=', *dims ) )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
+                
+                if self._value is None:
+                    
+                    return None
+                    
+                
+                ( operator, val, service_key ) = self._value
+                
+                if operator == '=':
+                    
+                    if val == 'not rated':
+                        
+                        return Predicate( self._predicate_type, ( operator, 'rated', service_key ) )
+                        
+                    elif val == 'rated':
+                        
+                        return Predicate( self._predicate_type, ( operator, 'not rated', service_key ) )
+                        
+                    elif isinstance( val, ( int, float ) ):
+                        
+                        try:
+                            
+                            service_type = CG.client_controller.services_manager.GetServiceType( service_key )
+                            
+                        except:
+                            
+                            return None
+                            
+                        
+                        if service_type == HC.LOCAL_RATING_LIKE:
+                            
+                            if val == 0.0:
+                                
+                                return Predicate( self._predicate_type, ( '=', 1.0, service_key ) )
+                                
+                            elif val == 1.0:
+                                
+                                return Predicate( self._predicate_type, ( '=', 0.0, service_key ) )
+                                
+                            
+                        
+                    
+                elif operator == '>':
+                    
+                    # again these are imperfect and we'd want NumberTest tech so we could go <=, >= here
+                    
+                    return Predicate( self._predicate_type, ( '<', val, service_key ) )
+                    
+                elif operator == '<':
+                    
+                    return Predicate( self._predicate_type, ( '>', val, service_key ) )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY:
+                
+                if self._value is None:
+                    
+                    return None
+                    
+                
+                ( operator, val ) = self._value
+                
+                if val == 'was rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'never rated' ) )
+                    
+                elif val == 'never rated':
+                    
+                    return Predicate( self._predicate_type, ( operator, 'was rated' ) )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
+                
+                if self._value is None:
+                    
+                    return None
+                    
+                
+                ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = self._value
+                
+                # let's not be too clever yet, but maybe we can inspect logical operator and give better answers here
+                return Predicate( self._predicate_type, ( logical_operator, service_specifier_primary, service_specifier_secondary, not rated ) )
+                
+            
+        except Exception as e:
+            
+            HydrusData.PrintException( e )
             
             return None
             
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
-            
-            return Predicate( self._predicate_type, not self._value )
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATIO:
-            
-            operator, *dims = self._value
-            
-            # the taller/wider swap here is imperfect, and when we change to a NumberTest or whatever, we'd then have >=, <=
-            if operator == 'taller than':
-                
-                return Predicate( self._predicate_type, ( 'wider than', *dims ) )
-                
-            elif operator == 'wider than':
-                
-                return Predicate( self._predicate_type, ( 'taller than', *dims ) )
-                
-            elif operator == '=':
-                
-                return Predicate( self._predicate_type, ( HC.UNICODE_NOT_EQUAL, *dims ) )
-                
-            elif operator == HC.UNICODE_NOT_EQUAL:
-                
-                return Predicate( self._predicate_type, ( '=', *dims ) )
-                
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
-            
-            ( operator, val, service_key ) = self._value
-            
-            if operator == '=':
-                
-                if val == 'not rated':
-                    
-                    return Predicate( self._predicate_type, ( operator, 'rated', service_key ) )
-                    
-                elif val == 'rated':
-                    
-                    return Predicate( self._predicate_type, ( operator, 'not rated', service_key ) )
-                    
-                elif isinstance( val, ( int, float ) ):
-                    
-                    try:
-                        
-                        service_type = CG.client_controller.services_manager.GetServiceType( service_key )
-                        
-                    except:
-                        
-                        return None
-                        
-                    
-                    if service_type == HC.LOCAL_RATING_LIKE:
-                        
-                        if val == 0.0:
-                            
-                            return Predicate( self._predicate_type, ( '=', 1.0, service_key ) )
-                            
-                        elif val == 1.0:
-                            
-                            return Predicate( self._predicate_type, ( '=', 0.0, service_key ) )
-                            
-                        
-                    
-                
-            elif operator == '>':
-                
-                # again these are imperfect and we'd want NumberTest tech so we could go <=, >= here
-                
-                return Predicate( self._predicate_type, ( '<', val, service_key ) )
-                
-            elif operator == '<':
-                
-                return Predicate( self._predicate_type, ( '>', val, service_key ) )
-                
-            
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
-            
-            ( operator, val ) = self._value
-            
-            if val == 'was rated':
-                
-                return Predicate( self._predicate_type, ( operator, 'never rated' ) )
-                
-            elif val == 'never rated':
-                
-                return Predicate( self._predicate_type, ( operator, 'was rated' ) )
-                
-            
+        
         return None
         
     
@@ -2452,15 +2513,44 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base += connector + mime_text
                     
                 
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY:
+                
+                base = 'any rating (no longer in use, please delete this pred)'
+                
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
                 
-                base = 'any rating'
+                base = 'advanced rating'
                 
                 if self._value is not None:
                     
-                    ( operator, value ) = self._value
+                    ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = self._value
                     
-                    base = f'{value}'
+                    base = {
+                        HC.LOGICAL_OPERATOR_ALL : 'all ',
+                        HC.LOGICAL_OPERATOR_ANY : 'any ',
+                        HC.LOGICAL_OPERATOR_ONLY : 'only ',
+                    }.get( logical_operator, 'unknown ' )
+                    
+                    if service_specifier_primary.IsOneServiceKey() and logical_operator != HC.LOGICAL_OPERATOR_ONLY:
+                        
+                        base = ''
+                        
+                    
+                    base += service_specifier_primary.ToString()
+                    
+                    if logical_operator == HC.LOGICAL_OPERATOR_ONLY and not service_specifier_secondary.IsAllRatings():
+                        
+                        base += f' (amongst {service_specifier_secondary.ToString()})'
+                        
+                    
+                    if rated:
+                        
+                        base += ' rated'
+                        
+                    else:
+                        
+                        base += ' not rated'
+                        
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_RATING:

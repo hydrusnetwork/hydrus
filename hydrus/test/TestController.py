@@ -19,7 +19,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusTemp
-from hydrus.core import HydrusThreading
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
@@ -265,7 +265,12 @@ class Controller( object ):
         services.append( ClientServices.GenerateService( self.example_tag_repo_service_key, HC.TAG_REPOSITORY, 'example tag repo' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_TAG_SERVICE_KEY, HC.COMBINED_TAG, 'all known tags' ) )
         services.append( ClientServices.GenerateService( CC.COMBINED_FILE_SERVICE_KEY, HC.COMBINED_FILE, 'all known files' ) )
-        services.append( ClientServices.GenerateService( LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'example local rating like service' ) )
+        
+        service = typing.cast( ClientServices.ServiceLocalRatingLike, ClientServices.GenerateService( LOCAL_RATING_LIKE_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'example local rating like service' ) )
+        service._shape = None
+        service._rating_svg = 'star'
+        services.append( service )
+        
         services.append( ClientServices.GenerateService( LOCAL_RATING_NUMERICAL_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL, 'example local rating numerical service' ) )
         services.append( ClientServices.GenerateService( LOCAL_RATING_INCDEC_SERVICE_KEY, HC.LOCAL_RATING_INCDEC, 'example local rating inc/dec service' ) )
         services.append( ClientServices.GenerateService( self.example_ipfs_service_key, HC.IPFS, 'example ipfs service' ) )

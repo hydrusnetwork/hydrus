@@ -982,6 +982,7 @@ class BusyCursor( object ):
     def __enter__( self ):
         
         QW.QApplication.setOverrideCursor( QC.Qt.CursorShape.WaitCursor )
+        
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         

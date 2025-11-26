@@ -12,12 +12,12 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusProcess
 from hydrus.core import HydrusSessions
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
+from hydrus.core.processes import HydrusProcess
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.server import ServerDB
 from hydrus.server import ServerFiles

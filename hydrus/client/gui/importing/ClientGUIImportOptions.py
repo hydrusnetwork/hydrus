@@ -169,7 +169,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         destination_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'import destinations' )
         
-        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
+        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file domain, you can send these imports to other/multiple locations.' )
         
         destination_location_context = file_import_options.GetDestinationLocationContext()
         
@@ -504,7 +504,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
         else:
             
-            self._destination_location_context_st.setText( 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
+            self._destination_location_context_st.setText( 'If you have more than one local file domain, you can send these imports to other/multiple locations.' )
             
             self._destination_location_context_st.setObjectName( '' )
             

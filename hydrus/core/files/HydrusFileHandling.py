@@ -314,7 +314,14 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             
             renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, target_resolution, start_pos = desired_thumb_frame_index )
             
-            numpy_image = renderer.read_frame()
+            try:
+                
+                numpy_image = renderer.read_frame()
+                
+            finally:
+                
+                renderer.Stop()
+                
             
         except Exception as e:
             
@@ -327,18 +334,20 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
         if numpy_image is None and desired_thumb_frame_index != 0:
             
-            if renderer is not None:
-                
-                renderer.Stop()
-                
-            
             # try first frame instead
             
             try:
                 
                 renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration_ms, num_frames, target_resolution )
                 
-                numpy_image = renderer.read_frame()
+                try:
+                    
+                    numpy_image = renderer.read_frame()
+                    
+                finally:
+                    
+                    renderer.Stop()
+                    
                 
             except Exception as e:
                 
@@ -359,10 +368,10 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
             thumbnail_numpy =  HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution ) # just in case ffmpeg doesn't deliver right
             
         
-        if renderer is not None:
-            
-            renderer.Stop()
-            
+    
+    if thumbnail_numpy is None:
+        
+        return GenerateDefaultThumbnail( mime, target_resolution )
         
     
     return thumbnail_numpy
@@ -860,7 +869,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             elif mime == HC.UNDETERMINED_JXL:
                 
                 # disabled animated jxl for now--ffmpeg getting in an infinite loop!
-                if False: #HydrusVideoHandling.FileIsAnimated( path ):
+                if HydrusVideoHandling.FileIsAnimated( path ):
                     
                     return HC.ANIMATION_JXL
                     

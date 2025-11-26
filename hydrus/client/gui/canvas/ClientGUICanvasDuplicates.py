@@ -24,7 +24,6 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
-from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -746,11 +745,11 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         self._ProcessPair( HC.DUPLICATE_SAME_QUALITY )
         
     
-    def _PrefetchNeighbours( self ):
+    def _GetPrefetchNeighboursInPreferenceOrder( self ):
         
         if self._current_media is None:
             
-            return
+            return []
             
         
         other_media: ClientMedia.MediaSingleton = self._media_list.GetNext( self._current_media )
@@ -773,25 +772,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 
             
         
-        delay_base = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
-        
-        images_cache = CG.client_controller.images_cache
-        
-        for ( i, media_result ) in enumerate( media_results_to_prefetch ):
-            
-            delay = i * delay_base
-            
-            hash = media_result.GetHash()
-            mime = media_result.GetMime()
-            
-            if media_result.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media_result, self.CANVAS_TYPE ):
-                
-                if not images_cache.HasImageRenderer( hash ):
-                    
-                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', images_cache.PrefetchImageRenderer, media_result )
-                    
-                
-            
+        return media_results_to_prefetch
         
     
     def _PresentFactoryPairs( self ):
@@ -1434,6 +1415,9 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 return False
                 
             elif result == QW.QDialog.DialogCode.Accepted:
+                
+                # like with archive/delete, it might be nice to move this to a 'notifyweareclosing'
+                # if the dialog gives Accepted (rather than 'forget it'), then save or 'don't discard' the pending data, and then on the close we send it 
                 
                 self._CommitProcessed( blocking = False )
                 

@@ -272,9 +272,7 @@ class FileSystemPredicates( object ):
             
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED:
                 
-                ( operator, rating ) = value
-                
-                self._advanced_ratings_predicates.append( ( operator, rating ) )
+                self._advanced_ratings_predicates.append( predicate )
                 
             
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING:
@@ -458,6 +456,7 @@ class FileSystemPredicates( object ):
         
         return self._advanced_tag_predicates
         
+    
     def GetAdvancedRatingsPredicates( self ):
         
         return self._advanced_ratings_predicates

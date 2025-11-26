@@ -189,6 +189,7 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
+        rows.append( ( 'Maximum entries to show in page navigation history: ', self._page_nav_history_max_entries ) )
         rows.append( ( 'When switching to pages, move keyboard focus to any text input field: ', self._set_search_focus_on_page_change ) )
         rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
         rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )
@@ -196,7 +197,6 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
         rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
         rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
-        rows.append( ( 'Maximum entries to show in page navigation history: ', self._page_nav_history_max_entries ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
         

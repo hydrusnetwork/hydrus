@@ -1,7 +1,6 @@
 import bisect
 import queue
 import random
-import subprocess
 import threading
 import time
 import traceback
@@ -105,39 +104,6 @@ def ShutdownThread( thread ) -> None:
     thread_info = GetThreadInfo( thread )
     
     thread_info[ 'shutting_down' ] = True
-    
-def SubprocessCommunicate( process: subprocess.Popen ):
-    
-    def do_test():
-        
-        if HG.model_shutdown:
-            
-            try:
-                
-                process.kill()
-                
-            except:
-                
-                pass
-                
-            
-            raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
-            
-        
-    
-    do_test()
-    
-    while True:
-        
-        try:
-            
-            return process.communicate( timeout = 10 )
-            
-        except subprocess.TimeoutExpired:
-            
-            do_test()
-            
-        
     
 
 class RegularJobChecker( object ):
@@ -1030,22 +996,5 @@ class RepeatingJob( SchedulableJob ):
             
             self._scheduler.AddJob( self )
             
-        
-    
-
-def WaitForProcessToFinish( p, timeout ):
-    
-    started = HydrusTime.GetNow()
-    
-    while p.poll() is None:
-        
-        if HydrusTime.TimeHasPassed( started + timeout ):
-            
-            p.kill()
-            
-            raise Exception( 'Process did not finish within ' + HydrusNumbers.ToHumanInt( timeout ) + ' seconds!' )
-            
-        
-        time.sleep( 2 )
         
     

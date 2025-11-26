@@ -11,12 +11,13 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLogger
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPubSub
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNATPunch
+from hydrus.core.processes import HydrusProcess
+from hydrus.core.processes import HydrusSubprocess
+from hydrus.core.processes import HydrusThreading
 
 class HydrusController( object ):
     
@@ -679,6 +680,8 @@ class HydrusController( object ):
         
         self._fast_job_scheduler.ClearOutDead()
         self._slow_job_scheduler.ClearOutDead()
+        
+        HydrusSubprocess.ReapDeadLongLivedExternalProcesses()
         
     
     def MaintainMemorySlow( self ):

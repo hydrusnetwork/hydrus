@@ -111,14 +111,14 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                         if content_action not in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                             
-                            raise HydrusExceptions.BadRequestException( 'Sorry, you submitted a content action of "{}" for service "{}", but you can only add/delete on a local tag service!'.format( parsed_content_action, service_key.hex() ) )
+                            raise HydrusExceptions.BadRequestException( 'Sorry, you submitted a content action of "{}" for service "{}", but you can only add/delete on a local tag domain!'.format( parsed_content_action, service_key.hex() ) )
                             
                         
                     else:
                         
                         if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE ):
                             
-                            raise HydrusExceptions.BadRequestException( 'Sorry, you submitted a content action of "{}" for service "{}", but you cannot add/delete on a remote tag service!'.format( parsed_content_action, service_key.hex() ) )
+                            raise HydrusExceptions.BadRequestException( 'Sorry, you submitted a content action of "{}" for service "{}", but you cannot add/delete on a remote tag repository!'.format( parsed_content_action, service_key.hex() ) )
                             
                         
                     

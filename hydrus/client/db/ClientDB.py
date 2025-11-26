@@ -3694,7 +3694,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if HG.file_import_report_mode:
                 
-                HydrusData.ShowText( 'File import job adding file to local file service' )
+                HydrusData.ShowText( 'File import job adding file to local file domain' )
                 
             
             #
@@ -4271,8 +4271,6 @@ class DB( HydrusDB.HydrusDB ):
         self._modules.append( self.modules_files_maintenance_queue )
         
         #
-        
-        # how about a module for 'local file services', it can do various filtering
         
         self.modules_repositories = ClientDBRepositories.ClientDBRepositories( self._c, self._cursor_transaction_wrapper, self.modules_db_maintenance, self.modules_services, self.modules_files_storage, self.modules_files_metadata_basic, self.modules_hashes_local_cache, self.modules_tags_local_cache, self.modules_files_maintenance_queue )
         
@@ -9014,7 +9012,6 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # prepped two weeks early
         if version == 648:
             
             try:
@@ -9026,6 +9023,26 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to rename "all my files" failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                if new_options.GetInteger( 'image_cache_prefetch_limit_percentage' ) < 25:
+                    
+                    new_options.SetInteger( 'image_cache_prefetch_limit_percentage', 25 )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

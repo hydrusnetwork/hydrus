@@ -1,16 +1,13 @@
 from io import BytesIO
 import re
-import subprocess
 
 import numpy
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusProcess
-from hydrus.core import HydrusThreading
-from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFFMPEG
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.processes import HydrusSubprocess
 
 def read_uint16(f):
     
@@ -84,35 +81,29 @@ def GetFFMPEGPSDLines( path ):
     
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-i", path ]
-    
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
+    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-xerror", "-i", path ]
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        process = subprocess.Popen( cmd, bufsize = 10**5, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, bufsize = 1024 * 512 )
+        
+    except HydrusExceptions.SubprocessTimedOut:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'ffmpeg could not get PSD data quick enough!' )
         
     except FileNotFoundError as e:
         
         HydrusFFMPEG.HandleFFMPEGFileNotFound( e, path )
         
     
-    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
-    
-    data_bytes = stderr
-    
-    if len( data_bytes ) == 0:
+    if stderr is None or len( stderr ) == 0:
         
-        HydrusFFMPEG.HandleFFMPEGNoContent( path, sbp_kwargs, stdout, stderr )
+        HydrusFFMPEG.HandleFFMPEGNoContent( path, stdout, stderr )
         
     
-    del process
-    
-    ( text, encoding ) = HydrusText.NonFailingUnicodeDecode( data_bytes, 'utf-8' )
-    
-    lines = text.splitlines()
+    lines = stderr.splitlines()
     
     HydrusFFMPEG.CheckFFMPEGError( lines )
     

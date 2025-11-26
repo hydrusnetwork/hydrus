@@ -271,6 +271,8 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         self._is_ready = True
         
+        CG.client_controller.pub( 'notify_image_finished_rendering' )
+        
         if not self._this_is_for_metadata_alone:
             
             # TODO: Move this error code to a nice button or something
@@ -486,6 +488,11 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         return pixmap
         
     
+    def IsFinishedLoading( self ):
+        
+        return self._is_ready
+        
+    
     def IsReady( self ):
         
         return self._is_ready
@@ -515,6 +522,12 @@ class ImageTile( ClientCachesBase.CacheableObject ):
         return self._num_bytes
         
     
+    def IsFinishedLoading( self ):
+        
+        return True
+        
+    
+
 class RasterContainer( object ):
     
     def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None ):
@@ -649,6 +662,11 @@ class RasterContainerVideo( RasterContainer ):
         self._ideal_next_frame = 0
         
         CG.client_controller.CallToThread( self.THREADRender )
+        
+    
+    def __del__( self ):
+        
+        self.Stop()
         
     
     def _HasFrame( self, index ):
@@ -1180,5 +1198,10 @@ class HydrusBitmap( ClientCachesBase.CacheableObject ):
     def GetSize( self ):
         
         return self._size
+        
+    
+    def IsFinishedLoading( self ):
+        
+        return True
         
     

@@ -4,7 +4,7 @@ import weakref
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusThreading
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
@@ -23,6 +23,11 @@ class MediaResultCacheContainer( ClientCachesBase.CacheableObject ):
     def GetEstimatedMemoryFootprint( self ) -> int:
         
         return 1
+        
+    
+    def IsFinishedLoading( self ):
+        
+        return True
         
     
 

@@ -18,8 +18,8 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData

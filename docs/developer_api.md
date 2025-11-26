@@ -191,7 +191,7 @@ When it does this, it gives you this structure, typically under a `services` key
   "c6f63616c2074616773" : {
     "name" : "my tags",
     "type": 5,
-    "type_pretty" : "local tag service"
+    "type_pretty" : "local tag domain"
   },
   "5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d" : {
     "name" : "example tag repo",
@@ -216,22 +216,22 @@ When it does this, it gives you this structure, typically under a `services` key
   "616c6c206c6f63616c2066696c6573" : {
     "name" : "hydrus local file storage",
     "type": 15,
-    "type_pretty" : "virtual combined local file service"
+    "type_pretty" : "virtual combined local file domain"
   },
   "616c6c206c6f63616c206d65646961" : {
     "name" : "combined local file domains",
     "type" : 21,
-    "type_pretty" : "virtual combined local media service"
+    "type_pretty" : "virtual combined local media domain"
   },
   "616c6c206b6e6f776e2066696c6573" : {
     "name" : "all known files",
     "type" : 11,
-    "type_pretty" : "virtual combined file service"
+    "type_pretty" : "virtual combined file domain"
   },
   "616c6c206b6e6f776e2074616773" : {
     "name" : "all known tags",
     "type": 10,
-    "type_pretty" : "virtual combined tag service"
+    "type_pretty" : "virtual combined tag domain"
   },
   "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : {
     "name" : "example local rating like service",
@@ -265,7 +265,7 @@ I hope you recognise some of the information here. But what's that hex key on ea
 All services have these properties:
 
 - `name` - A mutable human-friendly name like 'my tags'. You can use this to present the service to the user--they should recognise it.
-- `type` - An integer enum saying whether the service is a local tag service or like/dislike rating service or whatever. This cannot change.
+- `type` - An integer enum saying whether the service is a local tag domain or like/dislike rating or whatever. This cannot change.
 - `service_key` - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases 64 characters. This cannot change, and it is how we will refer to different services.
 
 This `service_key` is important. A user can rename their services, so `name` is not an excellent identifier, and definitely not something you should save to any permanent config file.
@@ -505,7 +505,7 @@ Response:
     "name" : "my tags",
     "service_key" : "6c6f63616c2074616773",
     "type" : 5,
-    "type_pretty" : "local tag service"
+    "type_pretty" : "local tag domain"
   }
 }
 ```
@@ -541,7 +541,7 @@ This now primarily uses [The Services Object](#services_object).
 
 ### **GET `/get_service_rating_svg`** { id="get_service_rating_svg" }
 
-_Ask the client for the SVG star shape for a ratings service._
+_Ask the client for the SVG star shape for a ratings service. Use this when a rating service in [The Services Object](#services_object) has a `star_shape` of `svg`._
 
 Restricted access: 
 :   YES. At least one of Add Files, Add Tags, Manage Pages, or Search Files permission needed.
@@ -654,7 +654,7 @@ Response:
 !!! note "Careful"
     `combined local file domains` and `hydrus local file storage` are different!
     
-    - Deleting from `combined local file domains` sends files straight to the trash, no matter how many local file services they are in.
+    - Deleting from `combined local file domains` sends files straight to the trash, no matter how many local file domains they are in.
     - Deleting from `hydrus local file storage` removes files from any local domain, including trash, and triggers an immediate physical delete.
     
     Check [here](advanced_multiple_local_file_services.md#meta_file_domains) for more info.
@@ -686,7 +686,7 @@ Arguments (in JSON):
 Response: 
 :   200 and no content.
 
-This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'combined local file domains', undeletes to all the local file services for which there are deletion records.
+This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'combined local file domains', undeletes to all the local file domains for which there are deletion records.
 
 This operation will only occur on files that are currently in your file store (i.e. in 'hydrus local file storage', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!
 
@@ -743,7 +743,7 @@ Arguments (in JSON):
 Response:
 :   200 and no content.
 
-This is only appropriate if the user has multiple local file services. It does the same as the media _files->add to->domain_ menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.
+This is only appropriate if the user has multiple local file domains. It does the same as the media _files->add to->domain_ menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.
 
 If you need to do a 'move' migrate, then please follow this command with a delete from wherever you need to remove from.
 
@@ -1307,8 +1307,8 @@ Arguments (in JSON):
     
     The permitted 'actions' are:
 
-    *   0 - Add to a local tag service.
-    *   1 - Delete from a local tag service.
+    *   0 - Add to a local tag domain.
+    *   1 - Delete from a local tag domain.
     *   2 - Pend to a tag repository.
     *   3 - Rescind a pend from a tag repository.
     *   4 - Petition from a tag repository. (This is special)

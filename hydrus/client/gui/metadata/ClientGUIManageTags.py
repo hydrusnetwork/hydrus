@@ -643,8 +643,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 choice_tooltip_lookup = {}
                 
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_ADD ] = 'this adds the tags to this local tag service'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag service'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_ADD ] = 'this adds the tags to this local tag domain'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag domain'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_PEND ] = 'this pends the tags to be added to this tag repository when you upload'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'this petitions the tags for deletion from this tag repository when you upload'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'this rescinds the currently pending tags, so they will not be added'

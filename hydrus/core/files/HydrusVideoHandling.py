@@ -1,19 +1,23 @@
 import numpy
 import os
 import re
-import subprocess
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusProcess
-from hydrus.core import HydrusText
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAudioHandling
 from hydrus.core.files import HydrusFFMPEG
+from hydrus.core.processes import HydrusSubprocess
 
 def FileIsAnimated( path ):
+    
+    # TODO: this guy can be better, or at least it deserves some work
+    # surely we can have some sort of lines-inspection before we try the 'render first second' stuff, at least to discard obvious first stuff?
+    # I dunno, it is tricky. I only use this guy atm 2025-11 for animated jxl, which is indeed tricky to read from
+    # ffmpeg offers a slightly different codec, so maybe we could inspect that, but no duration data or anything, so what would a different ffmpeg version say?
+    # maybe this is ok as a backstop
     
     try:
         
@@ -32,7 +36,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
     
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-i", path ]
+    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-xerror", "-i", path ]
     
     if only_first_second:
         
@@ -54,31 +58,27 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
             
         
     
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
-    
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        process = subprocess.Popen( cmd, bufsize = 10**5, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd )
+        
+    except HydrusExceptions.SubprocessTimedOut:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'ffmpeg could not read file info quick enough!' )
         
     except FileNotFoundError as e:
         
         HydrusFFMPEG.HandleFFMPEGFileNotFound( e, path )
         
     
-    ( stdout, stderr ) = HydrusThreading.SubprocessCommunicate( process )
+    text = stderr
     
-    data_bytes = stderr
-    
-    if len( data_bytes ) == 0:
+    if len( text ) == 0:
         
-        HydrusFFMPEG.HandleFFMPEGNoContent( path, sbp_kwargs, stdout, stderr )
+        HydrusFFMPEG.HandleFFMPEGNoContent( path, stdout, stderr )
         
-    
-    del process
-    
-    ( text, encoding ) = HydrusText.NonFailingUnicodeDecode( data_bytes, 'utf-8' )
     
     lines = text.splitlines()
     
@@ -798,48 +798,32 @@ def VideoHasAudio( path, info_lines ) -> bool:
         '-' ] )
         
     
-    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
-    
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        process = subprocess.Popen( cmd, bufsize = 65536, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+        with HydrusSubprocess.SubprocessContextStreamer( cmd, bufsize = 65536, text = False ) as streamer:
+            
+            # silent PCM data is just 00 bytes
+            # every now and then, you'll get a couple ffs for some reason, but this is not legit audio data
+            
+            for chunk_of_pcm_data in streamer.IterateChunks():
+                
+                # iterating over bytes gives you ints, recall
+                # this used to be 'if not 0 or 255', but I found some that had 1 too, so let's just change the tolerance to reduce false positives
+                if True in ( 5 <= b <= 250 for b in chunk_of_pcm_data ):
+                    
+                    return True
+                    
+                
+            
         
     except FileNotFoundError as e:
         
         HydrusFFMPEG.HandleFFMPEGFileNotFound( e, path )
         
     
-    # silent PCM data is just 00 bytes
-    # every now and then, you'll get a couple ffs for some reason, but this is not legit audio data
-    
-    try:
-        
-        chunk_of_pcm_data = process.stdout.read( 65536 )
-        
-        while len( chunk_of_pcm_data ) > 0:
-            
-            # iterating over bytes gives you ints, recall
-            # this used to be 'if not 0 or 255', but I found some that had 1 too, so let's just change the tolerance to reduce false positives
-            if True in ( 5 <= b <= 250 for b in chunk_of_pcm_data ):
-                
-                return True
-                
-            
-            chunk_of_pcm_data = process.stdout.read( 65536 )
-            
-        
-        return False
-        
-    finally:
-        
-        process.terminate()
-        
-        process.stdout.close()
-        process.stderr.close()
-        
-    
+
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
@@ -888,7 +872,7 @@ class VideoRendererFFMPEG( object ):
         
         bufsize = self.depth * x * y
         
-        self.process = None
+        self.process_reader: typing.Optional[ HydrusSubprocess.SubprocessContextReader ] = None
         
         self.bufsize = bufsize
         
@@ -900,16 +884,18 @@ class VideoRendererFFMPEG( object ):
         self.initialize( start_index = start_pos )
         
     
+    def __del__( self ):
+        
+        self.close()
+        
+    
     def close( self ) -> None:
         
-        if self.process is not None:
+        if self.process_reader is not None:
             
-            self.process.terminate()
+            self.process_reader.CloseProcess()
             
-            self.process.stdout.close()
-            self.process.stderr.close()
-            
-            self.process = None
+            self.process_reader = None
             
         
     
@@ -976,13 +962,11 @@ class VideoRendererFFMPEG( object ):
         ] )
         
         
-        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
-        
         HydrusData.CheckProgramIsNotShuttingDown()
         
         try:
             
-            self.process = subprocess.Popen( cmd, bufsize = self.bufsize, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
+            self.process_reader = HydrusSubprocess.SubprocessContextReader( cmd, bufsize = self.bufsize, text = False )
             
         except FileNotFoundError as e:
             
@@ -1003,11 +987,16 @@ class VideoRendererFFMPEG( object ):
         
         for i in range( n ):
             
-            if self.process is not None:
+            if self.process_reader is not None:
                 
-                self.process.stdout.read( self.depth * w * h )
-                
-                self.process.stdout.flush()
+                try:
+                    
+                    frame_of_data = self.process_reader.ReadChunk()
+                    
+                except HydrusExceptions.SubprocessTimedOut:
+                    
+                    self.process_reader = None
+                    
                 
             
             self.pos += 1
@@ -1021,7 +1010,7 @@ class VideoRendererFFMPEG( object ):
             self.initialize()
             
         
-        if self.process is None:
+        if self.process_reader is None:
             
             result = self.lastread
             
@@ -1029,11 +1018,9 @@ class VideoRendererFFMPEG( object ):
             
             ( w, h ) = self._target_resolution
             
-            nbytes = self.depth * w * h
+            frame_of_data = self.process_reader.ReadChunk()
             
-            s = self.process.stdout.read( nbytes )
-            
-            if len( s ) != nbytes:
+            if len( frame_of_data ) != w * h * self.depth:
                 
                 if self.lastread is None:
                     
@@ -1069,7 +1056,7 @@ class VideoRendererFFMPEG( object ):
                 
             else:
                 
-                result = numpy.frombuffer( s, dtype = 'uint8' ).reshape( ( h, w, self.depth ) )
+                result = numpy.frombuffer( frame_of_data, dtype = 'uint8' ).reshape( ( h, w, self.depth ) )
                 
                 self.lastread = result
                 

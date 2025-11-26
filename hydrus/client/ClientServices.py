@@ -194,6 +194,157 @@ def GenerateService( service_key, service_type, name, dictionary = None ):
     
     return cl( service_key, service_type, name, dictionary )
     
+
+class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_SPECIFIER
+    SERIALISABLE_NAME = 'Service Specifier'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, service_types = None, service_keys = None ):
+        
+        if service_types is None:
+            
+            service_types = set()
+            
+        
+        if service_keys is None:
+            
+            service_keys = set()
+            
+        
+        super().__init__()
+        
+        self._service_types = set( service_types )
+        self._service_keys = set( service_keys )
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, ServiceSpecifier ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return ( tuple( sorted( self._service_types ) ), tuple( sorted( self._service_keys ) ) ).__hash__()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        serialisable_service_types = sorted( self._service_types )
+        serialisable_service_keys = sorted( ( key.hex() for key in self._service_keys ) )
+        
+        return ( serialisable_service_types, serialisable_service_keys )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( serialisable_service_types, serialisable_service_keys ) = serialisable_info
+        
+        self._service_types = set( serialisable_service_types )
+        self._service_keys = { bytes.fromhex( key_hex ) for key_hex in serialisable_service_keys }
+        
+    
+    def GetServiceKeys( self ):
+        
+        return self._service_keys
+        
+    
+    def GetServiceTypes( self ):
+        
+        return self._service_types
+        
+    
+    def GetSpecificKeys( self ) -> set[ bytes ]:
+        
+        try:
+            
+            if len( self._service_types ) > 0:
+                
+                service_keys = CG.client_controller.services_manager.GetServiceKeys( self._service_types )
+                
+            else:
+                
+                service_keys = CG.client_controller.services_manager.FilterValidServiceKeys( self._service_keys )
+                
+                if len( service_keys ) != self._service_keys:
+                    
+                    self._service_keys = set( service_keys )
+                    
+                
+            
+        except:
+            
+            service_keys = set()
+            
+        
+        return set( service_keys )
+        
+    
+    def IsAllRatings( self ):
+        
+        return self._service_types == set( HC.LOCAL_RATINGS_SERVICES )
+        
+    
+    def IsEmpty( self ):
+        
+        return len( self._service_types ) == 0 and len( self._service_keys ) == 0
+        
+    
+    def IsOneServiceKey( self ):
+        
+        return len( self._service_types ) == 0 and len( self._service_keys ) == 1
+        
+    
+    def ToString( self ) -> str:
+        
+        if self.IsEmpty():
+            
+            return '(no services selected)'
+            
+        elif len( self._service_types ) > 0:
+            
+            if self.IsAllRatings():
+                
+                return 'ratings'
+                
+            else:
+                
+                return ', '.join( sorted( ( HC.service_string_lookup_short[ service_type ] for service_type in self._service_types ) ) )
+                
+            
+        else:
+            
+            if len( self._service_keys ) == 1:
+                
+                try:
+                    
+                    ( service_key, ) = self._service_keys
+                    
+                    name = CG.client_controller.services_manager.GetServiceName( service_key )
+                    
+                except:
+                    
+                    name = 'unknown service'
+                    
+                
+            else:
+                
+                name = f'{HydrusNumbers.ToHumanInt(len(self._service_keys))} services'
+                
+            
+            return name
+            
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_SPECIFIER ] = ServiceSpecifier
+
 class Service( object ):
     
     def __init__( self, service_key, service_type, name, dictionary = None ):
@@ -639,30 +790,6 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
             
         
     
-    def ConvertRatingStateToString( self, rating_state: int ):
-        
-        if rating_state == ClientRatings.LIKE:
-            
-            return 'like'
-            
-        elif rating_state == ClientRatings.DISLIKE:
-            
-            return 'dislike'
-            
-        elif rating_state == ClientRatings.MIXED:
-            
-            return 'mixed'
-            
-        elif rating_state == ClientRatings.NULL:
-            
-            return 'not set'
-            
-        else:
-            
-            return 'unknown'
-            
-        
-    
 
 class ServiceLocalRatingLike( ServiceLocalRatingStars ):
     
@@ -685,6 +812,30 @@ class ServiceLocalRatingLike( ServiceLocalRatingStars ):
             
         
         return 'unknown'
+        
+    
+    def ConvertRatingStateToString( self, rating_state: int ):
+        
+        if rating_state == ClientRatings.LIKE:
+            
+            return 'like'
+            
+        elif rating_state == ClientRatings.DISLIKE:
+            
+            return 'dislike'
+            
+        elif rating_state == ClientRatings.MIXED:
+            
+            return 'mixed'
+            
+        elif rating_state == ClientRatings.NULL:
+            
+            return 'not set'
+            
+        else:
+            
+            return 'unknown'
+            
         
     
 

@@ -113,8 +113,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 648
-CLIENT_API_VERSION = 82
+SOFTWARE_VERSION = 649
+CLIENT_API_VERSION = 83
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -341,6 +341,10 @@ HYDRUS_CLIENT = 0
 HYDRUS_SERVER = 1
 HYDRUS_TEST = 2
 
+LOGICAL_OPERATOR_ALL = 0
+LOGICAL_OPERATOR_ANY = 1
+LOGICAL_OPERATOR_ONLY = 2
+
 MAINTENANCE_IDLE = 0
 MAINTENANCE_SHUTDOWN = 1
 MAINTENANCE_FORCED = 2
@@ -454,17 +458,17 @@ service_string_lookup = {
     LOCAL_FILE_DOMAIN : 'local file domain',
     LOCAL_FILE_TRASH_DOMAIN : 'local trash file domain',
     LOCAL_FILE_UPDATE_DOMAIN : 'local update file domain',
-    HYDRUS_LOCAL_FILE_STORAGE : 'virtual combined local file service',
-    COMBINED_LOCAL_FILE_DOMAINS : 'virtual combined local media service',
+    HYDRUS_LOCAL_FILE_STORAGE : 'virtual combined local file domain',
+    COMBINED_LOCAL_FILE_DOMAINS : 'virtual combined local media domain',
     MESSAGE_DEPOT : 'hydrus message depot',
-    LOCAL_TAG : 'local tag service',
+    LOCAL_TAG : 'local tag domain',
     LOCAL_RATING_INCDEC : 'local inc/dec rating service',
     LOCAL_RATING_NUMERICAL : 'local numerical rating service',
     LOCAL_RATING_LIKE : 'local like/dislike rating service',
     RATING_NUMERICAL_REPOSITORY : 'hydrus numerical rating repository',
     RATING_LIKE_REPOSITORY : 'hydrus like/dislike rating repository',
-    COMBINED_TAG : 'virtual combined tag service',
-    COMBINED_FILE : 'virtual combined file service',
+    COMBINED_TAG : 'virtual combined tag domain',
+    COMBINED_FILE : 'virtual combined file domain',
     LOCAL_BOORU : 'client local booru',
     CLIENT_API_SERVICE : 'client api',
     IPFS : 'ipfs daemon',
@@ -475,8 +479,35 @@ service_string_lookup = {
     NULL_SERVICE : 'null service'
 }
 
+service_string_lookup_short = {
+    TAG_REPOSITORY : 'tag repository',
+    FILE_REPOSITORY : 'file repository',
+    LOCAL_FILE_DOMAIN : 'local file domain',
+    LOCAL_FILE_TRASH_DOMAIN : 'trash',
+    LOCAL_FILE_UPDATE_DOMAIN : 'local update file domain',
+    HYDRUS_LOCAL_FILE_STORAGE : 'hydrus local file storage',
+    COMBINED_LOCAL_FILE_DOMAINS : 'combined local file domains',
+    MESSAGE_DEPOT : 'hydrus message depot',
+    LOCAL_TAG : 'local tag domain',
+    LOCAL_RATING_INCDEC : 'inc/dec ratings',
+    LOCAL_RATING_NUMERICAL : 'numerical ratings',
+    LOCAL_RATING_LIKE : 'like/dislike ratings',
+    RATING_NUMERICAL_REPOSITORY : 'hydrus numerical rating repository',
+    RATING_LIKE_REPOSITORY : 'hydrus like/dislike rating repository',
+    COMBINED_TAG : 'all known tags',
+    COMBINED_FILE : 'all known files',
+    LOCAL_BOORU : 'local booru',
+    CLIENT_API_SERVICE : 'client api',
+    IPFS : 'ipfs',
+    TEST_SERVICE : 'test service',
+    LOCAL_NOTES : 'notes',
+    SERVER_ADMIN : 'hydrus server administration',
+    COMBINED_DELETED_FILE : 'virtual deleted file service',
+    NULL_SERVICE : 'null service'
+}
+
 service_description_lookup = {
-    TAG_REPOSITORY : 'A repository of tag mapping data (tag-file pairs) stored on a remote server. Clients can sync with it, which means to download all the file hashes, tags, and mappings it knows of and synchronise that to local metadata storage. Clients can also upload new mapping data, which will in turn be shared to all users.\n\nThe "all known tags" service is a union of all local tag services and tag repositories.',
+    TAG_REPOSITORY : 'A repository of tag mapping data (tag-file pairs) stored on a remote server. Clients can sync with it, which means to download all the file hashes, tags, and mappings it knows of and synchronise that to local metadata storage. Clients can also upload new mapping data, which will in turn be shared to all users.\n\nThe "all known tags" service is a union of all local tag domains and remote tag repositories.',
     FILE_REPOSITORY : 'A repository of files stored on a remote server. Clients can sync with it, which means to regularly download all the file hashes and thumbnails. You can search it like any other file domain, viewing the thumbnails, and download files. Clients can also upload new files, which will in turn be shared to all users.',
     LOCAL_FILE_DOMAIN : 'This stores media files you have imported. You can have multiple local file domains, and files may be in multiple local file domains at once. Each domain is completely isolated from one another when you perform a file or tag search (if your search page is pointed at A, you will not get any file search results or tag autocomplete suggestions from B).',
     LOCAL_FILE_TRASH_DOMAIN : 'This is where your files go when they have been removed from all your local file domains. It is a waiting area to allow for undeletes of mistakes. When files are deleted from this place, they are physically deleted.',
@@ -484,13 +515,13 @@ service_description_lookup = {
     HYDRUS_LOCAL_FILE_STORAGE : 'This represents all files currently tracked and stored in your database. If a file is in here, it is either in "repository updates", "combined local file domains", or "trash", and it should be loadable from disk.\n\nWhen a file is deleted from the trash, it also leaves this domain and is scheduled to be physically deleted--which usually happens within a few seconds.',
     COMBINED_LOCAL_FILE_DOMAINS : 'This represents all files currently in any of your local file domains. You start with only "my files", but if you add more, this is a convenient umbrella that unions all of them with efficient search tech. When a file is deleted from all of its local file domains, it leaves this service and enters the trash.',
     MESSAGE_DEPOT : 'You should not see this text',
-    LOCAL_TAG : 'This stores tag mappings (tag-file pairs) that you have added/imported. You can have multiple local tag services, and the exact same mappings map appear in multiple domains.\n\nTags are not removed when files are deleted, and if you later re-import the file, you will see it still has its tags.\n\nThe "all known tags" service is a union of all local tag services and tag repositories.',
+    LOCAL_TAG : 'This stores tag mappings (tag-file pairs) that you have added/imported. You can have multiple local tag domains, and the exact same mappings map appear in multiple domains.\n\nTags are not removed when files are deleted, and if you later re-import the file, you will see it still has its tags.\n\nThe "all known tags" service is a union of all local tag services and tag repositories.',
     LOCAL_RATING_INCDEC : 'This stores inc/dec ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
     LOCAL_RATING_NUMERICAL : 'This stores numerical ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
     LOCAL_RATING_LIKE : 'This stores like/dislike ratings.\n\nRatings are not removed when files are deleted, and if you later re-import the file, you will see it still has its ratings.',
     RATING_NUMERICAL_REPOSITORY : 'You should not see this text',
     RATING_LIKE_REPOSITORY : 'You should not see this text',
-    COMBINED_TAG : 'This is a union of all your local tag services and tag repositories.',
+    COMBINED_TAG : 'This is a union of all your local tag domains and remote tag repositories.',
     COMBINED_FILE : 'This is a special view on a tag service. It will deliver results without any cross-reference with a known file service, and thus if the file is tagged on a service, you will see it whether you have it, had it, or have never had it.',
     LOCAL_BOORU : 'You should not see this text',
     CLIENT_API_SERVICE : 'The Client API.',
@@ -510,6 +541,7 @@ LOCAL_TAG_SERVICES = ( LOCAL_TAG, )
 LOCAL_SERVICES = LOCAL_FILE_SERVICES + LOCAL_TAG_SERVICES + ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_RATING_INCDEC, LOCAL_NOTES, CLIENT_API_SERVICE )
 
 STAR_RATINGS_SERVICES = ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY )
+LOCAL_RATINGS_SERVICES = ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_RATING_INCDEC )
 RATINGS_SERVICES = ( LOCAL_RATING_LIKE, LOCAL_RATING_NUMERICAL, LOCAL_RATING_INCDEC, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY )
 REPOSITORIES = ( TAG_REPOSITORY, FILE_REPOSITORY, RATING_LIKE_REPOSITORY, RATING_NUMERICAL_REPOSITORY )
 RESTRICTED_SERVICES = REPOSITORIES + ( SERVER_ADMIN, MESSAGE_DEPOT )

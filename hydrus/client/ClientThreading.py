@@ -5,8 +5,8 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP

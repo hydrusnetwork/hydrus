@@ -291,7 +291,7 @@ def boot():
     
     if HG.restart:
         
-        from hydrus.core import HydrusProcess
+        from hydrus.core.processes import HydrusProcess
         
         HydrusProcess.RestartProcess()
         

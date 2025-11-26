@@ -70,7 +70,7 @@ def GetExampleServicesDict():
         '6c6f63616c2074616773': {
             'name' : 'my tags',
             'type' : 5,
-            'type_pretty' : 'local tag service'
+            'type_pretty' : 'local tag domain'
         },
         TG.test_controller.example_tag_repo_service_key.hex() : {
             'name' : 'example tag repo',
@@ -100,28 +100,28 @@ def GetExampleServicesDict():
         '616c6c206c6f63616c2066696c6573' : {
             'name' : 'hydrus local file storage',
             'type' : 15,
-            'type_pretty' : 'virtual combined local file service'
+            'type_pretty' : 'virtual combined local file domain'
         },
         '616c6c206c6f63616c206d65646961' : {
             'name' : 'combined local file domains',
             'type' : 21,
-            'type_pretty' : 'virtual combined local media service'
+            'type_pretty' : 'virtual combined local media domain'
         },
         '616c6c206b6e6f776e2066696c6573' : {
             'name' : 'all known files',
             'type' : 11,
-            'type_pretty' : 'virtual combined file service'
+            'type_pretty' : 'virtual combined file domain'
         },
         '616c6c206b6e6f776e2074616773' : {
             'name' : 'all known tags',
             'type' : 10,
-            'type_pretty' : 'virtual combined tag service'
+            'type_pretty' : 'virtual combined tag domain'
         },
         TG.test_controller.example_like_rating_service_key.hex() : {
             'name' : 'example local rating like service',
             'type' : 7,
             'type_pretty' : 'local like/dislike rating service',
-            'star_shape' : 'circle'
+            'star_shape' : 'svg'
         },
         TG.test_controller.example_numerical_rating_service_key.hex() : {
             'name' : 'example local rating numerical service',
@@ -765,7 +765,7 @@ class TestClientAPI( unittest.TestCase ):
                     'name' : 'my tags',
                     'service_key' : '6c6f63616c2074616773',
                     'type': 5,
-                    'type_pretty': 'local tag service'
+                    'type_pretty': 'local tag domain'
                 }
             ],
             'tag_repositories' : [
@@ -810,7 +810,7 @@ class TestClientAPI( unittest.TestCase ):
                     'name' : 'hydrus local file storage',
                     'service_key' : '616c6c206c6f63616c2066696c6573',
                     'type' : 15,
-                    'type_pretty' : 'virtual combined local file service'
+                    'type_pretty' : 'virtual combined local file domain'
                 }
             ],
             'all_local_media' : [
@@ -818,7 +818,7 @@ class TestClientAPI( unittest.TestCase ):
                     'name' : 'combined local file domains',
                     'service_key' : '616c6c206c6f63616c206d65646961',
                     'type': 21,
-                    'type_pretty': 'virtual combined local media service'
+                    'type_pretty': 'virtual combined local media domain'
                 }
             ],
             'all_known_files' : [
@@ -826,7 +826,7 @@ class TestClientAPI( unittest.TestCase ):
                     'name' : 'all known files',
                     'service_key' : '616c6c206b6e6f776e2066696c6573',
                     'type' : 11,
-                    'type_pretty' : 'virtual combined file service'
+                    'type_pretty' : 'virtual combined file domain'
                 }
             ],
             'all_known_tags' : [
@@ -834,7 +834,7 @@ class TestClientAPI( unittest.TestCase ):
                     'name' : 'all known tags',
                     'service_key' : '616c6c206b6e6f776e2074616773',
                     'type' : 10,
-                    'type_pretty' : 'virtual combined tag service'
+                    'type_pretty' : 'virtual combined tag domain'
                 }
             ],
             'trash' : [
@@ -941,6 +941,35 @@ class TestClientAPI( unittest.TestCase ):
                 
             
             
+        
+    
+    def _test_get_service_svg( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'add_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = f'/get_service_rating_svg?service_key={TG.test_controller.example_like_rating_service_key.hex()}'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.getheader( 'content-type' ), 'image/svg+xml' )
+        
+        svg_path = HydrusStaticDir.GetSVGPath( 'star' )
+        
+        svg_file = open( svg_path, 'rb' )
+        
+        svg_content = svg_file.read()
+        
+        self.assertEqual( data, svg_content )
         
     
     def _test_add_files_add_file( self, connection, set_up_permissions ):
@@ -8231,6 +8260,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_basics( connection )
         set_up_permissions = self._test_client_api_basics( connection )
         self._test_get_services( connection, set_up_permissions )
+        self._test_get_service_svg( connection, set_up_permissions )
         self._test_manage_database( connection, set_up_permissions )
         self._test_options( connection, set_up_permissions )
         self._test_add_files_add_file( connection, set_up_permissions )

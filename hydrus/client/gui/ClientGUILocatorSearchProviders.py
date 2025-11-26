@@ -121,9 +121,12 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
             
             current_media_page = CG.client_controller.gui.GetNotebookCurrentPage()
             
-            current_media_page.ActivateFavouriteSearch( fav_search )
-            
-            self.result_ids_to_fav_searches = {}
+            if current_media_page is not None:
+                
+                current_media_page.ActivateFavouriteSearch( fav_search )
+                
+                self.result_ids_to_fav_searches = {}
+                
             
         
     
@@ -161,14 +164,15 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         
         if result:
             
-            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_favourite_searches_results' ) > 0:
+            if CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_favourite_searches_results' ) is not None:
                 
-                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_favourite_searches_results' ) ]
+                result = result[ : CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_favourite_searches_results' ) ]
                 
             
             self.resultsAvailable.emit( jobID, result )
             
         
+    
     def stopJobs( self, jobs: list ):
         
         self.result_ids_to_pages = {}
@@ -191,8 +195,10 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         super().__init__( parent )
         
+        from hydrus.client.gui.pages import ClientGUIPages
+        
         self.result_id_counter = 0
-        self.result_ids_to_pages = {}
+        self.result_ids_to_pages: dict[ int, typing.Union[ ClientGUIPages.Page, ClientGUIPages.PagesNotebook ] ] = {}
         
     
     def title( self ):
@@ -212,7 +218,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         page = self.result_ids_to_pages.get( resultID, None )
         
-        if page:
+        if page is not None:
             
             page_key = page.GetPageKey()
             
@@ -291,9 +297,9 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     
                 
             
-            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_page_results' ) > 0:
+            if CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_page_results' ) is not None:
                 
-                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_page_results' ) ]
+                result = result[ : CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_page_results' ) ]
                 
             
             return result
@@ -373,8 +379,6 @@ class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
         
         history_data = CG.client_controller.gui.GetPagesHistory()
         
-        from hydrus.client.gui.pages import ClientGUIPages
-        
         def get_history_tabs( history_data: list ):
             
             result = []
@@ -398,9 +402,9 @@ class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
                     
                 
             
-            if CG.client_controller.new_options.GetInteger( 'command_palette_limit_history_results' ) > 0:
+            if CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_history_results' ) is not None:
                 
-                result = result[ : CG.client_controller.new_options.GetInteger( 'command_palette_limit_history_results' ) ]
+                result = result[ : CG.client_controller.new_options.GetNoneableInteger( 'command_palette_limit_history_results' ) ]
                 
             
             return result

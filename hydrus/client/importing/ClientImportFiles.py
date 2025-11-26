@@ -330,7 +330,7 @@ class FileImportJob( object ):
             extra_description = f'File with hash "{self.GetHash().hex()}".'
             
             thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in, extra_description = extra_description )
-
+            
             # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
             self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
             

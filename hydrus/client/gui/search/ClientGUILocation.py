@@ -73,7 +73,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ClearSurplusServices( self ):
         
         # if user clicks all known files, then all other services will be wiped
-        # hydrus local file storage should do other local file services too
+        # hydrus local file storage should do all other local file services too
         # and combined local file domains does local file domains
         
         location_context = self._GetValue()
@@ -177,7 +177,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
             
             if service.GetServiceKey() == CC.COMBINED_DELETED_FILE_SERVICE_KEY:
                 
-                desc += ' Note this includes files deleted from any domain at all, including those removed from one local file service but still in another local file service.'
+                desc += ' Note this includes files deleted from any domain at all, including those removed from one local file domain but still in another local file domain.'
                 
             
             check_it = location_context == self._location_context

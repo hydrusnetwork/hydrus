@@ -1,8 +1,8 @@
 ---
-title: Multiple Local File Services
+title: Multiple Local File Domains
 --- 
 
-# multiple local file services
+# multiple local file domains
 
 The client lets you store your files in different overlapping partitions. This can help management workflows and privacy.
 
@@ -30,7 +30,7 @@ Changing the tag domain to 'PTR' or 'all known tags' would make for a different 
 
 This idea of dynamically intersecting domains is very important to hydrus. Each service stands on its own, and the 'my tags' domain is not linked to 'my files'. It does not care where its tagged files are. When you delete a file, no tags are changed. But when you delete a file, the 'file domain' circle will shrink, and that may change the search results in the intersection.
 
-With _multiple local file services_, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.
+With _multiple local file domains_, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.
 
 You can add and remove them under _services->manage services_:
 
@@ -56,7 +56,7 @@ Also note that these files now have two 'delete' commands. You will be presented
 
 You can be happy that any search in this new domain--for tags or files--is not going to provide any unexpected surprises. You can also do 'system:everything', 'system:limit=64' for a random sample, or any other simple search predicate for browsing, and the search should run fast and safe.
 
-If you want to try multiple local file services out, I recommend this split to start off. If you don't like it, you can delete 'sfw' later with no harm done.
+If you want to try multiple local file domains out, I recommend this split to start off. If you don't like it, you can delete 'sfw' later with no harm done.
 
 !!! note
     While 'add to y' copies the files, 'move from x to y' deletes the files from the original location. They get a delete timestamp ("deleted from my files 5 minutes ago"), and they can be undeleted or 'added' back, and they will get their old import timestamp back. 
@@ -75,7 +75,7 @@ I also expect to write a system to easily merge clients together. Several users 
 
 Note that when you select a file domain, you can select 'multiple locations'. This provides the union of whichever domains you like. Tag counts will be correct but imprecise, often something like 'blonde hair (2-5)', meaning 'between two and five files', due to the complexity of quickly counting within these complicated domains.
 
-As soon as you add another local file service, you will also see a 'combined local file domains' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. 
+As soon as you add another local file domain, you will also see a 'combined local file domains' service listed in the file domain selector. This is a virtual service that provides a very efficient and accurate search space of the union of all your local file domains. 
 
 This whole system is new. I will keep working on it, including better 'at a glance' indications of which files are where (current thoughts are custom thumbnail border colours and little indicator icons). Let me know how you get on with it!
 

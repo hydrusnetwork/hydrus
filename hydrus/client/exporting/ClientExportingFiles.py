@@ -11,8 +11,8 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG

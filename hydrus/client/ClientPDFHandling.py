@@ -94,6 +94,11 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, 
             
             document.close()
             
+            if numpy_image is None:
+                
+                raise Exception()
+                
+            
             thumbnail_numpy_image = numpy_image
             
             return thumbnail_numpy_image
@@ -104,7 +109,7 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, 
             
         
     
-    CG.client_controller.CallBlockingToQtTLW( qt_code )
+    return CG.client_controller.CallBlockingToQtTLW( qt_code )
     
 
 HydrusPDFHandling.GenerateThumbnailNumPyFromPDFPath = GenerateThumbnailNumPyFromPDFPath

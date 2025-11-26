@@ -314,6 +314,31 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
         raise HydrusExceptions.DataMissing( 'Service id error in database: id "{}" does not exist!'.format( service_id ) )
         
     
+    def GetServiceTypesToServiceIds( self, service_specifier: ClientServices.ServiceSpecifier ):
+        
+        service_types = service_specifier.GetServiceTypes()
+        
+        if len( service_types ) > 0:
+            
+            service_ids = self.GetServiceIds( service_types )
+            
+        else:
+            
+            service_keys = service_specifier.GetServiceKeys()
+            
+            service_ids = [ self._service_keys_to_service_ids[ service_key ] for service_key in service_keys  if service_key in self._service_keys_to_service_ids ]
+            
+        
+        service_types_to_service_ids = collections.defaultdict( list )
+        
+        for service_id in service_ids:
+            
+            service_types_to_service_ids[ self._service_ids_to_services[ service_id ].GetServiceType() ].append( service_id )
+            
+        
+        return service_types_to_service_ids
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
         
         return []

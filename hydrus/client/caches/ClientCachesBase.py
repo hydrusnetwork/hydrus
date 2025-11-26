@@ -16,6 +16,11 @@ class CacheableObject( object ):
         raise NotImplementedError()
         
     
+    def IsFinishedLoading( self ):
+        
+        raise NotImplementedError()
+        
+    
 
 class DataCache( object ):
     
@@ -26,7 +31,7 @@ class DataCache( object ):
         self._cache_size = cache_size
         self._timeout = timeout
         
-        self._keys_to_data = {}
+        self._keys_to_data: dict[ typing.Any, tuple[ CacheableObject, int ] ] = {}
         self._keys_fifo = collections.OrderedDict()
         
         self._total_estimated_memory_footprint = 0
@@ -38,11 +43,16 @@ class DataCache( object ):
     
     def _Delete( self, key ):
         
+        if key in self._keys_fifo:
+            
+            del self._keys_fifo[ key ]
+            
+        
         if key not in self._keys_to_data:
             
             return
             
-
+        
         ( data, size_estimate ) = self._keys_to_data[ key ]
         
         del self._keys_to_data[ key ]
@@ -244,6 +254,53 @@ class DataCache( object ):
         with self._lock:
             
             self._TouchKey( key )
+            
+        
+    
+    def _DeleteLoadedItemsUntilFreeSpace( self, free_space_desired: int ) -> bool:
+        
+        current_free_space = self._cache_size - self._total_estimated_memory_footprint
+        
+        if current_free_space > free_space_desired:
+            
+            return True
+            
+        
+        for key in list( self._keys_fifo.keys() ):
+            
+            ( data, size_estimate ) = self._keys_to_data[ key ]
+            
+            if not data.IsFinishedLoading():
+                
+                # this guy is still rendering, let's not push him out for a different prefetch
+                continue
+                
+            
+            self._Delete( key )
+            
+            current_free_space = self._cache_size - self._total_estimated_memory_footprint
+            
+            if current_free_space > free_space_desired:
+                
+                return True
+                
+            
+        
+        # we went through the whole cache and couldn't find enough easy freed-up space to fit this new guy in. not a good time to prefetch it!
+        return False
+        
+    
+    def TryToFlushEasySpaceForPrefetch( self, free_space_desired: int ):
+        
+        # ok, caller wants to do a prefetch. question is, is there enough soft space in the fifo queue to jam another guy in?
+        # or, are we actually pretty busy now with image rendering and stuff and we don't really want to cut too hard?
+        # let's see if we can free up some space and let the caller know
+        
+        with self._lock:
+            
+            successful = self._DeleteLoadedItemsUntilFreeSpace( free_space_desired )
+            
+            return successful
             
         
     

@@ -704,7 +704,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
             )
             
             label = f'{CG.client_controller.services_manager.GetName( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
-            description = 'Duplicate the files to this local file service.'
+            description = 'Duplicate the files to this local file domain.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
             menu_tuples.append( ( label, description, call ) )

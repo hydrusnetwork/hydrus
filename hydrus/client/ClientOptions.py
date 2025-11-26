@@ -428,6 +428,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         from hydrus.client.gui.widgets import ClientGUIPainterShapes
         from hydrus.core.files.images import HydrusImageHandling
         from hydrus.core.files.images import HydrusImageColours
+        from hydrus.client.metadata import ClientTags
         
         self._dictionary[ 'integers' ] = {
             'notebook_tab_alignment' : CC.DIRECTION_UP,
@@ -484,11 +485,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'image_cache_timeout' : 600,
             'image_tile_cache_timeout' : 300,
             'image_cache_storage_limit_percentage' : 25,
-            'image_cache_prefetch_limit_percentage' : 15,
-            'media_viewer_prefetch_delay_base_ms' : 100,
+            'image_cache_prefetch_limit_percentage' : 25,
             'media_viewer_prefetch_num_previous' : 2,
             'media_viewer_prefetch_num_next' : 3,
-            'duplicate_filter_prefetch_num_pairs' : 5,
+            'duplicate_filter_prefetch_num_pairs' : 3,
             'thumbnail_border' : 1,
             'thumbnail_margin' : 2,
             'thumbnail_dpr_percent' : 100,
@@ -545,9 +545,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'export_filename_character_limit' : 220,
             'file_has_transparency_strictness' : HydrusImageColours.HAS_TRANSPARENCY_STRICTNESS_HUMAN,
             'page_nav_history_max_entries' : 100,
-            'command_palette_limit_page_results' : 0,
-            'command_palette_limit_history_results' : 10,
-            'command_palette_limit_favourite_searches_results' : 0,
+            'tag_list_tag_display_type_sidebar' : ClientTags.TAG_DISPLAY_SELECTION_LIST,
+            'tag_list_tag_display_type_media_viewer_hover' : ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
         }
         
         self._dictionary[ 'floats' ] = {
@@ -603,6 +602,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'number_of_unselected_medias_to_present_tags_for' : 4096,
             'export_path_character_limit' : None,
             'export_dirname_character_limit' : None,
+            'command_palette_limit_page_results' : None,
+            'command_palette_limit_history_results' : 10,
+            'command_palette_limit_favourite_searches_results' : None,
         }
         
         #
@@ -661,7 +663,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integer_list' ] = {
             'file_viewing_stats_interesting_canvas_types' : [ CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_CLIENT_API ],
-            'command_palette_provider_order' : [ CC.COMMAND_PALETTE_PROVIDER_CALCULATOR, CC.COMMAND_PALETTE_PROVIDER_MAIN_MENU, CC.COMMAND_PALETTE_PROVIDER_MEDIA_MENU, CC.COMMAND_PALETTE_PROVIDER_PAGES_HISTORY, CC.COMMAND_PALETTE_PROVIDER_PAGES ],
+            'command_palette_provider_order' : [ CC.COMMAND_PALETTE_PROVIDER_CALCULATOR, CC.COMMAND_PALETTE_PROVIDER_MAIN_MENU, CC.COMMAND_PALETTE_PROVIDER_MEDIA_MENU, CC.COMMAND_PALETTE_PROVIDER_PAGES_HISTORY, CC.COMMAND_PALETTE_PROVIDER_PAGES, CC.COMMAND_PALETTE_PROVIDER_FAVOURITE_SEARCH ],
         }
         
         #

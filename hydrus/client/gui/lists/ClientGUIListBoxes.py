@@ -2977,8 +2977,6 @@ class ListBoxTags( ListBox ):
             self._extra_parent_rows_allowed = CG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
             
         
-        self._render_for_user = not self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
-        
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
         self._sibling_connector_string = CG.client_controller.new_options.GetString( 'sibling_connector' )
@@ -3036,7 +3034,9 @@ class ListBoxTags( ListBox ):
         
         show_parent_rows = self._show_parent_decorators and self._extra_parent_rows_allowed
         
-        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( self._render_for_user, self._show_sibling_decorators, self._sibling_connector_string, self._sibling_connector_namespace, self._show_parent_decorators, show_parent_rows )
+        render_for_user = not self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
+        
+        rows_of_texts_and_namespaces = term.GetRowsOfPresentationTextsWithNamespaces( render_for_user, self._show_sibling_decorators, self._sibling_connector_string, self._sibling_connector_namespace, self._show_parent_decorators, show_parent_rows )
         
         rows_of_texts_and_colours = []
         
@@ -5018,13 +5018,13 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
                     callable = HydrusData.Call( self.SetTagDisplayType, tag_display_type )
                     
                 
-                label = 'switch to "{}" tag display'.format( ClientTags.tag_display_str_lookup[ tag_display_type ] )
+                label = 'switch to "{}"'.format( ClientTags.tag_display_str_lookup[ tag_display_type ] )
                 description = 'Switch which tags this list shows, this may not work!'
                 
                 ClientGUIMenus.AppendMenuCheckItem( submenu, label, description, checked, callable )
                 
             
-            ClientGUIMenus.AppendMenu( menu, submenu, 'experimental' )
+            ClientGUIMenus.AppendMenu( menu, submenu, 'tag display (experimental)' )
             
         
     
@@ -5323,7 +5323,9 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
     def __init__( self, parent, canvas_key, location_context: ClientLocation.LocationContext ):
         
-        super().__init__( parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
+        tag_display_type = CG.client_controller.new_options.GetInteger( 'tag_list_tag_display_type_media_viewer_hover' )
+        
+        super().__init__( parent, tag_display_type, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
         
         self._canvas_key = canvas_key
         self._location_context = location_context

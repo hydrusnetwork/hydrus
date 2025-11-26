@@ -374,7 +374,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._last_motion_pos = QC.QPoint( 0, 0 )
         self._last_geometry = QC.QRect( 0, 0, 0, 0 )
         
-        self._media_container.readyForNeighbourPrefetch.connect( self._PrefetchNeighbours )
+        self._media_container.readyForNeighbourPrefetch.connect( self._MaintainNeighbourPrefetch )
         
         self._media_container.zoomChanged.connect( self.ZoomChanged )
         
@@ -384,6 +384,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
+        CG.client_controller.sub( self, '_MaintainNeighbourPrefetch', 'notify_image_finished_rendering' )
         
     
     def _Archive( self ):
@@ -474,6 +475,11 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return ''
         
     
+    def _GetPrefetchNeighboursInPreferenceOrder( self ) -> list[ ClientMediaResult.MediaResult ]:
+        
+        return []
+        
+    
     def _Inbox( self ):
         
         if self._current_media is None:
@@ -482,6 +488,22 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ) )
+        
+    
+    def _MaintainNeighbourPrefetch( self ):
+        
+        if self._current_media is None:
+            
+            return
+            
+        
+        to_prefetch = self._GetPrefetchNeighboursInPreferenceOrder()
+        
+        to_prefetch.insert( 0, self._current_media.GetMediaResult() ) # we stick this at the front to ensure we don't start hitting neightbours before the current image, if there is one, is rendered
+        
+        to_prefetch = [ media_result for media_result in to_prefetch if media_result.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media_result, self.CANVAS_TYPE ) ]
+        
+        CG.client_controller.images_cache.PrefetchImageRenderers( to_prefetch )
         
     
     def _ManageNotes( self, name_to_start_on = None ):
@@ -607,11 +629,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             ClientGUIMediaModalActions.DoOpenKnownURLFromShortcut( self, self._current_media )
             
-        
-    
-    def _PrefetchNeighbours( self ):
-        
-        pass
         
     
     def _SaveCurrentMediaViewTime( self ):
@@ -3019,6 +3036,11 @@ class CanvasWithHovers( Canvas ):
         return self._canvas_type
         
     
+    def NotifyWeAreClosing( self ):
+        
+        pass
+        
+    
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
         
         command_processed = True
@@ -3140,21 +3162,6 @@ class CanvasMediaList( CanvasWithHovers ):
             
         
     
-    def UserOKToClose( self ):
-        
-        can_close = super().UserOKToClose()
-        
-        if can_close:
-            
-            if self._current_media is not None:
-                
-                self.exitFocusMedia.emit( self._current_media )
-                
-            
-        
-        return can_close
-        
-    
     def _GenerateHoverTopFrame( self ):
         
         raise NotImplementedError()
@@ -3174,7 +3181,7 @@ class CanvasMediaList( CanvasWithHovers ):
         return index_string
         
     
-    def _PrefetchNeighbours( self ):
+    def _GetPrefetchNeighboursInPreferenceOrder( self ) -> list[ ClientMediaResult.MediaResult ]:
         
         media_looked_at = set()
         
@@ -3183,68 +3190,54 @@ class CanvasMediaList( CanvasWithHovers ):
         previous = self._current_media
         next = self._current_media
         
-        delay_base = HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_delay_base_ms' ) )
-        
         num_to_go_back = CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_previous' )
         num_to_go_forward = CG.client_controller.new_options.GetInteger( 'media_viewer_prefetch_num_next' )
         
         # if media_looked_at nukes the list, we want shorter delays, so do next first
         
-        for i in range( num_to_go_forward ):
-            
-            next = self._media_list.GetNext( next )
-            
-            if next in media_looked_at:
-                
-                break
-                
-            else:
-                
-                media_looked_at.add( next )
-                
-            
-            delay = delay_base * ( i + 1 )
-            
-            to_render.append( ( next, delay ) )
-            
+        num_looked_forward = 0
+        num_looked_back = 0
         
-        for i in range( num_to_go_back ):
+        while num_looked_forward < num_to_go_forward and num_looked_back < num_to_go_back:
             
-            previous = self._media_list.GetPrevious( previous )
-            
-            if previous in media_looked_at:
+            if num_looked_forward < num_to_go_forward:
                 
-                break
+                next = self._media_list.GetNext( next )
                 
-            else:
-                
-                media_looked_at.add( previous )
-                
-            
-            delay = delay_base * 2 * ( i + 1 )
-            
-            to_render.append( ( previous, delay ) )
-            
-        
-        images_cache = CG.client_controller.images_cache
-        images_cache.UnpinAll()
-        images_cache.Pin([next,previous])
-        
-        for ( media, delay ) in to_render:
-            
-            hash = media.GetHash()
-            mime = media.GetMime()
-            
-            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media.GetMediaResult(), self.CANVAS_TYPE ):
-                
-                if not images_cache.HasImageRenderer( hash ):
+                if next in media_looked_at:
                     
-                    # we do qt safe to make sure the job is cancelled if we are destroyed
+                    num_looked_forward = num_to_go_forward
                     
-                    CG.client_controller.CallLaterQtSafe( self, delay, 'image pre-fetch', images_cache.PrefetchImageRenderer, media.GetMediaResult() )
+                else:
+                    
+                    to_render.append( next.GetMediaResult() )
+                    
+                    media_looked_at.add( next )
+                    
+                    num_looked_forward += 1
                     
                 
             
+            if num_looked_back < num_to_go_back:
+                
+                previous = self._media_list.GetPrevious( previous )
+                
+                if previous in media_looked_at:
+                    
+                    num_looked_back = num_to_go_back
+                    
+                else:
+                    
+                    to_render.append( previous.GetMediaResult() )
+                    
+                    media_looked_at.add( previous )
+                    
+                    num_looked_back += 1
+                    
+                
+            
+        
+        return to_render
         
     
     def _ShowFirst( self ):
@@ -3297,6 +3290,16 @@ class CanvasMediaList( CanvasWithHovers ):
     def EventFullscreenSwitch( self, event ):
         
         self.ProcessApplicationCommand( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
+        
+    
+    def NotifyWeAreClosing( self ):
+        
+        super().NotifyWeAreClosing()
+        
+        if self._current_media is not None:
+            
+            self.exitFocusMedia.emit( self._current_media )
+            
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
@@ -3490,148 +3493,6 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
         
     
-    def UserOKToClose( self ):
-        
-        can_close = super().UserOKToClose()
-        
-        if not can_close:
-            
-            return can_close
-            
-        
-        kept = list( self._kept )
-        
-        deleted = list( self._deleted )
-        
-        skipped = list( self._skipped )
-        
-        if len( kept ) > 0 or len( deleted ) > 0:
-            
-            if len( kept ) > 0:
-                
-                kept_label = 'keep {}'.format( HydrusNumbers.ToHumanInt( len( kept ) ) )
-                
-            else:
-                
-                kept_label = None
-                
-            
-            deletion_options = []
-            
-            if len( deleted ) > 0:
-                
-                location_contexts_to_present_options_for = []
-                
-                possible_location_context_at_top = self._location_context.Duplicate()
-                
-                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN ) )
-                
-                if len( possible_location_context_at_top.current_service_keys ) > 0:
-                    
-                    location_contexts_to_present_options_for.append( possible_location_context_at_top )
-                    
-                
-                current_local_service_keys = HydrusLists.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
-                
-                local_file_domain_service_keys = [ service_key for service_key in current_local_service_keys if CG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
-                
-                location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
-                
-                combined_local_file_domains_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
-                
-                if len( local_file_domain_service_keys ) > 1:
-                    
-                    location_contexts_to_present_options_for.append( combined_local_file_domains_location_context )
-                    
-                elif len( local_file_domain_service_keys ) == 1:
-                    
-                    if combined_local_file_domains_location_context in location_contexts_to_present_options_for:
-                        
-                        location_contexts_to_present_options_for.remove( combined_local_file_domains_location_context )
-                        
-                    
-                
-                location_contexts_to_present_options_for = HydrusLists.DedupeList( location_contexts_to_present_options_for )
-                
-                only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
-                
-                if only_allow_all_media_files:
-                    
-                    location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ]
-                    
-                
-                for location_context in location_contexts_to_present_options_for:
-                    
-                    file_service_keys = location_context.current_service_keys
-                    
-                    num_deletable = len( [ m for m in deleted if len( m.GetLocationsManager().GetCurrent().intersection( file_service_keys ) ) > 0 ] )
-                    
-                    if num_deletable > 0:
-                        
-                        if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ):
-                            
-                            location_label = 'combined local file domains'
-                            
-                        else:
-                            
-                            location_label = location_context.ToString( CG.client_controller.services_manager.GetName )
-                            
-                        
-                        delete_label = 'delete {} from {}'.format( HydrusNumbers.ToHumanInt( num_deletable ), location_label )
-                        
-                        deletion_options.append( ( location_context, delete_label ) )
-                        
-                    
-                
-            
-            ( result, deletee_location_context, cancelled ) = ClientGUIScrolledPanelsCommitFiltering.GetFinishArchiveDeleteFilteringAnswer( self, kept_label, deletion_options )
-            
-            if cancelled:
-                
-                self._kept.discard( self._current_media )
-                self._deleted.discard( self._current_media )
-                self._skipped.discard( self._current_media )
-                
-                return False
-                
-            elif result == QW.QDialog.DialogCode.Accepted:
-                
-                self._kept = set()
-                self._deleted = set()
-                self._skipped = set()
-                
-                self._current_media = self._media_list.GetFirst() # so the pubsub on close is better
-                
-                if HC.options[ 'remove_filtered_files' ]:
-                    
-                    kept_hashes = [ m.GetHash() for m in kept ]
-                    deleted_hashes = [ m.GetHash() for m in deleted ]
-                    
-                    all_hashes = set()
-                    
-                    all_hashes.update( kept_hashes )
-                    all_hashes.update( deleted_hashes )
-                    
-                    if CG.client_controller.new_options.GetBoolean( 'remove_filtered_files_even_when_skipped' ):
-                        
-                        skipped_hashes = [ m.GetHash() for m in skipped ]
-                        
-                        all_hashes.update( skipped_hashes )
-                        
-                    
-                    self.userRemovedMedia.emit( all_hashes )
-                    
-                
-                kept_mr = [ m.GetMediaResult() for m in kept ]
-                deleted_mr = [ m.GetMediaResult() for m in deleted ]
-                
-                CG.client_controller.CallToThread( CommitArchiveDelete, deletee_location_context, kept_mr, deleted_mr )
-                
-            
-        
-        return True
-        
-    
     def _Delete( self, media = None, reason = None, file_service_key = None ):
         
         if self._current_media is None:
@@ -3770,6 +3631,167 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             self._Undelete()
             
+        
+    
+    def UserOKToClose( self ):
+        
+        can_close = super().UserOKToClose()
+        
+        if not can_close:
+            
+            self._kept.discard( self._current_media )
+            self._deleted.discard( self._current_media )
+            self._skipped.discard( self._current_media )
+            
+            return can_close
+            
+        
+        kept = list( self._kept )
+        
+        deleted = list( self._deleted )
+        
+        skipped = list( self._skipped )
+        
+        if len( kept ) > 0 or len( deleted ) > 0:
+            
+            if len( kept ) > 0:
+                
+                kept_label = 'keep {}'.format( HydrusNumbers.ToHumanInt( len( kept ) ) )
+                
+            else:
+                
+                kept_label = None
+                
+            
+            deletion_options = []
+            
+            if len( deleted ) > 0:
+                
+                location_contexts_to_present_options_for = []
+                
+                possible_location_context_at_top = self._location_context.Duplicate()
+                
+                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN ) )
+                
+                if len( possible_location_context_at_top.current_service_keys ) > 0:
+                    
+                    location_contexts_to_present_options_for.append( possible_location_context_at_top )
+                    
+                
+                current_local_service_keys = HydrusLists.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
+                
+                local_file_domain_service_keys = [ service_key for service_key in current_local_service_keys if CG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
+                
+                location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
+                
+                combined_local_file_domains_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
+                
+                if len( local_file_domain_service_keys ) > 1:
+                    
+                    location_contexts_to_present_options_for.append( combined_local_file_domains_location_context )
+                    
+                elif len( local_file_domain_service_keys ) == 1:
+                    
+                    if combined_local_file_domains_location_context in location_contexts_to_present_options_for:
+                        
+                        location_contexts_to_present_options_for.remove( combined_local_file_domains_location_context )
+                        
+                    
+                
+                location_contexts_to_present_options_for = HydrusLists.DedupeList( location_contexts_to_present_options_for )
+                
+                only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
+                
+                if only_allow_all_media_files:
+                    
+                    location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ]
+                    
+                
+                for location_context in location_contexts_to_present_options_for:
+                    
+                    file_service_keys = location_context.current_service_keys
+                    
+                    num_deletable = len( [ m for m in deleted if len( m.GetLocationsManager().GetCurrent().intersection( file_service_keys ) ) > 0 ] )
+                    
+                    if num_deletable > 0:
+                        
+                        if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ):
+                            
+                            location_label = 'combined local file domains'
+                            
+                        else:
+                            
+                            location_label = location_context.ToString( CG.client_controller.services_manager.GetName )
+                            
+                        
+                        delete_label = 'delete {} from {}'.format( HydrusNumbers.ToHumanInt( num_deletable ), location_label )
+                        
+                        deletion_options.append( ( location_context, delete_label ) )
+                        
+                    
+                
+            
+            ( result, deletee_location_context, cancelled ) = ClientGUIScrolledPanelsCommitFiltering.GetFinishArchiveDeleteFilteringAnswer( self, kept_label, deletion_options )
+            
+            if cancelled:
+                
+                self._kept.discard( self._current_media )
+                self._deleted.discard( self._current_media )
+                self._skipped.discard( self._current_media )
+                
+                return False
+                
+            elif result == QW.QDialog.DialogCode.Accepted:
+                
+                # TODO: would be cleaner to save this data and then fire the following off in the new 'notifyweareclosing' guy, but it isn't a big deal
+                # HOWEVER, if you do, remember 'accepted' is not the same as 'forget it'--don't always flush pending content, only here
+                # so yeah I guess bundle this into 'stuff to commit'
+                
+                self._kept = set()
+                self._deleted = set()
+                self._skipped = set()
+                
+                self._current_media = self._media_list.GetFirst() # so the pubsub on close is better
+                
+                if HC.options[ 'remove_filtered_files' ]:
+                    
+                    kept_hashes = [ m.GetHash() for m in kept ]
+                    deleted_hashes = [ m.GetHash() for m in deleted ]
+                    
+                    all_hashes = set()
+                    
+                    all_hashes.update( kept_hashes )
+                    all_hashes.update( deleted_hashes )
+                    
+                    if CG.client_controller.new_options.GetBoolean( 'remove_filtered_files_even_when_skipped' ):
+                        
+                        skipped_hashes = [ m.GetHash() for m in skipped ]
+                        
+                        all_hashes.update( skipped_hashes )
+                        
+                    else:
+                        
+                        if len( skipped ) > 0:
+                            
+                            self._current_media = skipped[ 0 ] 
+                            
+                        
+                    
+                    self.userRemovedMedia.emit( all_hashes )
+                    
+                else:
+                    
+                    self._current_media = self._media_list.GetFirst()
+                    
+                
+                kept_mr = [ m.GetMediaResult() for m in kept ]
+                deleted_mr = [ m.GetMediaResult() for m in deleted ]
+                
+                CG.client_controller.CallToThread( CommitArchiveDelete, deletee_location_context, kept_mr, deleted_mr )
+                
+            
+        
+        return True
         
     
 

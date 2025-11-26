@@ -217,7 +217,12 @@ class Sidebar( QW.QScrollArea ):
         return 'empty page'
         
     
-    def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST ):
+    def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = None ):
+        
+        if tag_display_type is None: # petitions sets this guy explicitly and for good reason, so now None
+            
+            tag_display_type = CG.client_controller.new_options.GetInteger( 'tag_list_tag_display_type_sidebar' )
+            
         
         self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags', CC.TAG_PRESENTATION_SEARCH_PAGE )
         

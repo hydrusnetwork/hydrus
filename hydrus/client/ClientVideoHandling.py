@@ -191,6 +191,11 @@ class AnimationRendererPIL( object ):
             
         
     
+    def close( self ):
+        
+        pass
+        
+    
     def read_frame( self ):
         
         numpy_image = self._RenderCurrentFrameAndResizeIt()

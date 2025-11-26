@@ -450,6 +450,11 @@ class DBBase( object ):
     
     def _ExecuteCancellable( self, query, query_args, cancelled_hook: collections.abc.Callable[ [], bool ] ):
         
+        if cancelled_hook is not None and cancelled_hook():
+            
+            return []
+            
+        
         cursor = self._Execute( query, query_args )
         
         return ReadFromCancellableCursor( cursor, 1024, cancelled_hook = cancelled_hook )

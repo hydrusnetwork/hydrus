@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.metadata import ClientTags
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -91,6 +92,24 @@ class TagPresentationPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        tag_display_type_panel = ClientGUICommon.StaticBox( self, 'default taglist display type (advanced)' )
+        
+        self._tag_list_tag_display_type_sidebar = ClientGUICommon.BetterChoice( self )
+        self._tag_list_tag_display_type_media_viewer_hover = ClientGUICommon.BetterChoice( self )
+        
+        for tag_display_type in [
+            ClientTags.TAG_DISPLAY_SELECTION_LIST,
+            ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
+            ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL,
+            ClientTags.TAG_DISPLAY_STORAGE,
+        ]:
+            
+            self._tag_list_tag_display_type_sidebar.addItem( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type )
+            self._tag_list_tag_display_type_media_viewer_hover.addItem( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type )
+            
+        
+        #
+        
         namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
         
         self._namespace_colours = ClientGUIListBoxes.ListBoxTagsColourOptions( namespace_colours_panel, HC.options[ 'namespace_colours' ] )
@@ -115,6 +134,9 @@ class TagPresentationPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._sibling_connector_custom_namespace_colour.SetValue( new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' ) )
         self._or_connector.setText( new_options.GetString( 'or_connector' ) )
         self._or_connector_custom_namespace_colour.setText( new_options.GetNoneableString( 'or_connector_custom_namespace_colour' ) )
+        
+        self._tag_list_tag_display_type_sidebar.SetValue( new_options.GetInteger( 'tag_list_tag_display_type_sidebar' ) )
+        self._tag_list_tag_display_type_media_viewer_hover.SetValue( new_options.GetInteger( 'tag_list_tag_display_type_media_viewer_hover' ) )
         
         #
         
@@ -186,10 +208,25 @@ class TagPresentationPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        rows = []
+        
+        rows.append( ( 'Tag display type for new page sidebar taglists: ', self._tag_list_tag_display_type_sidebar ) )
+        rows.append( ( 'Tag display type for new media viewer taglists: ', self._tag_list_tag_display_type_media_viewer_hover ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._selection_tags_panel, rows )
+        
+        st = ClientGUICommon.BetterStaticText( tag_display_type_panel, label = 'Do not edit these unless you know exactly what they do!' )
+        
+        tag_display_type_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        tag_display_type_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
         QP.AddToLayout( vbox, self._tag_banners_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._selection_tags_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, namespace_rendering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, other_rendering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, tag_display_type_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, namespace_colours_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
@@ -298,6 +335,9 @@ class TagPresentationPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetString( 'or_connector', self._or_connector.text() )
         self._new_options.SetNoneableString( 'or_connector_custom_namespace_colour', self._or_connector_custom_namespace_colour.text() )
+        
+        self._new_options.SetInteger( 'tag_list_tag_display_type_sidebar', self._tag_list_tag_display_type_sidebar.GetValue() )
+        self._new_options.SetInteger( 'tag_list_tag_display_type_media_viewer_hover', self._tag_list_tag_display_type_media_viewer_hover.GetValue() )
         
         HC.options[ 'namespace_colours' ] = self._namespace_colours.GetNamespaceColours()
         

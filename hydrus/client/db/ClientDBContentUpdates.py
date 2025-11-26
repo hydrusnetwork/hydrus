@@ -329,7 +329,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 self.AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
                 
             
-            # if any files are no longer in any local file services, remove from the umbrella and send them to the trash
+            # if any files are no longer in any local file domains, remove from the umbrella and send them to the trash
             
             if service_id in local_file_service_ids:
                 

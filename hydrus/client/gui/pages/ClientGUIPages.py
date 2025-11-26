@@ -1651,15 +1651,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if len( num_string ) > 0:
             
-            if isinstance( page, PagesNotebook ) and CG.client_controller.new_options.GetBoolean( 'decorate_page_of_pages_tab_names' ):
-                
-                name_decorator = CG.client_controller.new_options.GetString( 'page_of_pages_decorator' )
-                
-                page_name += f' ({num_string}){name_decorator}'
-                
-            else:
-                
-                page_name += f' ({num_string})'
+            page_name += f' ({num_string})'
+            
+        
+        if isinstance( page, PagesNotebook ) and CG.client_controller.new_options.GetBoolean( 'decorate_page_of_pages_tab_names' ):
+            
+            name_decorator = CG.client_controller.new_options.GetString( 'page_of_pages_decorator' )
+            
+            page_name += name_decorator
             
         
         safe_page_name = ClientGUIFunctions.EscapeMnemonics( page_name )

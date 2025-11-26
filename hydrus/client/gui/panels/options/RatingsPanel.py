@@ -165,7 +165,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         for w in ( self._media_viewer_incdec_example, self._thumbnail_incdec_example, self._preview_window_incdec_example, self._dialog_incdec_example ):
             
-            w.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Preferred )
+            w.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Preferred )
             w.adjustSize()
             
         
@@ -232,11 +232,11 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, example_select_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, media_viewer_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, preview_window_rating_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, thumbnail_ratings_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, manage_ratings_popup_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, example_select_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox.addStretch( 0 )
         self.setLayout( vbox )
