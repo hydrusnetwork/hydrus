@@ -1960,7 +1960,7 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         else:
             
-            possible_names.sort()
+            HydrusText.HumanTextSort( possible_names )
             
             subscription_name = possible_names.pop( 0 )
             

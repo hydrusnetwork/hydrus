@@ -94,7 +94,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        label = 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!'
+        label = 'Hey, this system is still being worked on, but it is close to a full release! If you have not touched it yet, wait a couple weeks and I will have the help up to date.'
         label += '\n\n'
         label += 'Rules are worked on in alphabetical name order, so if you have overlapping test domains and want to force precedence, try naming them "1 - " and "2 - " etc..'
         
@@ -1386,7 +1386,9 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        st = ClientGUICommon.BetterStaticText( self, 'Hey, this system is still being worked on, and not all its planned tools are available yet. Start with the suggested pixel duplicate jpg/png rule, and if it all makes sense to you, keep exploring. Stay semi-automatic for a while before attempting automatic. Be careful. Let me know how it goes!' )
+        label = 'Hey, this system is still being worked on, but it is close to a full release! If you have not touched it yet, wait a couple weeks and I will have the help up to date.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1658,6 +1660,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: delete orphan rules', 'Scan for rules that are partly missing (probably from hard drive damage) and delete them.', self._DeleteOrphanRules ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: fix orphan potential pairs', 'Scan for potential pairs in your rule cache that are no longer pertinent and delete them.', self._DeleteOrphanPotentialPairs ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: regen cached numbers', 'Clear cached pair counts and regenerate from source.', self._RegenNumbers ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'maintenance: resync rule file domains', 'Check that the rule has desynced from the correct pairs its search looks for.', self._ResyncRulesToLocationContexts ) )
         
         return menu_template_items
         
@@ -1792,6 +1795,18 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         if result == QW.QDialog.DialogCode.Accepted:
             
             CG.client_controller.duplicates_auto_resolution_manager.ResetRuleTestProgress( rules )
+            
+        
+    
+    def _ResyncRulesToLocationContexts( self ):
+        
+        text = f'This will check that every rule is tracking all the pairs in its search domain, and no others. There is no point to running this unless you see a pair that should not be in a pending queue or similar (e.g. if one of the files is trashed).'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            CG.client_controller.Write( 'duplicates_auto_resolution_maintenance_resync_rules_to_location_contexts' )
             
         
     

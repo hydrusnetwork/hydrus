@@ -3247,7 +3247,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         ClientGUIMenus.AppendMenu( self._menubar_undo_searching_submenu, removed_from_search_menu, 'removal' )
                         
                     
-                    ClientGUIMenus.AppendMenuItem( self._menubar_undo_searching_submenu, 'clear all' + HC.UNICODE_ELLIPSIS, 'Remove all search history from memory.', self.AskToDeleteAllSearchPredHistory )
+                    ClientGUIMenus.AppendMenuItem( self._menubar_undo_searching_submenu, 'clear history' + HC.UNICODE_ELLIPSIS, 'Remove all search history from memory.', self.AskToDeleteAllSearchPredHistory )
                     
                     self._menubar_undo_searching_submenu.addSeparator()
                     
@@ -4222,7 +4222,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _ManageDefaultImportOptions( self ):
         
-        title = 'edit default tag import options'
+        title = 'edit default import options'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             

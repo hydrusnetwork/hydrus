@@ -7,7 +7,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBDefinitionsCache
-from hydrus.client.db import ClientDBFilesDuplicates
+from hydrus.client.db import ClientDBFilesDuplicatesStorage
+from hydrus.client.db import ClientDBFilesDuplicatesUpdates
 from hydrus.client.db import ClientDBFilesSearch
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMediaResults
@@ -24,7 +25,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
-        modules_files_duplicates: ClientDBFilesDuplicates.ClientDBFilesDuplicates,
+        modules_files_duplicates_storage: ClientDBFilesDuplicatesStorage.ClientDBFilesDuplicatesStorage,
+        modules_files_duplicates_updates: ClientDBFilesDuplicatesUpdates.ClientDBFilesDuplicatesUpdates,
         modules_files_query: ClientDBFilesSearch.ClientDBFilesQuery,
         modules_media_results: ClientDBMediaResults.ClientDBMediaResults
         ):
@@ -34,7 +36,8 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         self.modules_files_storage = modules_files_storage
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_similar_files = modules_similar_files
-        self.modules_files_duplicates = modules_files_duplicates
+        self.modules_files_duplicates_storage = modules_files_duplicates_storage
+        self.modules_files_duplicates_updates = modules_files_duplicates_updates
         self.modules_files_query = modules_files_query
         self.modules_media_results = modules_media_results
         
@@ -295,7 +298,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                             
                             all_media_ids = set( itertools.chain.from_iterable( relevant_pairs_and_distances.GetPairs() ) )
                             
-                            required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
+                            required_hash_ids = self.modules_files_duplicates_storage.GetKingHashIds( db_location_context, all_media_ids )
                             
                             self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
                             self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2, query_hash_ids = required_hash_ids )
@@ -313,7 +316,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                                 
                                 all_media_ids = set( itertools.chain.from_iterable( relevant_pairs_and_distances.GetPairs() ) )
                                 
-                                required_hash_ids = self.modules_files_duplicates.GetKingHashIds( db_location_context, all_media_ids )
+                                required_hash_ids = self.modules_files_duplicates_storage.GetKingHashIds( db_location_context, all_media_ids )
                                 
                                 self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1, query_hash_ids = required_hash_ids )
                                 
@@ -326,23 +329,23 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                     
                     if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                         
-                        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
+                        table_join = self.modules_files_duplicates_storage.GetPotentialDuplicatePairsTableJoinOnSeparateSearchResults( temp_table_name_1, temp_table_name_2, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                         
                     else:
                         
                         if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
                             
-                            table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
+                            table_join = self.modules_files_duplicates_storage.GetPotentialDuplicatePairsTableJoinOnEverythingSearchResults( db_location_context, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                             
                         else:
                             
                             if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                                 
-                                table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
+                                table_join = self.modules_files_duplicates_storage.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                                 
                             else:
                                 
-                                table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
+                                table_join = self.modules_files_duplicates_storage.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance, master_potential_duplicate_pairs_table_name = temp_media_ids_table_name )
                                 
                             
                         
@@ -380,7 +383,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
             
         
-        potential_duplicate_pairs_fragmentary_search.AddHits( len( matching_pairs_and_distances ) )
+        potential_duplicate_pairs_fragmentary_search.AddHits( matching_pairs_and_distances )
         
         return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( matching_pairs_and_distances )
         
@@ -414,7 +417,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         all_media_ids = { media_id for pair in pairs for media_id in pair }
         
-        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
+        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates_storage.GetKingHashId( media_id ) for media_id in all_media_ids }
         
         media_results = self.modules_media_results.GetMediaResults( set( media_ids_to_king_hash_ids.values() ) )
         
@@ -429,7 +432,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
     
     def GetPotentialDuplicatesCount( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ):
         
-        potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
+        potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_updates.GetPotentialDuplicateIdPairsAndDistances( potential_duplicates_search_context.GetLocationContext() )
         
         potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
@@ -454,7 +457,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
     
     def GetRandomPotentialDuplicateGroupHashes( self, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext ) -> list[ bytes ]:
         
-        potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
+        potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_updates.GetPotentialDuplicateIdPairsAndDistances( potential_duplicates_search_context.GetLocationContext() )
         
         potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( 1 )
@@ -493,7 +496,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         all_media_ids = { media_id for pair in group_potential_duplicate_id_pairs_and_distances.GetPairs() for media_id in pair }
         
-        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
+        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates_storage.GetKingHashId( media_id ) for media_id in all_media_ids }
         
         hashes = self.modules_hashes_local_cache.GetHashes( list( media_ids_to_king_hash_ids.values() ) )
         

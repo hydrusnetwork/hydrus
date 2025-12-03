@@ -68,8 +68,8 @@ class EditServiceSpecifierPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._specifier_type_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._service_types_radiobox, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._service_keys_radiobox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._service_types_radiobox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._service_keys_radiobox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox.addStretch( 0 )
         
@@ -122,7 +122,7 @@ class ServiceSpecifierButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit time delta' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit service specifier' ) as dlg:
             
             panel = EditServiceSpecifierPanel( dlg, self._service_specifier, self._allowed_service_types )
             

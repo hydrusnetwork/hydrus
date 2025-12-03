@@ -15,8 +15,14 @@ from hydrus.client.media import ClientMediaResult
 
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE = 4000
+
+PAIRS_UPDATE_CLEAR_ALL = 0
+PAIRS_UPDATE_DELETE_PAIRS = 1
+PAIRS_UPDATE_DELETE_PAIRS_BY_MEDIA_ID = 2
+PAIRS_UPDATE_ADD_ROWS = 3
 
 class PotentialDuplicateIdPairsAndDistances( object ):
     
@@ -24,7 +30,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
         self._potential_id_pairs_and_distances = list( potential_id_pairs_and_distances )
         
-        self._media_ids_to_other_media_ids_and_distances = collections.defaultdict( list )
+        self._media_ids_to_other_media_ids_to_distances = collections.defaultdict( dict )
         self._mapping_initialised = False
         
         self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE
@@ -35,15 +41,171 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         return len( self._potential_id_pairs_and_distances )
         
     
+    def _AddToMappingIfInitialised( self, rows ):
+        
+        if not self._mapping_initialised:
+            
+            return
+            
+        
+        for ( smaller_media_id, larger_media_id, distance ) in rows:
+            
+            self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ][ larger_media_id ] = distance
+            self._media_ids_to_other_media_ids_to_distances[ larger_media_id ][ smaller_media_id ] = distance
+            
+        
+    
+    def _DeleteFromMappingIfInitialised( self, deletee_pairs ):
+        
+        if not self._mapping_initialised:
+            
+            return
+            
+        
+        for ( deletee_smaller_media_id, deletee_larger_media_id ) in deletee_pairs:
+            
+            for ( deletee_media_id_a, deletee_media_id_b ) in [
+                ( deletee_smaller_media_id, deletee_larger_media_id ),
+                ( deletee_larger_media_id, deletee_smaller_media_id ),
+            ]:
+                
+                if deletee_media_id_a in self._media_ids_to_other_media_ids_to_distances:
+                    
+                    other_media_ids_to_distances = self._media_ids_to_other_media_ids_to_distances[ deletee_media_id_a ]
+                    
+                    if deletee_media_id_b in other_media_ids_to_distances:
+                        
+                        del other_media_ids_to_distances[ deletee_media_id_b ]
+                        
+                        if len( other_media_ids_to_distances ) == 0:
+                            
+                            del self._media_ids_to_other_media_ids_to_distances[ deletee_media_id_a ]
+                            
+                        
+                    
+                
+            
+        
+    
+    def _FilterExistingPairs( self, pairs ):
+        
+        if not self._mapping_initialised:
+            
+            self._InitialiseMapping()
+            
+        
+        existing_pairs = [
+            ( smaller_media_id, larger_media_id )
+            for ( smaller_media_id, larger_media_id )
+            in pairs
+            if smaller_media_id in self._media_ids_to_other_media_ids_to_distances and larger_media_id in self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ]
+        ]
+        
+        return existing_pairs
+        
+    
+    def _FilterNonExistingRows( self, rows ):
+        
+        if not self._mapping_initialised:
+            
+            self._InitialiseMapping()
+            
+        
+        new_rows = [
+            ( smaller_media_id, larger_media_id, distance )
+            for ( smaller_media_id, larger_media_id, distance )
+            in rows
+            if smaller_media_id not in self._media_ids_to_other_media_ids_to_distances or larger_media_id not in self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ]
+        ]
+        
+        return new_rows
+        
+    
+    def _GetPairsFromMediaId( self, media_id ):
+        
+        if not self._mapping_initialised:
+            
+            self._InitialiseMapping()
+            
+        
+        if media_id in self._media_ids_to_other_media_ids_to_distances:
+            
+            return [ ( min( media_id, other_media_id ), max( media_id, other_media_id ) ) for other_media_id in self._media_ids_to_other_media_ids_to_distances[ media_id ] ]
+            
+        else:
+            
+            return []
+            
+        
+    
     def _InitialiseMapping( self ):
+        
+        self._media_ids_to_other_media_ids_to_distances = collections.defaultdict( dict )
         
         for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances:
             
-            self._media_ids_to_other_media_ids_and_distances[ smaller_media_id ].append( ( larger_media_id, distance ) )
-            self._media_ids_to_other_media_ids_and_distances[ larger_media_id ].append( ( smaller_media_id, distance ) )
+            self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ][ larger_media_id ] = distance
+            self._media_ids_to_other_media_ids_to_distances[ larger_media_id ][ smaller_media_id ] = distance
             
         
         self._mapping_initialised = True
+        
+    
+    def AddRows( self, rows ):
+        
+        if len( rows ) == 0:
+            
+            return
+            
+        
+        new_rows = self._FilterNonExistingRows( rows )
+        
+        if len( new_rows ) == 0:
+            
+            return
+            
+        
+        self._potential_id_pairs_and_distances.extend( new_rows )
+        
+        self._AddToMappingIfInitialised( new_rows )
+        
+    
+    def ClearPairs( self ):
+        
+        self._potential_id_pairs_and_distances = []
+        
+        self._mapping_initialised = False
+        
+    
+    def DeletePairs( self, deletee_pairs ):
+        
+        if len( deletee_pairs ) == 0:
+            
+            return
+            
+        
+        existing_deletee_pairs = self._FilterExistingPairs( deletee_pairs )
+        
+        if len( existing_deletee_pairs ) == 0:
+            
+            return
+            
+        
+        if not isinstance( existing_deletee_pairs, set ):
+            
+            existing_deletee_pairs = set( existing_deletee_pairs )
+            
+        
+        self._potential_id_pairs_and_distances = [ ( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances if ( smaller_media_id, larger_media_id ) not in existing_deletee_pairs ]
+        
+        self._DeleteFromMappingIfInitialised( existing_deletee_pairs )
+        
+    
+    def DeletePairsByMediaId( self, deletee_media_id: int ):
+        
+        deletee_pairs = self._GetPairsFromMediaId( deletee_media_id )
+        
+        self.DeletePairs( deletee_pairs )
         
     
     def Duplicate( self ) -> "PotentialDuplicateIdPairsAndDistances":
@@ -71,7 +233,9 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             
             searched.add( search_media_id )
             
-            for ( result_media_id, distance ) in self._media_ids_to_other_media_ids_and_distances[ search_media_id ]:
+            other_media_ids_to_distances = self._media_ids_to_other_media_ids_to_distances[ search_media_id ]
+            
+            for ( result_media_id, distance ) in other_media_ids_to_distances.items():
                 
                 if result_media_id in searched:
                     
@@ -134,9 +298,37 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def Merge( self, potential_duplicate_id_pairs_and_distances: "PotentialDuplicateIdPairsAndDistances" ):
         
-        self._potential_id_pairs_and_distances.extend( potential_duplicate_id_pairs_and_distances.GetRows() )
+        rows = potential_duplicate_id_pairs_and_distances.GetRows()
         
-        self._mapping_initialised = False
+        self.AddRows( rows )
+        
+    
+    def NotifyPotentialDuplicatePairsUpdate( self, update_type, *args ):
+        
+        if update_type == PAIRS_UPDATE_CLEAR_ALL:
+            
+            # no args
+            
+            self.ClearPairs()
+            
+        elif update_type == PAIRS_UPDATE_DELETE_PAIRS:
+            
+            ( location_context, pairs ) = args
+            
+            self.DeletePairs( pairs )
+            
+        elif update_type == PAIRS_UPDATE_DELETE_PAIRS_BY_MEDIA_ID:
+            
+            ( media_id, ) = args 
+            
+            self.DeletePairsByMediaId( media_id )
+            
+        elif update_type == PAIRS_UPDATE_ADD_ROWS:
+            
+            ( location_context, rows ) = args
+            
+            self.AddRows( rows )
+            
         
     
     def NotifyWorkTimeForAutothrottle( self, actual_work_period: float, ideal_work_period: float ):
@@ -338,26 +530,34 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         self._search_space_initialised_time = 0.0
         
         self._potential_duplicate_id_pairs_and_distances_search_space = PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances_search_space.Duplicate()
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
         
-        self._num_hits = 0
         self._desired_num_hits = None
         
     
-    def AddHits( self, num_hits: int ):
+    def AddHits( self, matching_pairs_and_distances: tuple[ int, int, int ] ):
         
-        self._num_hits += num_hits
+        self._potential_duplicate_id_pairs_and_distances_that_hit.AddRows( matching_pairs_and_distances )
         
     
     def DoingFileBasedSearchIsOK( self ):
         
         # don't do it for partial searches, and a sanity check
-        return self._is_searching_full_space and self.NumPairsInSearchSpace() > 10000 and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
+        return self._is_searching_full_space and self.NumPairsInSearchSpace() > 10000 and not self.ThereIsJustABitLeftBro() and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
         
     
     def EstimatedNumHits( self ):
         
-        estimate = int( self._num_hits * ( self.NumPairsInSearchSpace() / self.NumPairsSearched() ) )
+        num_hits = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
+        num_searched = self.NumPairsSearched()
+        
+        if num_searched == 0:
+            
+            return 0
+            
+        
+        estimate = int( num_hits * ( self.NumPairsInSearchSpace() / self.NumPairsSearched() ) )
         
         return estimate
         
@@ -366,13 +566,15 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         
         num_still_to_search = self.NumPairsStillToSearch()
         
-        if self._desired_num_hits is not None and self._num_hits > 0:
+        num_hits = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
+        
+        if self._desired_num_hits is not None and num_hits > 0:
             
-            num_hits_still_to_get = self._desired_num_hits - self._num_hits
+            num_hits_still_to_get = self._desired_num_hits - num_hits
             
             if num_hits_still_to_get > 0:
                 
-                rows_per_hit = self.NumPairsSearched() / self._num_hits
+                rows_per_hit = self.NumPairsSearched() / num_hits
                 
                 expected_remaining_rows_until_we_are_good = int( rows_per_hit * num_hits_still_to_get )
                 
@@ -388,6 +590,16 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         group_potential_duplicate_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_search_space.FilterWiderPotentialGroup( media_ids )
         
         return { media_id for pair in group_potential_duplicate_id_pairs_and_distances.GetRows() for media_id in pair }
+        
+    
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        return self._potential_duplicates_search_context.GetLocationContext()
+        
+    
+    def GetNumHits( self ) -> int:
+        
+        return len( self._potential_duplicate_id_pairs_and_distances_that_hit )
         
     
     def GetPotentialDuplicatesSearchContext( self ):
@@ -461,7 +673,7 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             return rel
             
         
-        x = self._num_hits
+        x = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
         n = self.NumPairsSearched()
         N = self.NumPairsInSearchSpace()
         
@@ -473,6 +685,32 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         rel = relative_halfwidth_from_counts( x, n, N )
         
         return rel
+        
+    
+    def NotifyPotentialDuplicatePairsUpdate( self, update_type, *args ):
+        
+        if not self._search_space_initialised:
+            
+            return
+            
+        
+        if update_type in ( PAIRS_UPDATE_ADD_ROWS, PAIRS_UPDATE_DELETE_PAIRS ):
+            
+            ( location_context, rows_of_data ) = args
+            
+            if location_context != self._potential_duplicates_search_context.GetLocationContext():
+                
+                return
+                
+            
+        
+        self._potential_duplicate_id_pairs_and_distances_search_space.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+        self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+        
+        if update_type != PAIRS_UPDATE_ADD_ROWS:
+            
+            self._potential_duplicate_id_pairs_and_distances_that_hit.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+            
         
     
     def NotifySearchSpaceFetchStarted( self ):
@@ -555,7 +793,7 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
     
     def SetPotentialDuplicatesSearchContext( self, potential_duplicates_search_context: "PotentialDuplicatesSearchContext" ):
         
-        reset_search_space = self._potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() != potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext()
+        reset_search_space = self._potential_duplicates_search_context.GetLocationContext() != potential_duplicates_search_context.GetLocationContext()
         
         self._potential_duplicates_search_context = potential_duplicates_search_context
         
@@ -623,7 +861,27 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         
         self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances_search_space.Duplicate()
         
-        self._num_hits = 0
+        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
+        
+    
+    def ThereIsJustABitLeftBro( self ):
+        
+        # we are in a '1700 out of 1703 rows' situation. in this case we don't want any funny business--just do those last three
+        
+        num_in_search_space = self.NumPairsInSearchSpace()
+        num_still_to_search = self.NumPairsStillToSearch()
+        
+        if num_still_to_search < 1024:
+            
+            return True
+            
+        
+        if num_still_to_search < num_in_search_space * 0.05:
+            
+            return True
+            
+        
+        return False
         
     
     def ThisAppearsToHaveAHitRateLowerThan( self, percentage_float ):
@@ -651,7 +909,7 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             return U # We are 95% confident the hitrate will be below this
             
         
-        x = self._num_hits
+        x = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
         n = self.NumPairsSearched()
         N = self.NumPairsInSearchSpace()
         
@@ -741,6 +999,11 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         return self._file_search_context_2
         
     
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        return self._file_search_context_1.GetLocationContext()
+        
+    
     def GetMaxHammingDistance( self ) -> int:
         
         return self._max_hamming_distance
@@ -783,6 +1046,11 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
             
         
         return ', '.join( components )
+        
+    
+    def GetTagContext( self ) -> ClientSearchTagContext.TagContext:
+        
+        return self._file_search_context_1.GetTagContext()
         
     
     def OptimiseForSearch( self ):

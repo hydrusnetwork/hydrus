@@ -184,7 +184,7 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
     
     def DoInitialisationWork( self ) -> bool:
         
-        location_context = self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
+        location_context = self._potential_duplicate_pairs_fragmentary_search.GetLocationContext()
         
         potential_duplicate_id_pairs_and_distances: ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances = CG.client_controller.Read( 'potential_duplicate_id_pairs_and_distances', location_context )
         
@@ -195,7 +195,7 @@ class PotentialDuplicatePairFactoryDB( PotentialDuplicatePairFactory ):
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
         
-        return self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
+        return self._potential_duplicate_pairs_fragmentary_search.GetLocationContext()
         
     
     def GetPotentialDuplicateMediaResultPairsAndDistances( self ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances:

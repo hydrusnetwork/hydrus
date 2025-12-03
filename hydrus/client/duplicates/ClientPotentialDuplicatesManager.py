@@ -121,8 +121,6 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
                 
                 if num_done > 0:
                     
-                    CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-                    
                     PotentialDuplicatesMaintenanceNumbersStore.instance().RefreshMaintenanceNumbers()
                     
                     self._i_triggered_a_numbers_regen_last_cycle = False

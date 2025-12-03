@@ -192,7 +192,6 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._RefetchDeclinedPairs()
         
         CG.client_controller.sub( self, 'CloseFromEditDialog', 'edit_duplicates_auto_resolution_rules_dialog_opening' )
-        CG.client_controller.sub( self, '_RefetchPendingActionPairs', 'notify_duplicate_filter_non_blocking_commit_complete' )
         
         if rule.GetOperationMode() != ClientDuplicatesAutoResolution.DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_WORK_BUT_NO_ACTION:
             
@@ -344,7 +343,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._RefetchPendingActionPairs()
                 
-                self._we_have_done_undos
+                self._we_have_done_undos = False
                 
             
         elif page == self._actioned_pairs_panel:
@@ -647,6 +646,10 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
+        
+        canvas_window.canvasDuplicateFilterExitingAfterWorkDone.connect( self._RefetchPendingActionPairs )
+        canvas_window.canvasDuplicateFilterExitingAfterWorkDone.connect( self._RefetchActionedPairs )
+        canvas_window.canvasDuplicateFilterExitingAfterWorkDone.connect( self._RefetchDeclinedPairs )
         
         canvas_frame.SetCanvas( canvas_window )
         

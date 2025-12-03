@@ -47,7 +47,7 @@ class DownloadingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._subscription_file_error_cancel_threshold.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a simple patch and will be replaced with a better "retry network errors later" system at some point, but is useful to increase if you have subs to unreliable websites.' ) )
         
         self._process_subs_in_random_order = QW.QCheckBox( subscriptions )
-        self._process_subs_in_random_order.setToolTip( ClientGUIFunctions.WrapToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' ) )
+        self._process_subs_in_random_order.setToolTip( ClientGUIFunctions.WrapToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in smart alphabetical order.' ) )
         
         checker_options = self._new_options.GetDefaultSubscriptionCheckerOptions()
         

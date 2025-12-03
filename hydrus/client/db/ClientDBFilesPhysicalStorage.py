@@ -43,11 +43,11 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         subfolders = set()
         
-        for ( prefix, portable_location_path, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ):
+        for ( prefix, creation_path, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ):
             
-            path = HydrusPaths.ConvertPortablePathToAbsPath( portable_location_path )
+            abs_path = HydrusPaths.ConvertPortablePathToAbsPath( creation_path )
             
-            base_location = paths_to_base_locations.get( path, ClientFilesPhysical.FilesStorageBaseLocation( portable_location_path, 0 ) )
+            base_location = paths_to_base_locations.get( abs_path, ClientFilesPhysical.FilesStorageBaseLocation( creation_path, 0 ) )
             
             subfolders.add( ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location, purge ) )
             
@@ -83,9 +83,9 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
                 self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( missing_prefix, portable_path, False ) )
                 
             
-            for ( prefix, portable_location_path, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ):
+            for ( prefix, creation_path, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ):
                 
-                base_location = paths_to_base_locations.get( portable_location_path, ClientFilesPhysical.FilesStorageBaseLocation( portable_location_path, 0 ) )
+                base_location = ClientFilesPhysical.FilesStorageBaseLocation( creation_path, 0 )
                 
                 subfolders.add( ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location, purge ) )
                 
@@ -98,9 +98,9 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         media_base_locations = set()
         
-        for ( portable_path, ideal_weight, max_num_bytes ) in self._Execute( 'SELECT location, weight, max_num_bytes FROM ideal_client_files_locations;' ):
+        for ( creation_path, ideal_weight, max_num_bytes ) in self._Execute( 'SELECT location, weight, max_num_bytes FROM ideal_client_files_locations;' ):
             
-            media_base_locations.add( ClientFilesPhysical.FilesStorageBaseLocation( portable_path, ideal_weight, max_num_bytes = max_num_bytes ) )
+            media_base_locations.add( ClientFilesPhysical.FilesStorageBaseLocation( creation_path, ideal_weight, max_num_bytes = max_num_bytes ) )
             
         
         result = self._Execute( 'SELECT location FROM ideal_thumbnail_override_location;' ).fetchone()

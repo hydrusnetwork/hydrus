@@ -313,8 +313,6 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
             
             CG.client_controller.WriteSynchronous( 'duplicate_pair_status', database_write_rows )
             
-            CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

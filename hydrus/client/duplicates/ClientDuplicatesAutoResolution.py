@@ -397,6 +397,11 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return self._id
         
     
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        return self._potential_duplicates_search_context.GetLocationContext()
+        
+    
     def GetMaxPendingPairs( self ) -> typing.Optional[ int ]:
         
         return self._max_pending_pairs
@@ -433,7 +438,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             
             if sum( self._counts_cache.values() ) == 0:
                 
-                return 'no data'
+                return 'no pairs'
                 
             
             not_searched = self._counts_cache[ DUPLICATE_STATUS_NOT_SEARCHED ]

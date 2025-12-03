@@ -150,6 +150,8 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._pixel_dupes_preference.currentIndexChanged.connect( self.PixelDupesPreferenceChanged )
         self._max_hamming_distance.valueChanged.connect( self.MaxHammingDistanceChanged )
         
+        CG.client_controller.sub( self, 'NotifyPotentialDuplicatePairsUpdate', 'potential_duplicate_pairs_update' )
+        
     
     def _AllGoodToDoCountWork( self ):
         
@@ -281,7 +283,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._potential_duplicate_pairs_fragmentary_search.NotifySearchSpaceFetchStarted()
         
-        location_context = self.GetValue().GetFileSearchContext1().GetLocationContext()
+        location_context = self.GetValue().GetLocationContext()
         
         def work_callable():
             
@@ -431,6 +433,13 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
             return False
             
         
+        if self._potential_duplicate_pairs_fragmentary_search.ThereIsJustABitLeftBro():
+            
+            # for whatever reason we are in a 'searched 1700 out of 1703 rows' type situation, so let's do the last little bit and get a nice number
+            
+            return False
+            
+        
         # this is mostly AI vomit, but I'm generally there. 95% of <2.5%, simple as
         
         REL_ERROR  = 0.025 # 2.5% error
@@ -499,15 +508,18 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         self._DoCountWork()
         
     
-    def NotifyNewDupePairs( self ):
+    def ForceRefreshNumbers( self ):
         
-        # TODO: more evidence it would be nice to media result all duplicate relations
-        # ok this guy is called every time we set dupes anywhere and it sucks since it has to reinitialise the id cache
-        # sooooooo... why not have a whole content update pipeline for duplicate relations and then we just edit our initial/matching stores here on actual updates?
-        # I'm not sure if we can be that smart, but when media results are aware of duplicate relationships, I'll bet we can do something
-        # we could even, earlier than that, have a 'now potential duplicate pair (media_id, media_id)' pubsub that this guy just watches for. we'd integrate it into the master store, update 'to search', and go
-        # or maybe the pair factory watches it and we just get a 'hey wake up' signal later
         self._RefreshPotentialDuplicateIdPairsAndDistances()
+        
+    
+    def NotifyPotentialDuplicatePairsUpdate( self, update_type, *args ):
+        
+        self._potential_duplicate_pairs_fragmentary_search.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+        
+        self._num_potential_duplicate_pairs = self._potential_duplicate_pairs_fragmentary_search.GetNumHits()
+        
+        self._DoCountWork()
         
     
     def PageHidden( self ):

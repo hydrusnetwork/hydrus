@@ -208,7 +208,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        # This is now normally called by modules_files_duplicates.NotifyFileLeavingHydrusLocalFileStorage, but since this maintenance job is just the similar search part, let's leave it as-is now
+                        # This is now normally called by modules_files_duplicates_updates.NotifyFileLeavingHydrusLocalFileStorage, but since this maintenance job is just the similar search part, let's leave it as-is now
                         
                         if self.modules_similar_files.FileIsInSystem( hash_id ):
                             

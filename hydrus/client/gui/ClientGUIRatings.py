@@ -1331,7 +1331,7 @@ class RatingPreviewServiceWrapper:
         return self._service_key
         
     
-    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> QW.QWidget:
+    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> typing.Union[ RatingIncDecExample, RatingLikeExample, RatingNumericalExample ]:
         
         if self._service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
             
@@ -1348,6 +1348,7 @@ class RatingPreviewServiceWrapper:
         else:
             
             raise Exception( 'Unknown rating service type!' )
+            
         
     
     def SetLiveData( self, k, v ):

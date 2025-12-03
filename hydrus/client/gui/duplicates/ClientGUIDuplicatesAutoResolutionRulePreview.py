@@ -151,8 +151,6 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         self._num_to_fetch.valueChanged.connect( self._DoSearchWork )
         self._num_to_fetch.valueChanged.connect( self._DoTestWork )
         
-        CG.client_controller.sub( self, '_RefetchPairs', 'notify_duplicate_filter_non_blocking_commit_complete' )
-        
     
     def _DoSearchWork( self ):
         
@@ -207,7 +205,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._potential_duplicate_pairs_fragmentary_search.NotifySearchSpaceFetchStarted()
         
-        location_context = self._potential_duplicate_pairs_fragmentary_search.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext()
+        location_context = self._potential_duplicate_pairs_fragmentary_search.GetLocationContext()
         
         def work_callable():
             
@@ -512,6 +510,8 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         canvas_window.canvasWithHoversExiting.connect( CG.client_controller.gui.NotifyMediaViewerExiting )
         canvas_window.showPairInPage.connect( self._ShowPairInPage )
         
+        canvas_window.canvasDuplicateFilterExitingAfterWorkDone.connect( self._RefetchPairs )
+        
         canvas_frame.SetCanvas( canvas_window )
         
     
@@ -647,7 +647,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
             old_search = old_value.GetPotentialDuplicatesSearchContext()
             new_search = new_value.GetPotentialDuplicatesSearchContext()
             
-            if new_search.GetFileSearchContext1().GetLocationContext() != old_search.GetFileSearchContext1().GetLocationContext():
+            if new_search.GetLocationContext() != old_search.GetLocationContext():
                 
                 self._InitialisePotentialDuplicatePairs()
                 

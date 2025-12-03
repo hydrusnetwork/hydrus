@@ -15,7 +15,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBDefinitionsCache
-from hydrus.client.db import ClientDBFilesDuplicates
+from hydrus.client.db import ClientDBFilesDuplicatesStorage
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
@@ -1077,7 +1077,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_tag_search: ClientDBTagSearch.ClientDBTagSearch,
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles,
-        modules_files_duplicates: ClientDBFilesDuplicates.ClientDBFilesDuplicates,
+        modules_files_duplicates_storage: ClientDBFilesDuplicatesStorage.ClientDBFilesDuplicatesStorage,
         modules_files_search_tags: ClientDBFilesSearchTags
     ):
         
@@ -1097,7 +1097,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_tag_search = modules_tag_search
         self.modules_similar_files = modules_similar_files
-        self.modules_files_duplicates = modules_files_duplicates
+        self.modules_files_duplicates_storage = modules_files_duplicates_storage
         self.modules_files_search_tags = modules_files_search_tags
         
         super().__init__( 'client file query', cursor )
@@ -1183,7 +1183,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                dupe_hash_ids = self.modules_files_duplicates.GetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
+                dupe_hash_ids = self.modules_files_duplicates_storage.GetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, dupe_hash_ids )
                 
@@ -1760,7 +1760,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         if king_filter is not None and king_filter:
             
-            king_hash_ids = self.modules_files_duplicates.FilterKingHashIds( query_hash_ids )
+            king_hash_ids = self.modules_files_duplicates_storage.FilterKingHashIds( query_hash_ids )
             
             query_hash_ids.intersection_update( king_hash_ids )
             
@@ -1869,7 +1869,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         if king_filter is not None and not king_filter:
             
-            king_hash_ids = self.modules_files_duplicates.FilterKingHashIds( query_hash_ids )
+            king_hash_ids = self.modules_files_duplicates_storage.FilterKingHashIds( query_hash_ids )
             
             query_hash_ids.difference_update( king_hash_ids )
             
@@ -1881,17 +1881,17 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if only_do_zero:
                 
-                nonzero_hash_ids = self.modules_files_duplicates.GetHashIdsFromDuplicateCountPredicate( db_location_context, '>', 0, dupe_type )
+                nonzero_hash_ids = self.modules_files_duplicates_storage.GetHashIdsFromDuplicateCountPredicate( db_location_context, '>', 0, dupe_type )
                 
                 query_hash_ids.difference_update( nonzero_hash_ids )
                 
             elif include_zero:
                 
-                nonzero_hash_ids = self.modules_files_duplicates.GetHashIdsFromDuplicateCountPredicate( db_location_context, '>', 0, dupe_type )
+                nonzero_hash_ids = self.modules_files_duplicates_storage.GetHashIdsFromDuplicateCountPredicate( db_location_context, '>', 0, dupe_type )
                 
                 zero_hash_ids = query_hash_ids.difference( nonzero_hash_ids )
                 
-                accurate_except_zero_hash_ids = self.modules_files_duplicates.GetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
+                accurate_except_zero_hash_ids = self.modules_files_duplicates_storage.GetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
                 
                 hash_ids = zero_hash_ids.union( accurate_except_zero_hash_ids )
                 

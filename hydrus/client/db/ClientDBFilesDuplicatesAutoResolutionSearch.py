@@ -4,10 +4,10 @@ import typing
 
 from hydrus.core import HydrusTime
 
-from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
 from hydrus.client.db import ClientDBFilesDuplicatesFileSearch
 from hydrus.client.db import ClientDBFilesDuplicatesSetter
+from hydrus.client.db import ClientDBFilesDuplicatesStorage
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMediaResults
@@ -23,7 +23,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         cursor: sqlite3.Cursor,
         modules_local_hashes_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
-        modules_files_duplicates: ClientDBFilesDuplicates.ClientDBFilesDuplicates,
+        modules_files_duplicates_storage: ClientDBFilesDuplicatesStorage.ClientDBFilesDuplicatesStorage,
         modules_files_duplicates_auto_resolution_storage: ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage,
         modules_media_results: ClientDBMediaResults.ClientDBMediaResults,
         modules_files_duplicates_file_query: ClientDBFilesDuplicatesFileSearch.ClientDBFilesDuplicatesFileSearch,
@@ -32,7 +32,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         self.modules_local_hashes_cache = modules_local_hashes_cache
         self.modules_files_storage = modules_files_storage
-        self.modules_files_duplicates = modules_files_duplicates
+        self.modules_files_duplicates_storage = modules_files_duplicates_storage
         self.modules_files_duplicates_auto_resolution_storage = modules_files_duplicates_auto_resolution_storage
         self.modules_media_results = modules_media_results
         self.modules_files_duplicates_file_query = modules_files_duplicates_file_query
@@ -48,8 +48,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             hash_id_a = media_result_a.GetHashId()
             hash_id_b = media_result_b.GetHashId()
             
-            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
-            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            media_id_a = self.modules_files_duplicates_storage.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates_storage.GetMediaId( hash_id_b )
             
             if media_id_a == media_id_b: # ok a previous approve in this run already merged these guys; nothing to do
                 
@@ -76,8 +76,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         hash_id_1 = media_result_1.GetHashId()
         hash_id_2 = media_result_2.GetHashId()
         
-        media_id_1 = self.modules_files_duplicates.GetMediaId( hash_id_1 )
-        media_id_2 = self.modules_files_duplicates.GetMediaId( hash_id_2 )
+        media_id_1 = self.modules_files_duplicates_storage.GetMediaId( hash_id_1 )
+        media_id_2 = self.modules_files_duplicates_storage.GetMediaId( hash_id_2 )
         
         smaller_media_id = min( media_id_1, media_id_2 )
         larger_media_id = max( media_id_1, media_id_2 )
@@ -95,8 +95,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         hash_id_a = self.modules_local_hashes_cache.GetHashId( hash_a )
         hash_id_b = self.modules_local_hashes_cache.GetHashId( hash_b )
         
-        media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
-        media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+        media_id_a = self.modules_files_duplicates_storage.GetMediaId( hash_id_a )
+        media_id_b = self.modules_files_duplicates_storage.GetMediaId( hash_id_b )
         
         smaller_media_id = min( media_id_a, media_id_b )
         larger_media_id = max( media_id_a, media_id_b )
@@ -124,8 +124,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             hash_id_a = media_result_a.GetHashId()
             hash_id_b = media_result_b.GetHashId()
             
-            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
-            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            media_id_a = self.modules_files_duplicates_storage.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates_storage.GetMediaId( hash_id_b )
             
             smaller_media_id = min( media_id_a, media_id_b )
             larger_media_id = max( media_id_a, media_id_b )
@@ -138,7 +138,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
     
     def GetResolutionPair( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ) -> typing.Optional[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
         
-        db_location_context = self.modules_files_storage.GetDBLocationContext( rule.GetPotentialDuplicatesSearchContext().GetFileSearchContext1().GetLocationContext() )
+        db_location_context = self.modules_files_storage.GetDBLocationContext( rule.GetLocationContext() )
         
         def get_row():
             
@@ -156,8 +156,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             ( smaller_media_id, larger_media_id ) = pair_to_work
             
-            smaller_hash_id = self.modules_files_duplicates.GetBestKingId( smaller_media_id, db_location_context = db_location_context )
-            larger_hash_id = self.modules_files_duplicates.GetBestKingId( larger_media_id, db_location_context = db_location_context )
+            smaller_hash_id = self.modules_files_duplicates_storage.GetBestKingId( smaller_media_id, db_location_context = db_location_context )
+            larger_hash_id = self.modules_files_duplicates_storage.GetBestKingId( larger_media_id, db_location_context = db_location_context )
             
             if smaller_hash_id is None or larger_hash_id is None:
                 
@@ -244,7 +244,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         all_media_ids = { media_id for pair in pairs for media_id in pair }
         
-        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates.GetKingHashId( media_id ) for media_id in all_media_ids }
+        media_ids_to_king_hash_ids = { media_id : self.modules_files_duplicates_storage.GetKingHashId( media_id ) for media_id in all_media_ids }
         
         all_hash_ids = set( media_ids_to_king_hash_ids.values() )
         
@@ -284,8 +284,8 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             hash_id_a = media_result_a.GetHashId()
             hash_id_b = media_result_b.GetHashId()
             
-            media_id_a = self.modules_files_duplicates.GetMediaId( hash_id_a )
-            media_id_b = self.modules_files_duplicates.GetMediaId( hash_id_b )
+            media_id_a = self.modules_files_duplicates_storage.GetMediaId( hash_id_a )
+            media_id_b = self.modules_files_duplicates_storage.GetMediaId( hash_id_b )
             
             smaller_media_id = min( media_id_a, media_id_b )
             larger_media_id = max( media_id_a, media_id_b )

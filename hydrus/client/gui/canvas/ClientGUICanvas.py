@@ -3198,7 +3198,7 @@ class CanvasMediaList( CanvasWithHovers ):
         num_looked_forward = 0
         num_looked_back = 0
         
-        while num_looked_forward < num_to_go_forward and num_looked_back < num_to_go_back:
+        while num_looked_forward < num_to_go_forward or num_looked_back < num_to_go_back:
             
             if num_looked_forward < num_to_go_forward:
                 

@@ -67,15 +67,16 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._dialog_rating_incdec_height_px.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set height in pixels for inc/dec rectangles in the \'manage ratings\' dialog.  Width will be dynamic based on the rating. It is limited to be between twice and half of the normal ratings icons sizes.' ) )
         
         #clamp inc/dec rectangles to min 0.5 and max 2x rating stars px for rating size stuff
-        self._media_viewer_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
-        self._draw_thumbnail_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
-        self._preview_window_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
+        # hydev turning this off for now
+        #self._media_viewer_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
+        #self._draw_thumbnail_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
+        #self._preview_window_rating_icon_size_px.editingFinished.connect( self._icon_size_changed )
         
         #
         
         self._example_star_service = ClientGUIRatings.RatingPreviewServiceWrapper( self._new_options.GetKey( 'options_ratings_panel_template_service_key' ), CC.PREVIEW_RATINGS_SERVICE_KEY, HC.LOCAL_RATING_NUMERICAL )
         self._example_incdec_service = ClientGUIRatings.RatingPreviewServiceWrapper( CC.PREVIEW_RATINGS_SERVICE_KEY )
-         
+        
         self._media_viewer_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )
         self._media_viewer_incdec_example = ClientGUIRatings.RatingIncDecExample( self, self._example_incdec_service.GetServiceKey(), CC.CANVAS_DIALOG )
         self._thumbnail_star_example = ClientGUIRatings.RatingNumericalExample( self, self._example_star_service.GetServiceKey(), CC.CANVAS_DIALOG )

@@ -2,6 +2,7 @@ import itertools
 import sqlite3
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
@@ -15,7 +16,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBFileDeleteLock
-from hydrus.client.db import ClientDBFilesDuplicates
+from hydrus.client.db import ClientDBFilesDuplicatesUpdates
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
 from hydrus.client.db import ClientDBFilesStorage
@@ -74,7 +75,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         modules_mappings_cache_combined_files_display: ClientDBMappingsCacheCombinedFilesDisplay.ClientDBMappingsCacheCombinedFilesDisplay,
         modules_mappings_cache_specific_display: ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay,
         modules_mappings_cache_specific_storage: ClientDBMappingsCacheSpecificStorage.ClientDBMappingsCacheSpecificStorage,
-        modules_files_duplicates: ClientDBFilesDuplicates.ClientDuplicates,
+        modules_files_duplicates_updates: ClientDBFilesDuplicatesUpdates.ClientDBFilesDuplicatesUpdates,
         modules_files_maintenance_queue: ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue,
         modules_repositories: ClientDBRepositories.ClientDBRepositories,
         modules_media_results: ClientDBMediaResults.ClientDBMediaResults
@@ -105,7 +106,7 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         self.modules_mappings_cache_combined_files_display = modules_mappings_cache_combined_files_display
         self.modules_mappings_cache_specific_display = modules_mappings_cache_specific_display
         self.modules_mappings_cache_specific_storage = modules_mappings_cache_specific_storage
-        self.modules_files_duplicates = modules_files_duplicates
+        self.modules_files_duplicates_updates = modules_files_duplicates_updates
         self.modules_files_maintenance_queue = modules_files_maintenance_queue
         self.modules_repositories = modules_repositories
         self.modules_media_results = modules_media_results
@@ -114,6 +115,8 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
         
     
     def AddFiles( self, service_id, rows ):
+        
+        local_file_service_ids = self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) )
         
         hash_ids = { row[0] for row in rows }
         
@@ -172,6 +175,33 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 num_deleted = self.modules_files_storage.ClearDeleteRecord( service_id, new_hash_ids )
                 
                 service_info_updates.append( ( -num_deleted, service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) )
+                
+            
+            # duplicate stuff
+            
+            if service_id in local_file_service_ids:
+                
+                try:
+                    
+                    self.modules_files_duplicates_updates.NotifyFilesEnteringLocalFileDomain( service_id, new_hash_ids )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem with duplicate update signal:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+            
+            if service_id == self.modules_services.combined_local_file_domains_service_id:
+                
+                try:
+                    
+                    self.modules_files_duplicates_updates.NotifyFilesEnteringCombinedLocalFileDomains( new_hash_ids )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem with duplicate update signal:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
                 
             
             # if entering the combined local domain, update the hash cache
@@ -329,6 +359,34 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 self.AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
                 
             
+            # duplicate stuff
+            
+            if service_id == self.modules_services.combined_local_file_domains_service_id:
+                
+                try:
+                    
+                    self.modules_files_duplicates_updates.NotifyFilesLeavingCombinedLocalFileDomains( existing_hash_ids )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem with duplicate update signal:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                
+            
+            if service_id in local_file_service_ids:
+                
+                try:
+                    
+                    self.modules_files_duplicates_updates.NotifyFilesLeavingLocalFileDomain( service_id, existing_hash_ids )
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem with duplicate update signal:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                
+            
             # if any files are no longer in any local file domains, remove from the umbrella and send them to the trash
             
             if service_id in local_file_service_ids:
@@ -365,7 +423,15 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                 
                 for hash_id in existing_hash_ids:
                     
-                    self.modules_files_duplicates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
+                    try:
+                        
+                        self.modules_files_duplicates_updates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.Print( 'Problem with duplicate update signal:' )
+                        HydrusData.PrintException( e, do_wait = False )
+                        
                     
                 
                 self.modules_files_maintenance_queue.CancelFiles( existing_hash_ids )

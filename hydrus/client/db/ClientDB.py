@@ -38,11 +38,12 @@ from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBContentUpdates
 from hydrus.client.db import ClientDBFileDeleteLock
-from hydrus.client.db import ClientDBFilesDuplicates
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionSearch
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
 from hydrus.client.db import ClientDBFilesDuplicatesFileSearch
 from hydrus.client.db import ClientDBFilesDuplicatesSetter
+from hydrus.client.db import ClientDBFilesDuplicatesStorage
+from hydrus.client.db import ClientDBFilesDuplicatesUpdates
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBFilesMaintenance
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
@@ -1097,7 +1098,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         for hash_id in in_components_not_in_master:
                             
-                            self.modules_files_duplicates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
+                            self.modules_files_duplicates_updates.NotifyFileLeavingHydrusLocalFileStorage( hash_id )
                             
                         
                         self.modules_files_maintenance_queue.CancelFiles( in_components_not_in_master )
@@ -1927,7 +1928,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
         # TODO: fix this, it takes ages sometimes IRL
-        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
+        table_join = self.modules_files_duplicates_updates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
         
         ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
         
@@ -3863,15 +3864,15 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'duplicates_auto_resolution_resolution_pair' : self.modules_files_duplicates_auto_resolution_search.GetResolutionPair,
                 'duplicates_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
-                'file_duplicate_hashes' : self.modules_files_duplicates.GetFileHashesByDuplicateType,
-                'file_duplicate_info' : self.modules_files_duplicates.GetFileDuplicateInfo,
+                'file_duplicate_hashes' : self.modules_files_duplicates_storage.GetFileHashesByDuplicateType,
+                'file_duplicate_info' : self.modules_files_duplicates_storage.GetFileDuplicateInfo,
                 'file_hashes' : self.modules_hashes.GetFileHashes,
                 'file_info_managers' : self.modules_media_results.GetFileInfoManagersFromHashes,
                 'file_info_managers_from_ids' : self.modules_media_results.GetFileInfoManagers,
                 'file_maintenance_get_job_counts' : self.modules_files_maintenance_queue.GetJobCounts,
                 'file_maintenance_get_jobs' : self.modules_files_maintenance_queue.GetJobs,
                 'file_query_ids' : self.modules_files_query.GetHashIdsFromQuery,
-                'file_relationships_for_api' : self.modules_files_duplicates.GetFileRelationshipsForAPI,
+                'file_relationships_for_api' : self.modules_files_duplicates_storage.GetFileRelationshipsForAPI,
                 'filter_existing_tags' : self.modules_mappings_counts_update.FilterExistingTags,
                 'filter_hashes' : self.modules_files_metadata_rich.FilterHashesByService,
                 'force_refresh_tags_managers' : self.modules_media_results.GetForceRefreshTagsManagers,
@@ -3893,7 +3894,7 @@ class DB( HydrusDB.HydrusDB ):
                 'num_deferred_file_deletes' : self.modules_files_storage.GetDeferredPhysicalDeleteCounts,
                 'potential_duplicates_count' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCount,
                 'potential_duplicates_count_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicatesCountFragmentary,
-                'potential_duplicate_id_pairs_and_distances' : self.modules_files_duplicates.GetPotentialDuplicateIdPairsAndDistances,
+                'potential_duplicate_id_pairs_and_distances' : self.modules_files_duplicates_updates.GetPotentialDuplicateIdPairsAndDistances,
                 'potential_duplicate_id_pairs_and_distances_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistancesFragmentary,
                 'potential_duplicate_media_result_pairs_and_distances' : self.modules_files_duplicates_file_query.GetPotentialDuplicateMediaResultPairsAndDistances,
                 'potential_duplicate_media_result_pairs_and_distances_fragmentary' : self.modules_files_duplicates_file_query.GetPotentialDuplicateMediaResultPairsAndDistancesFragmentary,
@@ -3974,16 +3975,16 @@ class DB( HydrusDB.HydrusDB ):
                 'analyze' : self.modules_db_maintenance.AnalyzeDueTables,
                 'associate_repository_update_hashes' : self.modules_repositories.AssociateRepositoryUpdateHashes,
                 'clear_deferred_physical_delete' : self.modules_files_storage.ClearDeferredPhysicalDelete,
-                'clear_all_false_positive_relations' : self.modules_files_duplicates.ClearAllFalsePositivesHashes,
-                'clear_internal_false_positive_relations' : self.modules_files_duplicates.ClearInternalFalsePositivesHashes,
+                'clear_all_false_positive_relations' : self.modules_files_duplicates_updates.ClearAllFalsePositivesHashes,
+                'clear_internal_false_positive_relations' : self.modules_files_duplicates_updates.ClearInternalFalsePositivesHashes,
                 'clear_orphan_tables' : self.modules_db_maintenance.ClearOrphanTables,
                 'content_updates' : self.modules_content_updates.ProcessContentUpdatePackage,
                 'cull_file_viewing_statistics' : self.modules_files_viewing_stats.CullFileViewingStatistics,
                 'db_integrity' : self.modules_db_maintenance.CheckDBIntegrity,
                 'delete_serialisable_named' : self.modules_serialisable.DeleteJSONDumpNamed,
-                'delete_potential_duplicate_pairs' : self.modules_files_duplicates.DeleteAllPotentialDuplicatePairs,
-                'dissolve_alternates_group' : self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes,
-                'dissolve_duplicates_group' : self.modules_files_duplicates.DissolveMediaIdFromHashes,
+                'delete_potential_duplicate_pairs' : self.modules_files_duplicates_updates.DeleteAllPotentialDuplicatePairs,
+                'dissolve_alternates_group' : self.modules_files_duplicates_updates.DissolveAlternatesGroupIdFromHashes,
+                'dissolve_duplicates_group' : self.modules_files_duplicates_updates.DissolveMediaIdFromHashes,
                 'do_deferred_table_delete_work' : self.modules_db_maintenance.DoDeferredDeleteTablesWork,
                 'duplicates_auto_resolution_approve_pending_pairs' : self.modules_files_duplicates_auto_resolution_search.ApprovePendingPairs,
                 'duplicates_auto_resolution_commit_resolution_pair_failed' : self.modules_files_duplicates_auto_resolution_search.CommitResolutionPairFailed,
@@ -3994,13 +3995,14 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicates_auto_resolution_maintenance_fix_orphan_rules' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanRules,
                 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
                 'duplicates_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
+                'duplicates_auto_resolution_maintenance_resync_rules_to_location_contexts' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceResyncAllRulesToLocationContexts,
                 'duplicates_auto_resolution_rescind_declined_pairs' : self.modules_files_duplicates_auto_resolution_search.RescindDeclinedPairs,
                 'duplicates_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
                 'duplicates_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
                 'duplicates_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
                 'duplicates_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
                 'duplicate_pair_status' : self.modules_files_duplicates_setter.SetDuplicatePairStatus,
-                'duplicate_set_king' : self.modules_files_duplicates.SetKingFromHash,
+                'duplicate_set_king' : self.modules_files_duplicates_updates.SetKingFromHash,
                 'file_maintenance_add_jobs' : self.modules_files_maintenance_queue.AddJobs,
                 'file_maintenance_add_jobs_hashes' : self.modules_files_maintenance_queue.AddJobsHashes,
                 'file_maintenance_cancel_jobs' : self.modules_files_maintenance_queue.CancelJobs,
@@ -4015,12 +4017,12 @@ class DB( HydrusDB.HydrusDB ):
                 'regenerate_similar_files_tree' : self.modules_similar_files.RegenerateTree,
                 'regenerate_similar_files_search_count_numbers' : self.modules_similar_files.RegenerateSearchCacheNumbers,
                 'regenerate_tag_siblings_and_parents_cache' : self.modules_tag_display.RegenerateTagSiblingsAndParentsCache,
-                'resync_potential_pairs_to_hydrus_local_file_storage' : self.modules_files_duplicates.ResyncPotentialPairsToHydrusLocalFileStorage,
+                'resync_potential_pairs_to_hydrus_local_file_storage' : self.modules_files_duplicates_updates.ResyncPotentialPairsToHydrusLocalFileStorage,
                 'register_shutdown_work' : self.modules_db_maintenance.RegisterShutdownWork,
                 'relocate_client_files' : self.modules_files_physical_storage.RelocateClientFiles,
-                'remove_alternates_member' : self.modules_files_duplicates.RemoveAlternateMemberFromHashes,
-                'remove_duplicates_member' : self.modules_files_duplicates.RemoveMediaIdMemberFromHashes,
-                'remove_potential_pairs' : self.modules_files_duplicates.RemovePotentialPairsFromHashes,
+                'remove_alternates_member' : self.modules_files_duplicates_updates.RemoveAlternateMemberFromHashes,
+                'remove_duplicates_member' : self.modules_files_duplicates_updates.RemoveMediaIdMemberFromHashes,
+                'remove_potential_pairs' : self.modules_files_duplicates_updates.RemovePotentialPairsFromHashes,
                 'repair_client_files' : self.modules_files_physical_storage.RepairClientFiles,
                 'reprocess_repository' : self.modules_repositories.ReprocessRepository,
                 'serialisable' : self.modules_serialisable.SetJSONDump,
@@ -4250,19 +4252,24 @@ class DB( HydrusDB.HydrusDB ):
         
         self._modules.append( self.modules_similar_files )
         
+        self.modules_files_duplicates_storage = ClientDBFilesDuplicatesStorage.ClientDBFilesDuplicatesStorage( self._c, self.modules_files_storage, self.modules_hashes_local_cache )
+        
+        self._modules.append( self.modules_files_duplicates_storage )
+        
         self.modules_files_duplicates_auto_resolution_storage = ClientDBFilesDuplicatesAutoResolutionStorage.ClientDBFilesDuplicatesAutoResolutionStorage(
             self._c,
             self._cursor_transaction_wrapper,
             self.modules_services,
             self.modules_db_maintenance,
-            self.modules_serialisable
+            self.modules_serialisable,
+            self.modules_files_duplicates_storage
         )
         
         self._modules.append( self.modules_files_duplicates_auto_resolution_storage )
         
-        self.modules_files_duplicates = ClientDBFilesDuplicates.ClientDBFilesDuplicates( self._c, self.modules_files_storage, self.modules_hashes_local_cache, self.modules_similar_files, self.modules_files_duplicates_auto_resolution_storage )
+        self.modules_files_duplicates_updates = ClientDBFilesDuplicatesUpdates.ClientDBFilesDuplicatesUpdates( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_files_storage, self.modules_hashes_local_cache, self.modules_similar_files, self.modules_files_duplicates_storage, self.modules_files_duplicates_auto_resolution_storage )
         
-        self._modules.append( self.modules_files_duplicates )
+        self._modules.append( self.modules_files_duplicates_updates )
         
         #
         
@@ -4328,7 +4335,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_mappings_cache_combined_files_display,
             self.modules_mappings_cache_specific_display,
             self.modules_mappings_cache_specific_storage,
-            self.modules_files_duplicates,
+            self.modules_files_duplicates_updates,
             self.modules_files_maintenance_queue,
             self.modules_repositories,
             self.modules_media_results
@@ -4372,7 +4379,7 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_hashes_local_cache,
             self.modules_tag_search,
             self.modules_similar_files,
-            self.modules_files_duplicates,
+            self.modules_files_duplicates_storage,
             self.modules_files_search_tags
         )
         
@@ -4385,7 +4392,8 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_storage,
             self.modules_hashes_local_cache,
             self.modules_similar_files,
-            self.modules_files_duplicates,
+            self.modules_files_duplicates_storage,
+            self.modules_files_duplicates_updates,
             self.modules_files_query,
             self.modules_media_results
         )
@@ -4397,7 +4405,8 @@ class DB( HydrusDB.HydrusDB ):
         self.modules_files_duplicates_setter = ClientDBFilesDuplicatesSetter.ClientDBFilesDuplicatesSetter(
             self._c,
             self.modules_hashes_local_cache,
-            self.modules_files_duplicates,
+            self.modules_files_duplicates_storage,
+            self.modules_files_duplicates_updates,
             self.modules_content_updates
         )
         
@@ -4409,7 +4418,7 @@ class DB( HydrusDB.HydrusDB ):
             self._c,
             self.modules_hashes_local_cache,
             self.modules_files_storage,
-            self.modules_files_duplicates,
+            self.modules_files_duplicates_storage,
             self.modules_files_duplicates_auto_resolution_storage,
             self.modules_media_results,
             self.modules_files_duplicates_file_query,
@@ -4900,11 +4909,11 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( i, hash_id ) in enumerate( group_of_hash_ids ):
                 
-                media_id = self.modules_files_duplicates.GetMediaId( hash_id )
+                media_id = self.modules_files_duplicates_storage.GetMediaId( hash_id )
                 
-                potential_duplicate_media_ids_and_distances = [ ( self.modules_files_duplicates.GetMediaId( duplicate_hash_id ), distance ) for ( duplicate_hash_id, distance ) in self.modules_similar_files.SearchFile( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
+                potential_duplicate_media_ids_and_distances = [ ( self.modules_files_duplicates_storage.GetMediaId( duplicate_hash_id ), distance ) for ( duplicate_hash_id, distance ) in self.modules_similar_files.SearchFile( hash_id, search_distance ) if duplicate_hash_id != hash_id ]
                 
-                self.modules_files_duplicates.AddPotentialDuplicates( media_id, potential_duplicate_media_ids_and_distances )
+                self.modules_files_duplicates_updates.AddPotentialDuplicates( media_id, potential_duplicate_media_ids_and_distances )
                 
                 self.modules_similar_files.SetSearchStatus( hash_id, search_distance )
                 
@@ -6955,382 +6964,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
         
-        if version == 580:
-            
-            try:
-                
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                domain_manager.DeleteParsers( [
-                    'rule34.paheal gallery page parser',
-                    'rule34hentai gallery page parser'
-                ] )
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'shimmie file page parser',
-                    'shimmie gallery page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 581:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                new_options.SetBoolean( 'override_stylesheet_colours', True )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update your options failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                self._Execute( 'UPDATE services SET name = ? WHERE name = ? and service_type = ?;', ( 'deleted from anywhere', 'all deleted files', HC.COMBINED_DELETED_FILE ) )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to rename "all deleted files" failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 583:
-            
-            try:
-                
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'shimmie file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 584:
-            
-            try:
-                
-                from hydrus.client.networking import ClientNetworkingContexts
-                
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
-                
-                pixiv_network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( 'pixiv.net' )
-                
-                if pixiv_network_context not in network_contexts_to_custom_header_dicts:
-                    
-                    network_contexts_to_custom_header_dicts[ pixiv_network_context ] = {}
-                    
-                
-                custom_header_dict = network_contexts_to_custom_header_dicts[ pixiv_network_context ]
-                
-                if 'Accept-Language' not in custom_header_dict:
-                    
-                    custom_header_dict[ 'Accept-Language' ] = ( 'en-US,en;q=0.5', ClientNetworkingDomain.VALID_APPROVED, 'Tells Pixiv to give English tag translations.' )
-                    
-                
-                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 585:
-            
-            if self._TableExists( 'tag_siblings' ):
-                
-                for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
-                    
-                    self._controller.frame_splash_status.SetSubtext( f'moving parents/siblings: {service_id}' )
-                    
-                    statuses_to_storage_table_names = ClientDBTagParents.GenerateTagParentsStorageTableNames( service_id )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id ) SELECT child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_CURRENT ) )
-                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id ) SELECT child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_DELETED ) )
-                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id, reason_id ) SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) )
-                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id, reason_id ) SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
-                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
-                    
-                    for table_name in statuses_to_storage_table_names.values():
-                        
-                        self.modules_db_maintenance.AnalyzeTable( table_name )
-                        
-                    
-                    #
-                    
-                    statuses_to_storage_table_names = ClientDBTagSiblings.GenerateTagSiblingsStorageTableNames( service_id )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id ) SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_CURRENT ) )
-                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id ) SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_DELETED ) )
-                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id, reason_id ) SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) )
-                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
-                    
-                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]
-                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
-                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id, reason_id ) SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
-                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
-                    
-                    for table_name in statuses_to_storage_table_names.values():
-                        
-                        self.modules_db_maintenance.AnalyzeTable( table_name )
-                        
-                    
-                
-                self._Execute( 'DROP TABLE tag_parents;' )
-                self._Execute( 'DROP TABLE tag_parent_petitions;' )
-                
-                self._Execute( 'DROP TABLE tag_siblings;' )
-                self._Execute( 'DROP TABLE tag_sibling_petitions;' )
-                
-            
-        
-        if version == 586:
-            
-            try:
-                
-                login_manager: ClientNetworkingLogin.NetworkLoginManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                login_manager.SetActive( '8chan.moe', '8chan.moe TOS click-through', False )
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 587:
-            
-            try:
-                
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                # new example urls suggest new links, this should force the detach and re-link we want
-                domain_manager.DeleteParsers( 'shimmie file page parser' )
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'shimmie file page parser',
-                    'shimmie file page parser - simple tags'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 588:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'catbox collection parser',
-                    'safebooru file page parser'
-                ] )
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'catbox collection'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                result = self._Execute( 'SELECT phash_id, inner_population, outer_population FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
-                
-                if result is not None: # if none, this client has no files
-                    
-                    ( root_phash_id, inner_population, outer_population ) = result
-                    
-                    is_decent_sized_branch = inner_population + outer_population > 16
-                    
-                    if is_decent_sized_branch:
-                        
-                        larger = max( inner_population, outer_population )
-                        smaller = min( inner_population, outer_population )
-                        
-                        if smaller / larger < 0.33:
-                            
-                            self._controller.frame_splash_status.SetSubtext( f'optimising similar files search' )
-                            
-                            self.modules_similar_files.RegenerateTree()
-                            
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to check/regenerate your similar file search tree failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 589:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'x post'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 590:
             
             try:
@@ -7604,12 +7237,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for alternates_group_id in false_positive_alternates_group_ids:
                     
-                    false_positive_medias_ids.update( self.modules_files_duplicates.GetAlternateMediaIds( alternates_group_id ) )
+                    false_positive_medias_ids.update( self.modules_files_duplicates_storage.GetAlternateMediaIds( alternates_group_id ) )
                     
                 
                 db_location_context = self.modules_files_storage.GetDBLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
                 
-                false_positive_hash_ids = self.modules_files_duplicates.GetDuplicatesHashIds( false_positive_medias_ids, db_location_context )
+                false_positive_hash_ids = self.modules_files_duplicates_storage.GetDuplicatesHashIds( false_positive_medias_ids, db_location_context )
                 
                 if len( false_positive_hash_ids ) > 0:
                     
@@ -8954,7 +8587,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.frame_splash_status.SetSubtext( f'cleaning up some potential duplicates storage...' )
                 
-                self.modules_files_duplicates.ResyncPotentialPairsToHydrusLocalFileStorage()
+                self.modules_files_duplicates_updates.ResyncPotentialPairsToHydrusLocalFileStorage()
                 
             except Exception as e:
                 
@@ -9043,6 +8676,24 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 649:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'making duplicate auto-resolution rules smarter...' )
+                
+                self.modules_files_duplicates_auto_resolution_storage.MaintenanceResyncAllRulesToLocationContexts()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to resync your auto-resolution rules to their file domains failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.\n\nAlso, you might want to pause duplicates auto-resolution work right after the client boots, since it sounds like they have a file storage issue.'
                 
                 self.pub_initial_message( message )
                 

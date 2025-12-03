@@ -100,14 +100,12 @@ def THREADCommitDuplicatePairDecisions(
     
     job_status.FinishAndDismiss()
     
-    CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-    CG.client_controller.pub( 'notify_duplicate_filter_non_blocking_commit_complete' )
-    
 
 class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES
     
+    canvasDuplicateFilterExitingAfterWorkDone = QC.Signal()
     showPairInPage = QC.Signal( list )
     
     def __init__( self, parent, potential_duplicate_pair_factory: ClientPotentialDuplicatesPairFactory.PotentialDuplicatePairFactory ):
@@ -127,6 +125,8 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         self._duplicate_pair_decisions: list[ ClientPotentialDuplicatesPairFactory.DuplicatePairDecision ] = []
         self._hashes_due_to_be_deleted_in_this_batch = set()
         self._hashes_due_to_be_media_merged_in_this_batch = set()
+        
+        self._have_done_work = False
         
         self._num_items_to_commit = 0
         self._duplicate_pair_decisions_we_are_committing = []
@@ -234,6 +234,8 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         if self._num_items_to_commit > 0:
             
+            self._have_done_work = True
+            
             if blocking:
                 
                 self._commit_work_updater.update()
@@ -333,6 +335,8 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             ( media_result_1, media_result_2 ) = self._batch_of_pairs_to_process[ self._current_pair_index ]
             
             duplicate_pair_decision = ClientPotentialDuplicatesPairFactory.DuplicatePairDecisionDeletion( media_result_1, media_result_2, content_update_packages )
+            
+            self._have_done_work = True
             
             self._ShowNextPair( duplicate_pair_decision )
             
@@ -559,8 +563,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             if not self._potential_duplicate_pair_factory.InitialisationWorkLooksGood():
                 
                 ClientGUIDialogsMessage.ShowInformation( self, 'All potential pairs are cleared!' )
-                
-                CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                 
                 self._TryToCloseWindow()
                 
@@ -790,8 +792,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
                 
             
-            CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-            
             self._TryToCloseWindow()
             
         else:
@@ -910,8 +910,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             if len( self._duplicate_pair_decisions ) == 0:
                 
                 # the first one shouldn't be auto-skipped, so if it was and now we can't pop, something weird happened
-                
-                CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                 
                 ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It could be some files were deleted during processing. The filter will now close.' )
                 
@@ -1139,8 +1137,6 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                         
                     else:
                         
-                        CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
-                        
                         HydrusData.Print( 'Rows that could not be displayed:' )
                         
                         for duplicate_pair_decision in self._duplicate_pair_decisions:
@@ -1227,6 +1223,16 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
             self._Archive()
             
+        
+    
+    def CleanBeforeDestroy( self ):
+        
+        if self._have_done_work:
+            
+            self.canvasDuplicateFilterExitingAfterWorkDone.emit()
+            
+        
+        super().CleanBeforeDestroy()
         
     
     def Delete( self, canvas_key ):

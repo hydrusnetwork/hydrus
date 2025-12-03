@@ -296,7 +296,16 @@ class BetterQListWidget( QW.QListWidget ):
             
             data = self._GetRowData( list_widget_item )
             
-            list_widget_item.setSelected( data in datas )
+            try:
+                
+                selected = data in datas # has been known to 'unhashable', so let's failsafe
+                
+            except:
+                
+                selected = False
+                
+            
+            list_widget_item.setSelected( selected )
             
         
     

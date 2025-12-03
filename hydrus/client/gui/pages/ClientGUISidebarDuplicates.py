@@ -151,8 +151,6 @@ class FilterPanel( QW.QWidget ):
         
         #
         
-        CG.client_controller.sub( self, 'NotifyNewPotentialsSearchNumbers', 'new_similar_files_potentials_search_numbers' )
-        
         self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
         self._potential_duplicates_search_context.thisSearchDefinitelyHasNoPairs.connect( self._NotifyPotentialsSearchDefinitelyHasNoPairs )
         
@@ -249,8 +247,8 @@ class FilterPanel( QW.QWidget ):
         
         self._page_manager.SetVariable( 'synchronised', synchronised )
         
-        self.locationChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetLocationContext() )
-        self.tagContextChanged.emit( potential_duplicates_search_context.GetFileSearchContext1().GetTagContext() )
+        self.locationChanged.emit( potential_duplicates_search_context.GetLocationContext() )
+        self.tagContextChanged.emit( potential_duplicates_search_context.GetTagContext() )
         
     
     def _PotentialDuplicatesSortChanged( self ):
@@ -266,11 +264,6 @@ class FilterPanel( QW.QWidget ):
         self.setCurrentMediaAs.emit( duplicate_type )
         
     
-    def NotifyNewPotentialsSearchNumbers( self ):
-        
-        self._potential_duplicates_search_context.NotifyNewDupePairs()
-        
-    
     def PageHidden( self ):
         
         self._potential_duplicates_search_context.PageHidden()
@@ -283,7 +276,7 @@ class FilterPanel( QW.QWidget ):
     
     def RefreshDuplicateNumbers( self ):
         
-        self._potential_duplicates_search_context.NotifyNewDupePairs()
+        self._potential_duplicates_search_context.ForceRefreshNumbers()
         
     
     def ShowRandomPotentialDupes( self ):
@@ -305,7 +298,7 @@ class FilterPanel( QW.QWidget ):
                 
                 ClientGUIDialogsMessage.ShowInformation( self, 'No potential files in this search!' )
                 
-                self._potential_duplicates_search_context.NotifyNewDupePairs()
+                self._potential_duplicates_search_context.ForceRefreshNumbers()
                 
             else:
                 

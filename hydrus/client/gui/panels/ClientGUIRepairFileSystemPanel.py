@@ -37,7 +37,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         text += '\n' * 2
         text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under \'database->move media files\' immediately.'
         text += '\n' * 2
-        text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help. Regardless of the situation, the document at "install_dir/db/help my media files are broke.txt" may be useful background reading.'
+        text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help. Regardless of the situation, the document at "install_dir/db/help my media files-folders are broke.txt" may be useful background reading.'
         
         if self._only_thumbs:
             
