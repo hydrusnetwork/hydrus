@@ -126,7 +126,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, media_callable = self._page.GetMedia, synchronised = synchronised, show_lock_search_button = True )
         
-        self.my_predicates = None
+        self.my_predicates = set()
         self.searchQueryGrown.connect( CG.client_controller.gui.SetPredicateHistoryAdded, QC.Qt.ConnectionType.QueuedConnection )
         self.searchQueryShrunk.connect( CG.client_controller.gui.SetPredicateHistoryRemoved, QC.Qt.ConnectionType.QueuedConnection )
         

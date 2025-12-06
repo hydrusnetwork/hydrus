@@ -8,6 +8,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui.pages import ClientGUIMediaResultsPanelLoading
 from hydrus.core import HydrusNumbers
 
 def GetSearchProvider( provider: int ) -> typing.Optional[ QAbstractLocatorSearchProvider ]:
@@ -40,7 +41,7 @@ def GetSearchProvider( provider: int ) -> typing.Optional[ QAbstractLocatorSearc
     return None
     
 
-def highlight_result_text( result_text: str, query_text: str ):
+def highlight_result_text( result_text: str, query_text: str, pass_through = False ):
     
     result_text = escape( result_text )
     
@@ -56,6 +57,11 @@ def highlight_result_text( result_text: str, query_text: str ):
             
         
         if query_text not in result_text:
+            
+            if pass_through: #no bold
+                
+                return escape( original_result_text )
+                
             
             result_text = result_text.casefold() # last ditch attempt
             
@@ -110,7 +116,7 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
     
     def suggestedReservedItemCount( self ):
         
-        return 8
+        return 32
         
     
     def resultSelected( self, resultID: int ):
@@ -119,11 +125,26 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         
         if fav_search:
             
+            ( folder, name, fsc, sync, sort, collect ) = fav_search
+            
+            if CG.client_controller.new_options.GetBoolean( 'command_palette_fav_searches_open_new_page' ):
+                
+                CG.client_controller.gui.NewPageQuery( 
+                    fsc.GetLocationContext(),
+                    initial_hashes = None,
+                    initial_predicates = fsc.GetPredicates(),
+                    initial_sort = sort,
+                    initial_collect = collect,
+                    page_name = name,
+                    do_sort = sync
+                )
+                
+            
             current_media_page = CG.client_controller.gui.GetNotebookCurrentPage()
             
             if current_media_page is not None:
                 
-                current_media_page.ActivateFavouriteSearch( fav_search )
+                current_media_page.ActivateFavouriteSearch( ( folder, name ) )
                 
                 self.result_ids_to_fav_searches = {}
                 
@@ -144,19 +165,19 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         fav_searches = CG.client_controller.favourite_search_manager.GetFavouriteSearchRows()
         
         result = []
-        #file_search_context, synchronised, media_sort, media_collect are unused
-        for ( folder, name, _, _, _, _ ) in fav_searches:
+        
+        for ( folder, name, file_search_context, synchronised, media_sort, media_collect ) in fav_searches:
             
-            if query_casefold in name.casefold():
+            if query_casefold in folder.casefold() or query_casefold in name.casefold():
                 
-                primary_text = highlight_result_text( name, query )
-                secondary_text = 'favourite search'
+                primary_text = highlight_result_text( name, query, pass_through = True )
+                secondary_text = highlight_result_text( folder, query, pass_through = True ) + ' - <i>favourite search</i>'
                 
                 icon_filename = 'search.png'
                 
                 result.append( QLocatorSearchResult( self.result_id_counter, icon_filename, icon_filename, True, [ primary_text, secondary_text ] ) )
                 
-                self.result_ids_to_fav_searches[ self.result_id_counter ] = ( folder, name )
+                self.result_ids_to_fav_searches[ self.result_id_counter ] = ( folder, name, file_search_context, synchronised, media_sort, media_collect )
                 
                 self.result_id_counter += 1
                 
@@ -210,7 +231,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
     # Should be larger than the average expected result count
     def suggestedReservedItemCount( self ):
         
-        return 32
+        return 512
         
     
     # Called when the user activates a result
@@ -613,12 +634,19 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         
         media_page = CG.client_controller.gui.GetNotebookCurrentPage()
         
-        if not media_page or not media_page._media_panel:
+        if not media_page or not media_page.GetMediaResultsPanel():
             
             return
             
         
-        self.menu = media_page._media_panel.ShowMenu( True )
+        media_panel = media_page.GetMediaResultsPanel()
+        
+        if media_panel is None or isinstance( media_panel, ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading ):
+            
+            return 
+            
+        
+        self.menu = media_panel.ShowMenu( True )
         
         # helper function to traverse menu and generate entries
         # TODO: need to filter out menu items not suitable for display in locator

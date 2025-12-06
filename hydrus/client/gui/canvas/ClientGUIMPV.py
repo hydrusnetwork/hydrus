@@ -949,9 +949,14 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if probably_crashy:
             
-            if HG.mpv_allow_crashy_files:
+            if HG.mpv_allow_crashy_files or HG.mpv_allow_crashy_files_silently:
                 
-                HydrusData.ShowText( 'This file would have triggered the crash handling now.' )
+                if not HG.mpv_allow_crashy_files_silently:
+                    
+                    hash = original_media.GetHash()
+                    
+                    HydrusData.ShowText( f'This file ({hash}) would have triggered the crash handling now.' )
+                    
                 
                 return
                 
@@ -1329,7 +1334,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         global damaged_file_hashes
         
-        if media is not None and media.GetHash() in damaged_file_hashes and not HG.mpv_allow_crashy_files:
+        if media is not None and media.GetHash() in damaged_file_hashes and not HG.mpv_allow_crashy_files and not HG.mpv_allow_crashy_files_silently:
             
             self.ClearMedia()
             

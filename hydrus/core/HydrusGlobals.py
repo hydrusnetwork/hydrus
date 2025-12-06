@@ -77,6 +77,7 @@ mpv_report_mode = False
 potential_duplicates_report_mode = False
 
 mpv_allow_crashy_files = False
+mpv_allow_crashy_files_silently = False
 
 fake_petition_mode = False
 

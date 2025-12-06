@@ -114,12 +114,79 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
         #
+        self._options_search = QW.QLineEdit( self )
+        self._options_search.setPlaceholderText( 'Search options...' )
+        self._options_search.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Fixed )
+        self._options_search.setFixedHeight( self._options_search.sizeHint().height() )
+        
+        completer_strings = []
+        self._completer_map = {}
+        
+        for index, page in enumerate( self._listbook.GetPages() ):
+            
+            page_name = self._listbook.tabText( index )
+            
+            for widget in page.findChildren( QW.QWidget ):
+                
+                text = ""
+                
+                if isinstance( widget, QW.QLabel ):
+                    text = widget.text()
+                elif isinstance( widget, QW.QCheckBox ):
+                    text = widget.text()
+                elif isinstance( widget, QW.QGroupBox ):
+                    text = widget.title()
+                elif isinstance( widget, QW.QComboBox ):
+                    text = widget.currentText()
+                
+                if text:
+                    key = f"{text} ({page_name})"
+                    completer_strings.append( key )
+                    self._completer_map[key] = ( page_name, widget )
+                    
+                
+            
+        from qtpy import QtCore as QC
+        self._completer = QW.QCompleter( completer_strings, self._options_search )
+        self._completer.setCaseSensitivity( QC.Qt.CaseSensitivity.CaseInsensitive )
+        self._completer.setFilterMode( QC.Qt.MatchFlag.MatchContains )
+        self._completer.setCompletionMode( QW.QCompleter.CompletionMode.PopupCompletion )
+        self._completer.setMaxVisibleItems( 10 )
+        self._options_search.setCompleter( self._completer )
+        
+        def on_completer_activated( text: str ):
+            
+            if text in self._completer_map:
+                
+                page_name, widget = self._completer_map[text]
+                self._listbook.SelectName( page_name )
+                
+                widget.setStyleSheet( "background-color: rgba(255, 255, 0, 128);" )
+                widget.repaint()
+                
+            QC.QTimer.singleShot( 0, lambda: self._options_search.setText('') )
+            
+        
+        self._completer.activated.connect( on_completer_activated )
+        
+        #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        if self._new_options.GetBoolean( 'options_search_bar_top_of_window' ):
+            
+            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+        else:
+            
+            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         self.widget().setLayout( vbox )
+        
+        self._options_search.setFocus()
         
 
     def SetCurrentOptionsPanel ( self ):
