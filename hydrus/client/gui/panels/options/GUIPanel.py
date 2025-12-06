@@ -60,6 +60,9 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._remember_options_window_panel = QW.QCheckBox( self._misc_panel )
         self._remember_options_window_panel.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will cause the options window (this one) to reopen at the last panel you were looking at when it was closed.' ) )
         
+        self._options_search_bar_top_of_window = QW.QCheckBox( self._misc_panel )
+        self._options_search_bar_top_of_window.setToolTip( ClientGUIFunctions.WrapToolTip( 'Relocate the built in options search bar. Requires Apply & re-open options.' ) )
+        
         #
         
         frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
@@ -110,6 +113,8 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._remember_options_window_panel.setChecked( self._new_options.GetBoolean( 'remember_options_window_panel' ) )
         
+        self._options_search_bar_top_of_window.setChecked( self._new_options.GetBoolean( 'options_search_bar_top_of_window' ) )
+        
         self._disable_get_safe_position_test.setChecked( self._new_options.GetBoolean( 'disable_get_safe_position_test' ) )
         
         self._save_window_size_and_position_on_close.setChecked( self._new_options.GetBoolean( 'save_window_size_and_position_on_close' ) )
@@ -144,6 +149,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
         rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
         rows.append( ( 'Remember last open options panel in this window: ', self._remember_options_window_panel ) )
+        rows.append( ( 'Move the options search bar from the bottom of the options window to the top: ', self._options_search_bar_top_of_window ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -322,7 +328,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
         self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
         self._new_options.SetBoolean( 'remember_options_window_panel', self._remember_options_window_panel.isChecked() )
-        
+        self._new_options.SetBoolean( 'options_search_bar_top_of_window', self._options_search_bar_top_of_window.isChecked() )
         self._new_options.SetBoolean( 'disable_get_safe_position_test', self._disable_get_safe_position_test.isChecked() )
         self._new_options.SetBoolean( 'save_window_size_and_position_on_close', self._save_window_size_and_position_on_close.isChecked() )
         

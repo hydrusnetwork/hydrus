@@ -1991,6 +1991,10 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         
         HG.mpv_allow_crashy_files = not HG.mpv_allow_crashy_files
         
+    def _FlipMPVSilentCrashHandling( self ):
+        
+        HG.mpv_allow_crashy_files_silently = not HG.mpv_allow_crashy_files_silently
+        
     
     def _FlipShowHideWholeUI( self ):
         
@@ -3546,6 +3550,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
         ClientGUIMenus.AppendSeparator( debug_modes )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'allow crashy files in mpv', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors.', HG.mpv_allow_crashy_files, self._FlipMPVCrashHandling )
+        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'silence crashy files in mpv', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors and do not notify the user.', HG.mpv_allow_crashy_files_silently, self._FlipMPVSilentCrashHandling )
         ClientGUIMenus.AppendSeparator( debug_modes )
         crash_reporting_on = CG.client_controller.logger.CurrentlyCrashReporting()
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'use faulthandler to log crashes', 'Enable python crash logging. Note this will disable Windows Error Reporting or Linux Dumps, and it does not play well with mpv.', crash_reporting_on, self._FlipCrashReporting )

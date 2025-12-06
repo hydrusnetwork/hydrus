@@ -801,6 +801,7 @@ class QLocatorWidget(QW.QWidget):
             
             if i <= top_index:
                 
+                self.resultList.ensureVisible( 0, 0, 0, 0 )
                 self.searchEdit.setFocus()
                 return
                 
@@ -891,6 +892,7 @@ class QLocatorWidget(QW.QWidget):
             senderWidget.setSelected( False )
             
         
+        self.resultList.ensureVisible( 0, 0, 0, 0 )
         self.searchEdit.setFocus()
         
     

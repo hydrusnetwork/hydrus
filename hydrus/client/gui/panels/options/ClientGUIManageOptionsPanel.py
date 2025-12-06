@@ -117,6 +117,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._options_search = QW.QLineEdit( self )
         self._options_search.setPlaceholderText( 'Search options...' )
         self._options_search.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Fixed )
+        self._options_search.setFixedHeight( self._options_search.sizeHint().height() )
         
         completer_strings = []
         self._completer_map = {}
@@ -172,8 +173,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+        if self._new_options.GetBoolean( 'options_search_bar_top_of_window' ):
+            
+            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+        else:
+            
+            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
         
         self.widget().setLayout( vbox )
         
