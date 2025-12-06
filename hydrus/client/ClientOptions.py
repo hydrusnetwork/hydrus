@@ -291,6 +291,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_initially_show_all_pages' : True,
             'command_palette_initially_show_history' : True,
             'command_palette_initially_show_favourite_searches' : False,
+            'command_palette_fav_searches_open_new_page' : True,
             'command_palette_show_main_menu' : False,
             'command_palette_show_media_menu' : False,
             'disallow_media_drags_on_duration_media' : False,

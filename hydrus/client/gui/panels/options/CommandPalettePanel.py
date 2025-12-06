@@ -35,7 +35,9 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._command_palette_initially_show_favourite_searches = QW.QCheckBox( self._command_palette_panel )
         self._command_palette_initially_show_favourite_searches.setToolTip( ClientGUIFunctions.WrapToolTip( 'If checked, your favourite searches will also show as results when the command palette before typing anything.' ) )
-        
+        self._command_palette_fav_searches_open_new_page = QW.QCheckBox( self._command_palette_panel )
+        self._command_palette_fav_searches_open_new_page.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, triggering a favourite search from the palette will overwrite the current page\'s search.' ) )
+         
         self._command_palette_limit_favourite_searches_results = ClientGUICommon.NoneableSpinCtrl( self._command_palette_panel, default_int = 10, min = 1 )
         self._command_palette_limit_favourite_searches_results.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of favourite search results to show before requiring more typing to filter them down.' ) )
         
@@ -57,6 +59,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._command_palette_initially_show_history.setChecked( self._new_options.GetBoolean( 'command_palette_initially_show_history' ) )
         self._command_palette_limit_history_results.SetValue( self._new_options.GetNoneableInteger( 'command_palette_limit_history_results' ) )
         self._command_palette_initially_show_favourite_searches.setChecked( self._new_options.GetBoolean( 'command_palette_initially_show_favourite_searches' ) )
+        self._command_palette_fav_searches_open_new_page.setChecked( self._new_options.GetBoolean( 'command_palette_fav_searches_open_new_page' ))
         self._command_palette_limit_favourite_searches_results.SetValue( self._new_options.GetNoneableInteger( 'command_palette_limit_favourite_searches_results' ) )
         
         self._command_palette_show_main_menu.setChecked( self._new_options.GetBoolean( 'command_palette_show_main_menu' ) )
@@ -73,6 +76,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Max page history to show: ', self._command_palette_limit_history_results ) )
         rows.append( ( 'Initially show favourite search results (otherwise wait for typing):', self._command_palette_initially_show_favourite_searches ) )
         rows.append( ( 'Max favourite searches to show: ', self._command_palette_limit_favourite_searches_results ) )
+        rows.append( ( 'Open favourite search results in a new page: ', self._command_palette_fav_searches_open_new_page ) )
         rows.append( ( 'ADVANCED: Show main menubar results (after typing): ', self._command_palette_show_main_menu ) )
         rows.append( ( 'ADVANCED: Show media menu results (after typing): ', self._command_palette_show_media_menu ) )
         
@@ -156,6 +160,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'command_palette_initially_show_history', self._command_palette_initially_show_history.isChecked() )
         self._new_options.SetNoneableInteger( 'command_palette_limit_history_results', self._command_palette_limit_history_results.GetValue() )
         self._new_options.SetBoolean( 'command_palette_initially_show_favourite_searches', self._command_palette_initially_show_favourite_searches.isChecked() )
+        self._new_options.SetBoolean( 'command_palette_fav_searches_open_new_page', self._command_palette_fav_searches_open_new_page.isChecked() )
         self._new_options.SetNoneableInteger( 'command_palette_limit_favourite_searches_results', self._command_palette_limit_favourite_searches_results.GetValue() )
         self._new_options.SetBoolean( 'command_palette_show_main_menu', self._command_palette_show_main_menu.isChecked() )
         self._new_options.SetBoolean( 'command_palette_show_media_menu', self._command_palette_show_media_menu.isChecked() )
