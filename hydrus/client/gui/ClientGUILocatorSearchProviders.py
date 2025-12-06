@@ -621,7 +621,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         
         media_panel = media_page.GetMediaResultsPanel()
         
-        if media_panel is None or isinstance( media_panel, ClientGUIMediaResultsPanelLoading ):
+        if media_panel is None or isinstance( media_panel, ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading ):
             
             return 
             
