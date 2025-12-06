@@ -734,8 +734,9 @@ class QLocatorWidget(QW.QWidget):
                     resultWidget.setSelected(False)
                     widget.setSelected(True)
                     self.resultList.ensureVisible(0, widget.pos().y() + widget.height(), 0, 0)
-                    break
+                    return
             i = i + 1
+        self.handleResultSelectFromTop()
 
     def handleResultSelectFromBottom( self ):
         
