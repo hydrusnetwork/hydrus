@@ -3067,25 +3067,25 @@
 
   <h1>Filtering Duplicates Automatically</h1>
 
-<p><strong>Hey, this is all for a system that is close to launching but still has a couple rough edges. If you are new to hydrus, please come back soon!</strong></p>
+<p><strong>If you are not familiar with the <a href="duplicates.html">duplicate filter</a>, turn back now!</strong></p>
 <h2 id="the_problem_with_duplicates_processing">the problem with duplicates processing<a class="headerlink" href="#the_problem_with_duplicates_processing" title="Permanent link">&para;</a></h2>
 <p>The duplicates filter can get pretty tedious. Pairs that are obvious resizes or pixel duplicates are easy to resolve but boring to work through.</p>
-<p>If only there were some way to automate common decisions! Hydrus could solve these trivial duplicates in the background using a certain decision logic, leaving us with less, more interesting work to do.</p>
+<p>If only there were some way to automate common decisions. Hydrus could solve these trivial duplicates in the background using a specific decision logic, leaving us with less, more interesting work to do.</p>
 <div class="admonition warning">
 <p class="admonition-title">Be careful!</p>
-<p>Automated systems are powerful magic wands, and we should always be careful waving them around. Make sure you are hesitant rather than confident and always check the preview tab to make sure what you are about to do makes sense. Starting <em>any</em> new rule in semi-automatic mode is a great idea, too. There are some undo tools if things go wrong, but they aren't perfect.</p>
+<p>Automated systems are powerful magic wands, and we should never wave them around. Make sure you are hesitant rather than confident and always check the preview tab to make sure what you are about to do makes sense. Starting <em>any</em> custom rule in semi-automatic mode is always sensible. There are some undo tools if things go wrong, but they aren't perfect.</p>
 <p>If you plan to do something huge, like deleting 50,000 files, plan it around your next scheduled backup.</p>
 </div>
 <div class="admonition info">
 <p class="admonition-title">Everything is off by default</p>
-<p>Resolving duplicates is a highly subjective issue. Maybe you think EXIF data is the best, or maybe you always want it gone. Maybe you never want to delete low quality files, or always merge URLs, or set an artist correction as a duplicate instead of an alternate. People simply differ.</p>
-<p>This system has templated quick-start suggestions, but they are not mandatory. I have made general decisions that will work for many users, but if you care, you should double-check anything before starting it. The whole system is highly configurable, and you are encouraged to set it up exactly as you want. Everything is off by default!</p>
+<p>Although most people agree on generally keeping 'originals', resolving duplicates can still be a highly subjective issue. Maybe you think EXIF data is the best, or maybe you always want it gone. Maybe you never want to delete low quality files, or always merge URLs, or set an artist correction as a duplicate instead of an alternate. People simply differ.</p>
+<p>This system has templated quick-start suggestions, but they are not mandatory. The whole system is highly configurable, and you are encouraged to set it up exactly as you want. Everything is off by default!</p>
 </div>
 <h2 id="tldr">tl;dr<a class="headerlink" href="#tldr" title="Permanent link">&para;</a></h2>
-<p>If you just want to do this, open up a new duplicates page, go to the <code>auto-resolution</code> tab, hit <code>edit rules</code>, then, from the <code>add suggested</code> button, add <code>pixel-perfect jpegs and pngs</code>, <code>pixel-perfect pairs</code>, and <code>visually similar pairs</code>. Edit each rule and change it from 'semi-automatic' to 'fully automatic'. Save it all and never look at this page again.</p>
+<p>If you just want to do this, open up a new duplicates page, go to the <code>auto-resolution</code> tab, hit <code>edit rules</code>, then, from the <code>add suggested</code> button, add <code>near-perfect jpegs and pngs</code>, <code>pixel-perfect jpegs and pngs</code>, <code>pixel-perfect pairs</code>, and <code>visually similar pairs - only earlier imports</code>. Edit each rule and change it from 'semi-automatic' to 'fully automatic'. Save it all and never look at this page again. Around one in thirty of your files will be deleted over the next couple of days, and in future, you may notice around one in sixty new files being deleted a second or two after import.</p>
 <h2 id="philosophy">philosophy<a class="headerlink" href="#philosophy" title="Permanent link">&para;</a></h2>
 <p><strong>This system is designed mostly for setting simple and clear "A is better than B" duplicate actions. I do not recommend trying to set up "alternates" rules or anything else overly clever at this stage--it is too easy to make a mistake.</strong></p>
-<p>Generally speaking, for most situations, the original versions of files are better than derived copies. When a file is converted, the best case is only that the data is preserved losslessly. Most of the time, a little entropy is added. A scaling down will decimate pixels, a new compression pass will add subtle visual artifacts, and creating the new file header might strip or malform previously interesting additional metadata like EXIF. The conversions a file has passed through in its lifetime is a downward slope of ever-decreasing quality. </p>
+<p>Generally speaking, for most situations, the original versions of files are better than derived copies. When a file is converted, it is unusual that the data is preserved losslessly. Most of the time, a little entropy is added. A scaling down will decimate pixels, a new compression pass will add subtle visual artifacts, and creating the new file header might strip or malform previously interesting additional metadata like EXIF. The conversions a file has passed through in its lifetime are a downward slope of ever-decreasing quality. </p>
 <p>Determining which of two files is the more 'original' is difficult in edge cases, but most of the time, we will be seeing files that are:</p>
 <ul>
 <li>Older</li>
@@ -3094,7 +3094,7 @@
 <li>Higher quality</li>
 <li>Posessing more file header metadata</li>
 </ul>
-<p>We might want to say 'posessing more tags' or 'posessing an url for site x' too, but in the wishy-washy world of external metadata, which can be applied at different times depending on how you acquired a file, that's better left to a human to think about. Let's generally have our automated system examine attributes of just the file itself.</p>
+<p>We might want to say 'posessing more tags' or 'posessing an url for site x' too, but in the wishy-washy world of external metadata, which can be applied at different times for different reasons, that's usually better left to a human to think about. Let's generally have our automated system examine attributes of just the file itself.</p>
 <div class="admonition info">
 <p class="admonition-title">AI Upscaling</p>
 <p>We are entering a world of increasingly intelligent interpolation. waifu2x has been an interesting project that could, to arguable ability, improve the quality of a source image, but with modern AI this question is exploding in many directions. We aren't at the point where it is the same as hiring a human artist to remaster a work, but the old assumptions are eroding. The idea of an 'original' being the better of any potential duplicate is still in some human, soulful way true, but perhaps in a decade many of us will be regularly upscaling and recolouring works with intelligent 'correction' models. For instance, imagine a model that could, at least for certain classes of image, reliably undo rough jpeg artifacts or subsampling.</p>
@@ -3102,10 +3102,10 @@
 <p>Whatever happens, we'll want to keep all true originals, or confidently lossless copies, just to be safe.</p>
 </div>
 <h2 id="duplicates_auto-resolution">duplicates auto-resolution<a class="headerlink" href="#duplicates_auto-resolution" title="Permanent link">&para;</a></h2>
-<p>We will now look at the Duplicates Auto-Resolution system, which runs on multiple 'rules' that describe a pair search to run, a test to assert and arrange AB, and then an action to apply. Let's start with a simple and generally non-controversial example: pixel-duplicate jpeg &amp; png pairs.</p>
-<p>When saving an image, if you save a jpeg, the output file will usually have some small new 'fuzzy' artifacts, but if you save a png, it is always pixel perfect to the original. This is one of the reasons why jpegs of rich images tend to be smaller than pngs--jpegs are a <em>lossy</em> simulation and compress well, pngs are a <em>lossless</em> copy and so bloat up to account for everything perfectly.</p>
+<p>We will now look at the Duplicates Auto-Resolution system. It works using 'rules' that each describe a pair search to run, a test to assert and arrange the pair into AB, and then an action to apply ('A is better than B'). Let's start with a simple and generally non-controversial example: pixel-duplicate jpeg &amp; png pairs.</p>
+<p>When converting an image, if you save a jpeg, the output file will usually have some small new 'fuzzy' artifacts, but if you save a png, it is always pixel perfect to the original. This is one of the reasons why jpegs of rich images tend to be smaller than pngs--jpegs are a <em>lossy</em> simulation and compress well, pngs are a <em>lossless</em> copy and so bloat up to account for everything perfectly.</p>
 <p>Thus, when you have a normal (i.e. not some weird edge case like a 1x1 image) potential duplicate pair that is pixel-duplicates (i.e. they have exactly the same pixel image content) where one is a jpeg and the other a png, you <em>know</em>, for certain, that the png is a derivative copy of the jpeg. The lossless pixel-perfect copy was made from the lossy original. This happens most often when someone is posting from one application to another, or with a phone, where rather than uploading the source jpeg, they do 'copy image' and paste that into the upload box--the browser eats the clipboard bitmap and creates the accursed 'Clipboard.png', and this eventually percolates to our clients as duplicate spam.</p>
-<p>In this case, we always want to keep the (usually smaller, original) jpeg and ditch the (bloated, derived) png. This violates our earlier idea that larger files tend to be better, but since the file formats are different, we can ignore it for this comparison. The important thing is we know the jpegs are always a 'more original' version of the image than the png.</p>
+<p>In this case, we always want to keep the (usually smaller, original) jpeg and ditch the (bloated, derived) png. This violates our earlier idea that larger files tend to be better, but since the file formats are different, we can ignore it for this comparison. The important thing is we know the pixel-perfect jpegs are always a 'more original' version of the image than the png.</p>
 <p>In the normal manual duplicates filter, this would be:</p>
 <ul>
 <li>A two-part duplicates search, for 'system:filetype is jpeg' and 'system:filetype is png', with 'must be pixel dupes'.</li>
@@ -3116,7 +3116,7 @@
 <div class="admonition info">
 <p class="admonition-title">Duplicates are one-in-a-million tricky, but do not worry too much about it</p>
 <p>There are ways of copying jpegs while maintaining exactly the same pixel data, so we don't actually <em>know</em> the png is a direct copy of that jpeg file you are looking at. If the original file is a jpeg A, perhaps you have a jpeg B (A stripped of header metadata) and a png C (A copied to clipboard).</p>
-<p>It doesn't really matter. We'll always hit some edge cases, and better to have jpeg data stored in the jpeg format. If we ever encounter A, we'll try to recognise it has more full header metadata and perform A&gt;B, which achieves the originally desired A&gt;C by transitivity.</p>
+<p>It doesn't really matter. Imagining unusual scenarios is interesting to think about, but it doesn't get much work done. We'll always hit some edge cases, and better to have jpeg data stored in the jpeg format. If we ever encounter A, we'll try to recognise it has more full header metadata and perform A&gt;B, which achieves the originally desired A&gt;C by transitivity.</p>
 </div>
 <h3 id="auto-resolution_tab">auto-resolution tab<a class="headerlink" href="#auto-resolution_tab" title="Permanent link">&para;</a></h3>
 <p>Go to the duplicates filtering page and switch to the 'auto-resolution' tab. This shows all your active auto-resolution rules and what they are currently doing. Hit <code>edit rules</code> to get started.</p>
@@ -3124,7 +3124,7 @@
 <h3 id="search">search<a class="headerlink" href="#search" title="Permanent link">&para;</a></h3>
 <p>Each rule represents a search, a way of testing pairs, and then a duplicate action. There's a button to add suggested rules. Try adding 'pixel-perfect jpegs vs pngs'.</p>
 <p><a href="images/duplicates_auto_resolution_search.png"><img alt="" src="images/duplicates_auto_resolution_search.png" /></a></p>
-<p>Note that in addition to the jpeg/png filetype predicates, I have added <code>width &gt; 128</code> and <code>height &gt; 128</code> to each search. I said above that we are confident of this rule for <em>normal</em> images, but what about 16x16 icons? There a jpeg might, by chance, be a pixel-perfect match of a png. Maybe we want to keep the png of icons anyway for odd cases--this is a human question, so we'll exclude it from our search.</p>
+<p>Note that in addition to the jpeg/png filetype predicates, I have added <code>width &gt; 128</code> and <code>height &gt; 128</code> to each search. I said above that we are confident of this rule for <em>normal</em> images, but what about 16x16 icons? There a jpeg might, by chance, be a pixel-perfect match of a png. Maybe we want to keep the png of icons anyway for odd cases--this is a tricky, human question, so we'll exclude small stuff from our search.</p>
 <div class="admonition info">
 <p class="admonition-title">Specific search is good</p>
 <p>Note, of course, that we didn't have to add our width and height predicates to the 'png' side, since both files in a pixel-perfect pair will have the same resolution. However, several different components of the duplicates auto-resolution system runs faster with more specific searches, since this reduces the number of files and pairs it needs to track for a specific rule.</p>
@@ -3133,8 +3133,8 @@
 <h3 id="comparison">comparison<a class="headerlink" href="#comparison" title="Permanent link">&para;</a></h3>
 <p>Although we have two searches to match our pair of files, the pairs that come in will always do so in random order. We need to define our A and B using the comparison tab:</p>
 <p><a href="images/duplicates_auto_resolution_comparison.png"><img alt="" src="images/duplicates_auto_resolution_comparison.png" /></a></p>
-<p>If we imagine the files coming in as 1 and 2, the auto-resolution rule will test every rule here as if 1 were A and 2 were B. If any tests fail, it tries again with 2 as A and 1 as B. If either way fits, that sets our AB pair order. If the pair does not fit either way around, this counts as a test failure and no action is taken. Complicated rules that want to select a small subset of pairs (e.g. selecting an AB where <code>A has &gt; 1.25x the num_pixels of B</code>) will have many test failures--this is normal.</p>
-<p>Since for our example rule we know that every incoming search pair will include one jpeg and one png, we can simply define that A has to be the jpeg, and we know that every pair will be ordered A-jpeg, B-png. In this case, since the search ensures that every pair has one jpeg, every single pair will pass the test exactly one way around; none will fail.</p>
+<p>If we imagine the files coming in as 1 and 2, the auto-resolution rule will test every rule here as if 1 were A and 2 were B. If any tests fail, it tries again with 2 as A and 1 as B. If either way fits, that sets our AB pair order. If the pair does not fit either way around, this counts as a test failure and no action is taken. Complicated rules that want to select a small subset of pairs (e.g. selecting an AB where <code>A has &gt; 1.25x the num_pixels of B</code>) will have many test 'failures'--this is normal.</p>
+<p>Since for our example rule we know that every incoming search pair will include one jpeg and one png, we can simply define that A has to be the jpeg, and we know that every pair will be ordered A-jpeg, B-png. Every single pair will pass the test exactly one way around; none will fail.</p>
 <p>You can get more complicated:</p>
 <p><a href="images/duplicates_auto_resolution_comparison_complex.png"><img alt="" src="images/duplicates_auto_resolution_comparison_complex.png" /></a></p>
 <h3 id="action">action<a class="headerlink" href="#action" title="Permanent link">&para;</a></h3>
@@ -3150,22 +3150,22 @@
 <p>Once we are happy, we can apply the dialogs and save our rule. It will start working immediately--if it doesn't, check the cog icon to make sure the system is allowed to work in 'normal' time.</p>
 <div class="admonition info">
 <p class="admonition-title">incidence</p>
-<p>In my testing, you can expect to encounter a pixel-perfect jpeg/png pair every ~25,000 files you import. Having a rule here is not going to cut a huge swath through your potential duplicates queue, but it is nice to learn on.</p>
+<p>If you have a typical client, you can expect to encounter a pixel-perfect jpeg/png pair every ~25,000 files you import. Having a rule here is not going to cut a huge swath through your potential duplicates queue, but it is nice to learn on.</p>
 </div>
 <h3 id="semi_and_fully_automatic">semi and fully automatic<a class="headerlink" href="#semi_and_fully_automatic" title="Permanent link">&para;</a></h3>
 <p>Rules can either be 'semi-automatic' or 'fully automatic'. They have the all same settings, and they will search and test pairs the same way, but semi-automatic rules will not perform their final duplicate action without your approval. Fully automatic rules are fire-and-forget and will do everything without your interference.</p>
 <p>I strongly recommend you start any new rules in semi-automatic. Go through them manually, approving pairs through the 'pending actions' interface, and if you don't encounter any 'deny' situations after a good number of pairs, then you can more confidently switch it to fully automatic.</p>
 <h2 id="so_how_does_this_all_work">so, how does this all work?<a class="headerlink" href="#so_how_does_this_all_work" title="Permanent link">&para;</a></h2>
-<p>When you add a new rule, hydrus will throw all the current potential duplicate pairs at it. It will chip away at them in brief background packets, searching for pairs and then running them against the comparsion test. Semi-automatic rules will queue ready-to-action pairs for your approval, but fully automatic rules action them immediately. If you have both potential duplicate pair discovery (the 'preparation' tab of the duplicates page) and duplicates auto-resolution set to work in "normal" time, they should trigger on any new files within moments of them being imported. The list on the duplicates page will update with a live summary.</p>
+<p>When you add a new rule, hydrus will throw all the current potential duplicate pairs at it. It will chip away at them in brief background packets, searching first for pairs that match and then running them against the comparsion test. Semi-automatic rules will queue ready-to-action pairs for your approval, but fully automatic rules action them immediately. If you have both potential duplicate pair discovery (the 'preparation' tab of the duplicates page) and duplicates auto-resolution set to work in "normal" time, they should trigger on any new files within moments of them being imported. The list on the duplicates page will update with a live summary.</p>
 <p>Click 'review actions' to see it in more detail:</p>
 <p><a href="images/duplicates_auto_resolution_pending_actions.png"><img alt="" src="images/duplicates_auto_resolution_pending_actions.png" /></a></p>
 <p>This panel shows pairs a semi-automatic rule is prepared to action. Select those that are good and click 'approve', click 'deny' for any that are false positives. You can also double-click on a pair to load up the queue in a normal duplicate-filter-like media viewer, but this time with 'approve/deny' buttons on the right-hand duplicate hover window. <strong>I recommend using this filter to process semi-automatic rules.</strong></p>
-<p>If a rule ever needs you to click 'deny', it needs tighter search or comparison before you can set it to fully automatic. The ideal of these rules is automation!</p>
+<p>If a rule ever needs you to click 'deny', it needs tighter search or comparison before you can set it to fully automatic. The ideal of these rules is fire-and-forget automation!</p>
 <p><a href="images/duplicates_auto_resolution_actions_taken.png"><img alt="" src="images/duplicates_auto_resolution_actions_taken.png" /></a></p>
 <p>This shows the pairs the rule has most recently actioned. The 'undo' button is ok, but it cannot undo the content merge. Try not to rely on it.</p>
 <p><a href="images/duplicates_auto_resolution_denied_actions.png"><img alt="" src="images/duplicates_auto_resolution_denied_actions.png" /></a></p>
-<p>And there is now an 'actions denied' tab, if you need to review or undo some pairs you previously abstained on. Hitting undo here will queue them up for another search-and-test on this rule.</p>
-<p>I strongly recommend you stay on semi-automatic to start. If you have tuned them to the point where they are boringly reliable, then you are good to try automatic. Once you let them do their own thing, you probably aren't going to look at them much any more!</p>
+<p>And there is an 'actions denied' tab, if you need to review or undo some pairs you previously abstained on. Hitting undo here will queue them up for another search-and-test on this rule.</p>
+<p>Once you have tuned your rule to the point where it is boringly reliable, then you are good to switch it to automatic. Once you let rules do their own thing, you probably aren't going to look at this panel much any more!</p>
 <h2 id="now_what">now what?<a class="headerlink" href="#now_what" title="Permanent link">&para;</a></h2>
 <p>Once you have played with easy jpg/png pixel duplicates and have a feel for the UI, let's look at the other suggested rules. Try adding them just to browse through their settings.</p>
 <h3 id="pixel-perfect_gifs_vs_pngs">pixel-perfect gifs vs pngs<a class="headerlink" href="#pixel-perfect_gifs_vs_pngs" title="Permanent link">&para;</a></h3>
@@ -3193,13 +3193,14 @@
 <p>Note we don't have to compare resolution because pixel-perfect files always have the same resolution.</p>
 <div class="admonition info">
 <p class="admonition-title">incidence</p>
-<p>In my testing, you will encounter one of these pairs every ~30 files you import. Having a rule here is excellent and will catch 90%+ of your pixel-perfect duplicates.</p>
+<p>If you have a typical client, you can expect to encounter one of these pairs every ~30 files you import, about 15-30% of your potential duplicates at 0 search distance. Having a rule here is excellent and will catch 90%+ of your pixel-perfect duplicates.</p>
 </div>
 <h3 id="visually_similar_pairs">visually similar pairs<a class="headerlink" href="#visually_similar_pairs" title="Permanent link">&para;</a></h3>
-<p>I wrote an algorithm specifically for this auto-resolution system that renders the two images and inspects them with a lot of math to determine if they are "visual duplicates". You have probably seen it in the manual duplicate filter already. Imagine it as a much smarter version of the original similar file search that populates the "potential duplicates" queue. It tries to ignore compression artifacts or resizes but will detect artist corrections, watermarks, or recolours. Because we want to trust it to make automatic decisions, the algorithm is intended to be as very confident when it does say "yes they are visual duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not). It is hacky voodoo, but it works pretty good!</p>
+<p>I wrote an algorithm specifically for this auto-resolution system that renders the two images and inspects them with a lot of math to determine if they are "visual duplicates". You have probably seen it in the manual duplicate filter already. Imagine it as a much smarter version of the original shape-based similar file search that populates the "potential duplicates" queue. It tries to ignore compression artifacts or resizes but will reliably detect artist corrections, watermarks, or recolours. The underlying concepts are hacky voodoo, but it works pretty good!</p>
+<p>Because we want to trust it to make automatic decisions, the algorithm is intended to be as very confident when it says "yes they are visual duplicates", so I have tuned it to err on the side of a false negative (it sometimes says that a pair of files are not duplicates when they actually are, but it will very rarely say that two files are duplicates when they are not).</p>
 <p>The 'visually similar pairs' suggested rules use this tool. Let's first look at the search:</p>
 <ul>
-<li><strong>must not be pixel dupes</strong> - We don't care about pixel dupes, so we'll exclude them</li>
+<li><strong>must not be pixel dupes</strong> - We don't care about pixel dupes (they are <em>definitely</em> visual duplicates), so we'll exclude them</li>
 <li><strong>maximum search distance: 0</strong> - Let's stick with 'exact match' for now. The visual duplicates algorithm is not going to get many hits at higher search distances.</li>
 <li><strong>system:filetype is image</strong> - Again, this is important, just leave it in there like the width/height tests.</li>
 </ul>
@@ -3212,8 +3213,8 @@
 <li><strong>A is wider or equal to B</strong> - We want bigger files, but we'll accept the same resolution too.</li>
 <li><strong>A was imported earlier than B + 7 days</strong> - This is optional, depending on which suggested rule you add. It acts as another safety barrier to make sure you aren't removing a nine year old original with some unintentionally bloated re-encode from yesterday. The +7 days buffer is to ensure that we aren't too strict about a group of files that <em>were</em> all imported at the same time. I'm an old guy with many old and original files, so I like and recommend this rule.</li>
 </ul>
-<p>Note that a visual duplicates calculation is CPU expensive--often a second of time for each pair actioned. Be careful where you deploy it--don't have it operate on five different rules at a similar files search distance of 12, for instance!</p>
-<p>This tool can be trusted in fully automatic rules at 'almost certainly' confidence. If you discover any false positive pairs at any distance, I am very interested in seeing them!</p>
+<p>Note that a visual duplicates calculation is CPU expensive--often a second of time for each pair actioned. Be careful where you deploy it--don't have it operate on five different rules at a similar files search distance of 12!</p>
+<p>This tool can be trusted in fully automatic rules at 'almost certainly' confidence. If you discover any false positive pairs at any distance, I am very interested in seeing them.</p>
 <div class="admonition info">
 <p class="admonition-title">transparency</p>
 <p>The visual duplicates test can handle pairs of files with transparency. It isn't super strict, but it will ensure the the two files' alpha channels line up closely. Note that hydrus already discards transparency data for files that have non-obvious transparency (e.g. one pixel in the corner, or a scatter of 99% opaque pixels due to an anti-aliasing artifact)--when we are talking transparency, we are hopefully talking about something a human will notice.</p>
@@ -3221,7 +3222,7 @@
 </div>
 <div class="admonition info">
 <p class="admonition-title">incidence</p>
-<p>In my testing, you will encounter one of these pairs every ~100 files you import. Having a rule here is heavy work, but it will clear out many boring duplicate pairs, about 5-10% of all potential duplicates at 0 search distance.</p>
+<p>If you have a typical client, you can expect to encounter one of these pairs every ~100 files you import. Having a rule here is heavy work, but it will clear out many boring duplicate pairs, about 5-10% of all potential duplicates at 0 search distance.</p>
 <p>If I can improve the visual duplicates test's accuracy, the percentage of easy duplicates it will cover will increase.</p>
 </div>
 <h3 id="near-perfect_jpegs_vs_pngs">near-perfect jpegs vs pngs<a class="headerlink" href="#near-perfect_jpegs_vs_pngs" title="Permanent link">&para;</a></h3>
@@ -3229,9 +3230,9 @@
 <p>Near-perfect is not the same as perfect, however. We can't be so certain on the providence, and vector images and flat UI screenshots tend to be a better fit in png. This rule has comparators to ensure we select the jpeg only when it is the same or larger resolution than the png, has a smaller filesize (to catch those clean and efficient screenshots, where the png filesize will plummet), and that we don't throw away a png with EXIF when the jpeg has none.</p>
 <p>I hope you are more confident in this whole system now. Please check out this rule and its search and comparison, then preview its results for your client, and decide if it works for you.</p>
 <h2 id="future">future<a class="headerlink" href="#future" title="Permanent link">&para;</a></h2>
-<p>I'd like to make a few more comparators, mostly tag stuff since some users have specific workflows in mind for it. I may start thinking about the whole problem from the opposite angle, also, by detecting and actioning specific types of alternates.</p>
+<p>There's space for more comparators. The visual duplicates algorithm could also detect heavy jpeg encodes better (it false negatives a lot here). I may also start thinking about the whole problem from the opposite angle, by detecting and actioning specific types of alternates.</p>
 <p>I'd also love if auto-resolution rules applied to files <em>as</em> they are imported, so, in the vein of a 'previously deleted' import result, you could have an instant result of 'duplicate discarded: (rule name)'. I was concerned this would add too much lag to file imports, but I have been optimising the single-job overhead of potential duplicate discovery and auto-resolution search/test, and I think it may be feasible.</p>
-<p>If you try out the system, thank you. Let me know how it works and I'll keep iterating. I'm also super interested in your action ratios for the three suggested rules, if you use them. Do you get one action per 25,000, 30, and 100 files, or something very different?</p>
+<p>If you try out the system, thank you. Let me know how it works and I'll keep iterating in my normal weekly work. I'm also super interested in your action ratios for the three suggested rules, if you use them. Do you get one action per 25,000, 30, and 100 files, or something very different?</p>
 
 
 
@@ -3252,7 +3253,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 12, 2025 21:10:41 UTC">November 12, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 10, 2025 21:30:48 UTC">December 10, 2025</span>
   </span>
 
     
