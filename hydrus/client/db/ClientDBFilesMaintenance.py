@@ -1,7 +1,9 @@
 import sqlite3
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 
+from hydrus.client import ClientData
 from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
@@ -96,12 +98,19 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                             
                         
                     
-                    if mime != original_mime and ( mime in HC.HYDRUS_UPDATE_FILES or original_mime in HC.HYDRUS_UPDATE_FILES ):
+                    if mime != original_mime:
                         
-                        self.modules_repositories.NotifyUpdatesChanged( ( hash_id, ) )
+                        HydrusData.Print( f'File Maintenance: File {hash.hex()} changed filetype from {HC.mime_string_lookup[ original_mime ]} to {HC.mime_string_lookup[ mime ]}.' )
+                        
+                        if ( mime in HC.HYDRUS_UPDATE_FILES or original_mime in HC.HYDRUS_UPDATE_FILES ):
+                            
+                            self.modules_repositories.NotifyUpdatesChanged( ( hash_id, ) )
+                            
                         
                     
                     if mime in HC.MIMES_WITH_THUMBNAILS and resolution_changed:
+                        
+                        HydrusData.Print( f'File Maintenance: File {hash.hex()} changed resolution from {ClientData.ResolutionToPrettyString( original_resolution )} to {ClientData.ResolutionToPrettyString( ( width, height ) )}.' )
                         
                         self._ScheduleJobsForChangedAppearance( hash_id )
                         

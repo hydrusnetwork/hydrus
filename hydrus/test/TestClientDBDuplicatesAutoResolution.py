@@ -1009,7 +1009,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         rule_1_read = rules_we_read[0]
         
-        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+        self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
         
         for ( hash, is_king, dupe_counts ) in [
             ( hashes[0], True, { HC.DUPLICATE_POTENTIAL : 1 } ),
@@ -1052,13 +1052,13 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
             
             rule_1_read = rules_we_read[0]
             
-            self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
+            self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
             
             #
             
-            declined_pairs_with_info = self._read( 'duplicates_auto_resolution_declined_pairs', rule_1_read )
+            denied_pairs_with_info = self._read( 'duplicates_auto_resolution_denied_pairs', rule_1_read )
             
-            [ ( read_media_result_smaller, read_media_result_larger, timestamp_ms ) ] = declined_pairs_with_info
+            [ ( read_media_result_smaller, read_media_result_larger, timestamp_ms ) ] = denied_pairs_with_info
             
             self.assertEqual( { read_media_result_smaller, read_media_result_larger }, { media_result_1, media_result_2 } )
             self.assertTrue( timestamp_ms, 123456 )
@@ -1066,7 +1066,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         #
         
-        self._write( 'duplicates_auto_resolution_rescind_declined_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
+        self._write( 'duplicates_auto_resolution_rescind_denied_pairs', rule_1_read, [ ( media_result_1, media_result_2 ) ] )
         
         rules_we_read = self._read( 'duplicates_auto_resolution_rules_with_counts' )
         
@@ -1074,8 +1074,8 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         self._compare_counts_cache( rule_1_read.GetCountsCacheDuplicate(), { ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED : 1, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST : 1 } )
         
-        declined_pairs_with_info = self._read( 'duplicates_auto_resolution_declined_pairs', rule_1_read )
+        denied_pairs_with_info = self._read( 'duplicates_auto_resolution_denied_pairs', rule_1_read )
         
-        self.assertEqual( declined_pairs_with_info, [] )
+        self.assertEqual( denied_pairs_with_info, [] )
         
     

@@ -2288,7 +2288,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         super().__init__( parent, my_canvas, canvas_key )
         
-        self._always_on_top = True
+        self._always_on_top = CG.client_controller.new_options.GetBoolean( 'hover_window_duplicates_always_on_top' )
         
         self._show_approve_deny = show_approve_deny
         
@@ -2315,7 +2315,17 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit background lighten/darken switch intensity', 'edit how much the background will brighten or darken as you switch between the pair', self._EditBackgroundSwitchIntensity ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        check_manager = ClientGUICommon.CheckboxManagerCalls(
+            self._FlipAlwaysOnTop,
+            HydrusData.Call( CG.client_controller.new_options.GetBoolean, 'hover_window_duplicates_always_on_top' )
+        )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'this hover is always visible', 'By default, this hover is always visible. If you like, you can have it appear only on mouseover, like the others.', check_manager ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         self._cog_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
@@ -2325,17 +2335,18 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         close_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._back_a_pair = ClientGUICommon.IconButton( self, CC.global_icons().position_first, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ) )
-        self._back_a_pair.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
+        self._back_a_pair.SetToolTipWithShortcuts( 'undo last decision and go back to that pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
         self._back_a_pair.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
+        # TODO: instead of the 'set current index string' stuff, we should have a cleverer 'filter progress status' object, and then the back/next buttons should enable and tooltip based on that status
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
         self._next_button = ClientGUICommon.IconButton( self, CC.global_icons().pair, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_VIEW_NEXT ) )
-        self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
+        self._next_button.SetToolTipWithShortcuts( 'switch to other file', CAC.SIMPLE_VIEW_NEXT )
         self._next_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._skip_a_pair = ClientGUICommon.IconButton( self, CC.global_icons().position_last, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_SKIP ) )
-        self._skip_a_pair.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
+        self._skip_a_pair.SetToolTipWithShortcuts( 'show the next actionable pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
         self._skip_a_pair.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         command_button_vbox = QP.VBoxLayout()
@@ -2552,6 +2563,15 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         disabled = False
         
         self._this_is_better_and_delete_other.setEnabled( not disabled )
+        
+    
+    def _FlipAlwaysOnTop( self ):
+        
+        new_value = CG.client_controller.new_options.FlipBoolean( 'hover_window_duplicates_always_on_top' )
+        
+        self._always_on_top = new_value
+        
+        self.DoRegularHideShow()
         
     
     def _GetIdealSizeAndPosition( self ):

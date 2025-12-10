@@ -132,7 +132,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             pair = ( smaller_media_id, larger_media_id )
             
-            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED )
+            self.modules_files_duplicates_auto_resolution_storage.SetPairsToSimpleQueue( rule, ( pair, ), ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED )
             
         
     
@@ -236,9 +236,9 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         return media_result_pairs_with_data
         
     
-    def GetDeclinedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
+    def GetDeniedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
         
-        media_id_pairs_with_data = self.modules_files_duplicates_auto_resolution_storage.GetDeclinedPairs( rule, fetch_limit = fetch_limit )
+        media_id_pairs_with_data = self.modules_files_duplicates_auto_resolution_storage.GetDeniedPairs( rule, fetch_limit = fetch_limit )
         
         pairs = [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, timestamp ) in media_id_pairs_with_data ]
         
@@ -277,7 +277,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         return tables_and_columns
         
     
-    def RescindDeclinedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, media_result_pairs ):
+    def RescindDeniedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, media_result_pairs ):
         
         for ( media_result_a, media_result_b ) in media_result_pairs:
             

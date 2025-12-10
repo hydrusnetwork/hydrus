@@ -34,7 +34,7 @@ DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST = 2
 DUPLICATE_STATUS_ACTIONED = 3
 DUPLICATE_STATUS_NOT_SEARCHED = 4 # assign this to new pairs that are added, by default
 DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION = 5
-DUPLICATE_STATUS_USER_DECLINED = 6
+DUPLICATE_STATUS_USER_DENIED = 6
 
 duplicate_status_str_lookup = {
     DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH : 'Did not match search',
@@ -43,7 +43,7 @@ duplicate_status_str_lookup = {
     DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION : 'Matches search, passed test, ready to action',
     DUPLICATE_STATUS_ACTIONED : 'Actioned',
     DUPLICATE_STATUS_NOT_SEARCHED : 'Not searched',
-    DUPLICATE_STATUS_USER_DECLINED : 'User declined'
+    DUPLICATE_STATUS_USER_DENIED : 'User denied'
 }
 
 DUPLICATES_AUTO_RESOLUTION_RULE_OPERATION_MODE_PAUSED = 0 # this is now defunct
@@ -447,7 +447,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             failed_test = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST ]
             ready_to_action = self._counts_cache[ DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ]
             actioned = self._counts_cache[ DUPLICATE_STATUS_ACTIONED ]
-            declined = self._counts_cache[ DUPLICATE_STATUS_USER_DECLINED ]
+            denied = self._counts_cache[ DUPLICATE_STATUS_USER_DENIED ]
             
         
         result = ''
@@ -479,9 +479,9 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
             result += f' ({HydrusNumbers.ToHumanInt( failed_test )} failed the test)'
             
         
-        if declined > 0:
+        if denied > 0:
             
-            result += f' ({HydrusNumbers.ToHumanInt( declined )} declined by user)'
+            result += f' ({HydrusNumbers.ToHumanInt( denied )} denied by user)'
             
         
         if not_match > 0:
@@ -1757,11 +1757,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         CG.client_controller.WriteSynchronous( 'duplicate_auto_resolution_flip_pause_play', rule )
         
     
-    def ResetRuleDeclined( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
+    def ResetRuleDenied( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):
         
         for rule in rules:
             
-            CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_reset_rule_declined', rule )
+            CG.client_controller.WriteSynchronous( 'duplicates_auto_resolution_reset_rule_denied', rule )
             
         
     

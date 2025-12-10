@@ -679,7 +679,16 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 if not WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING:
                     
-                    message = f'Hey, it looks like this thumbnail view is very very very tall. I want to make it {HydrusNumbers.ToHumanInt( virtual_height )} pixels tall, but Qt only supports a max virtual scroll height of {HydrusNumbers.ToHumanInt( MAX_HEIGHT )} pixels.'
+                    if self.isVisible():
+                        
+                        message = 'Hey, it looks like this thumbnail view'
+                        
+                    else:
+                        
+                        message = 'Hey, it looks like one of the thumbnail views on a page not currently in view'
+                        
+                    
+                    message += f' is very very very tall. I want to make it {HydrusNumbers.ToHumanInt( virtual_height )} pixels tall, but Qt only supports a max virtual scroll height of {HydrusNumbers.ToHumanInt( MAX_HEIGHT )} pixels.'
                     message += '\n\n'
                     message += 'This page will handle ctrl+a and do its math correct (albeit slowly!), but you will not be able to scroll down all the way. This situation is probably not stable and you should rethink your query (e.g. adding a system:limit and doing the job in batches) before there is a real problem.'
                     message += '\n\n'

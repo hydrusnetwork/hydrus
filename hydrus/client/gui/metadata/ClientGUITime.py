@@ -104,7 +104,11 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
-        self._intended_files_per_check = ClientGUICommon.BetterSpinBox( self._reactive_check_panel, min=1, max=1000 )
+        self._intended_files_per_check = QW.QDoubleSpinBox( self._reactive_check_panel )
+        self._intended_files_per_check.setDecimals( 2 )
+        self._intended_files_per_check.setSingleStep( 0.05 )
+        self._intended_files_per_check.setMinimum( 0.25 )
+        self._intended_files_per_check.setMaximum( 1000.0 )
         self._intended_files_per_check.setToolTip( ClientGUIFunctions.WrapToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' ) )
         
         self._never_faster_than = TimeDeltaWidget( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )

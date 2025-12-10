@@ -767,6 +767,17 @@ def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> tuple[ int, int ]:
             width //= sar_height
             
         
+        # some vids are rotated, you get this line in the video stream section:
+        #     Side data:
+        #       displaymatrix: rotation of (-)90.00 degrees
+        
+        rotation_lines = [ line for line in lines if re.search( 'displaymatrix: rotation of -?90.00 degrees', line ) is not None ]
+        
+        if len( rotation_lines ) > 0:
+            
+            ( width, height ) = ( height, width )
+            
+        
         return ( width, height )
         
     except:

@@ -126,7 +126,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._search_panel, self._page_key, file_search_context, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, media_callable = self._page.GetMedia, synchronised = synchronised, show_lock_search_button = True )
         
-        self.my_predicates = set()
+        self.last_seen_predicates = set()
         self.searchQueryGrown.connect( CG.client_controller.gui.SetPredicateHistoryAdded, QC.Qt.ConnectionType.QueuedConnection )
         self.searchQueryShrunk.connect( CG.client_controller.gui.SetPredicateHistoryRemoved, QC.Qt.ConnectionType.QueuedConnection )
         
@@ -526,9 +526,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         file_search_context = self._tag_autocomplete.GetFileSearchContext()
         
-        if self.my_predicates != file_search_context.GetPredicates():
+        if self.last_seen_predicates != file_search_context.GetPredicates():
             
-            old_preds = set( self.my_predicates )
+            old_preds = set( self.last_seen_predicates )
             new_preds = set( file_search_context.GetPredicates() )
             
             added = list( new_preds - old_preds )
@@ -542,7 +542,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
                 
                 self.searchQueryShrunk.emit( removed )
                 
-            self.my_predicates = file_search_context.GetPredicates()
+            
+            self.last_seen_predicates = file_search_context.GetPredicates()
+            
         
         self._page_manager.SetVariable( 'file_search_context', file_search_context.Duplicate() )
         
@@ -604,9 +606,9 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         file_search_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
-        self.my_predicates = file_search_context.GetPredicates()
+        self.last_seen_predicates = file_search_context.GetPredicates()
         
-        if len( self.my_predicates ) > 0 and not file_search_context.IsComplete():
+        if len( self.last_seen_predicates ) > 0 and not file_search_context.IsComplete():
             
             CG.client_controller.CallAfterQtSafe( self, self.RefreshQuery )
             

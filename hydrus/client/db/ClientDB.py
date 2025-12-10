@@ -3860,7 +3860,7 @@ class DB( HydrusDB.HydrusDB ):
                 'deferred_delete_data' : self.modules_db_maintenance.GetDeferredDeleteTableData,
                 'deferred_physical_delete' : self.modules_files_storage.GetDeferredPhysicalDelete,
                 'duplicates_auto_resolution_actioned_pairs' : self.modules_files_duplicates_auto_resolution_search.GetActionedPairs,
-                'duplicates_auto_resolution_declined_pairs' : self.modules_files_duplicates_auto_resolution_search.GetDeclinedPairs,
+                'duplicates_auto_resolution_denied_pairs' : self.modules_files_duplicates_auto_resolution_search.GetDeniedPairs,
                 'duplicates_auto_resolution_pending_action_pairs' : self.modules_files_duplicates_auto_resolution_search.GetPendingActionPairs,
                 'duplicates_auto_resolution_resolution_pair' : self.modules_files_duplicates_auto_resolution_search.GetResolutionPair,
                 'duplicates_auto_resolution_rules_with_counts' : self.modules_files_duplicates_auto_resolution_storage.GetRulesWithCounts,
@@ -3996,10 +3996,10 @@ class DB( HydrusDB.HydrusDB ):
                 'duplicates_auto_resolution_maintenance_fix_orphan_potential_pairs' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs,
                 'duplicates_auto_resolution_maintenance_regen_numbers' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers,
                 'duplicates_auto_resolution_maintenance_resync_rules_to_location_contexts' : self.modules_files_duplicates_auto_resolution_storage.MaintenanceResyncAllRulesToLocationContexts,
-                'duplicates_auto_resolution_rescind_declined_pairs' : self.modules_files_duplicates_auto_resolution_search.RescindDeclinedPairs,
+                'duplicates_auto_resolution_rescind_denied_pairs' : self.modules_files_duplicates_auto_resolution_search.RescindDeniedPairs,
                 'duplicates_auto_resolution_reset_rule_search_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleSearchProgress,
                 'duplicates_auto_resolution_reset_rule_test_progress' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleTestProgress,
-                'duplicates_auto_resolution_reset_rule_declined' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDeclined,
+                'duplicates_auto_resolution_reset_rule_denied' : self.modules_files_duplicates_auto_resolution_storage.ResetRuleDenied,
                 'duplicates_auto_resolution_set_rules' : self.modules_files_duplicates_auto_resolution_storage.SetRules,
                 'duplicate_pair_status' : self.modules_files_duplicates_setter.SetDuplicatePairStatus,
                 'duplicate_set_king' : self.modules_files_duplicates_updates.SetKingFromHash,
@@ -8274,7 +8274,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 rule_ids = self._STL( self._Execute( 'SELECT rule_id FROM duplicate_files_auto_resolution_rules;' ) )
                 
-                status = ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED # 6
+                status = ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED # 6
                 
                 for rule_id in rule_ids:
                     
@@ -8312,7 +8312,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.PrintException( e )
                 
-                message = 'Failed to update auto-resolution rule declined tables!'
+                message = 'Failed to update auto-resolution rule denied tables!'
                 
                 raise Exception( message ) from e
                 

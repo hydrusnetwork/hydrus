@@ -255,7 +255,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'draw_transparency_checkerboard_as_greenscreen' : False,
             'menu_choice_buttons_can_mouse_scroll' : True,
             'remember_options_window_panel' : True,
-            'options_search_bar_top_of_window' : False,
+            'options_search_bar_top_of_window' : True,
             'focus_preview_on_ctrl_click' : False,
             'focus_preview_on_ctrl_click_only_static' : False,
             'focus_preview_on_shift_click' : False,
@@ -332,6 +332,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' : True,
             'manage_tags_show_deleted_mappings' : False,
             'mpv_destruction_test' : False,
+            'hover_window_duplicates_always_on_top' : True,
         }
         
         #

@@ -509,7 +509,7 @@ class Call( object ):
     
     def __call__( self ):
         
-        self._func( *self._args, **self._kwargs )
+        return self._func( *self._args, **self._kwargs )
         
     
     def __repr__( self ):

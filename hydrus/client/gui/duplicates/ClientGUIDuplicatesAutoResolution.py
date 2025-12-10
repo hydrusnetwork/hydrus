@@ -94,12 +94,11 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         st_warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        label = 'Hey, this system is still being worked on, but it is close to a full release! If you have not touched it yet, wait a couple weeks and I will have the help up to date.'
-        label += '\n\n'
-        label += 'Rules are worked on in alphabetical name order, so if you have overlapping test domains and want to force precedence, try naming them "1 - " and "2 - " etc..'
+        label = 'Rules are worked on in smart alphabetical name order, so if you have overlapping test domains and want to force precedence, try naming them "1 - " and "2 - " etc..'
         
         st = ClientGUICommon.BetterStaticText( self, label )
         st.setWordWrap( True )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._duplicates_auto_resolution_rules_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1375,7 +1374,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         self._duplicates_auto_resolution_rules_st = ClientGUICommon.BetterStaticText( self, label = f'initialising{HC.UNICODE_ELLIPSIS}' )
         self._have_loaded_rules_once = False
         
-        self._duplicates_auto_resolution_rules_panel.AddIconButton( CC.global_icons().pause, self._PausePlayRules, tooltip = 'pause/play', enabled_only_on_selection = True )
+        self._duplicates_auto_resolution_rules_panel.AddButton( 'pause/play', self._PausePlayRules, enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'review actions', self._ReviewActions, enabled_only_on_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit rules', self._Edit )
         #self._duplicates_auto_resolution_rules_panel.AddButton( 'work hard', self._FlipWorkingHard, enabled_check_func = self._CanWorkHard )
@@ -1385,13 +1384,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        
-        label = 'Hey, this system is still being worked on, but it is close to a full release! If you have not touched it yet, wait a couple weeks and I will have the help up to date.'
-        
-        st = ClientGUICommon.BetterStaticText( self, label )
-        st.setWordWrap( True )
-        
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         button_hbox = QP.HBoxLayout()
         
@@ -1653,7 +1645,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( title_call_3, 'Reset all the denied pairs for the given rules.', self._ResetDeclined ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( title_call_3, 'Reset all the denied pairs for the given rules.', self._ResetDenied ) )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
         
@@ -1726,7 +1718,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
             
         
     
-    def _ResetDeclined( self ):
+    def _ResetDenied( self ):
         
         rules = self._duplicates_auto_resolution_rules.GetData( only_selected = True )
         
@@ -1746,7 +1738,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            CG.client_controller.duplicates_auto_resolution_manager.ResetRuleDeclined( rules )
+            CG.client_controller.duplicates_auto_resolution_manager.ResetRuleDenied( rules )
             
         
     

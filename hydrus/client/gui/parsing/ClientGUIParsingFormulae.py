@@ -948,6 +948,8 @@ class EditJSONParsingRulePanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._index_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._number_of_steps_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        vbox.addStretch( 0 )
+        
         self.widget().setLayout( vbox )
         
         #

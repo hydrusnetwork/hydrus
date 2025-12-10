@@ -244,6 +244,7 @@ def GenerateUsefulShapePerceptualHashesNumPy( numpy_image: numpy.ndarray ):
     perceptual_hash = GenerateShapePerceptualHashNumPy( numpy_image )
     
     # now discard the blank hash, which is 1000000... and not useful
+    # 2025-12 Update: Interesting submission by a user of two white pages that matched in the system--they were pure white, so phashes were being discarded ok here, but they were the same res, and thus pixel dupes!
     
     perceptual_hashes = set()
     
@@ -253,7 +254,7 @@ def GenerateUsefulShapePerceptualHashesNumPy( numpy_image: numpy.ndarray ):
     
     if HG.phash_generation_report_mode:
         
-        HydrusData.ShowText( 'phash generation: final perceptual_hashes: {}'.format( len( perceptual_hashes ) ) )
+        HydrusData.ShowText( 'phash generation: final perceptual_hashes: {}'.format( [ phash.hexh() for phash in perceptual_hashes ] ) )
         
     
     # we good

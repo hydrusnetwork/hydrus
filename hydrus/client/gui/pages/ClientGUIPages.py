@@ -3447,29 +3447,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         select_page = True
     ):
         
-        if initial_hashes is None:
-            
-            initial_hashes = []
-            
-        
-        start_system_hash_locked = False
-        
         if initial_predicates is None:
             
-            if len( initial_hashes ) > 0:
-                
-                start_system_hash_locked = True
-                initial_predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
-                
-            else:
-                
-                initial_predicates = []
-                
-            
-        
-        if page_name is None:
-            
-            page_name = 'files'
+            initial_predicates = []
             
         
         new_options = CG.client_controller.new_options
@@ -3490,7 +3470,54 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = initial_predicates )
         
+        return self.NewPageQueryFileSearchContext(
+            file_search_context,
+            initial_hashes = initial_hashes,
+            initial_sort = initial_sort,
+            initial_collect = initial_collect,
+            page_name = page_name,
+            on_deepest_notebook = on_deepest_notebook,
+            do_sort = do_sort,
+            forced_insertion_index = forced_insertion_index,
+            select_page = select_page
+        )
+        
+    
+    def NewPageQueryFileSearchContext(
+        self,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+        initial_hashes = None,
+        initial_sort = None,
+        initial_collect = None,
+        page_name = None,
+        on_deepest_notebook = False,
+        do_sort = False,
+        forced_insertion_index = None,
+        select_page = True
+    ):
+        
+        if initial_hashes is None:
+            
+            initial_hashes = []
+            
+        
+        if page_name is None:
+            
+            page_name = 'files'
+            
+        
+        start_system_hash_locked = False
+        
         if len( initial_hashes ) > 0:
+            
+            if len( file_search_context.GetPredicates() ) == 0:
+                
+                start_system_hash_locked = True
+                
+                predicates = [ ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( initial_hashes ), 'sha256' ) ) ]
+                
+                file_search_context.SetPredicates( predicates )
+                
             
             # this is important, it is consulted deeper to determine query refresh on start!
             file_search_context.SetComplete()

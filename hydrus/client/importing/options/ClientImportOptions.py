@@ -36,7 +36,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Checker Timing Options'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
+    def __init__( self, intended_files_per_check: float = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
         
         super().__init__()
         
@@ -161,16 +161,14 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
                 
                 ideal_check_period = self._intended_files_per_check * approx_time_per_file
                 
-                # if a thread produced lots of files and then stopped completely for whatever reason, we don't want to keep checking fast
-                # so, we set a lower limit of time since last file upload, neatly doubling our check period in these situations
-                
                 latest_source_time = file_seed_cache.GetLatestSourceTime()
                 
+                # safety throttle, but it is legacy and I might remove it. perhaps more confusing than useful
                 time_since_latest_file = max( last_check_time - latest_source_time, 30 )
                 
-                never_faster_than = max( self._never_faster_than, time_since_latest_file )
+                never_faster_than = max( self._never_faster_than, time_since_latest_file * 0.25 )
                 
-                check_period = min( max( never_faster_than, ideal_check_period ), self._never_slower_than )
+                check_period = int( min( max( never_faster_than, ideal_check_period ), self._never_slower_than ) )
                 
             
             next_check_time = last_check_time + check_period
@@ -224,7 +222,17 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            timing_statement = 'Trying to get ' + HydrusNumbers.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
+            if self._intended_files_per_check == int( self._intended_files_per_check ):
+                
+                intended_files_per_check_str = HydrusNumbers.ToHumanInt( self._intended_files_per_check )
+                
+            else:
+                
+                # TODO: We should have a nice way of presenting a float to an arbitrary sig figs, with commas; ToHumanFloat
+                intended_files_per_check_str = str( self._intended_files_per_check )
+                
+            
+            timing_statement = f'Trying to get {intended_files_per_check_str} files per check, never faster than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
             
         
         ( death_files_found, death_time_delta ) = self._death_file_velocity
@@ -277,4 +285,5 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._intended_files_per_check, self._never_faster_than, self._never_slower_than, self._death_file_velocity )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS ] = CheckerOptions

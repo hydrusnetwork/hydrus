@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_651"><a href="#version_651">version 651</a></h2>
+                    <ul>
+                        <li><h3>user submission</h3></li>
+                        <li>the user who has been sending in UI features has some more--</li>
+                        <li>the options dialog now has a search bar!! you type something in, and it'll present any text strings in the whole options dialog that match. you select one and it'll take you to the associated page and highlight the text. it is still experimental and because the underlying strings are a little jank, sometimes the results are weird too, but it is pretty cool and a clever way to get this functionality without a whole dialog rewrite, as I was expecting to do</li>
+                        <li>the regular command palette now supports smart wraparound so you can press 'up' after typing something to get to the bottom of the list</li>
+                        <li>it also supports page up/down/home/end for fast results navigation! I fixed a couple things with page up/down and made home/page up terminate on the top result, rather than the text entry--let me know if anything feels/renders wrong</li>
+                        <li>a new checkbox in `options-&gt;command palette`, default on, makes favourite search selections in the command palette open a new page rather than populating the current</li>
+                        <li>the command palette now highlights favourite search 'folder' name</li>
+                        <li>bug fixes for some recent menu search stuff and undo/redo search stuff</li>
+                        <li><h3>duplicates auto-resolution launch</h3></li>
+                        <li>this system is now v1.0 and ready for all users to use. I invite everyone who has done some duplicates work but has yet to touch auto-resolution to check out the updated help here https://hydrusnetwork.github.io/hydrus/advanced_duplicates_auto_resolution.html</li>
+                        <li>if you are interested but don't want to get into the details, there's a 'tl;dr:' section that tells you how to get set up in about a minute</li>
+                        <li>if you have yet to do any duplicates work at all in hydrus, I also updated the core dupes help here: https://hydrusnetwork.github.io/hydrus/duplicates.html</li>
+                        <li><h3>misc</h3></li>
+                        <li>the duplicates filter's right-hand hover window now has a 'this window is always visible' checkbox under the cog menu. turn it off, and it will only appear when your mouse is over it, like the other hover windows</li>
+                        <li>all 'checker options' in subscriptions and watchers now support sub-integer 'intended files per check' values. the spinner widget now changes in increments of 0.05 and can go as low as 0.25 (previously '1')</li>
+                        <li>videos that are rotated with file metadata 90 or -90 degrees in the ffmpeg metadata report now get the correct resolution in hydrus and will get the correct shape of video canvas (non-letterboxed) with mpv or the native renderer. I have not scheduled all videos for a metadata regen since these seem to be very rare, but if you see a video with a whack thumbnail and it renders in, say, a small landscape cutout within a portrait black box, while being fine in an external player, try hitting `manage-&gt;maintenance-&gt;regen file metadata` on it. it is still doesn't fix, send it to me please!</li>
+                        <li>an error of 'There are no playback devices available' in an 'ao/xxxxx' component from mpv now counts as 'crashy' in the emergency dump-out mpv error handler</li>
+                        <li>all `fatal` mpv errors are now caught by the emergency dump-out mpv error handler and assumed to be 'crashy'</li>
+                        <li>fixed a bug related to the new search history stuff that could raise an error if a search page were edited in some early initialisation states</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>added a new call to create new file search pages that uses the richer 'file search context' object. this allows the new 'load a favourite search from command palette' job to load the correct tag context. we still don't set the 'searching immediately' state correctly here, but it'd be nice to have one day</li>
+                        <li>when file maintenance changes a file's filetype or resolution, details are now printed to the log</li>
+                        <li>a safety throttle that stopped checker options checking too fast is relaxed to 'no faster than _one quarter_ of the time since the last hit'</li>
+                        <li>tweaked some layout stuff in the options dialog</li>
+                        <li><h3>duplicates auto-resolution misc work, mostly boring</h3></li>
+                        <li>gave the duplicates and duplicates auto-resolution help a full pass</li>
+                        <li>in the auto-resolution review actions window, the approve, deny, select-all, and both undo buttons will now enable/disable as their respective lists' selection status changes</li>
+                        <li>for clarity and unity, replaced some final instances of 'declined' with 'denied' in the auto-resolution system</li>
+                        <li>renamed 'both files match different searches' to 'the two files match different searches'</li>
+                        <li>the pause icon button is now a clear text button with 'pause/play'. when I figure out a nice icon or dynamic icon-switching button for pause/play, I'll put this back</li>
+                        <li>removed the 'this is being built' warning labels from the UI</li>
+                        <li>fixed some bad tooltips in duplicate hover window</li>
+                        <li>I put off a couple of features I had planned for launch, like having more modified time merge in duplicate metadata merge options, and a column in the preview's failed-test thumbnail pair list to say which comparator failed. I didn't want to rush these out; I can add thm later in normal work</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_650"><a href="#version_650">version 650</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

@@ -86,7 +86,7 @@ def EmergencyDumpOutGlobal( probably_crashy, reason ):
     MPVEmergencyDumpOutSignaller.instance().emergencyDumpOut.emit( probably_crashy, reason )
     
 
-def log_message_is_fine_bro( message ):
+def log_message_is_fine_bro( component, message ):
     
     return True in (
         'rescan-external-files' in message,
@@ -95,34 +95,47 @@ def log_message_is_fine_bro( message ):
     )
     
 
+def log_message_is_probably_crashy_bro( component, message ):
+    
+    probably_crashy_tests = []
+    
+    if 'ffmpeg' in component:
+        
+        probably_crashy_tests = [
+            'Invalid NAL unit size' in message,
+            'Error splitting the input' in message
+        ]
+        
+    elif 'ao/' in component: # ao/wasapi, potentially others
+        
+        probably_crashy_tests = [
+            'There are no playback devices available' in message
+        ]
+        
+    
+    return True in probably_crashy_tests
+    
+
 def log_handler( loglevel, component, message ):
     
     # IMPORTANT ISSUE! if you have multiple mpv windows and hence log handlers, then somehow the mpv dll or python-mpv wrapper seems to only use the first or something
     # so we need to push to all players when we have a big deal problem and we'll just deal with it
     
-    if log_message_is_fine_bro( message ) and not HG.mpv_report_mode:
+    if log_message_is_fine_bro( component, message ) and not HG.mpv_report_mode:
         
         return
         
     
-    if loglevel == 'error':
+    if loglevel in ( 'error', 'fatal' ):
         
-        if 'Too many events queued' in message:
+        if loglevel == 'fatal':
             
-            return
+            probably_crashy = True
             
-        
-        probably_crashy_tests = []
-        
-        if 'ffmpeg' in component:
+        else:
             
-            probably_crashy_tests = [
-                'Invalid NAL unit size' in message,
-                'Error splitting the input' in message
-            ]
+            probably_crashy = log_message_is_probably_crashy_bro( component, message )
             
-        
-        probably_crashy = True in probably_crashy_tests
         
         try:
             
@@ -936,7 +949,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         # we had to rewrite this thing due to some threading/loop/event issues at the lower mpv level
         # it now broadcasts to all mpv widgets, so we could unload all on very serious errors, but for now I've hacked in the problem widget handle so we'll only do it for us right now
         
-        self._NotifyInitialisationIsDone() 
+        self._NotifyInitialisationIsDone()
         
         original_media = self._media
         
@@ -955,7 +968,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     hash = original_media.GetHash()
                     
-                    HydrusData.ShowText( f'This file ({hash}) would have triggered the crash handling now.' )
+                    HydrusData.ShowText( f'This file ({hash.hex()}) would have triggered the crash handling now.' )
                     
                 
                 return
@@ -983,7 +996,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if probably_crashy:
                 
-                message = f'Sorry, this media appears to have a serious problem! To avoid crashes, I have unloaded it and will not allow it again this boot. The file is possibly truncated or otherwise corrupted, but if you think it is good, please send it to hydev for more testing. The specific errors should be written to the log.{media_line}'
+                message = f'Sorry, this media appears to have a serious problem in mpv! To avoid crashes, I have unloaded it and will not allow it again this boot. The file is possibly truncated or otherwise corrupted, but if you think it is good, please send it to hydev for more testing. The specific errors should be written to the log.{media_line}'
                 
                 HydrusData.DebugPrint( message )
                 

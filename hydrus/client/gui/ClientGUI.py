@@ -10,7 +10,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
-from hydrus.client.gui.pages.ClientGUIPages import PagesNotebook
+from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEnvironment
@@ -3550,7 +3550,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
         ClientGUIMenus.AppendSeparator( debug_modes )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'allow crashy files in mpv', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors.', HG.mpv_allow_crashy_files, self._FlipMPVCrashHandling )
-        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'silence crashy files in mpv', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors and do not notify the user.', HG.mpv_allow_crashy_files_silently, self._FlipMPVSilentCrashHandling )
+        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'allow crashy files in mpv (and silence errors)', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors and do not notify the user when it happens.', HG.mpv_allow_crashy_files_silently, self._FlipMPVSilentCrashHandling )
         ClientGUIMenus.AppendSeparator( debug_modes )
         crash_reporting_on = CG.client_controller.logger.CurrentlyCrashReporting()
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'use faulthandler to log crashes', 'Enable python crash logging. Note this will disable Windows Error Reporting or Linux Dumps, and it does not play well with mpv.', crash_reporting_on, self._FlipCrashReporting )
@@ -8092,7 +8092,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         activate_window = False
     ):
         
-        self._notebook.NewPageQuery(
+        page = self._notebook.NewPageQuery(
             location_context,
             initial_hashes = initial_hashes,
             initial_predicates = initial_predicates,
@@ -8108,6 +8108,38 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self.activateWindow()
             
+        
+        return page
+        
+    
+    def NewPageQueryFileSearchContext(
+        self,
+        file_search_context: ClientSearchFileSearchContext.FileSearchContext,
+        initial_hashes = None,
+        initial_sort = None,
+        initial_collect = None,
+        page_name = None,
+        do_sort = False,
+        select_page = True,
+        activate_window = False
+    ):
+        
+        page = self._notebook.NewPageQueryFileSearchContext(
+            file_search_context,
+            initial_hashes,
+            initial_sort,
+            initial_collect,
+            page_name,
+            do_sort,
+            select_page
+        )
+        
+        if activate_window and not self.isActiveWindow():
+            
+            self.activateWindow()
+            
+        
+        return page
         
     
     def NotifyAdvancedMode( self ):
@@ -8286,7 +8318,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     parent = page.parentWidget()
                     
-                    if isinstance( parent, PagesNotebook ):
+                    if isinstance( parent, ClientGUIPages.PagesNotebook ):
                         
                         parent.RefreshAllPages()
                         

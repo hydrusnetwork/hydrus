@@ -736,7 +736,7 @@ class StringMatch( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Match'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, match_type = STRING_MATCH_ANY, match_value = '', min_chars = None, max_chars = None, example_string = DEFAULT_EXAMPLE_STRING ):
+    def __init__( self, match_type: int = STRING_MATCH_ANY, match_value: typing.Union[ str, int ] = '', min_chars = None, max_chars = None, example_string = DEFAULT_EXAMPLE_STRING ):
         
         super().__init__()
         
@@ -833,6 +833,9 @@ class StringMatch( StringProcessingStep ):
             
         elif self._match_type in ( STRING_MATCH_FLEXIBLE, STRING_MATCH_REGEX ):
             
+            r = ''
+            fail_reason = ' (unknown error, this object is probably from a newer client)'
+            
             if self._match_type == STRING_MATCH_FLEXIBLE:
                 
                 if self._match_value == FLEXIBLE_MATCH_ALPHA:
@@ -869,11 +872,6 @@ class StringMatch( StringProcessingStep ):
                     
                     r = r'^[a-zA-Z\d\-_]+={0,2}$'
                     fail_reason = ' had non-base64url characters'
-                    
-                else:
-                    
-                    r = ''
-                    fail_reason = ' (unknown error, this object is probably from a newer client)'
                     
                 
             elif self._match_type == STRING_MATCH_REGEX:

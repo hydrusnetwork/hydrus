@@ -129,14 +129,12 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
             
             if CG.client_controller.new_options.GetBoolean( 'command_palette_fav_searches_open_new_page' ):
                 
-                CG.client_controller.gui.NewPageQuery( 
-                    fsc.GetLocationContext(),
-                    initial_hashes = None,
-                    initial_predicates = fsc.GetPredicates(),
+                CG.client_controller.gui.NewPageQueryFileSearchContext( 
+                    fsc,
                     initial_sort = sort,
                     initial_collect = collect,
                     page_name = name,
-                    do_sort = sync
+                    do_sort = True
                 )
                 
             
@@ -168,10 +166,21 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         
         for ( folder, name, file_search_context, synchronised, media_sort, media_collect ) in fav_searches:
             
-            if query_casefold in folder.casefold() or query_casefold in name.casefold():
+            looks_good_a = folder is not None and query_casefold in folder.casefold()
+            looks_good_b = query_casefold in name.casefold()
+            
+            if looks_good_a or looks_good_b:
                 
                 primary_text = highlight_result_text( name, query, pass_through = True )
-                secondary_text = highlight_result_text( folder, query, pass_through = True ) + ' - <i>favourite search</i>'
+                
+                if folder is not None:
+                    
+                    secondary_text = highlight_result_text( folder, query, pass_through = True ) + ' - <i>favourite search</i>'
+                    
+                else:
+                    
+                    secondary_text = ''
+                    
                 
                 icon_filename = 'search.png'
                 

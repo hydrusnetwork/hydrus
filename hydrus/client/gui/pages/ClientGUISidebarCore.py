@@ -238,7 +238,7 @@ class Sidebar( QW.QScrollArea ):
         self._page_manager.SetVariable( 'media_sort', media_sort )
         
     
-    def ActivateFavouriteSearch( self, fav_search = None ):
+    def ActivateFavouriteSearch( self, fav_search: tuple[ str, str ] ):
         
         pass
         

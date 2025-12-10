@@ -12,7 +12,7 @@ class ListBook( QW.QWidget ):
     
     currentChanged = QC.Signal( int )
     
-    def __init__( self, parent: QW.QWidget, list_chars_width = 24 ):
+    def __init__( self, parent: QW.QWidget, list_chars_width = 28 ):
         
         super().__init__( parent )
         
@@ -25,10 +25,10 @@ class ListBook( QW.QWidget ):
         
         #
         
-        hbox = QW.QHBoxLayout()
+        hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._page_list, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._widget_stack, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._widget_stack, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( hbox )
         

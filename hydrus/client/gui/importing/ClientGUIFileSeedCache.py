@@ -224,7 +224,7 @@ def ReverseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFileSeed
         
     
 
-def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, show = 'all' ):
+def ShowFileSeedCacheFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, show = 'all' ):
     
     if show == 'all':
         
@@ -237,6 +237,10 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
         presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
         
         hashes = file_seed_cache.GetPresentedHashes( presentation_import_options )
+        
+    else:
+        
+        return
         
     
     if len( hashes ) > 0:
@@ -329,8 +333,8 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     
     if num_successful > 0:
         
-        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', ShowFilesInNewPage, file_seed_cache, show = 'new' )
-        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', ShowFilesInNewPage, file_seed_cache )
+        ClientGUIMenus.AppendMenuItem( menu, 'show new files in a new page', 'Gather the new files in this import list and show them in a new page.', ShowFileSeedCacheFilesInNewPage, file_seed_cache, show = 'new' )
+        ClientGUIMenus.AppendMenuItem( menu, 'show all files in a new page', 'Gather the files in this import list and show them in a new page.', ShowFileSeedCacheFilesInNewPage, file_seed_cache )
         
     
     ClientGUIMenus.AppendSeparator( menu )

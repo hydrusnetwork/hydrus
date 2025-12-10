@@ -26,7 +26,7 @@ def GenerateResolutionActionedPairsTableName( rule_id: int ) -> str:
     return f'duplicate_files_auto_resolution_actioned_{rule_id}'
     
 
-def GenerateResolutionDeclinedPairsTableName( rule_id: int ) -> str:
+def GenerateResolutionDeniedPairsTableName( rule_id: int ) -> str:
     
     return f'duplicate_files_auto_resolution_declined_{rule_id}'
     
@@ -57,7 +57,7 @@ def GenerateAutoResolutionQueueTableNames( rule_id: int ) -> dict[ int, str ]:
         results[ status ] = f'{table_core}_{status}'
         
     
-    results[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED ] = GenerateResolutionDeclinedPairsTableName( rule_id )
+    results[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED ] = GenerateResolutionDeniedPairsTableName( rule_id )
     
     results[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION ] = GenerateResolutionPendingActionsPairsTableName( rule_id )
     
@@ -118,7 +118,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         statuses_to_table_names = GenerateAutoResolutionQueueTableNames( rule_id )
         
-        if dest_status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED:
+        if dest_status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED:
             
             now_ms = HydrusTime.GetNowMS()
             
@@ -171,7 +171,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                     ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST,
                     ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_PASSED_TEST_READY_TO_ACTION,
                     ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED,
-                    ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED
+                    ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED
                 ] ]
             )
             
@@ -445,7 +445,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         return { resolution_rule.GetLocationContext() for resolution_rule in self._rule_ids_to_rules.values() }
         
     
-    def GetDeclinedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
+    def GetDeniedPairs( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, fetch_limit = None ):
         
         if not self._have_initialised_rules:
             
@@ -454,15 +454,15 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         rule_id = rule.GetId()
         
-        declined_table_name = GenerateResolutionDeclinedPairsTableName( rule_id )
+        denied_table_name = GenerateResolutionDeniedPairsTableName( rule_id )
         
         if fetch_limit is None:
             
-            media_id_pairs_with_data = self._Execute( f'SELECT smaller_media_id, larger_media_id, timestamp_ms FROM {declined_table_name} ORDER BY timestamp_ms DESC;' ).fetchall()
+            media_id_pairs_with_data = self._Execute( f'SELECT smaller_media_id, larger_media_id, timestamp_ms FROM {denied_table_name} ORDER BY timestamp_ms DESC;' ).fetchall()
             
         else:
             
-            media_id_pairs_with_data = self._Execute( f'SELECT smaller_media_id, larger_media_id, timestamp_ms FROM {declined_table_name} ORDER BY timestamp_ms DESC LIMIT ?;', ( fetch_limit, ) ).fetchall()
+            media_id_pairs_with_data = self._Execute( f'SELECT smaller_media_id, larger_media_id, timestamp_ms FROM {denied_table_name} ORDER BY timestamp_ms DESC LIMIT ?;', ( fetch_limit, ) ).fetchall()
             
         
         return media_id_pairs_with_data
@@ -954,11 +954,11 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             
         
     
-    def ResetRuleDeclined( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
+    def ResetRuleDenied( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
         
         rule_id = rule.GetId()
         
-        self._MovePairsAcrossQueues( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
+        self._MovePairsAcrossQueues( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED )
         
         self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
         
@@ -1014,7 +1014,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         table_name = GenerateAutoResolutionQueueTableName( rule_id, status_to_set )
         
-        if status_to_set == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED:
+        if status_to_set == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED:
             
             now_ms = HydrusTime.GetNowMS()
             
@@ -1120,7 +1120,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
                     self._CreateIndex( table_name, [ 'hash_id_a' ] )
                     self._CreateIndex( table_name, [ 'hash_id_b' ] )
                     
-                elif status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DECLINED:
+                elif status == ClientDuplicatesAutoResolution.DUPLICATE_STATUS_USER_DENIED:
                     
                     self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( smaller_media_id INTEGER, larger_media_id INTEGER, timestamp_ms INTEGER, PRIMARY KEY ( smaller_media_id, larger_media_id ) );' )
                     

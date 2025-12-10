@@ -306,7 +306,7 @@ class ThumbnailPairListModelPendingAutoResolutionAction( ThumbnailPairListModel 
         
     
 
-class ThumbnailPairListModelDeclinedAutoResolutionAction( ThumbnailPairListModel ):
+class ThumbnailPairListModelDeniedAutoResolutionAction( ThumbnailPairListModel ):
     
     def columnCount(self, parent = QC.QModelIndex() ):
         
@@ -523,13 +523,13 @@ class ThumbnailPairListReviewPendingPreviewAutoResolutionAction( ThumbnailPairLi
         
     
 
-class ThumbnailPairListDeclinedAutoResolutionAction( ThumbnailPairList ):
+class ThumbnailPairListDeniedAutoResolutionAction( ThumbnailPairList ):
     
     MIN_NUM_ROWS_HEIGHT = 4
     
     def __init__( self, parent ):
         
-        super().__init__( parent, ThumbnailPairListModelDeclinedAutoResolutionAction() )
+        super().__init__( parent, ThumbnailPairListModelDeniedAutoResolutionAction() )
         
         self.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
         
@@ -583,3 +583,92 @@ class ListEnterCatcher( QC.QObject ):
         return False
         
     
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# if you are reading this, hydev was using a page of empty space for screenshot backing and forgot to delete this

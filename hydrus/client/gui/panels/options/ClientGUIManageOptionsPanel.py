@@ -115,7 +115,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         self._options_search = QW.QLineEdit( self )
-        self._options_search.setPlaceholderText( 'Search options...' )
+        self._options_search.setPlaceholderText( 'Search options... (Experimental!)' )
         self._options_search.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Fixed )
         self._options_search.setFixedHeight( self._options_search.sizeHint().height() )
         
@@ -146,7 +146,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
+        
         from qtpy import QtCore as QC
+        
         self._completer = QW.QCompleter( completer_strings, self._options_search )
         self._completer.setCaseSensitivity( QC.Qt.CaseSensitivity.CaseInsensitive )
         self._completer.setFilterMode( QC.Qt.MatchFlag.MatchContains )
@@ -164,6 +166,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 widget.setStyleSheet( "background-color: rgba(255, 255, 0, 128);" )
                 widget.repaint()
                 
+            
             QC.QTimer.singleShot( 0, lambda: self._options_search.setText('') )
             
         
@@ -176,12 +179,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         if self._new_options.GetBoolean( 'options_search_bar_top_of_window' ):
             
             QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         else:
             
             QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, self._options_search, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
         self.widget().setLayout( vbox )
