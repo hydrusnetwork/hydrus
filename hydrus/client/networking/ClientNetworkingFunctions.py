@@ -566,7 +566,7 @@ def ParseURL( url: str ) -> urllib.parse.ParseResult:
         
     except Exception as e:
         
-        raise HydrusExceptions.URLClassException( str( e ) )
+        raise HydrusExceptions.URLClassException( f'Problem with URL ({e})! URL text was "{url}"' )
         
     
 

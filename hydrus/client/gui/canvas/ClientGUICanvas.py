@@ -24,6 +24,7 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
@@ -853,9 +854,16 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def paintEvent( self, event ):
         
-        painter = QG.QPainter( self )
-        
-        self._DrawBackgroundBitmap( painter )
+        try:
+            
+            painter = QG.QPainter( self )
+            
+            self._DrawBackgroundBitmap( painter )
+            
+        except Exception as e:
+            
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
+            
         
     
     def PauseMedia( self ):

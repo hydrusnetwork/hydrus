@@ -550,6 +550,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'page_nav_history_max_entries' : 100,
             'tag_list_tag_display_type_sidebar' : ClientTags.TAG_DISPLAY_SELECTION_LIST,
             'tag_list_tag_display_type_media_viewer_hover' : ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
+            'command_palette_num_chars_for_results_threshold' : 0,
         }
         
         self._dictionary[ 'floats' ] = {

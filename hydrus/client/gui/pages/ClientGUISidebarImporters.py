@@ -708,25 +708,29 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             self._gallery_importers_listctrl.UpdateDatas()
             
             job_status = self._loading_highlight_job_status
-            hashes = new_highlight.GetPresentedHashes()
             
-            num_to_do = len( hashes )
+            panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._page_manager )
             
-            if num_to_do > 0:
-                
-                panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._page_manager )
-                
-                self._page.SwapMediaResultsPanel( panel )
-                
+            self._page.SwapMediaResultsPanel( panel )
             
             def work_callable():
                 
-                BLOCK_SIZE = 256
+                all_media_results = []
                 
                 start_time = HydrusTime.GetNowFloat()
-                have_published_job_status = False
                 
-                all_media_results = []
+                hashes = new_highlight.GetPresentedHashes()
+                
+                if job_status.IsCancelled():
+                    
+                    return all_media_results
+                    
+                
+                num_to_do = len( hashes )
+                
+                BLOCK_SIZE = 256
+                
+                have_published_job_status = False
                 
                 for ( i, block_of_hashes ) in enumerate( HydrusLists.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
                     
@@ -735,7 +739,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                     job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetGauge( num_done, num_to_do )
                     
-                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
+                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 2 ):
                         
                         CG.client_controller.pub( 'message', job_status )
                         
@@ -1887,25 +1891,29 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             self._watchers_listctrl.UpdateDatas()
             
             job_status = self._loading_highlight_job_status
-            hashes = new_highlight.GetPresentedHashes()
             
-            num_to_do = len( hashes )
+            panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._page_manager )
             
-            if num_to_do > 0:
-                
-                panel = ClientGUIMediaResultsPanelLoading.MediaResultsPanelLoading( self._page, self._page_key, self._page_manager )
-                
-                self._page.SwapMediaResultsPanel( panel )
-                
+            self._page.SwapMediaResultsPanel( panel )
             
             def work_callable():
                 
-                BLOCK_SIZE = 256
-                
                 start_time = HydrusTime.GetNowFloat()
-                have_published_job_status = False
                 
                 all_media_results = []
+                
+                hashes = new_highlight.GetPresentedHashes()
+                
+                num_to_do = len( hashes )
+                
+                BLOCK_SIZE = 256
+                
+                have_published_job_status = False
+                
+                if job_status.IsCancelled():
+                    
+                    return all_media_results
+                    
                 
                 for ( i, block_of_hashes ) in enumerate( HydrusLists.SplitIteratorIntoChunks( hashes, BLOCK_SIZE ) ):
                     
@@ -1914,7 +1922,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                     job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetGauge( num_done, num_to_do )
                     
-                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
+                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 2 ):
                         
                         CG.client_controller.pub( 'message', job_status )
                         

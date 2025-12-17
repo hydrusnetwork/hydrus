@@ -105,13 +105,15 @@ class TestCheckerOptions( unittest.TestCase ):
         
         new_thread_file_seed_cache = ClientImportFileSeeds.FileSeedCache()
         
+        time_since_last_post = 600
+        
         for i in range( 10 ):
             
             url = 'https://wew.lad/' + os.urandom( 16 ).hex()
             
             file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
             
-            file_seed.source_time = last_check_time - 600
+            file_seed.source_time = last_check_time - time_since_last_post
             
             new_thread_file_seed_cache.AddFileSeeds( ( file_seed, ) )
             
@@ -188,9 +190,8 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 10 files in previous 10 minutes' )
         self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 0 files in previous 1 minute' )
         
-        # these would be 360, 120, 600, but the 'don't check faster the time since last file post' bumps this up
-        self.assertEqual( regular_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
-        self.assertEqual( fast_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 300 )
+        self.assertEqual( fast_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 150 )
         self.assertEqual( slow_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
         
         # Let's test the static timings, where if faster_than == slower_than

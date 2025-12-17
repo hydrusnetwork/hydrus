@@ -22,6 +22,7 @@ from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
@@ -2023,92 +2024,99 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         def paintEvent( self, event ):
             
-            if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
+            try:
                 
-                self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
-                
-                self._parent._DirtyAllPages()
-                self._parent._DeleteAllDirtyPages()
-                
-            
-            painter = QG.QPainter( self )
-            
-            ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
-            
-            page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
-            
-            page_indices_to_display = self._parent._CalculateVisiblePageIndices()
-            
-            earliest_page_index_to_display = min( page_indices_to_display )
-            last_page_index_to_display = max( page_indices_to_display )
-            
-            page_indices_to_draw = list( page_indices_to_display )
-            
-            if earliest_page_index_to_display > 0:
-                
-                page_indices_to_draw.append( earliest_page_index_to_display - 1 )
-                
-            
-            page_indices_to_draw.append( last_page_index_to_display + 1 )
-            
-            page_indices_to_draw.sort()
-            
-            potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
-            
-            random.shuffle( potential_clean_indices_to_steal )
-            
-            y_start = self._parent._GetYStart()
-            
-            bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-            
-            painter.setBackground( QG.QBrush( bg_colour ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
-            
-            if background_pixmap is not None:
-                
-                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
-                
-                pixmap_size = background_pixmap.size()
-                
-                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
-                
-            
-            for page_index in page_indices_to_draw:
-                
-                if page_index not in self._parent._clean_canvas_pages:
+                if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
                     
-                    if len( self._parent._dirty_canvas_pages ) == 0:
+                    self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
+                    
+                    self._parent._DirtyAllPages()
+                    self._parent._DeleteAllDirtyPages()
+                    
+                
+                painter = QG.QPainter( self )
+                
+                ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
+                
+                page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
+                
+                page_indices_to_display = self._parent._CalculateVisiblePageIndices()
+                
+                earliest_page_index_to_display = min( page_indices_to_display )
+                last_page_index_to_display = max( page_indices_to_display )
+                
+                page_indices_to_draw = list( page_indices_to_display )
+                
+                if earliest_page_index_to_display > 0:
+                    
+                    page_indices_to_draw.append( earliest_page_index_to_display - 1 )
+                    
+                
+                page_indices_to_draw.append( last_page_index_to_display + 1 )
+                
+                page_indices_to_draw.sort()
+                
+                potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
+                
+                random.shuffle( potential_clean_indices_to_steal )
+                
+                y_start = self._parent._GetYStart()
+                
+                bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+                
+                painter.setBackground( QG.QBrush( bg_colour ) )
+                
+                painter.eraseRect( painter.viewport() )
+                
+                background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+                
+                if background_pixmap is not None:
+                    
+                    my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
+                    
+                    pixmap_size = background_pixmap.size()
+                    
+                    painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
+                    
+                
+                for page_index in page_indices_to_draw:
+                    
+                    if page_index not in self._parent._clean_canvas_pages:
                         
-                        if len( potential_clean_indices_to_steal ) > 0:
+                        if len( self._parent._dirty_canvas_pages ) == 0:
                             
-                            index_to_steal = potential_clean_indices_to_steal.pop()
-                            
-                            self._parent._DirtyPage( index_to_steal )
-                            
-                        else:
-                            
-                            self._parent._CreateNewDirtyPage()
+                            if len( potential_clean_indices_to_steal ) > 0:
+                                
+                                index_to_steal = potential_clean_indices_to_steal.pop()
+                                
+                                self._parent._DirtyPage( index_to_steal )
+                                
+                            else:
+                                
+                                self._parent._CreateNewDirtyPage()
+                                
                             
                         
+                        canvas_page = self._parent._dirty_canvas_pages.pop()
+                        
+                        self._parent._DrawCanvasPage( page_index, canvas_page )
+                        
+                        self._parent._clean_canvas_pages[ page_index ] = canvas_page
+                        
                     
-                    canvas_page = self._parent._dirty_canvas_pages.pop()
-                    
-                    self._parent._DrawCanvasPage( page_index, canvas_page )
-                    
-                    self._parent._clean_canvas_pages[ page_index ] = canvas_page
+                    if page_index in page_indices_to_display:
+                        
+                        canvas_page = self._parent._clean_canvas_pages[ page_index ]
+                        
+                        page_virtual_y = page_height * page_index
+                        
+                        painter.drawImage( 0, page_virtual_y, canvas_page )
+                        
                     
                 
-                if page_index in page_indices_to_display:
-                    
-                    canvas_page = self._parent._clean_canvas_pages[ page_index ]
-                    
-                    page_virtual_y = page_height * page_index
-                    
-                    painter.drawImage( 0, page_virtual_y, canvas_page )
-                    
+            except Exception as e:
+                
+                ClientGUIExceptionHandling.HandlePaintEventException( self, e )
                 
             
         

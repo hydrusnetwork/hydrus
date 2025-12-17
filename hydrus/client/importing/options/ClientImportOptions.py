@@ -16,7 +16,7 @@ def FilterCurrentTagHashes( service_key: bytes, media_results: collections.abc.C
 
 def FilterNotPreviouslyDeletedTags( service_key: bytes, media_result: ClientMediaResult.MediaResult, tags: collections.abc.Iterable[ str ] ):
     
-    deleted_tags = media_result.GetTagsManager().GetDeleted( service_key, ClientTags.TAG_DISPLAY_STORAGE )
+    deleted_tags = set( media_result.GetTagsManager().GetDeleted( service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
     
     tags = set( tags ).difference( deleted_tags )
     
@@ -25,7 +25,7 @@ def FilterNotPreviouslyDeletedTags( service_key: bytes, media_result: ClientMedi
 
 def FilterNotPreviouslyDeletedTagHashes( service_key: bytes, media_results: collections.abc.Collection[ ClientMediaResult.MediaResult ], tag: str ):
     
-    hashes = { media_result.GetHash() for media_result in media_results if tag not in media_result.GetTagsManager().GetDeleted( service_key, ClientTags.TAG_DISPLAY_STORAGE ) }
+    hashes = { media_result.GetHash() for media_result in media_results if tag not in set( media_result.GetTagsManager().GetDeleted( service_key, ClientTags.TAG_DISPLAY_STORAGE ) ) }
     
     return hashes
     

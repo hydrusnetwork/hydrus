@@ -18,6 +18,8 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._command_palette_panel = ClientGUICommon.StaticBox( self, 'command palette' )
         
+        self._command_palette_num_chars_for_results_threshold = ClientGUICommon.BetterSpinBox( self._command_palette_panel, initial = 1, min = 0, max = 64 )
+        
         self._command_palette_show_page_of_pages = QW.QCheckBox( self._command_palette_panel )
         self._command_palette_show_page_of_pages.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show "page of pages" as selectable page results. This will focus the page, and whatever sub-page it previously focused (including none, if it has no child pages).' ) )
         
@@ -37,7 +39,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._command_palette_initially_show_favourite_searches.setToolTip( ClientGUIFunctions.WrapToolTip( 'If checked, your favourite searches will also show as results when the command palette before typing anything.' ) )
         self._command_palette_fav_searches_open_new_page = QW.QCheckBox( self._command_palette_panel )
         self._command_palette_fav_searches_open_new_page.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, triggering a favourite search from the palette will overwrite the current page\'s search.' ) )
-         
+        
         self._command_palette_limit_favourite_searches_results = ClientGUICommon.NoneableSpinCtrl( self._command_palette_panel, default_int = 10, min = 1 )
         self._command_palette_limit_favourite_searches_results.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of favourite search results to show before requiring more typing to filter them down.' ) )
         
@@ -53,6 +55,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        self._command_palette_num_chars_for_results_threshold.setValue( self._new_options.GetInteger( 'command_palette_num_chars_for_results_threshold' ) )
         self._command_palette_show_page_of_pages.setChecked( self._new_options.GetBoolean( 'command_palette_show_page_of_pages' ) )
         self._command_palette_initially_show_all_pages.setChecked( self._new_options.GetBoolean( 'command_palette_initially_show_all_pages' ) )
         self._command_palette_limit_page_results.SetValue( self._new_options.GetNoneableInteger( 'command_palette_limit_page_results' ) )
@@ -69,16 +72,17 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Show "page of pages" results: ', self._command_palette_show_page_of_pages ) )
-        rows.append( ( 'Initially show all page results (otherwise wait for typing): ', self._command_palette_initially_show_all_pages ) )
-        rows.append( ( 'Max page results to show: ', self._command_palette_limit_page_results ) )
+        rows.append( ( 'Show results after typing this many characters:', self._command_palette_num_chars_for_results_threshold ) )
+        rows.append( ( 'Show "page of pages" results:', self._command_palette_show_page_of_pages ) )
+        rows.append( ( 'Initially show all page results (otherwise wait for typing):', self._command_palette_initially_show_all_pages ) )
+        rows.append( ( 'Max page results to show:', self._command_palette_limit_page_results ) )
         rows.append( ( 'Initially show page history results (otherwise wait for typing):', self._command_palette_initially_show_history ) )
-        rows.append( ( 'Max page history to show: ', self._command_palette_limit_history_results ) )
+        rows.append( ( 'Max page history to show:', self._command_palette_limit_history_results ) )
         rows.append( ( 'Initially show favourite search results (otherwise wait for typing):', self._command_palette_initially_show_favourite_searches ) )
-        rows.append( ( 'Max favourite searches to show: ', self._command_palette_limit_favourite_searches_results ) )
-        rows.append( ( 'Open favourite search results in a new page: ', self._command_palette_fav_searches_open_new_page ) )
-        rows.append( ( 'ADVANCED: Show main menubar results (after typing): ', self._command_palette_show_main_menu ) )
-        rows.append( ( 'ADVANCED: Show media menu results (after typing): ', self._command_palette_show_media_menu ) )
+        rows.append( ( 'Max favourite searches to show:', self._command_palette_limit_favourite_searches_results ) )
+        rows.append( ( 'Open favourite search results in a new page:', self._command_palette_fav_searches_open_new_page ) )
+        rows.append( ( 'ADVANCED: Show main menubar results (after typing):', self._command_palette_show_main_menu ) )
+        rows.append( ( 'ADVANCED: Show media menu results (after typing):', self._command_palette_show_media_menu ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -98,6 +102,10 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         command_palette_provider_order.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         command_palette_provider_order.Add( self._command_palette_provider_order, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._command_palette_panel.Add( command_palette_provider_order, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._command_palette_num_chars_for_results_threshold.valueChanged.connect( self._UpdateWidgets )
+        
+        self._UpdateWidgets()
         
         vbox = QP.VBoxLayout()
         
@@ -152,8 +160,18 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
     
+    def _UpdateWidgets( self ):
+        
+        they_are_relevant = self._command_palette_num_chars_for_results_threshold.value() == 0
+        
+        self._command_palette_initially_show_all_pages.setEnabled( they_are_relevant )
+        self._command_palette_initially_show_history.setEnabled( they_are_relevant )
+        self._command_palette_initially_show_favourite_searches.setEnabled( they_are_relevant )
+        
+    
     def UpdateOptions( self ):
         
+        self._new_options.SetInteger( 'command_palette_num_chars_for_results_threshold', self._command_palette_num_chars_for_results_threshold.value() )
         self._new_options.SetBoolean( 'command_palette_show_page_of_pages', self._command_palette_show_page_of_pages.isChecked() )
         self._new_options.SetBoolean( 'command_palette_initially_show_all_pages', self._command_palette_initially_show_all_pages.isChecked() )
         self._new_options.SetNoneableInteger( 'command_palette_limit_page_results', self._command_palette_limit_page_results.GetValue() )

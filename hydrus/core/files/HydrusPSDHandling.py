@@ -95,12 +95,12 @@ def GetFFMPEGPSDLines( path ):
         
     except FileNotFoundError as e:
         
-        HydrusFFMPEG.HandleFFMPEGFileNotFound( e, path )
+        raise HydrusFFMPEG.HandleFFMPEGFileNotFoundAndGenerateException( e, path )
         
     
     if stderr is None or len( stderr ) == 0:
         
-        HydrusFFMPEG.HandleFFMPEGNoContent( path, stdout, stderr )
+        raise HydrusFFMPEG.HandleFFMPEGNoContentAndGenerateException( path, stdout, stderr )
         
     
     lines = stderr.splitlines()

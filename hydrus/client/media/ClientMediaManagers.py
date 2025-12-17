@@ -1889,7 +1889,7 @@ class TagsManager( object ):
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            return statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]
+            return set( statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] )
             
         
     
@@ -1913,7 +1913,7 @@ class TagsManager( object ):
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            return statuses_to_tags[ HC.CONTENT_STATUS_DELETED ]
+            return set( statuses_to_tags[ HC.CONTENT_STATUS_DELETED ] )
             
         
     
@@ -1970,7 +1970,7 @@ class TagsManager( object ):
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            return statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]
+            return set( statuses_to_tags[ HC.CONTENT_STATUS_PENDING ] )
             
         
     
@@ -1982,17 +1982,19 @@ class TagsManager( object ):
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            return statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]
+            return set( statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ] )
             
         
     
-    def GetServiceKeysToStatusesToTags( self, tag_display_type ):
+    def GetServiceKeysToStatusesToTags( self, tag_display_type ) -> dict[ bytes, dict[ int, set[ str ] ] ]:
         
         with self._lock:
             
+            # until I figure out a read/write lock on media results, we are going to do a naive copy here. full dict comprehension, which I understand is more performative than copy.deepcopy
+            
             service_keys_to_statuses_to_tags = self._GetServiceKeysToStatusesToTags( tag_display_type )
             
-            return service_keys_to_statuses_to_tags
+            return { service_key : { status : tags.copy() for ( status, tags ) in statuses_to_tags.items() } for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items() }
             
         
     
@@ -2021,7 +2023,7 @@ class TagsManager( object ):
             
             statuses_to_tags = service_keys_to_statuses_to_tags[ service_key ]
             
-            return statuses_to_tags[ status ]
+            return set( statuses_to_tags[ status ] )
             
         
     

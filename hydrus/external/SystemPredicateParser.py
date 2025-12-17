@@ -1,6 +1,7 @@
 # made by prkc for Hydrus Network
 # Licensed under the same terms as Hydrus Network
 # hydev has changed a couple things here and there
+# and now I'm writing a parse state object to de-brittle the params and pipeline a bit here
 
 # The basic idea here is to take a system predicate written as text and parse it into a (predicate type, operator, value, unit)
 # tuple. The exact structure of the operator, value and unit members depend on the type of the predicate.
@@ -32,6 +33,8 @@ import math
 import re
 import datetime
 from enum import Enum, auto
+
+from hydrus.core import HydrusExceptions
 
 UNICODE_APPROX_EQUAL = '\u2248'
 UNICODE_NOT_EQUAL = '\u2260'
@@ -171,6 +174,7 @@ class Predicate( Enum ):
     NO_RATING = auto()
     TAG_ADVANCED_INCLUSIVE = auto()
     TAG_ADVANCED_EXCLUSIVE = auto()
+    RATING_ADVANCED = auto()
 
 
 # This enum lists the possible value formats a predicate can have (if it has a value).
@@ -196,6 +200,7 @@ class Value( Enum ):
     RATING_SERVICE_NAME_AND_INCDEC = auto() # my favourites 3/5
     NAMESPACE_AND_NUM_TAGS = auto()
     TAG_ADVANCED_TAG = auto() # ': "tag"'
+    RATING_ADVANCED = auto() # complicated, but usually something like 'all inc/dec ratings rated'
 
 
 # Possible operator formats
@@ -277,7 +282,7 @@ SYSTEM_PREDICATES = {
     'similar to data': (Predicate.SIMILAR_TO_DATA, None, Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.EQUAL, Value.FILETYPE_LIST, None),
-    'hash': (Predicate.HASH, Operators.EQUAL_NOT_CONSUMING, Value.HASHLIST_WITH_ALGORITHM, None),
+    r'hash( \(?(md5|sha1|sha512)\)?)?': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
     'archived? (date|time)|(date|time) archived|archived.': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'modified (date|time)|(date|time) modified|modified': (Predicate.MOD_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'last view(ed)? (date|time)|(date|time) last viewed|last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
@@ -288,7 +293,7 @@ SYSTEM_PREDICATES = {
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber)?( of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
     r'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
-    r'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
+    r'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, None, None),
     'num(ber)?( of)? pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
     'media views': (Predicate.MEDIA_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
     'preview views': (Predicate.PREVIEW_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
@@ -319,6 +324,7 @@ SYSTEM_PREDICATES = {
     r'(rating|count)( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
     r'has tag': (Predicate.TAG_ADVANCED_INCLUSIVE, Operators.TAG_ADVANCED_GUBBINS, Value.TAG_ADVANCED_TAG, None ),
     r'does not have tag': (Predicate.TAG_ADVANCED_EXCLUSIVE, Operators.TAG_ADVANCED_GUBBINS, Value.TAG_ADVANCED_TAG, None ),
+    r'(all|any|only).+rated': (Predicate.RATING_ADVANCED, None, Value.RATING_ADVANCED, None ),
 }
 
 def string_looks_like_date( string ):
@@ -330,39 +336,90 @@ def string_looks_like_date( string ):
     return True not in ( word in string for word in test_words )
     
 
+class SystemPredParseResult( object ):
+    
+    def __init__( self, text: str ):
+        
+        self.original_text = text.strip()
+        self.original_text_lower = self.original_text.lower()
+        
+        if self.original_text_lower.startswith( SYSTEM_PREDICATE_PREFIX ):
+            
+            self.subtag_text = self.original_text[ len( SYSTEM_PREDICATE_PREFIX ) ]
+            self.subtag_text_lower = self.original_text_lower[ len( SYSTEM_PREDICATE_PREFIX ): ]
+            
+        else:
+            
+            self.subtag_text = self.original_text
+            self.subtag_text_lower = self.original_text_lower
+            
+        
+        self.text_remainder = self.subtag_text_lower
+        
+        self.pred_type = None
+        self.operator = None
+        self.value = None
+        self.unit = None
+        
+    
+    def CheckBasics( self ):
+        
+        if self.original_text_lower.startswith( '-' ):
+            
+            raise ValueError( "System predicate can't start with negation" )
+            
+        
+        if not self.original_text_lower.startswith( SYSTEM_PREDICATE_PREFIX ):
+            
+            raise ValueError( "Not a system predicate!" )
+            
+        
+    
+
 # Parsing is just finding a matching predicate name,
 # then trying to parse it by consuming the input string.
 # The parse_* functions consume some of the string and return a (remaining part of the string, parsed value) tuple.
 def parse_system_predicate( string: str ):
     
-    # TODO: (hydev): rework this thing into passing around a 'parse result object' that the operator parser can set a value for and say 'yeah value is sorted' for things like 'has words' = '> 0' in one swoop
+    parse_result = SystemPredParseResult( string )
     
-    string = string.strip()
+    parse_result.CheckBasics()
     
-    if 'url' not in string: # hack for system:url has regex (blah) and matching url in general
-        
-        string = string.lower()
-        
-    
-    # hydev is removing this v594. there's several cases where we might want underscores, and I'm not sure the convenience of converting to spaces is worth losing that
-    # it isn't like system preds are expressed in underscore for on a third party site or something, like a parsed tag might be
-    # string = string.replace( '_', ' ' )
-    
-    if string.startswith( "-" ):
-        raise ValueError( "System predicate can't start with negation" )
-    if not string.startswith( SYSTEM_PREDICATE_PREFIX ):
-        raise ValueError( "Not a system predicate!" )
-    string = string[ len( SYSTEM_PREDICATE_PREFIX ): ]
     for pred_regex in SYSTEM_PREDICATES:
-        match = re.match( pred_regex.replace( ' ', '([_ ]+)' ) + ":?", string )
+        
+        match = re.match( pred_regex.replace( ' ', '([_ ]+)' ) + ":?", parse_result.subtag_text_lower )
+        
         if match:
-            pred = SYSTEM_PREDICATES[ pred_regex ]
-            string = string[ len( match[ 0 ] ): ]
-            string, operator = parse_operator( string, pred[ 1 ] )
-            string, value = parse_value( string, pred[ 2 ] )
-            string, unit = parse_unit( string, pred[ 3 ] )
-            if string: raise ValueError( "Unrecognized characters at the end of the predicate: " + string )
-            return pred[ 0 ], operator, value, unit
+            
+            # TODO: Keep pushing on parse_result
+            # I've crammed this 'parse_result' in here, with the intention that future iterations of this will work on that workspace rather than passing around a bunch of variables
+            # there's plenty I still haven't done and this looks uglier in places
+            # A part of this will be re-examining if and how much we still want to do 'text_remainder', with the stripping away of the thing being parsed, or if that is only appropriate for some pred types
+            # good example is 'has blah', where it'd be nice to recognise that as a special case and deliver our 'NumberTest( > 0 )' in a quicker step
+            # see the new 'ratings_advanced' bit for an example of where I mostly want to go
+            #
+            # we could have ways of breaking the pred into 'here's pertinent operator text' and such and saving that back to the parse result. maybe with an extra step or maybe every time from the subtag_text
+            # we could also push for more NumberTests in system preds in general and harmonising a bunch of that
+            # since hydrus predicates have a general complicated multitype '_value' variable and don't split unit/op/value, I suspect we should move to a separate parsing route for each type, sharing code where we can, and migrate this 'parse unit' stuff to smaller subroutines
+            #
+            # TODO: It would probably be a good idea to write a 'ParseNumberTest' at some point, for those preds that use them
+            # iirc we do some silly stuff in the caller atm to convert from op+value to numbertest, so let's embed it in here instead when reasonable
+            # at the same time, I believe we can then get +/- absolute and percentage stuff working. this is the 'is about', unicode_approx_equal, result, which then passes an 'extra_value' on to the numbertest or whatever
+            
+            parse_result.text_remainder = parse_result.text_remainder[ len( match[ 0 ] ): ]
+            
+            ( predicate_type, operator_format, value_format, unit_format ) = SYSTEM_PREDICATES[ pred_regex ]
+            
+            parse_operator( parse_result, operator_format )
+            parse_value( parse_result, value_format )
+            ( parse_result.text_remainder, parse_result.unit ) = parse_unit( parse_result.text_remainder, unit_format )
+            
+            if len( parse_result.text_remainder ) > 0:
+                
+                raise ValueError( "Unrecognized characters at the end of the predicate: " + string )
+                
+            
+            return ( predicate_type, parse_result.operator, parse_result.value, parse_result.unit )
             
         
     
@@ -370,7 +427,9 @@ def parse_system_predicate( string: str ):
     
 
 def parse_unit( string: str, spec ):
+    
     string = string.strip()
+    
     if spec is None:
         return string, None
     elif spec == Units.FILESIZE:
@@ -421,20 +480,25 @@ def parse_unit( string: str, spec ):
     raise ValueError( "Invalid unit specification" )
     
 
-def parse_value( string: str, spec ):
+def parse_value( parse_result: SystemPredParseResult, spec ):
+    
+    string = parse_result.text_remainder
     
     string = string.strip()
     
     if spec is None:
         
-        return string, None
+        return
         
     elif spec in ( Value.NATURAL, Value.INTEGER ):
         
         # 'has urls', 'has words'
         if string.startswith( 'has' ) or string.startswith( 'no' ):
             
-            return '', 0
+            parse_result.text_remainder = ''
+            parse_result.value = 0
+            
+            return
             
         
         match = re.match( '-?[0-9,]+', string )
@@ -454,7 +518,10 @@ def parse_value( string: str, spec ):
                 raise ValueError( "Invalid value, expected a positive integer!" )
                 
             
-            return ( rest_of_string, value )
+            parse_result.text_remainder = rest_of_string
+            parse_result.value = value
+            
+            return
             
         
         if spec == Value.NATURAL:
@@ -467,8 +534,11 @@ def parse_value( string: str, spec ):
             
         
     elif spec == Value.SHA256_HASHLIST_WITH_DISTANCE:
+        
         match = re.match( r'(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
+        
         if match:
+            
             hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             
             d = match.groupdict()
@@ -482,11 +552,20 @@ def parse_value( string: str, spec ):
                 distance = 4
                 
             
-            return string[ len( match[ 0 ] ): ], (hashes, distance)
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = (hashes, distance)
+            
+            return
+            
+        
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
+        
     elif spec == Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE:
+        
         match = re.match( r'(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
+        
         if match:
+            
             hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             pixel_hashes = { hash for hash in hashes if len( hash ) == 64 }
             perceptual_hashes = { hash for hash in hashes if len( hash ) == 16 }
@@ -502,8 +581,14 @@ def parse_value( string: str, spec ):
                 distance = 8
                 
             
-            return string[ len( match[ 0 ] ): ], (pixel_hashes, perceptual_hashes, distance)
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = (pixel_hashes, perceptual_hashes, distance)
+            
+            return
+            
+        
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
+    
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
         
         # hydev KISS hijack here, instead of clever regex to capture algorithm in all sorts of situations, let's just grab the hex we see and scan the rest for non-hex phrases mate
@@ -513,7 +598,7 @@ def parse_value( string: str, spec ):
         
         for possible_algorithm in ( 'md5', 'sha1', 'sha512' ):
             
-            if possible_algorithm in string:
+            if possible_algorithm in parse_result.original_text_lower: # original text lower--it will be gone from text_remainder by now
                 
                 algorithm = possible_algorithm
                 
@@ -525,8 +610,15 @@ def parse_value( string: str, spec ):
         match = re.search( r'(?P<hashes>([0-9a-f]{8}[0-9a-f]+(\s|,)*)+)', string )
         
         if match:
+            
             hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
-            return string[ match.endpos : ], (hashes, algorithm)
+            
+            
+            parse_result.text_remainder = string[ match.endpos : ]
+            parse_result.value = (hashes, algorithm)
+            
+            return
+            
         
         raise ValueError( "Invalid value, expected a list of hashes and perhaps an algorithm" )
         
@@ -545,7 +637,12 @@ def parse_value( string: str, spec ):
                 ftype = ftype.strip()
                 if len( ftype ) > 0 and ftype in FILETYPES:
                     found_ftypes_good.extend( FILETYPES[ ftype ] )
-            return string[ len( match[ 0 ] ): ], set( found_ftypes_good )
+            
+            
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = set( found_ftypes_good )
+            
+            return
             
         
         raise ValueError( "Invalid value, expected a list of file types" )
@@ -574,14 +671,23 @@ def parse_value( string: str, spec ):
                 
                 if years + months + days + hours == 0:
                     
-                    return ( '', dt )
+                    parse_result.text_remainder = ''
+                    parse_result.value = dt
+                    
+                    return
                     
                 
-                return ( '', ( years, months, days, hours ) )
+                parse_result.text_remainder = ''
+                parse_result.value = ( years, months, days, hours )
+                
+                return
                 
             else:
                 
-                return ( '', dt )
+                parse_result.text_remainder = ''
+                parse_result.value = dt
+                
+                return
                 
             
         else:
@@ -600,13 +706,24 @@ def parse_value( string: str, spec ):
                     string_result = ''
                     
                 
-                return string_result, (years, months, days, hours)
+                parse_result.text_remainder = string_result
+                parse_result.value = ( years, months, days, hours )
+                
+                return
                 
             
             match = re.match( r'(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
+            
             if match:
+                
                 # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
-                return string[ len( match[ 0 ] ): ], datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
+                
+                parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+                parse_result.value = datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
+                
+                return
+                
+            
             raise ValueError( "Invalid value, expected a date or a time interval" )
             
         
@@ -615,22 +732,60 @@ def parse_value( string: str, spec ):
         # 'has duration'
         if string.startswith( 'has' ) or string.startswith( 'no' ):
             
-            return '', ( 0, 0 )
+            parse_result.text_remainder = ''
+            parse_result.value = ( 0, 0 )
+            
+            return
             
         
         match = re.match( r'((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
+        
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
+            
             seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
             mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0
             seconds += math.floor( mseconds / 1000 )
             mseconds = mseconds % 1000
-            return string[ len( match[ 0 ] ): ], (seconds, mseconds)
+            
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = ( seconds, mseconds )
+            
+            return
+            
+        
         raise ValueError( "Invalid value, expected a duration" )
+        
     elif spec == Value.ANY_STRING:
-        return "", string
+        
+        if parse_result.pred_type in ( Predicate.URL_REGEX, Predicate.URL_CLASS, Predicate.NO_URL_REGEX, Predicate.NO_URL_REGEX ):
+            
+            # special case; previously we parsed the whole thing without the initial '.lower()' call. now we can be a bit cleverer
+            
+            try:
+                
+                index = parse_result.original_text.find( string )
+                
+                original_string = parse_result.original_text[ index + len( string ) ]
+                
+                string = original_string
+                
+            except:
+                
+                pass
+                
+            
+        
+        parse_result.text_remainder = ''
+        parse_result.value = string
+        
+        return
+        
     elif spec == Value.TIME_INTERVAL:
+        
         match = re.match( r'((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?\s*((?P<minute>0|([1-9][0-9]*))\s*(minutes|minute|mins|min))?\s*((?P<second>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?', string )
+        
         if match and (match.group( 'day' ) or match.group( 'hour' ) or match.group( 'minute' ) or match.group( 'second' )):
+            
             days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
             hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
             minutes = int( match.group( 'minute' ) ) if match.group( 'minute' ) else 0
@@ -641,17 +796,28 @@ def parse_value( string: str, spec ):
             minutes = minutes % 60
             days += math.floor( hours / 24 )
             hours = hours % 24
-            return string[ len( match[ 0 ] ): ], (days, hours, minutes, seconds)
-        raise ValueError( "Invalid value, expected a time interval" )
-    elif spec == Value.RATIO:
-        match = re.match( r'(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
-        if match: return string[ len( match[ 0 ] ): ], (int( match[ 'first' ] ), int( match[ 'second' ] ))
-        raise ValueError( "Invalid value, expected a ratio" )
-    elif spec == Value.RATIO_SPECIAL:
+            
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = (days, hours, minutes, seconds)
+            
+            return
+            
         
-        if string == 'square': return ( '', ( 1, 1 ) )
-        if string == 'landscape': return ( '', ( 1, 1 ) )
-        if string == 'portrait': return ( '', ( 1, 1 ) )
+        raise ValueError( "Invalid value, expected a time interval" )
+    
+    elif spec == Value.RATIO:
+        
+        match = re.match( r'(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
+        
+        if match:
+            
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.value = ( int( match[ 'first' ] ), int( match[ 'second' ] ) )
+            
+            return
+            
+        
+        raise ValueError( "Invalid value, expected a ratio" )
         
     elif spec == Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE:
         
@@ -670,7 +836,10 @@ def parse_value( string: str, spec ):
                 raise ValueError( 'Invalid value, rating value was out of bounds')
                 
             
-            return ( '', ( numerator, service_name ) )
+            parse_result.text_remainder = ''
+            parse_result.value = ( numerator, service_name )
+            
+            return
             
         
         raise ValueError( "Invalid value, expected a numerical rating" )
@@ -714,7 +883,10 @@ def parse_value( string: str, spec ):
         
         service_name = string
         
-        return ( '', ( value, service_name ) )
+        parse_result.text_remainder = ''
+        parse_result.value = ( value, service_name )
+        
+        return
         
     elif spec == Value.RATING_SERVICE_NAME_AND_INCDEC:
         
@@ -727,7 +899,10 @@ def parse_value( string: str, spec ):
             service_name = match[ 'name' ]
             value = int( match[ 'num' ] )
             
-            return ( '', ( value, service_name ) )
+            parse_result.text_remainder = ''
+            parse_result.value = ( value, service_name )
+            
+            return
             
         
         raise ValueError( "Invalid value, expected an inc/dec rating" )
@@ -748,9 +923,12 @@ def parse_value( string: str, spec ):
                 namespace = ''
             
             
-            ( gubbins, operator ) = parse_operator( operator_string, Operators.RELATIONAL )
+            ( gubbins, operator ) = parse_operator_relational( operator_string, Operators.RELATIONAL )
             
-            return ( '', ( namespace, operator, num ) )
+            parse_result.text_remainder = ''
+            parse_result.value = ( namespace, operator, num )
+            
+            return
             
         
     elif spec == Value.TAG_ADVANCED_TAG:
@@ -783,13 +961,169 @@ def parse_value( string: str, spec ):
             tag = 'invalid tag'
             
         
-        return ( '', tag )
+        parse_result.text_remainder = ''
+        parse_result.value = tag
+        
+        return
+        
+    elif spec == Value.RATING_ADVANCED:
+        
+        from hydrus.core import HydrusConstants as HC
+        from hydrus.client import ClientServices
+        
+        # this is newer code, we'll use the original string mate. upper case to handle service names too
+        # 'all|any|only (rating gubbins) (not) rated'
+        # 'only (rating gubbins) (amongst (other rating gubbins)) rated'
+        
+        subtag_workspace = parse_result.subtag_text_lower.strip()
+        
+        logical_operator = HC.LOGICAL_OPERATOR_ALL
+        
+        for ( possible_logical_operator_str, possible_logical_operator ) in (
+            ( 'all', HC.LOGICAL_OPERATOR_ALL ),
+            ( 'any', HC.LOGICAL_OPERATOR_ANY ),
+            ( 'only', HC.LOGICAL_OPERATOR_ONLY ),
+        ):
+            
+            if subtag_workspace.startswith( possible_logical_operator_str ):
+                
+                subtag_workspace = subtag_workspace[ len( possible_logical_operator_str ) : ].strip()
+                logical_operator = possible_logical_operator
+                
+                break
+                
+            
+        
+        rated = True
+        
+        for ( possible_rated_str, possible_rated ) in (
+            ( 'not rated', False ),
+            ( 'rated', True ),
+        ):
+            
+            if subtag_workspace.endswith( possible_rated_str ):
+                
+                subtag_workspace = subtag_workspace[ : - len( possible_rated_str ) ].strip()
+                rated = possible_rated
+                
+                break
+                
+            
+        
+        if logical_operator == HC.LOGICAL_OPERATOR_ONLY:
+            
+            if '(amongst' in subtag_workspace:
+                
+                ( subtag_workspace, service_specifier_secondary_text ) = subtag_workspace.split( '(amongst', 1 )
+                
+                subtag_workspace = subtag_workspace.strip()
+                service_specifier_secondary_text = service_specifier_secondary_text.strip()
+                
+                if service_specifier_secondary_text.endswith( ')' ):
+                    
+                    service_specifier_secondary_text = service_specifier_secondary_text[:-1]
+                    
+                    service_specifier_secondary_text = service_specifier_secondary_text.strip()
+                    
+                
+                service_specifier_secondary = parse_service_specifier( service_specifier_secondary_text )
+                
+            else:
+                
+                service_specifier_secondary = ClientServices.ServiceSpecifier( service_types = HC.LOCAL_RATINGS_SERVICES )
+                
+            
+        else:
+            
+            service_specifier_secondary = ClientServices.ServiceSpecifier()
+            
+        
+        service_specifier_primary = parse_service_specifier( subtag_workspace )
+        
+        parse_result.text_remainder = ''
+        parse_result.value = ( logical_operator, service_specifier_primary, service_specifier_secondary, rated )
+        
+        return
         
     
     raise ValueError( "Invalid value specification" )
     
 
-def parse_operator( string: str, spec ):
+def parse_service_specifier( text: str ):
+    
+    from hydrus.client import ClientGlobals as CG
+    from hydrus.client import ClientServices
+    from hydrus.core import HydrusConstants as HC
+    
+    # 'ratings'
+    # like/dislike ratings, numerical ratings
+    # service_name, service_name, service_name
+    
+    if text in ( 'rating', 'ratings' ):
+        
+        return ClientServices.ServiceSpecifier( service_types = HC.LOCAL_RATINGS_SERVICES )
+        
+    else:
+        
+        if ',' in text:
+            
+            separate_guys = text.split( ',' )
+            
+        else:
+            
+            separate_guys = [ text ]
+            
+        
+        separate_guys = [ guy.strip() for guy in separate_guys ]
+        
+        short_service_type_strings_to_service_types = { name : service_type for ( service_type, name ) in HC.service_string_lookup_short.items() }
+        
+        if True in ( guy in short_service_type_strings_to_service_types for guy in separate_guys ):
+            
+            service_type_strings = separate_guys
+            service_types = set()
+            
+            for service_type_string in service_type_strings:
+                
+                if service_type_string not in short_service_type_strings_to_service_types:
+                    
+                    raise ValueError( 'Unknown service type!' )
+                    
+                
+                service_types.add( short_service_type_strings_to_service_types[ service_type_string ] )
+                
+            
+            service_specifier = ClientServices.ServiceSpecifier( service_types = service_types )
+            
+        else:
+            
+            service_names = separate_guys
+            service_keys = set()
+            
+            for service_name in service_names:
+                
+                try:
+                    
+                    service_key = CG.client_controller.services_manager.GetServiceKeyFromName( HC.LOCAL_RATINGS_SERVICES, service_name )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    raise ValueError( f'Sorry, did not find a service called "{service_name}"!' )
+                    
+                
+                service_keys.add( service_key )
+                
+            
+            service_specifier = ClientServices.ServiceSpecifier( service_keys = service_keys )
+            
+        
+        return service_specifier
+        
+    
+
+def parse_operator( parse_result: SystemPredParseResult, spec ):
+    
+    string = parse_result.text_remainder
     
     while string.startswith( ':' ) or string.startswith( ' ' ):
         
@@ -803,7 +1137,7 @@ def parse_operator( string: str, spec ):
     
     if spec is None:
         
-        return string, None
+        return
         
     elif spec == Operators.VIEWS_RELATIONAL:
         
@@ -821,65 +1155,19 @@ def parse_operator( string: str, spec ):
         
         string = re.sub( '^[, ]+', '', string )
         
-        ( string, relational_op ) = parse_operator( string, Operators.RELATIONAL )
+        ( string, relational_op ) = parse_operator_relational( string, Operators.RELATIONAL )
         
-        return ( string, ( desired_canvas_types, relational_op ) )
+        parse_result.text_remainder = string
+        parse_result.operator = ( desired_canvas_types, relational_op )
+        
+        return
         
     elif spec in ( Operators.RELATIONAL, Operators.RELATIONAL_EXACT, Operators.RELATIONAL_TIME ):
         
-        exact = spec == Operators.RELATIONAL_EXACT
+        ( parse_result.text_remainder, parse_result.operator ) = parse_operator_relational( string, spec )
         
-        ops = [ '=', '<', '>' ]
+        return
         
-        if spec == Operators.RELATIONAL_TIME:
-            
-            re_result = re.search( r'\d.*', string )
-            
-            if re_result:
-                
-                op_string = string[ : re_result.start() ]
-                string_result = re_result.group()
-                
-                looks_like_date = string_looks_like_date( string_result )
-                invert_ops = not looks_like_date
-                
-                if 'month' in op_string and looks_like_date:
-                    
-                    return ( string_result, UNICODE_APPROX_EQUAL )
-                    
-                elif 'around' in op_string and not looks_like_date:
-                    
-                    return ( string_result, UNICODE_APPROX_EQUAL )
-                    
-                elif 'day' in op_string and looks_like_date:
-                    
-                    return ( string_result, '=' )
-                    
-                elif 'since' in op_string:
-                    
-                    return ( string_result, '<' if invert_ops else '>' )
-                    
-                elif 'before' in op_string:
-                    
-                    return ( string_result, '>' if invert_ops else '<' )
-                    
-                
-            
-        
-        if not exact:
-            ops = ops + [ UNICODE_NOT_EQUAL, UNICODE_APPROX_EQUAL ]
-        if string.startswith( '==' ): return string[ 2: ], '='
-        if not exact:
-            if string.startswith( '!=' ): return string[ 2: ], UNICODE_NOT_EQUAL
-            if string.startswith( 'is not' ): return string[ 6: ], UNICODE_NOT_EQUAL
-            if string.startswith( 'isn\'t' ): return string[ 5: ], UNICODE_NOT_EQUAL
-            if string.startswith( '~=' ): return string[ 2: ], UNICODE_APPROX_EQUAL
-        for op in ops:
-            if string.startswith( op ): return string[ len( op ): ], op
-        if string.startswith( 'is' ): return string[ 2: ], '='
-        if string.startswith( 'has' ): return string, '>'
-        if string.startswith( 'no' ): return string, '='
-        raise ValueError( "Invalid relational operator" )
     elif spec == Operators.RELATIONAL_FOR_RATING_SERVICE:
         
         # "favourites service name > 3/5"
@@ -907,44 +1195,61 @@ def parse_operator( string: str, spec ):
                     
                     parsing_string = f'{service_name} {value}'
                     
-                    return ( parsing_string, possible_operator )
+                    parse_result.text_remainder = parsing_string
+                    parse_result.operator = possible_operator
+                    
+                    return
                     
                 
             
+        
         raise ValueError( "Invalid rating operator" )
+        
     elif spec == Operators.EQUAL:
-        if string.startswith( '==' ): return string[ 2: ], '='
-        if string.startswith( UNICODE_NOT_EQUAL ): return string[ 1: ], '!='
-        if string.startswith( '!=' ): return string[ 2: ], '!='
-        if string.startswith( '=' ): return string[ 1: ], '='
-        if string.startswith( 'is not' ): return string[ 6: ], '!='
-        if string.startswith( 'isn\'t' ): return string[ 5: ], '!='
-        if string.startswith( 'is' ): return string[ 2: ], '='
-        raise ValueError( "Invalid equality operator" )
-    elif spec == Operators.EQUAL_NOT_CONSUMING:
         
-        # hydev checking in here with some nonsense that catches an awkward situation
-        # system:hash (md5) = blah
-        # we want to see the = but not eat the md5, so in this special case, which isn't hard to parse otherwise, we'll just look for it and return no changes
+        for ( possible_operator_str, possible_operator ) in [
+            ( '==', '=' ),
+            ( UNICODE_NOT_EQUAL, '!=' ),
+            ( '!=', '!=' ),
+            ( '=', '=' ),
+            ( 'is not', '!=' ),
+            ( 'isn\'t', '!=' ),
+            ( 'is', '=' ),
+        ]:
+            
+            if string.startswith( possible_operator_str ):
+                
+                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.operator = possible_operator
+                
+                return
+                
+            
         
-        if '==' in string: return string, '='
-        if UNICODE_NOT_EQUAL in string: return string, '!='
-        if '!=' in string: return string, '!='
-        if '=' in string: return string, '='
-        if 'is not' in string: return string, '!='
-        if 'isn\'t' in string: return string, '!='
-        if 'is' in string: return string, '='
         raise ValueError( "Invalid equality operator" )
+        
     elif spec == Operators.FILESERVICE_STATUS:
-        match = re.match( '(is )?currently in', string )
-        if match: return string[ len( match[ 0 ] ): ], 'is currently in'
-        match = re.match( '((is )?not currently in)|isn\'t currently in', string )
-        if match: return string[ len( match[ 0 ] ): ], 'is not currently in'
-        match = re.match( '(is )?pending to', string )
-        if match: return string[ len( match[ 0 ] ): ], 'is pending to'
-        match = re.match( '((is )?not pending to)|isn\'t pending to', string )
-        if match: return string[ len( match[ 0 ] ): ], 'is not pending to'
+        
+        for ( re_pattern, possible_operator ) in [
+            ( '(is )?currently in', 'is currently in' ),
+            ( '((is )?not currently in)|isn\'t currently in', 'is not currently in' ),
+            ( '(is )?pending to', 'is pending to' ),
+            ( '((is )?not pending to)|isn\'t pending to', 'is not pending to' ),
+        ]:
+            
+            match = re.match( re_pattern, string )
+            
+            if match:
+                
+                parse_result.text_remainder = string[ len( match[ 0 ] ) : ]
+                parse_result.operator = possible_operator
+                
+                return
+                
+            
+        
         raise ValueError( "Invalid operator, expected a file service relationship" )
+        
     elif spec == Operators.TAG_RELATIONAL:
         
         # note this is in the correct order, also, to eliminate = vs == ambiguity
@@ -975,32 +1280,71 @@ def parse_operator( string: str, spec ):
                 op = UNICODE_APPROX_EQUAL
                 
             
-            return string[ len( match[ 0 ] ): ], (namespace, op)
+            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.operator = ( namespace, op )
+            
+            return
             
         
         raise ValueError( "Invalid operator, expected a tag followed by a relational operator" )
         
     elif spec == Operators.ONLY_EQUAL:
-        if string.startswith( '==' ): return string[ 2: ], '='
-        if string.startswith( '=' ): return string[ 1: ], '='
-        if string.startswith( 'is' ): return string[ 2: ], '='
+        
+        for possible_operator_str in [ '==', '=', 'is' ]:
+            
+            if string.startswith( possible_operator_str ):
+                
+                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.operator = '='
+                
+                return
+                
+            
+        
         raise ValueError( "Invalid equality operator" )
+        
     elif spec == Operators.RATIO_OPERATORS:
-        if string.startswith( 'wider than' ): return string[ 10: ], 'wider than'
-        if string.startswith( 'taller than' ): return string[ 11: ], 'taller than'
-        if string.startswith( 'is wider than' ): return string[ 13: ], 'wider than'
-        if string.startswith( 'is taller than' ): return string[ 14: ], 'taller than'
-        if string.startswith( '==' ): return string[ 2: ], '='
-        if string.startswith( '=' ): return string[ 1: ], '='
-        if string.startswith( 'is' ): return string[ 2: ], '='
-        if string.startswith( '~=' ): return string[ 2: ], UNICODE_APPROX_EQUAL
-        if string.startswith( UNICODE_APPROX_EQUAL ): return string[ 1: ], UNICODE_APPROX_EQUAL
+        
+        for ( possible_operator_str, possible_operator ) in [
+            ( 'wider than', 'wider than' ),
+            ( 'taller than', 'taller than' ),
+            ( 'is wider than', 'wider than' ),
+            ( 'is taller than', 'taller than' ),
+            ( '==', '=' ),
+            ( '=', '=' ),
+            ( 'is', '=' ),
+            ( '~=', UNICODE_APPROX_EQUAL ),
+            ( UNICODE_APPROX_EQUAL, UNICODE_APPROX_EQUAL ),
+        ]:
+            
+            if string.startswith( possible_operator_str ):
+                
+                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.operator = possible_operator
+                
+                return
+                
+            
+        
         raise ValueError( "Invalid ratio operator" )
+        
     elif spec == Operators.RATIO_OPERATORS_SPECIAL:
         
-        if 'square' in string: return 'square', '='
-        if 'portrait' in string: return 'portrait', 'taller than'
-        if 'landscape' in string: return 'landscape', 'wider than'
+        for ( possible_operator_str, possible_operator ) in [
+            ( 'square', '=' ),
+            ( 'portrait', 'taller than' ),
+            ( 'landscape', 'wider than' ),
+        ]:
+            
+            if possible_operator_str in string:
+                
+                parse_result.text_remainder = ''
+                parse_result.operator = possible_operator
+                parse_result.value = ( 1, 1 )
+                
+                return
+                
+            
         
     elif spec == Operators.TAG_ADVANCED_GUBBINS:
         
@@ -1086,8 +1430,71 @@ def parse_operator( string: str, spec ):
             statuses = [ HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ]
             
         
-        return ( tag, ( service_key, tag_display_type, tuple( sorted( statuses ) ) ) )
+        parse_result.text_remainder = tag
+        parse_result.operator = ( service_key, tag_display_type, tuple( sorted( statuses ) ) )
+        
+        return
         
     
     raise ValueError( "Invalid operator specification" )
+    
+
+def parse_operator_relational( string: str, spec ):
+    
+    exact = spec == Operators.RELATIONAL_EXACT
+    
+    ops = [ '=', '<', '>' ]
+    
+    if spec == Operators.RELATIONAL_TIME:
+        
+        re_result = re.search( r'\d.*', string )
+        
+        if re_result:
+            
+            op_string = string[ : re_result.start() ]
+            string_result = re_result.group()
+            
+            looks_like_date = string_looks_like_date( string_result )
+            invert_ops = not looks_like_date
+            
+            if 'month' in op_string and looks_like_date:
+                
+                return ( string_result, UNICODE_APPROX_EQUAL )
+                
+            elif 'around' in op_string and not looks_like_date:
+                
+                return ( string_result, UNICODE_APPROX_EQUAL )
+                
+            elif 'day' in op_string and looks_like_date:
+                
+                return ( string_result, '=' )
+                
+            elif 'since' in op_string:
+                
+                return ( string_result, '<' if invert_ops else '>' )
+                
+            elif 'before' in op_string:
+                
+                return ( string_result, '>' if invert_ops else '<' )
+                
+            
+        
+    
+    if not exact:
+        ops = ops + [ UNICODE_NOT_EQUAL, UNICODE_APPROX_EQUAL ]
+    if string.startswith( '==' ): return string[ 2: ], '='
+    if not exact:
+        if string.startswith( '!=' ): return string[ 2: ], UNICODE_NOT_EQUAL
+        if string.startswith( 'is not' ): return string[ 6: ], UNICODE_NOT_EQUAL
+        if string.startswith( 'isn\'t' ): return string[ 5: ], UNICODE_NOT_EQUAL
+        if string.startswith( '~=' ): return string[ 2: ], UNICODE_APPROX_EQUAL
+    for op in ops:
+        if string.startswith( op ): return string[ len( op ): ], op
+    if string.startswith( 'is' ): return string[ 2: ], '='
+    
+    # TODO: Ok one thing it would be nice to do is checking this state in _some other place_ and then returning the 'numbertest( > 0 )' in one go
+    if string.startswith( 'has' ): return string, '>'
+    if string.startswith( 'no' ): return string, '='
+    
+    raise ValueError( "Invalid relational operator" )
     

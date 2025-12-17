@@ -96,7 +96,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 for ( parsed_content_action, tags ) in parsed_actions_to_tags.items():
                     
-                    HydrusNetworkVariableHandling.TestVariableType( 'action in actions_to_tags', parsed_content_action, str )
+                    HydrusNetworkVariableHandling.TestVariableType( 'parsed_content_action', parsed_content_action, str )
                     
                     try:
                         

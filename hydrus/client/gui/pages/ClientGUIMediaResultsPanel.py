@@ -26,6 +26,7 @@ from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -2795,23 +2796,30 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         def paintEvent( self, event ):
             
-            painter = QG.QPainter( self )
-            
-            bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-            
-            painter.setBackground( QG.QBrush( bg_colour ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
-            
-            if background_pixmap is not None:
+            try:
                 
-                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
+                painter = QG.QPainter( self )
                 
-                pixmap_size = background_pixmap.size()
+                bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
                 
-                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
+                painter.setBackground( QG.QBrush( bg_colour ) )
+                
+                painter.eraseRect( painter.viewport() )
+                
+                background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+                
+                if background_pixmap is not None:
+                    
+                    my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
+                    
+                    pixmap_size = background_pixmap.size()
+                    
+                    painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
+                    
+                
+            except Exception as e:
+                
+                ClientGUIExceptionHandling.HandlePaintEventException( self, e )
                 
             
         

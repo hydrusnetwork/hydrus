@@ -1829,6 +1829,17 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
             ( 'system:has tag in "my tags", ignoring siblings/parents: "skirt"', 'system:has tag in "my tags", ignoring siblings/parents, status current, pending: "skirt"' ),
             ( 'system:has tag in "all known tags", with status deleted: "filename:blarg"', 'system:has tag "all known tags", status deleted: "filename:blarg"' ),
             ( 'system:has tag in "all known tags", with status in current, pending, deleted, petitioned: "filename:blarg"', 'system:has tag "all known tags", deleted, current, pending, petitioned: "filename:blarg"' ),
+            ( 'system:all ratings rated', 'system:all ratings rated' ),
+            ( 'system:all ratings not rated', 'system:all ratings not rated' ),
+            ( 'system:any ratings rated', 'system:any ratings rated' ),
+            ( 'system:any ratings not rated', 'system:any ratings not rated' ),
+            ( 'system:all inc/dec ratings rated', 'system:all inc/dec ratings rated' ),
+            ( 'system:all inc/dec ratings not rated', 'system:all inc/dec ratings not rated' ),
+            ( 'system:only inc/dec ratings rated', 'system:only inc/dec ratings rated' ),
+            ( 'system:only inc/dec ratings not rated', 'system:only inc/dec ratings not rated' ),
+            ( 'system:only inc/dec ratings (amongst inc/dec ratings, numerical ratings) not rated', 'system:only inc/dec ratings (amongst inc/dec ratings, numerical ratings) not rated' ),
+            ( 'system:only 2 services rated', 'system:only example local rating numerical service, example local rating like service rated' ),
+            ( 'system:only example local rating numerical service (amongst inc/dec ratings, numerical ratings) rated', 'system:only example local rating numerical service (amongst inc/dec ratings, numerical ratings) rated' ),
         ]:
             
             ( sys_pred, ) = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( ( sys_pred_text, ) )

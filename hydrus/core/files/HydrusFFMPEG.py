@@ -106,7 +106,7 @@ def GetFFMPEGVersion():
     return 'unknown'
     
 
-def HandleFFMPEGFileNotFound( e, path ):
+def HandleFFMPEGFileNotFoundAndGenerateException( e, path ):
     
     global FFMPEG_MISSING_ERROR_PUBBED
     
@@ -132,10 +132,10 @@ def HandleFFMPEGFileNotFound( e, path ):
         FFMPEG_MISSING_ERROR_PUBBED = True
         
     
-    raise FileNotFoundError( 'Cannot interact with media because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
+    return FileNotFoundError( 'Cannot interact with media because FFMPEG not found--are you sure it is installed? Full error: ' + str( e ) )
     
 
-def HandleFFMPEGNoContent( path, stdout, stderr ):
+def HandleFFMPEGNoContentAndGenerateException( path, stdout, stderr ):
     
     global FFMPEG_NO_CONTENT_ERROR_PUBBED
     
@@ -157,7 +157,7 @@ def HandleFFMPEGNoContent( path, stdout, stderr ):
         FFMPEG_NO_CONTENT_ERROR_PUBBED = True
         
     
-    raise HydrusExceptions.DataMissing( 'Cannot interact with media because FFMPEG did not return any content.' )
+    return HydrusExceptions.DataMissing( 'Cannot interact with media because FFMPEG did not return any content.' )
     
 
 def RenderImageToImagePath( path, temp_image_path ):
@@ -186,7 +186,7 @@ def RenderImageToImagePath( path, temp_image_path ):
         
     except FileNotFoundError as e:
         
-        HandleFFMPEGFileNotFound( e, path )
+        raise HandleFFMPEGFileNotFoundAndGenerateException( e, path )
         
     
 
@@ -208,7 +208,7 @@ def RenderImageToRawRGBABytes( path ):
         
     except FileNotFoundError as e:
         
-        HandleFFMPEGFileNotFound( e, path )
+        raise HandleFFMPEGFileNotFoundAndGenerateException( e, path )
         
     
     return stdout
@@ -230,7 +230,7 @@ def RenderImageToPNGBytes( path ):
         
     except FileNotFoundError as e:
         
-        HandleFFMPEGFileNotFound( e, path )
+        raise HandleFFMPEGFileNotFoundAndGenerateException( e, path )
         
     
     return stdout

@@ -1,7 +1,6 @@
 import os
 import queue
 import subprocess
-import sys
 import threading
 
 from hydrus.core import HydrusBoot
@@ -145,21 +144,9 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False ):
     
     if text:
         
-        # probably need to override the stdXXX pipes with i/o encoding wrappers in the case of 3.5 here
-        
-        if sys.version_info.minor >= 6:
-            
-            sbp_kwargs[ 'encoding' ] = 'utf-8'
-            
-        
-        if sys.version_info.minor >= 7:
-            
-            sbp_kwargs[ 'text' ] = True
-            
-        else:
-            
-            sbp_kwargs[ 'universal_newlines' ] = True
-            
+        sbp_kwargs[ 'text' ] = True
+        sbp_kwargs[ 'encoding' ] = 'utf-8'
+        sbp_kwargs[ 'errors' ] = 'replace' # handling mp4s with invalid utf-8 metadata hooray
         
     
     if hide_terminal:

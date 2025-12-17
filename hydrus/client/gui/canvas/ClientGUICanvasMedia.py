@@ -31,6 +31,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
 from hydrus.client import ClientUgoiraHandling
+from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
@@ -706,25 +707,32 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def paintEvent( self, event ):
         
-        if self.devicePixelRatio() != self._last_device_pixel_ratio:
+        try:
             
-            self._ReinitForResizeOrDPRChange()
+            if self.devicePixelRatio() != self._last_device_pixel_ratio:
+                
+                self._ReinitForResizeOrDPRChange()
+                
             
-        
-        if not self._current_frame_drawn:
+            if not self._current_frame_drawn:
+                
+                self._TryToDrawCanvasBitmap()
+                
             
-            self._TryToDrawCanvasBitmap()
+            painter = QG.QPainter( self )
             
-        
-        painter = QG.QPainter( self )
-        
-        if self._canvas_qt_pixmap is None:
+            if self._canvas_qt_pixmap is None:
+                
+                self._DrawABlankFrame( painter )
+                
+            else:
+                
+                painter.drawPixmap( self.rect(), self._canvas_qt_pixmap )
+                
             
-            self._DrawABlankFrame( painter )
+        except Exception as e:
             
-        else:
-            
-            painter.drawPixmap( self.rect(), self._canvas_qt_pixmap )
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
             
         
     
@@ -1317,20 +1325,27 @@ class AnimationBar( QW.QWidget ):
     
     def paintEvent( self, event ):
         
-        painter = QG.QPainter( self )
-        
-        if self._CurrentMediaWindowIsBad() or self._next_draw_info is None:
+        try:
             
-            self._DrawBlank( painter )
+            painter = QG.QPainter( self )
             
-            self._next_draw_info = None
+            if self._CurrentMediaWindowIsBad() or self._next_draw_info is None:
+                
+                self._DrawBlank( painter )
+                
+                self._next_draw_info = None
+                
+            else:
+                
+                self._Redraw( painter )
+                
             
-        else:
+            self._last_drawn_info = self._next_draw_info
             
-            self._Redraw( painter )
+        except Exception as e:
             
-        
-        self._last_drawn_info = self._next_draw_info
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
+            
         
     
     def setGubbinsVisible( self, show: bool ):
@@ -3143,9 +3158,16 @@ class EmbedButton( QW.QWidget ):
     
     def paintEvent( self, event ):
         
-        painter = QG.QPainter( self )
-        
-        self._Redraw( painter )
+        try:
+            
+            painter = QG.QPainter( self )
+            
+            self._Redraw( painter )
+            
+        except Exception as e:
+            
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
+            
         
     
     def SetBackgroundColourGenerator( self, background_colour_generator ):
@@ -3909,21 +3931,21 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def paintEvent( self, event ):
         
-        if self.devicePixelRatio() != self._last_device_pixel_ratio:
-            
-            self._ClearCanvasTileCache()
-            
-        
-        painter = QG.QPainter( self )
-        
-        if self._image_renderer is None or not self._image_renderer.IsReady():
-            
-            self._DrawBackground( painter )
-            
-            return
-            
-        
         try:
+            
+            if self.devicePixelRatio() != self._last_device_pixel_ratio:
+                
+                self._ClearCanvasTileCache()
+                
+            
+            painter = QG.QPainter( self )
+            
+            if self._image_renderer is None or not self._image_renderer.IsReady():
+                
+                self._DrawBackground( painter )
+                
+                return
+                
             
             dirty_tile_coordinates = self._GetTileCoordinatesInView( event.rect() )
             
@@ -4004,9 +4026,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         except Exception as e:
             
-            HydrusData.PrintException( e, do_wait = False )
-            
-            return
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
             
         
     

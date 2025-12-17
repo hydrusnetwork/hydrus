@@ -22,6 +22,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtInit
 
@@ -1580,83 +1581,90 @@ class EllipsizedLabel( QW.QLabel ):
     
     def paintEvent( self, event ):
         
-        if not self._ellipsize_end:
+        try:
             
-            QW.QLabel.paintEvent( self, event )
-            
-            return
-            
-        
-        painter = QG.QPainter( self )
-
-        fontMetrics = painter.fontMetrics()
-
-        text_lines = self.text().splitlines()
-        
-        line_spacing = fontMetrics.lineSpacing()
-        
-        current_y = 0
-        
-        done = False
-        
-        my_width = self.width()
-        
-        for text_line in text_lines:
-            
-            elided_line = fontMetrics.elidedText( text_line, QC.Qt.TextElideMode.ElideRight, my_width )
-            
-            x = 0
-            width = my_width
-            height = line_spacing
-            flags = self.alignment()
-            
-            painter.drawText( x, current_y, width, height, flags, elided_line )
-            
-            # old hacky line that doesn't support alignment flags
-            #painter.drawText( QC.QPoint( 0, current_y + fontMetrics.ascent() ), elided_line )
-            
-            current_y += line_spacing
-            
-            # old code that did multiline wrap width stuff
-            '''
-            text_layout = QG.QTextLayout( text_line, painter.font() )
-            
-            text_layout.beginLayout()
-            
-            while True:
-            
-                line = text_layout.createLine()
+            if not self._ellipsize_end:
                 
-                if not line.isValid(): break
+                QW.QLabel.paintEvent( self, event )
                 
-                line.setLineWidth( self.width() )
+                return
                 
-                next_line_y = y + line_spacing
             
-                if self.height() >= next_line_y + line_spacing:
+            painter = QG.QPainter( self )
             
-                    line.draw( painter, QC.QPoint( 0, y ) )
+            fontMetrics = painter.fontMetrics()
+            
+            text_lines = self.text().splitlines()
+            
+            line_spacing = fontMetrics.lineSpacing()
+            
+            current_y = 0
+            
+            done = False
+            
+            my_width = self.width()
+            
+            for text_line in text_lines:
                 
-                    y = next_line_y
+                elided_line = fontMetrics.elidedText( text_line, QC.Qt.TextElideMode.ElideRight, my_width )
+                
+                x = 0
+                width = my_width
+                height = line_spacing
+                flags = self.alignment()
+                
+                painter.drawText( x, current_y, width, height, flags, elided_line )
+                
+                # old hacky line that doesn't support alignment flags
+                #painter.drawText( QC.QPoint( 0, current_y + fontMetrics.ascent() ), elided_line )
+                
+                current_y += line_spacing
+                
+                # old code that did multiline wrap width stuff
+                '''
+                text_layout = QG.QTextLayout( text_line, painter.font() )
+                
+                text_layout.beginLayout()
+                
+                while True:
                     
-                else:
-
-                    last_line = text_line[ line.textStart(): ]
-                
-                    elided_last_line = fontMetrics.elidedText( last_line, QC.Qt.TextElideMode.ElideRight, self.width() )
-                
-                    painter.drawText( QC.QPoint( 0, y + fontMetrics.ascent() ), elided_last_line )
+                    line = text_layout.createLine()
                     
-                    done = True
+                    if not line.isValid(): break
                     
-                    break
+                    line.setLineWidth( self.width() )
+                    
+                    next_line_y = y + line_spacing
+                    
+                    if self.height() >= next_line_y + line_spacing:
+                        
+                        line.draw( painter, QC.QPoint( 0, y ) )
+                        
+                        y = next_line_y
+                        
+                    else:
+                        
+                        last_line = text_line[ line.textStart(): ]
+                        
+                        elided_last_line = fontMetrics.elidedText( last_line, QC.Qt.TextElideMode.ElideRight, self.width() )
+                        
+                        painter.drawText( QC.QPoint( 0, y + fontMetrics.ascent() ), elided_last_line )
+                        
+                        done = True
+                        
+                        break
+                        
                     
                 
-
-            text_layout.endLayout()
+                text_layout.endLayout()
+                
+                if done: break
+                '''
+                
             
-            if done: break
-            '''
+        except Exception as e:
+            
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
             
         
     
