@@ -1352,6 +1352,77 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
         return predicates
         
     
+
+class PanelPredicateSystemNoteContent( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        super().__init__( parent )
+        
+        self._operator = ClientGUICommon.BetterChoice( self )
+        
+        self._operator.addItem( 'has note that contains', (0, True) )
+        self._operator.addItem( 'does not have note that contains', (0, False) )
+        self._operator.addItem( 'has note that contains the words', (1, True) )
+        self._operator.addItem( 'does not have note that contains the words', (1, False) )
+        self._operator.addItem( 'has note that matches', (2, True) )
+        self._operator.addItem( 'does not have note that matches', (2, False) )
+        
+        self._name = QW.QLineEdit( self )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( operator, name ) = predicate.GetValue()
+        
+        self._operator.SetValue( operator )
+        self._name.setText( name )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:note content'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._name, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 0 )
+        
+        self.setLayout( hbox )
+        
+        self.setFocusProxy( self._operator )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        operator = True
+        name = ''
+        
+        return ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT, ( operator, name ) )
+        
+        
+    def GetPredicates( self ):
+        
+        name = self._name.text()
+        
+        if name == '':
+            
+            name = 'notes'
+            
+        index, operator = self._operator.GetValue()
+        
+        types = [
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS,
+            ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT
+        ]
+        
+        predicates = ( ClientSearchPredicate.Predicate( types[index], ( operator, name ) ), )
+        
+        return predicates
+        
+    
 class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
