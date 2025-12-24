@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientGlobals as CG
@@ -233,7 +231,7 @@ def GetNumericalStateFromMedia( media, service_key ):
 
 class StarType( object ):
     
-    def __init__( self, shape: typing.Optional[ int ], rating_svg: typing.Optional[ str ] ):
+    def __init__( self, shape: int | None, rating_svg: str | None ):
         
         if shape is None and rating_svg is None:
             

@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
@@ -111,7 +110,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Location Search Context'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, current_service_keys: typing.Optional[ collections.abc.Collection[ bytes ] ] = None, deleted_service_keys: typing.Optional[ collections.abc.Collection[ bytes ] ] = None ):
+    def __init__( self, current_service_keys: collections.abc.Collection[ bytes ] | None = None, deleted_service_keys: collections.abc.Collection[ bytes ] | None = None ):
         
         # note this is pretty much a read-only class
         # sometimes we'll run FixMissingServices, but usually only on load and who cares if that fix is propagated around
@@ -260,7 +259,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return self.IsOneDomain() and CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self.current_service_keys
         
     
-    def IsAllMediaFiles( self ):
+    def IsCombinedLocalFileDomains( self ):
         
         return self.IsOneDomain() and CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in self.current_service_keys
         

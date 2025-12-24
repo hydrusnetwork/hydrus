@@ -321,7 +321,7 @@ class MediaCollectControl( QW.QWidget ):
     
     collectChanged = QC.Signal( ClientMedia.MediaCollect )
     
-    def __init__( self, parent, media_collect: typing.Optional[ ClientMedia.MediaCollect ] = None ):
+    def __init__( self, parent, media_collect: ClientMedia.MediaCollect | None = None ):
         
         super().__init__( parent )
         

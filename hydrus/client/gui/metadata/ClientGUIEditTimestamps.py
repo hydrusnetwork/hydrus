@@ -1,6 +1,5 @@
 import collections.abc
 import json
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -929,7 +928,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._file_modified_time_warning_st.setVisible( False )
         
     
-    def GetFileModifiedUpdateData( self ) -> typing.Optional[ tuple[ collections.abc.Collection[ bytes ], int, int ] ]:
+    def GetFileModifiedUpdateData( self ) -> tuple[ collections.abc.Collection[ bytes ], int, int ] | None:
         
         for ( hashes, timestamp_data, step_ms ) in self._GetValidTimestampDatas( only_changes = True ):
             

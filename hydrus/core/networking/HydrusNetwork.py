@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -148,7 +147,7 @@ def GetPossiblePermissions( service_type ):
     
 class Account( object ):
     
-    def __init__( self, account_key: bytes, account_type: "AccountType", created: int, expires: typing.Optional[ int ] ):
+    def __init__( self, account_key: bytes, account_type: "AccountType", created: int, expires: int | None ):
         
         super().__init__()
         
@@ -581,7 +580,7 @@ class Account( object ):
             
         
     
-    def SetExpires( self, expires: typing.Optional[ int ] ):
+    def SetExpires( self, expires: int | None ):
         
         with self._lock:
             

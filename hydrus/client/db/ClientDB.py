@@ -84,6 +84,7 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworkingBandwidth
+from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
@@ -1750,9 +1751,9 @@ class DB( HydrusDB.HydrusDB ):
     def _GetBonedStatsFromTable(
         self,
         current_files_table_name: str,
-        current_timestamps_ms_table_name: typing.Optional[ str ],
-        deleted_files_table_name: typing.Optional[ str ],
-        deleted_timestamps_ms_table_name: typing.Optional[ str ],
+        current_timestamps_ms_table_name: str | None,
+        deleted_files_table_name: str | None,
+        deleted_timestamps_ms_table_name: str | None,
         job_status = None
     ):
         
@@ -4896,7 +4897,7 @@ class DB( HydrusDB.HydrusDB ):
         self.modules_similar_files.ResetSearch( hash_ids )
         
     
-    def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance: int, work_period: typing.Optional[ float ] = None ):
+    def _PerceptualHashesSearchForPotentialDuplicates( self, search_distance: int, work_period: float | None = None ):
         
         time_started_float = HydrusTime.GetNowFloat()
         
@@ -6252,7 +6253,7 @@ class DB( HydrusDB.HydrusDB ):
         self._controller.frame_splash_status.SetText( '' )
         
     
-    def _RepairInvalidTags( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def _RepairInvalidTags( self, job_status: ClientThreading.JobStatus | None = None ):
         
         invalid_tag_ids_and_tags = set()
         
@@ -8731,6 +8732,48 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 652:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
+                
+                global_headers = network_contexts_to_custom_header_dicts.get( ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT, {} )
+                
+                if 'Accept' not in global_headers:
+                    
+                    global_headers[ 'Accept' ] = ( 'image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8', ClientNetworkingDomain.VALID_APPROVED, 'Prefers jpeg/png over webp, but provides graceful fallback.' )
+                    
+                
+                if 'Cache-Control' not in global_headers:
+                    
+                    global_headers[ 'Cache-Control' ] = ( 'no-transform', ClientNetworkingDomain.VALID_APPROVED, 'Tells CDNs not to deliver "optimised" versions of files. May not be honoured.' )
+                    
+                
+                network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = global_headers
+                
+                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some http headers failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8820,7 +8863,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                self.modules_services.GetServiceId( service_key )
+                service_id = self.modules_services.GetServiceId( service_key )
                 
             except HydrusExceptions.DataMissing:
                 

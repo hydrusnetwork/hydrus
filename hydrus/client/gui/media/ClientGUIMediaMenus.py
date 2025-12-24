@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import random
-import typing
 
 from qtpy import QtWidgets as QW
 
@@ -773,7 +772,7 @@ def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias:
     ClientGUIMenus.AppendMenu( menu, submenu, 'viewing stats' )
     
 
-def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
+def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: ClientMedia.Media | None, selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
     
     if len( selected_media ) == 0:
         
@@ -962,7 +961,7 @@ def StartOtherHashMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton,
     job.start()
     
 
-def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
+def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: ClientMedia.Media | None, selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
     
     if focused_media is not None:
         

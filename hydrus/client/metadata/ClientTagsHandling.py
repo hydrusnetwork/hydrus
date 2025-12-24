@@ -3,7 +3,6 @@ import collections.abc
 import random
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -23,7 +22,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Tag Autocomplete Options'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, service_key: typing.Optional[ bytes ] = None ):
+    def __init__( self, service_key: bytes | None = None ):
         
         if service_key is None:
             
@@ -314,7 +313,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return self._unnamespaced_search_gives_any_namespace_wildcards
         
     
-    def SetExactMatchCharacterThreshold( self, exact_match_character_threshold: typing.Optional[ int ] ):
+    def SetExactMatchCharacterThreshold( self, exact_match_character_threshold: int | None ):
         
         self._exact_match_character_threshold = exact_match_character_threshold
         

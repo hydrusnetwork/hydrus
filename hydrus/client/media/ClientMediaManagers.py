@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import itertools
 import threading
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -53,14 +52,14 @@ class FileInfoManager( object ):
         self,
         hash_id: int,
         hash: bytes,
-        size: typing.Optional[ int ] = None,
-        mime: typing.Optional[ int ] = None,
-        width: typing.Optional[ int ] = None,
-        height: typing.Optional[ int ] = None,
-        duration_ms: typing.Optional[ int ] = None,
-        num_frames: typing.Optional[ int ] = None,
-        has_audio: typing.Optional[ bool ] = None,
-        num_words: typing.Optional[ int ] = None
+        size: int | None = None,
+        mime: int | None = None,
+        width: int | None = None,
+        height: int | None = None,
+        duration_ms: int | None = None,
+        num_frames: int | None = None,
+        has_audio: bool | None = None,
+        num_words: int | None = None
     ):
         
         if mime is None:
@@ -86,7 +85,7 @@ class FileInfoManager( object ):
         self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
         self.blurhash = None
-        self.pixel_hash: typing.Optional[ bytes ] = None
+        self.pixel_hash: bytes | None = None
         
     
     def Duplicate( self ):
@@ -218,17 +217,17 @@ class TimesManager( object ):
         self._aggregate_modified_is_generated = True
         
     
-    def _GetFileServiceTimestampMS( self, timestamp_type: int, service_key: bytes ) -> typing.Optional[ int ]:
+    def _GetFileServiceTimestampMS( self, timestamp_type: int, service_key: bytes ) -> int | None:
         
         return self._timestamp_types_to_service_keys_to_timestamps_ms[ timestamp_type ].get( service_key, None )
         
     
-    def _GetLastViewedTimestampMS( self, canvas_type: int ) -> typing.Optional[ int ]:
+    def _GetLastViewedTimestampMS( self, canvas_type: int ) -> int | None:
         
         return self._canvas_types_to_last_viewed_timestamps_ms.get( canvas_type, None )
         
     
-    def _GetSimpleTimestampMS( self, timestamp_type: int ) -> typing.Optional[ int ]:
+    def _GetSimpleTimestampMS( self, timestamp_type: int ) -> int | None:
         
         if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE and not self._aggregate_modified_is_generated:
             
@@ -238,7 +237,7 @@ class TimesManager( object ):
         return self._simple_timestamp_types_to_timestamps_ms.get( timestamp_type, None )
         
     
-    def _GetDomainModifiedTimestampMS( self, domain: str ) -> typing.Optional[ int ]:
+    def _GetDomainModifiedTimestampMS( self, domain: str ) -> int | None:
         
         return self._domains_to_modified_timestamps_ms.get( domain, None )
         
@@ -335,17 +334,17 @@ class TimesManager( object ):
         return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE )
         
     
-    def GetArchivedTimestampMS( self ) -> typing.Optional[ int ]:
+    def GetArchivedTimestampMS( self ) -> int | None:
         
         return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_ARCHIVED )
         
     
-    def GetDeletedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
+    def GetDeletedTimestampMS( self, service_key: bytes ) -> int | None:
         
         return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_DELETED, service_key )
         
     
-    def GetDomainModifiedTimestampMS( self, domain: str ) -> typing.Optional[ int ]:
+    def GetDomainModifiedTimestampMS( self, domain: str ) -> int | None:
         
         return self._GetDomainModifiedTimestampMS( domain )
         
@@ -360,7 +359,7 @@ class TimesManager( object ):
         return [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp_ms = timestamp_ms ) for ( domain, timestamp_ms ) in self._domains_to_modified_timestamps_ms.items() ]
         
     
-    def GetFileModifiedTimestampMS( self ) -> typing.Optional[ int ]:
+    def GetFileModifiedTimestampMS( self ) -> int | None:
         
         return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_FILE )
         
@@ -380,22 +379,22 @@ class TimesManager( object ):
         return result
         
     
-    def GetImportedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
+    def GetImportedTimestampMS( self, service_key: bytes ) -> int | None:
         
         return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_IMPORTED, service_key )
         
     
-    def GetLastViewedTimestampMS( self, canvas_type ) -> typing.Optional[ int ]:
+    def GetLastViewedTimestampMS( self, canvas_type ) -> int | None:
         
         return self._GetLastViewedTimestampMS( canvas_type )
         
     
-    def GetPreviouslyImportedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
+    def GetPreviouslyImportedTimestampMS( self, service_key: bytes ) -> int | None:
         
         return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
         
     
-    def GetTimestampMSFromStub( self, timestamp_data_stub: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetTimestampMSFromStub( self, timestamp_data_stub: ClientTime.TimestampData ) -> int | None:
         
         if timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -758,8 +757,8 @@ class LocationsManager( object ):
         petitioned: set[ bytes ],
         times_manager: TimesManager,
         inbox: bool = False,
-        urls: typing.Optional[ set[ str ] ] = None,
-        service_keys_to_filenames: typing.Optional[ dict[ bytes, str ] ] = None,
+        urls: set[ str ] | None = None,
+        service_keys_to_filenames: dict[ bytes, str ] | None = None,
         local_file_deletion_reason: str = None
     ):
         
@@ -869,7 +868,7 @@ class LocationsManager( object ):
             
         
     
-    def _DeleteFromService( self, service_key: bytes, reason: typing.Optional[ str ] ):
+    def _DeleteFromService( self, service_key: bytes, reason: str | None ):
         
         service_type = CG.client_controller.services_manager.GetServiceType( service_key )
         
@@ -1072,7 +1071,7 @@ class LocationsManager( object ):
         return service_location_strings
         
     
-    def GetServiceFilename( self, service_key ) -> typing.Optional[ str ]:
+    def GetServiceFilename( self, service_key ) -> str | None:
         
         if service_key in self._service_keys_to_filenames:
             
@@ -1429,7 +1428,7 @@ class NotesManager( object ):
     
 class RatingsManager( object ):
     
-    def __init__( self, service_keys_to_ratings: dict[ bytes, typing.Union[ None, float, int ] ] ):
+    def __init__( self, service_keys_to_ratings: dict[ bytes, int | float | None ] ):
         
         self._service_keys_to_ratings = service_keys_to_ratings
         
@@ -1467,7 +1466,7 @@ class RatingsManager( object ):
             
         
     
-    def GetRatingForAPI( self, service_key ) -> typing.Union[ int, bool, None ]:
+    def GetRatingForAPI( self, service_key ) -> int | bool | None:
         
         try:
             

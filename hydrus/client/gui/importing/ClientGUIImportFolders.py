@@ -1,6 +1,5 @@
 import collections.abc
 import os
-import typing
 
 from qtpy import QtWidgets as QW
 
@@ -142,7 +141,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        import_folder: typing.Optional[ ClientImportLocal.ImportFolder ] = self._import_folders.GetTopSelectedData()
+        import_folder: ClientImportLocal.ImportFolder | None = self._import_folders.GetTopSelectedData()
         
         if import_folder is None:
             

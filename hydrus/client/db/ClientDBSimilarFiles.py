@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import random
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -73,7 +72,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                         
                         message = 'Hey, while trying to import a file, hydrus discovered a hole in the similar files search tree. Please run _database->regenerate->similar files search tree_ when it is convenient!'
                         message += '\n' * 2
-                        message += 'You will not see this message again this boot.'
+                        message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                         
                         HydrusData.ShowText( message )
                         
@@ -357,7 +356,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return perceptual_hash_ids
         
     
-    def _GetPixelHashId( self, hash_id: int ) -> typing.Optional[ int ]:
+    def _GetPixelHashId( self, hash_id: int ) -> int | None:
         
         result = self._Execute( 'SELECT pixel_hash_id FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         

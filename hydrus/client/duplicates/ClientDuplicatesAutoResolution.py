@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -132,7 +131,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._delete_a = False
         self._delete_b = False
         
-        self._custom_duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] = None
+        self._custom_duplicate_content_merge_options: ClientDuplicates.DuplicateContentMergeOptions | None = None
         
         self._counts_lock = threading.Lock()
         self._counts_cache = collections.Counter()
@@ -387,7 +386,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return ( action, hash_a, hash_b, content_update_packages )
         
     
-    def GetDuplicateContentMergeOptions( self ) -> typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ]:
+    def GetDuplicateContentMergeOptions( self ) -> ClientDuplicates.DuplicateContentMergeOptions | None:
         
         return self._custom_duplicate_content_merge_options
         
@@ -402,7 +401,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         return self._potential_duplicates_search_context.GetLocationContext()
         
     
-    def GetMaxPendingPairs( self ) -> typing.Optional[ int ]:
+    def GetMaxPendingPairs( self ) -> int | None:
         
         return self._max_pending_pairs
         
@@ -556,7 +555,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._delete_b = delete_b
         
     
-    def SetDuplicateContentMergeOptions( self, duplicate_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
+    def SetDuplicateContentMergeOptions( self, duplicate_content_merge_options: ClientDuplicates.DuplicateContentMergeOptions | None ):
         
         self._custom_duplicate_content_merge_options = duplicate_content_merge_options
         
@@ -571,7 +570,7 @@ class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
         self._operation_mode = value
         
     
-    def SetMaxPendingPairs( self, value: typing.Optional[ int ] ):
+    def SetMaxPendingPairs( self, value: int | None ):
         
         self._max_pending_pairs = value
         
@@ -1415,7 +1414,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         HydrusData.PrintException( e )
                         
-                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will not run again this boot. A full traceback of this error should be written to the log.'
+                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will shut down and not start again until the program in restarted. A full traceback of this error should be written to the log.'
                         message += '\n' * 2
                         message += str( e )
                         

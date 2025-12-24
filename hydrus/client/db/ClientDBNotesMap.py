@@ -1,6 +1,5 @@
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -45,7 +44,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM file_notes WHERE hash_id = ? AND name_id = ?;', ( hash_id, name_id ) )
         
     
-    def GetHashIdsFromNoteName( self, name: str, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsFromNoteName( self, name: str, hash_ids_table_name: str, job_status: ClientThreading.JobStatus | None = None ):
         
         label_id = self.modules_texts.GetLabelId( name )
         
@@ -60,7 +59,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsFromNumNotes( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str, job_status: ClientThreading.JobStatus | None = None ):
         
         result_hash_ids = set( hash_ids )
         
@@ -116,7 +115,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
-    def GetHashIdsThatDoNotHaveNotes( self, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsThatDoNotHaveNotes( self, hash_ids_table_name: str, job_status: ClientThreading.JobStatus | None = None ):
         
         cancelled_hook = None
         
@@ -132,7 +131,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsThatHaveNotes( self, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsThatHaveNotes( self, hash_ids_table_name: str, job_status: ClientThreading.JobStatus | None = None ):
         
         cancelled_hook = None
         

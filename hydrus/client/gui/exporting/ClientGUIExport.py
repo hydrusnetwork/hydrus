@@ -1,6 +1,5 @@
 import os
 import time
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -183,7 +182,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        export_folder: typing.Optional[ ClientExportingFiles.ExportFolder ] = self._export_folders.GetTopSelectedData()
+        export_folder: ClientExportingFiles.ExportFolder | None = self._export_folders.GetTopSelectedData()
         
         if export_folder is None:
             

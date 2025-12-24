@@ -1,6 +1,5 @@
 import collections
 import collections.abc
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
@@ -580,7 +579,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'File Search Context'
     SERIALISABLE_VERSION = 5
     
-    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates: typing.Optional[ list[ ClientSearchPredicate.Predicate ] ] = None ):
+    def __init__( self, location_context = None, tag_context = None, search_type = SEARCH_TYPE_AND, predicates: list[ ClientSearchPredicate.Predicate ] | None = None ):
         
         if location_context is None:
             

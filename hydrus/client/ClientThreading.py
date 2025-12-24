@@ -1,6 +1,5 @@
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -231,7 +230,7 @@ class JobStatus( object ):
             
         
     
-    def GetGauge( self, level = 1 ) -> typing.Optional[ tuple[ typing.Optional[ int ], typing.Optional[ int ] ] ]:
+    def GetGauge( self, level = 1 ) -> tuple[ int | None, int | None ] | None:
         
         return self.GetIfHasVariable( f'popup_gauge_{level}' )
         
@@ -246,12 +245,12 @@ class JobStatus( object ):
         return self.GetIfHasVariable( 'network_job' )
         
     
-    def GetStatusText( self, level = 1 ) -> typing.Optional[ str ]:
+    def GetStatusText( self, level = 1 ) -> str | None:
         
         return self.GetIfHasVariable( 'status_text_{}'.format( level ) )
         
     
-    def GetStatusTitle( self ) -> typing.Optional[ str ]:
+    def GetStatusTitle( self ) -> str | None:
         
         return self.GetIfHasVariable( 'status_title' )
         
@@ -269,7 +268,7 @@ class JobStatus( object ):
             
         
     
-    def GetUserCallable( self ) -> typing.Optional[ HydrusData.Call ]:
+    def GetUserCallable( self ) -> HydrusData.Call | None:
         
         return self.GetIfHasVariable( 'user_callable' )
         
@@ -346,7 +345,7 @@ class JobStatus( object ):
             
         
     
-    def SetGauge( self, num_done: typing.Optional[ int ], num_to_do: typing.Optional[ int ], level = 1 ):
+    def SetGauge( self, num_done: int | None, num_to_do: int | None, level = 1 ):
         
         self.SetVariable( f'popup_gauge_{level}', ( num_done, num_to_do ) )
         

@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from qtpy import QtWidgets as QW
 
@@ -14,8 +13,8 @@ from hydrus.client.gui.metadata import ClientGUITagFilter
 def ManageServiceOptionsTagFilter(
     win: QW.QWidget,
     service_key: bytes,
-    new_tags_to_block: typing.Optional[ collections.abc.Collection[ str ] ] = None,
-    new_tags_to_allow: typing.Optional[ collections.abc.Collection[ str ] ] = None
+    new_tags_to_block: collections.abc.Collection[ str ] | None = None,
+    new_tags_to_allow: collections.abc.Collection[ str ] | None = None
 ):
     
     service: ClientServices.ServiceRepository = CG.client_controller.services_manager.GetService( service_key )

@@ -383,7 +383,7 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alp
     return numpy_image
     
 
-def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = True, human_file_description = None ) -> PILImage.Image:
+def GeneratePILImage( path: str | typing.BinaryIO, dequantize = True, human_file_description = None ) -> PILImage.Image:
     
     pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
     
@@ -455,7 +455,7 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.ndarray ) -> PILImage.Ima
     return pil_image
     
 
-def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: typing.Optional[ list[ int ] ] = None ) -> bytes:
+def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: list[ int ] | None = None ) -> bytes:
     
     if params is None:
         

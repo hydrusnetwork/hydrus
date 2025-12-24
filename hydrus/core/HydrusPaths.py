@@ -276,7 +276,7 @@ def DirectoryIsWriteable( path ):
     return True
     
 
-def ElideSubdirsSafely( destination_directory: str, subdirs_elidable: str, path_character_limit: typing.Optional[ int ], dirname_character_limit: typing.Optional[ int ], force_ntfs_rules: bool ):
+def ElideSubdirsSafely( destination_directory: str, subdirs_elidable: str, path_character_limit: int | None, dirname_character_limit: int | None, force_ntfs_rules: bool ):
     
     if subdirs_elidable == '':
         
@@ -430,7 +430,7 @@ def ElideSubdirsSafely( destination_directory: str, subdirs_elidable: str, path_
     return os.path.join( *dirnames_elided )
     
 
-def ElideFilenameSafely( destination_directory: str, subdirs_elidable: str, base_filename: str, ext_suffix: str, path_character_limit: typing.Optional[ int ], dirname_character_limit: typing.Optional[ int ], filename_character_limit: int, force_ntfs_rules: bool ):
+def ElideFilenameSafely( destination_directory: str, subdirs_elidable: str, base_filename: str, ext_suffix: str, path_character_limit: int | None, dirname_character_limit: int | None, filename_character_limit: int, force_ntfs_rules: bool ):
     
     # I could prefetch the GetFileSystemType of the dest directory here and test that precisely instead of PLATFORM...
     # but tbh that opens a Pandora's Box of 'NTFS mount on Linux', and sticking our finger in that sort of thing is Not A Good Idea. let the user handle that if and when it fails
@@ -699,8 +699,18 @@ def GetDefaultLaunchPath():
         
     
 
+# in truth this is 'sdiskpart', a namedtuple dynamic object def tucked inside psutil let's go
+# this just teaches the linter what we are basically doing here
+class FakeDiskPart( typing.Protocol ):
+    
+    device: str
+    mountpoint: str
+    fstype: str
+    opts: str
+    
+
 @functools.lru_cache( maxsize = 128 )
-def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
+def GetPartitionInfo( path ) -> FakeDiskPart | None:
     
     if not HydrusPSUtil.PSUTIL_OK:
         
@@ -739,7 +749,7 @@ def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
     return None
     
 
-def GetDevice( path ) -> typing.Optional[ str ]:
+def GetDevice( path ) -> str | None:
     
     partition_info = GetPartitionInfo( path )
     
@@ -754,7 +764,7 @@ def GetDevice( path ) -> typing.Optional[ str ]:
         
     
 
-def GetFileSystemType( path: str ) -> typing.Optional[ str ]:
+def GetFileSystemType( path: str ) -> str | None:
     
     partition_info = GetPartitionInfo( path )
     
@@ -769,7 +779,7 @@ def GetFileSystemType( path: str ) -> typing.Optional[ str ]:
         
     
 
-def GetFreeSpace( path ) -> typing.Optional[ int ]:
+def GetFreeSpace( path ) -> int | None:
     
     if not HydrusPSUtil.PSUTIL_OK:
         
@@ -788,7 +798,7 @@ def GetFreeSpace( path ) -> typing.Optional[ int ]:
         
     
 
-def GetTotalSpace( path ) -> typing.Optional[ int ]:
+def GetTotalSpace( path ) -> int | None:
     
     if not HydrusPSUtil.PSUTIL_OK:
         
@@ -921,7 +931,7 @@ def MakeSureDirectoryExists( path ):
         
     
 
-def FileModifiedTimeIsOk( mtime: typing.Union[ int, float ] ):
+def FileModifiedTimeIsOk( mtime: int | float ):
     
     if HC.PLATFORM_WINDOWS:
         

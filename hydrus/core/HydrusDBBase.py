@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import threading
 import time
-import typing
 
 import sqlite3
 
@@ -517,7 +516,7 @@ class DBBase( object ):
             
         
     
-    def _GetSumResult( self, result: typing.Optional[ tuple[ typing.Optional[ int ] ] ] ) -> int:
+    def _GetSumResult( self, result: tuple[ int | None ] | None ) -> int:
         
         if result is None or result[0] is None:
             

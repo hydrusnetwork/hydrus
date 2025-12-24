@@ -1,5 +1,3 @@
-import typing
-
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
@@ -51,7 +49,7 @@ def CheckImporterCanDoFileWorkBecausePausifyingProblem( file_import_options: Fil
         
     
 
-def CheckImporterCanDoGalleryWorkBecausePaused( paused: bool, gallery_seed_log: typing.Optional[ ClientImportGallerySeeds.GallerySeedLog ] ):
+def CheckImporterCanDoGalleryWorkBecausePaused( paused: bool, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog | None ):
     
     if paused:
         

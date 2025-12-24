@@ -770,7 +770,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return self._comparators
         
     
-    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> typing.Optional[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
+    def GetMatchingAB( self, media_result_1: ClientMediaResult.MediaResult, media_result_2: ClientMediaResult.MediaResult, test_both_ways_around = True ) -> tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] | None:
         
         pair = [ media_result_1, media_result_2 ]
         

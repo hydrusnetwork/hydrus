@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -317,7 +316,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _GetTimestampMS( self, service_id: int, timestamp_type: int, hash_id: int ) -> typing.Optional[ int ]:
+    def _GetTimestampMS( self, service_id: int, timestamp_type: int, hash_id: int ) -> int | None:
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
         
@@ -1195,7 +1194,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> int | None:
         
         if timestamp_data.location is None:
             

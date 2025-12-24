@@ -1641,7 +1641,7 @@ class NoneableTextCtrl( QW.QWidget ):
 
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none', min_chars_width: typing.Optional[ int ] = None ):
+    def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none', min_chars_width: int | None = None ):
         
         super().__init__( parent )
         

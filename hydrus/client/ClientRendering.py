@@ -1,7 +1,6 @@
 import numpy
 import threading
 import time
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
@@ -385,7 +384,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
     
     def GetResolution( self ): return self._resolution
     
-    def GetQtImage( self, clip_rect: typing.Optional[ QC.QRect ] = None, target_resolution: typing.Optional[ QC.QSize ] = None ):
+    def GetQtImage( self, clip_rect: QC.QRect | None = None, target_resolution: QC.QSize | None = None ):
         
         if clip_rect is None:
             

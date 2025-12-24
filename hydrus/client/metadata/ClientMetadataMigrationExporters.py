@@ -1,7 +1,6 @@
 import collections.abc
 import json
 import os
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -143,12 +142,12 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         return examples
         
     
-    def GetForcedName( self ) -> typing.Optional[ str ]:
+    def GetForcedName( self ) -> str | None:
         
         return self._forced_name
         
     
-    def SetForcedName( self, forced_name: typing.Optional[ str ] ):
+    def SetForcedName( self, forced_name: str | None ):
         
         self._forced_name = forced_name
         
@@ -266,7 +265,7 @@ class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia
     SERIALISABLE_NAME = 'Metadata Single File Exporter Media Timestamps'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, timestamp_data_stub: typing.Optional[ ClientTime.TimestampData ] = None ):
+    def __init__( self, timestamp_data_stub: ClientTime.TimestampData | None = None ):
         
         super().__init__()
         

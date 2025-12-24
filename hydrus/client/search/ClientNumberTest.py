@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
@@ -375,7 +374,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return actually_zero or less_than_one or less_than_or_equal_to_zero
         
     
-    def ToString( self, absolute_number_renderer: typing.Optional[ collections.abc.Callable ] = None, replacement_value_string: typing.Optional[ str ] = None, use_time_operators = False ) -> str:
+    def ToString( self, absolute_number_renderer: collections.abc.Callable | None = None, replacement_value_string: str | None = None, use_time_operators = False ) -> str:
         
         if absolute_number_renderer is None:
             

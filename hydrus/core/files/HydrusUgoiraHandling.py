@@ -196,7 +196,7 @@ UgoiraFrame = typing.TypedDict('UgoiraFrame', {'file': str, 'delay': int})
 # this function is called multiple times for a single ugoira file 
 # and involves opening and parsing JSON so let's cache it
 @functools.lru_cache( maxsize = 8 )
-def GetUgoiraFrameDataJSON( path: str ) -> typing.Optional[list[UgoiraFrame]]:
+def GetUgoiraFrameDataJSON( path: str ) -> list[ UgoiraFrame ] | None:
     
     try:
         

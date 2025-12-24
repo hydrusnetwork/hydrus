@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -759,7 +757,7 @@ class RatingLike( QW.QWidget ):
         raise NotImplementedError()
         
     
-    def _SetRating( self, rating: typing.Optional[ float ] ):
+    def _SetRating( self, rating: float | None ):
         
         self._rating_state = rating
         
@@ -1331,7 +1329,7 @@ class RatingPreviewServiceWrapper:
         return self._service_key
         
     
-    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> typing.Union[ RatingIncDecExample, RatingLikeExample, RatingNumericalExample ]:
+    def GetWidget( self, canvas_type = CC.CANVAS_DIALOG, parent = None ) -> RatingIncDecExample | RatingLikeExample | RatingNumericalExample:
         
         if self._service_type == ClientGUICommon.HC.LOCAL_RATING_INCDEC:
             

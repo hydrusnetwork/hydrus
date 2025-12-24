@@ -84,6 +84,101 @@ try:
             self._show_archive = show_archive
             self._show_deleted = show_deleted
             
+            # takes ms since epoch
+            self._x_datetime_axis = QCh.QtCharts.QDateTimeAxis()
+            
+            self._x_datetime_axis.setTickCount( 25 )
+            self._x_datetime_axis.setLabelsAngle( 90 )
+            
+            self._x_datetime_axis.setFormat( 'yyyy-MM-dd' )
+            
+            self._y_value_axis = QCh.QtCharts.QValueAxis()
+            
+            self._y_value_axis.setLabelFormat( '%\'i' )
+            
+            self._chart = QCh.QtCharts.QChart()
+            
+            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignmentFlag.AlignBottom )
+            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
+            
+            self._current_files_series = None
+            self._deleted_files_series = None
+            self._inbox_files_series = None
+            self._archive_files_series = None
+            
+            self._max_num_files_current = 0
+            self._max_num_files_deleted = 0
+            self._max_num_files_inbox = 0
+            self._max_num_files_archive = 0
+            
+            self._InitialiseData()
+            
+            self.setChart( self._chart )
+            
+        
+        def _CalculateYRange( self ):
+            
+            max_num_files = 1
+            
+            if self._show_current:
+                
+                max_num_files = max( self._max_num_files_current, max_num_files )
+                
+            
+            if self._show_inbox:
+                
+                max_num_files = max( self._max_num_files_inbox, max_num_files )
+                
+            
+            if self._show_archive:
+                
+                max_num_files = max( self._max_num_files_archive, max_num_files )
+                
+            
+            if self._show_deleted:
+                
+                max_num_files = max( self._max_num_files_deleted, max_num_files )
+                
+            
+            self._y_value_axis.setRange( 0, max_num_files )
+            
+            self._y_value_axis.applyNiceNumbers()
+            
+        
+        def _InitialiseData( self ):
+            
+            if self._current_files_series is not None:
+                
+                self._current_files_series.detachAxis( self._x_datetime_axis )
+                self._current_files_series.detachAxis( self._y_value_axis )
+                
+                self._chart.removeSeries( self._current_files_series )
+                
+            
+            if self._deleted_files_series is not None:
+                
+                self._deleted_files_series.detachAxis( self._x_datetime_axis )
+                self._deleted_files_series.detachAxis( self._y_value_axis )
+                
+                self._chart.removeSeries( self._deleted_files_series )
+                
+            
+            if self._inbox_files_series is not None:
+                
+                self._inbox_files_series.detachAxis( self._x_datetime_axis )
+                self._inbox_files_series.detachAxis( self._y_value_axis )
+                
+                self._chart.removeSeries( self._inbox_files_series )
+                
+            
+            if self._archive_files_series is not None:
+                
+                self._archive_files_series.detachAxis( self._x_datetime_axis )
+                self._archive_files_series.detachAxis( self._y_value_axis )
+                
+                self._chart.removeSeries( self._archive_files_series )
+                
+            
             # this lad takes ms timestamp, not s, so * 1000
             # note you have to give this floats for the ms or it throws a type problem of big number to C long
             
@@ -145,23 +240,6 @@ try:
                 self._max_num_files_archive = max( self._max_num_files_archive, num_files )
                 
             
-            # takes ms since epoch
-            self._x_datetime_axis = QCh.QtCharts.QDateTimeAxis()
-            
-            self._x_datetime_axis.setTickCount( 25 )
-            self._x_datetime_axis.setLabelsAngle( 90 )
-            
-            self._x_datetime_axis.setFormat( 'yyyy-MM-dd' )
-            
-            self._y_value_axis = QCh.QtCharts.QValueAxis()
-            
-            self._y_value_axis.setLabelFormat( '%\'i' )
-            
-            self._chart = QCh.QtCharts.QChart()
-            
-            self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignmentFlag.AlignBottom )
-            self._chart.addAxis( self._y_value_axis, QC.Qt.AlignmentFlag.AlignLeft )
-            
             self._chart.addSeries( self._current_files_series )
             self._chart.addSeries( self._inbox_files_series )
             self._chart.addSeries( self._archive_files_series )
@@ -180,37 +258,6 @@ try:
             self._deleted_files_series.attachAxis( self._y_value_axis )
             
             self._RedrawLines()
-            
-            self.setChart( self._chart )
-            
-        
-        def _CalculateYRange( self ):
-            
-            max_num_files = 1
-            
-            if self._show_current:
-                
-                max_num_files = max( self._max_num_files_current, max_num_files )
-                
-            
-            if self._show_inbox:
-                
-                max_num_files = max( self._max_num_files_inbox, max_num_files )
-                
-            
-            if self._show_archive:
-                
-                max_num_files = max( self._max_num_files_archive, max_num_files )
-                
-            
-            if self._show_deleted:
-                
-                max_num_files = max( self._max_num_files_deleted, max_num_files )
-                
-            
-            self._y_value_axis.setRange( 0, max_num_files )
-            
-            self._y_value_axis.applyNiceNumbers()
             
         
         def _RedrawLines( self ):
@@ -249,6 +296,91 @@ try:
             self._show_inbox = not self._show_inbox
             
             self._RedrawLines()
+            
+        
+        def GetEndDate( self ) -> QC.QDate:
+            
+            return self._x_datetime_axis.max().date()
+            
+        
+        def GetStartDate( self ) -> QC.QDate:
+            
+            return self._x_datetime_axis.min().date()
+            
+        
+        def SetFileHistory( self, file_history ):
+            
+            self._file_history = file_history
+            
+            self._InitialiseData()
+            
+        
+        def AutoSetXRange( self ):
+            
+            # apparently you can go like self._current_files_series.boundingRect, but it isn't surfaced in qtpy and it is generally whack
+            # let's just do it manually
+            
+            smallest_value = None
+            largest_value = None
+            
+            lists = []
+            
+            if self._show_current:
+                
+                lists.append( self._file_history[ 'current' ] )
+                
+            
+            if self._show_deleted:
+                
+                lists.append( self._file_history[ 'deleted' ] )
+                
+            
+            if self._show_inbox:
+                
+                lists.append( self._file_history[ 'inbox' ] )
+                
+            
+            if self._show_archive:
+                
+                lists.append( self._file_history[ 'archive' ] )
+                
+            
+            for l in lists:
+                
+                if len( l ) > 0:
+                    
+                    if smallest_value is None:
+                        
+                        smallest_value = l[0][0]
+                        
+                    else:
+                        
+                        smallest_value = min( smallest_value, l[0][0] )
+                        
+                    
+                    if largest_value is None:
+                        
+                        largest_value = l[-1][0]
+                        
+                    else:
+                        
+                        largest_value = max( largest_value, l[-1][0] )
+                        
+                    
+                
+            
+            if smallest_value is not None and largest_value is not None:
+                
+                start_datetime = QC.QDateTime.fromSecsSinceEpoch( smallest_value )
+                end_datetime = QC.QDateTime.fromSecsSinceEpoch( largest_value )
+                
+                self.SetXRange( start_datetime, end_datetime )
+                
+            
+        
+        def SetXRange( self, start_datetime: QC.QDateTime, end_datetime: QC.QDateTime ):
+            
+            self._x_datetime_axis.setRange( start_datetime, end_datetime )
             
         
     

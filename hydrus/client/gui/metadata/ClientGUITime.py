@@ -1,5 +1,4 @@
 import json
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -26,7 +25,7 @@ from hydrus.client.search import ClientNumberTest
 
 # TODO: maybe break this into ClientGUITimeWidgets for gui.widgets and then shoot EditCheckerOptions off to something appropriate
 
-def QDateTimeToPrettyString( dt: typing.Optional[ QC.QDateTime ], include_milliseconds = False ):
+def QDateTimeToPrettyString( dt: QC.QDateTime | None, include_milliseconds = False ):
     
     if dt is None:
         
@@ -387,14 +386,14 @@ class DateTimeWidgetValueRange( object ):
         return ( min_value, max_value, self._set_count, self._null_count, self._step_ms )
         
     
-    def AddValueTimestampMS( self, timestamp_ms: typing.Optional[ int ], num_to_add = 1 ):
+    def AddValueTimestampMS( self, timestamp_ms: int | None, num_to_add = 1 ):
         
         qt_datetime = None if timestamp_ms is None else QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, QC.QTimeZone.systemTimeZone() )
         
         self.AddValueQtDateTime( qt_datetime, num_to_add = num_to_add )
         
     
-    def AddValueQtDateTime( self, qt_datetime: typing.Optional[ QC.QDateTime ], num_to_add = 1 ):
+    def AddValueQtDateTime( self, qt_datetime: QC.QDateTime | None, num_to_add = 1 ):
         
         if num_to_add == 0:
             
@@ -428,7 +427,7 @@ class DateTimeWidgetValueRange( object ):
             
         
     
-    def DuplicateWithNewQtDateTime( self, value: typing.Optional[ QC.QDateTime ], overwrite_nulls = False ) -> "DateTimeWidgetValueRange":
+    def DuplicateWithNewQtDateTime( self, value: QC.QDateTime | None, overwrite_nulls = False ) -> "DateTimeWidgetValueRange":
         
         datetime_value_range = DateTimeWidgetValueRange()
         
@@ -456,7 +455,7 @@ class DateTimeWidgetValueRange( object ):
         return datetime_value_range
         
     
-    def DuplicateWithNewTimestampMS( self, timestamp_ms: typing.Optional[ int ], overwrite_nulls = False ) -> "DateTimeWidgetValueRange":
+    def DuplicateWithNewTimestampMS( self, timestamp_ms: int | None, overwrite_nulls = False ) -> "DateTimeWidgetValueRange":
         
         qt_datetime = None if timestamp_ms is None else QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, QC.QTimeZone.systemTimeZone() )
         
@@ -468,7 +467,7 @@ class DateTimeWidgetValueRange( object ):
         return self.DuplicateWithNewQtDateTime( self.GetBestVisualValue(), overwrite_nulls = True )
         
     
-    def GetBestVisualValue( self ) -> typing.Optional[ QC.QDateTime ]:
+    def GetBestVisualValue( self ) -> QC.QDateTime | None:
         
         if self._set_count > 0:
             
@@ -1332,7 +1331,7 @@ class TimeDeltaWidget( QW.QWidget ):
         self.timeDeltaChanged.emit()
         
     
-    def GetValue( self ) -> typing.Optional[ float ]:
+    def GetValue( self ) -> float | None:
         
         if self._monthly_allowed and self._monthly.isChecked():
             
@@ -1484,7 +1483,7 @@ class NoneableTimeDeltaWidget( QW.QWidget ):
         self._time_delta_widget.setEnabled( controls_interactable )
         
     
-    def GetValue( self ) -> typing.Optional[ float ]:
+    def GetValue( self ) -> float | None:
         
         if self._checkbox.isChecked():
             

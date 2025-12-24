@@ -5,4 +5,4 @@ if typing.TYPE_CHECKING:
     from hydrus.server import ServerController
     
 
-server_controller: typing.Optional[ "ServerController.Controller" ] = None
+server_controller: "ServerController.Controller | None" = None

@@ -242,7 +242,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             return
             
         
-        current_page: typing.Optional[ ManageTagsPanel._Panel ] = self._tag_services.currentWidget()
+        current_page: ManageTagsPanel._Panel | None = self._tag_services.currentWidget()
         
         if current_page is not None:
             

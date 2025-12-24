@@ -4,13 +4,15 @@ title: Files
 
 # Getting started with files
 
-!!! warning
+!!! warning "Use your brain"
 
-	Hydrus can be powerful, and you control everything. By default, you are not connected to any servers and absolutely nothing is shared with other users--and you can't accidentally one-click your way to exposing your whole collection--but if you tag private files with real names and click to upload that data to a tag repository that other people have access to, the program won't try to stop you.
+	Hydrus can be powerful, and you control everything. By default, you are not connected to any servers and absolutely nothing is shared with other users. You cannot accidentally one-click your way to exposing your whole collection. However, if you tag private files with real names and click to upload that data to a tag repository that other people have access to, the program won't try to stop you.
     
     If you want to do private sexy slideshows of your shy wife, that's great, but if you have set up a repository or Client API connection to share content with friends, use your brain! It is **impossible** to contain leaks of private information.
+    
 
-	It is possible to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. Take things slow and figure out good processing workflows that work for your schedule before you start adding 500 subscriptions.
+!!! info "Do not rush"
+	It is easy to import millions of files. For many new users, their first mistake is downloading too much too fast in overexcitement and becoming overwhelmed. We are in this for the long haul, so take things slow and figure out good processing workflows that work for your schedule before you start adding 5,000 new subscriptions.
 
 ## The problem
 

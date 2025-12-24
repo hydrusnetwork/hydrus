@@ -549,7 +549,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     message = 'During file maintenance, a file was found to be invalid. It and any known URLs have been moved to "{}".'.format( error_dir )
                     message += '\n' * 2
-                    message += 'More files may be invalid, but this message will not appear again during this boot.'
+                    message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                     
                     HydrusData.ShowText( message )
                     
@@ -611,7 +611,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         message = 'During file maintenance, a file was found to be missing or invalid. Unfortunately, it appears to be archived and the archived file delete lock is on, so I cannot fully delete the file record. I have simply sent the file to the trash instead. You should search up recently trashed files and inbox & physically delete them yourself.'
                         message += '\n' * 2
-                        message += 'More files may be in this situation, but this message will not appear again during this boot.'
+                        message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                         
                         HydrusData.ShowText( message )
                         
@@ -654,7 +654,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         message = 'During file maintenance, a file was found to be missing or invalid. {} Its file hash and any known URLs have been written to "{}".'.format( m, error_dir )
                         message += '\n' * 2
-                        message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
+                        message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                         
                         HydrusData.ShowText( message )
                         
@@ -1255,7 +1255,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         job_status = ClientThreading.JobStatus()
                         
-                        message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into an I/O Error! This could be just some media library moaning about a weird (probably truncated) file, but it could also be a significant hard drive problem. Look at the error yourself. If it looks serious, you should shut the client down and check your hard drive health immediately. Just to be safe, no more file maintenance jobs will be run this boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
+                        message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into an I/O Error! This could be just some media library moaning about a weird (probably truncated) file, but it could also be a significant hard drive problem. Look at the error yourself. If it looks serious, you should shut the client down and check your hard drive health immediately. Just to be safe, no more file maintenance jobs will be run this program boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
                         message += '\n' * 2
                         message += str( e )
                         
@@ -1585,7 +1585,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         if self._serious_error_encountered and pub_job_status:
             
-            HydrusData.ShowText( 'Sorry, the file maintenance system has encountered a serious error and will perform no more jobs this boot. Please shut down and check your hard drive health immediately.' )
+            HydrusData.ShowText( 'Sorry, the file maintenance system has encountered a serious error and will perform no more jobs this program boot. Please shut the client down and check your hard drive health immediately.' )
             
             return
             

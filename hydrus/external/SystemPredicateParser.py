@@ -189,7 +189,7 @@ class Value( Enum ):
     # a datetime.datetime object. For the latter, only the YYYY-MM-DD format is accepted.
     # dateutils has a function to try to guess and parse arbitrary date formats but I didn't use it here since it would be an additional dependency.
     DATE_OR_TIME_INTERVAL = auto()
-    TIME_SEC_MSEC = auto()  # A tuple of two non-negative integers: (seconds, milliseconds) where the latter is <1000
+    TIME_TO_MSEC = auto()  # A hours, minutes, seconds, milliseconds that converts into ms integer
     ANY_STRING = auto()  # A string (accepts any string so can't use units after this since it consumes the entire remaining part of the input)
     TIME_INTERVAL = auto()  # A tuple of 4 non-negative integers: (days, hours, minutes, seconds) where hours < 24, minutes < 60, seconds < 60
     INTEGER = auto()  # An integer
@@ -287,7 +287,7 @@ SYSTEM_PREDICATES = {
     'modified (date|time)|(date|time) modified|modified': (Predicate.MOD_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'last view(ed)? (date|time)|(date|time) last viewed|last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'import(ed)? (date|time)|(date|time) imported|imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
-    'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
+    'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_TO_MSEC, None),
     'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL, Value.NATURAL, Units.FPS_OR_NONE),
     'num(ber)?( of)? frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
@@ -727,28 +727,45 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             raise ValueError( "Invalid value, expected a date or a time interval" )
             
         
-    elif spec == Value.TIME_SEC_MSEC:
+    elif spec == Value.TIME_TO_MSEC:
         
         # 'has duration'
         if string.startswith( 'has' ) or string.startswith( 'no' ):
             
             parse_result.text_remainder = ''
-            parse_result.value = ( 0, 0 )
+            parse_result.value = 0
             
             return
             
         
-        match = re.match( r'((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
+        pattern = r'((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|hr|h))?\s*'
+        pattern += r'((?P<min>0|([1-9][0-9]*))\s*(minutes|minute|mins|m$|m\s|m(?=\d)))?\s*'
+        pattern += r'((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*'
+        pattern += r'((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?'
         
-        if match and (match.group( 'sec' ) or match.group( 'msec' )):
+        match = re.match( pattern, string )
+        
+        if match and True in ( match.group( t_name ) is not None for t_name in ( 'hour', 'min', 'sec', 'msec' ) ):
             
-            seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
-            mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0
-            seconds += math.floor( mseconds / 1000 )
-            mseconds = mseconds % 1000
+            ms_delta = 0
+            
+            for ( t_name, ms_multiplier ) in [
+                ( 'hour', 3600 * 1000 ),
+                ( 'min', 60 * 1000 ),
+                ( 'sec', 1000 ),
+                ( 'msec', 1 )
+            ]:
+                
+                result = match.group( t_name )
+                
+                if result is not None:
+                    
+                    ms_delta += int( result ) * ms_multiplier
+                    
+                
             
             parse_result.text_remainder = string[ len( match[ 0 ] ): ]
-            parse_result.value = ( seconds, mseconds )
+            parse_result.value = ms_delta
             
             return
             

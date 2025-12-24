@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -22,7 +20,7 @@ from hydrus.client.search import ClientSearchTagContext
 
 class ListBoxTagsMediaSidebar( ClientGUIListBoxes.ListBoxTagsMedia ):
     
-    def __init__( self, parent: QW.QWidget, page_manager: ClientGUIPageManager.PageManager, page_key, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
+    def __init__( self, parent: QW.QWidget, page_manager: ClientGUIPageManager.PageManager, page_key, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST, tag_autocomplete: ClientGUIACDropdown.AutoCompleteDropdownTagsRead | None = None ):
         
         super().__init__( parent, tag_display_type, CC.TAG_PRESENTATION_SEARCH_PAGE, include_counts = True )
         

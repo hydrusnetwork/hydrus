@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import random
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -338,7 +337,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetDurationMS( self ) -> typing.Optional[ int ]:
+    def GetDurationMS( self ) -> int | None:
         
         raise NotImplementedError()
         
@@ -373,7 +372,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetNumFrames( self ) -> typing.Optional[ int ]:
+    def GetNumFrames( self ) -> int | None:
         
         raise NotImplementedError()
         
@@ -383,7 +382,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def GetNumWords( self ) -> typing.Optional[ int ]:
+    def GetNumWords( self ) -> int | None:
         
         raise NotImplementedError()
         
@@ -1429,7 +1428,7 @@ class MediaList( object ):
         self._tag_context = tag_context
         
     
-    def Sort( self, media_sort: typing.Optional[ "MediaSort" ] = None, secondary_sort: typing.Optional[ "MediaSort" ] = None ):
+    def Sort( self, media_sort: "MediaSort | None" = None, secondary_sort: "MediaSort | None" = None ):
         
         # TODO: TBH, I think I should stop caching the last sort and just take params every time. that's KISS
         
@@ -1759,7 +1758,7 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def GetDisplayMedia( self ) -> typing.Optional[ "MediaSingleton" ]:
+    def GetDisplayMedia( self ) -> "MediaSingleton | None":
         
         first = self._GetFirst()
         

@@ -4610,7 +4610,17 @@ class TestClientAPI( unittest.TestCase ):
                     'approved': 'approved',
                     'reason': 'This is the default User-Agent identifier for the client for all network connections.',
                     'value' : ClientDefaults.DEFAULT_USER_AGENT
-                }
+                },
+                'Cache-Control': {
+                    'approved': 'approved',
+                    'reason': 'Tells CDNs not to deliver "optimised" versions of files. May not be honoured.',
+                    'value': 'no-transform'
+                },
+                'Accept': {
+                    'approved': 'approved',
+                    'reason': 'Prefers jpeg/png over webp, but provides graceful fallback.',
+                    'value': 'image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8'
+                },
             }
         }
         
@@ -4663,11 +4673,21 @@ class TestClientAPI( unittest.TestCase ):
                     'reason': 'This is the default User-Agent identifier for the client for all network connections.',
                     'value' : ClientDefaults.DEFAULT_USER_AGENT
                 },
+                'Cache-Control': {
+                    'approved': 'approved',
+                    'reason': 'Tells CDNs not to deliver "optimised" versions of files. May not be honoured.',
+                    'value': 'no-transform'
+                },
+                'Accept': {
+                    'approved': 'approved',
+                    'reason': 'Prefers jpeg/png over webp, but provides graceful fallback.',
+                    'value': 'image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8'
+                },
                 'Test' : {
                     'approved': 'approved',
                     'reason': 'Set by Client API',
                     'value' : 'test_value'
-                }
+                },
             }
         }
         
@@ -4719,6 +4739,16 @@ class TestClientAPI( unittest.TestCase ):
                     'approved': 'approved',
                     'reason': 'This is the default User-Agent identifier for the client for all network connections.',
                     'value' : ClientDefaults.DEFAULT_USER_AGENT
+                },
+                'Cache-Control': {
+                    'approved': 'approved',
+                    'reason': 'Tells CDNs not to deliver "optimised" versions of files. May not be honoured.',
+                    'value': 'no-transform'
+                },
+                'Accept': {
+                    'approved': 'approved',
+                    'reason': 'Prefers jpeg/png over webp, but provides graceful fallback.',
+                    'value': 'image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8'
                 },
                 'Test' : {
                     'approved': 'approved',

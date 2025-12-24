@@ -3,7 +3,6 @@ import collections.abc
 import os
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -489,7 +488,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         search_subdirectories = True,
         file_import_options = None,
         tag_import_options = None,
-        metadata_routers: typing.Optional[ collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] ] = None,
+        metadata_routers: collections.abc.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ] = None,
         tag_service_keys_to_filename_tagging_options = None,
         actions = None,
         action_locations = None,
@@ -1511,7 +1510,7 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 HydrusData.PrintException( e )
                 
-                message = 'There was an unexpected problem during import folders work! They will not run again this boot. A full traceback of this error should be written to the log.'
+                message = 'There was an unexpected problem during import folders work! They will not run again this program boot. A full traceback of this error should be written to the log.'
                 message += '\n' * 2
                 message += str( e )
                 

@@ -203,8 +203,8 @@ class PredicateCount( object ):
         self,
         min_current_count: int,
         min_pending_count: int,
-        max_current_count: typing.Optional[ int ],
-        max_pending_count: typing.Optional[ int ]
+        max_current_count: int | None,
+        max_pending_count: int | None
         ):
         
         self.min_current_count = min_current_count
@@ -438,7 +438,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     def __init__(
         self,
-        predicate_type: typing.Optional[ int ] = None,
+        predicate_type: int | None = None,
         value: typing.Any = None,
         inclusive: bool = True,
         count = None
@@ -614,7 +614,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
                 
-                number_test_or_none = typing.cast( typing.Optional[ ClientNumberTest.NumberTest ], self._value )
+                number_test_or_none = typing.cast( ClientNumberTest.NumberTest | None, self._value )
                 
                 serialisable_value = HydrusSerialisable.GetNoneableSerialisableTuple( number_test_or_none )
                 
@@ -945,7 +945,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return self._predicate_type in PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS
         
     
-    def ExtractComparableValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> typing.Optional[ float ]:
+    def ExtractComparableValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> float | None:
         
         result = self.ExtractValueFromMediaResult( media_result )
         
@@ -957,7 +957,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return result
         
     
-    def ExtractValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> typing.Optional[ float ]:
+    def ExtractValueFromMediaResult( self, media_result: ClientMediaResult.MediaResult ) -> float | None:
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_SIZE:
             

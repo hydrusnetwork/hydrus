@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -92,7 +90,7 @@ class ListBook( QW.QWidget ):
         return self._page_list.count()
         
     
-    def currentWidget( self ) -> typing.Optional[ QW.QWidget ]:
+    def currentWidget( self ) -> QW.QWidget | None:
         
         if self._widget_stack.count() == 0:
             

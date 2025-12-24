@@ -1,5 +1,3 @@
-import typing
-
 import numpy
 
 import cv2
@@ -89,7 +87,7 @@ class LabHistograms( ClientCachesBase.CacheableObject ):
 
 class VisualData( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, resolution, lab_histograms: LabHistograms, alpha_hist: typing.Optional[ numpy.ndarray ] = None ):
+    def __init__( self, resolution, lab_histograms: LabHistograms, alpha_hist: numpy.ndarray | None = None ):
         
         self.resolution = resolution
         self.lab_histograms = lab_histograms

@@ -1,5 +1,4 @@
 import io
-import typing
 
 import struct
 
@@ -109,7 +108,7 @@ def GetAPNGChunks( file_header_bytes: bytes ) ->list:
     return chunks
     
 
-def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> typing.Optional[ bytes ]:
+def GetAPNGACTLChunkData( file_header_bytes: bytes ) -> bytes | None:
     
     # the acTL chunk can be in different places, but it has to be near the top
     # although it is almost always in fixed position (I think byte 29), we have seen both pHYs and sRGB chunks appear before it

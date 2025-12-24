@@ -1,7 +1,6 @@
 import collections.abc
 import os
 import re
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -833,7 +832,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         return statements
         
     
-    def GetTags( self, service_key: bytes, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: collections.abc.Collection[ str ], additional_tags: typing.Optional[ collections.abc.Collection[ str ] ] = None ):
+    def GetTags( self, service_key: bytes, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: collections.abc.Collection[ str ], additional_tags: collections.abc.Collection[ str ] | None = None ):
         
         if additional_tags is None:
             

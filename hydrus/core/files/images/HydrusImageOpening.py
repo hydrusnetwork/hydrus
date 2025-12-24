@@ -3,7 +3,7 @@ from PIL import Image as PILImage
 
 from hydrus.core import HydrusExceptions
 
-def RawOpenPILImage( path: typing.Union[ str, typing.BinaryIO ], human_file_description = None ) -> PILImage.Image:
+def RawOpenPILImage( path: str | typing.BinaryIO, human_file_description = None ) -> PILImage.Image:
     
     try:
         

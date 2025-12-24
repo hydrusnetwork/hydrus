@@ -4,6 +4,7 @@ import os
 import random
 import threading
 import time
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -652,7 +653,7 @@ class ClientFilesManager( object ):
                                 
                             
                         
-                        file_subfolder = file_subfolders[0]
+                        file_subfolder = typing.cast( ClientFilesPhysical.FilesStorageSubfolder, file_subfolders[0] )
                         
                         correct_base_location = file_subfolder.base_location
                         

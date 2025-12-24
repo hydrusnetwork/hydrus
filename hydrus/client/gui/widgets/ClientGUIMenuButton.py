@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -15,7 +14,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class MenuTemplateItem( object ):
     
-    def __init__( self, title: typing.Union[ str, collections.abc.Callable[ [], str ] ], description: typing.Union[ str, collections.abc.Callable[ [], str ] ] ):
+    def __init__( self, title: str | collections.abc.Callable[ [], str ], description: str | collections.abc.Callable[ [], str ] ):
         
         self.title = title
         self.description = description
@@ -74,7 +73,7 @@ class MenuTemplateItem( object ):
 
 class MenuTemplateItemCall( MenuTemplateItem ):
     
-    def __init__( self, title: typing.Union[ str, collections.abc.Callable[ [], str ] ], description: typing.Union[ str, collections.abc.Callable[ [], str ] ], call, *args, **kwargs ):
+    def __init__( self, title: str | collections.abc.Callable[ [], str ], description: str | collections.abc.Callable[ [], str ], call, *args, **kwargs ):
         
         super().__init__( title, description )
         
@@ -86,7 +85,7 @@ class MenuTemplateItemCall( MenuTemplateItem ):
 
 class MenuTemplateItemCheck( MenuTemplateItem ):
     
-    def __init__( self, title: typing.Union[ str, collections.abc.Callable[ [], str ] ], description: typing.Union[ str, collections.abc.Callable[ [], str ] ], check_manager: ClientGUICommon.CheckboxManager ):
+    def __init__( self, title: str | collections.abc.Callable[ [], str ], description: str | collections.abc.Callable[ [], str ], check_manager: ClientGUICommon.CheckboxManager ):
         
         super().__init__( title, description )
         
@@ -109,7 +108,7 @@ class MenuTemplateItemSeparator( MenuTemplateItem ):
 
 class MenuTemplateItemSubmenu( MenuTemplateItem ):
     
-    def __init__( self, title: typing.Union[ str, collections.abc.Callable[ [], str ] ], submenu_template_items: list[ MenuTemplateItem ] ):
+    def __init__( self, title: str | collections.abc.Callable[ [], str ], submenu_template_items: list[ MenuTemplateItem ] ):
         
         super().__init__( title, title )
         

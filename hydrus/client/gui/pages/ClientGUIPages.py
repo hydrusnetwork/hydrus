@@ -56,7 +56,7 @@ def ConvertNumSeedsToWeight( num_seeds: int ) -> int:
     return num_seeds * 20
     
 
-def GetParentNotebook( widget: QW.QWidget ):
+def GetParentNotebook( widget: QW.QWidget ) -> "PagesNotebook | None":
     
     parent = widget.parentWidget()
     
@@ -1191,7 +1191,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page = typing.cast( typing.Union[ Page, PagesNotebook ], self.widget( index ) )
+        page = typing.cast( Page | PagesNotebook, self.widget( index ) )
         
         if polite:
             
@@ -1340,7 +1340,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if 0 <= page_index <= self.count() - 1:
             
-            page = typing.cast( typing.Union[ Page, PagesNotebook ], self.widget( page_index ) )
+            page = typing.cast( Page | PagesNotebook, self.widget( page_index ) )
             
             hashes = page.GetHashes()
             
@@ -1371,7 +1371,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for index in closees:
             
-            page = typing.cast( typing.Union[ Page, PagesNotebook ], self.widget( index ) )
+            page = typing.cast( Page | PagesNotebook, self.widget( index ) )
             
             hashes.extend( page.GetHashes() )
             
@@ -1403,7 +1403,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return False
             
         
-        page = typing.cast(  typing.Union[ Page, PagesNotebook ], self.widget( index ) )
+        page = typing.cast(  Page | PagesNotebook, self.widget( index ) )
         
         only_changed_page_data = False
         about_to_save = False
@@ -1480,7 +1480,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for ( page, index ) in ( ( self.widget( index ), index ) for index in range( self.count() ) ):
             
-            page = typing.cast( typing.Union[ Page, PagesNotebook ], page )
+            page = typing.cast( Page | PagesNotebook, page )
             
             if page.GetPageKey() == page_key:
                 
@@ -1512,7 +1512,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self
         
     
-    def _GetPages( self ) -> list[ typing.Union[ Page, "PagesNotebook" ] ]:
+    def _GetPages( self ) -> "list[ Page | PagesNotebook ]":
         
         return [ self.widget( i ) for i in range( self.count() ) ]
         
@@ -1604,7 +1604,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         import_page_progress_display = new_options.GetBoolean( 'import_page_progress_display' )
         
-        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
+        page: Page | PagesNotebook = self.widget( index )
         
         if isinstance( page, Page ) and not page.IsInitialised():
             
@@ -1685,7 +1685,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        page: typing.Union[ Page, PagesNotebook ] = self.widget( index )
+        page: Page | PagesNotebook = self.widget( index )
         
         current_name = page.GetName()
         
@@ -1836,7 +1836,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if click_over_tab:
             
-            page: typing.Union[ Page, PagesNotebook ] = self.widget( tab_index )
+            page: Page | PagesNotebook = self.widget( tab_index )
             
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
@@ -2772,7 +2772,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def GetPageFromPageKey( self, page_key ) -> typing.Optional[ Page ]:
+    def GetPageFromPageKey( self, page_key ) -> "Page | PagesNotebook | None":
         
         if self._page_key == page_key:
             
@@ -3640,7 +3640,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def PageHidden( self ):
         
-        result: typing.Union[ Page, PagesNotebook ] = self.currentWidget()
+        result: Page | PagesNotebook = self.currentWidget()
         
         if result is not None:
             
@@ -3655,14 +3655,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if old_selection != -1 and old_selection < self.count():
             
-            old_page: typing.Union[ Page, PagesNotebook ] = self.widget( old_selection )
+            old_page: Page | PagesNotebook = self.widget( old_selection )
             
             old_page.PageHidden()
             
         
         if selection != -1:
             
-            new_page: typing.Union[ Page, PagesNotebook ] = self.widget( selection )
+            new_page: Page | PagesNotebook = self.widget( selection )
             
             new_page.PageShown()
             
@@ -3677,7 +3677,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def PageShown( self ):
         
-        result: typing.Union[ Page, PagesNotebook ] = self.currentWidget()
+        result: Page | PagesNotebook = self.currentWidget()
         
         if result is not None:
             

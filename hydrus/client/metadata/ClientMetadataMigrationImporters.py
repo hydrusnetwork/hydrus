@@ -1,6 +1,5 @@
 import collections.abc
 import os
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusLists
@@ -80,7 +79,7 @@ class SingleFileMetadataImporterMediaNotes( SingleFileMetadataImporterMedia, Hyd
     SERIALISABLE_NAME = 'Metadata Single File Importer Media Notes'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, string_processor: typing.Optional[ ClientStrings.StringProcessor ] = None ):
+    def __init__( self, string_processor: ClientStrings.StringProcessor | None = None ):
         
         if string_processor is None:
             
@@ -466,7 +465,7 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
         raise NotImplementedError()
         
     
-    def GetSidecarPath( self, actual_file_path ) -> typing.Optional[ str ]:
+    def GetSidecarPath( self, actual_file_path ) -> str | None:
         
         possible_paths = self.GetPossibleSidecarPaths( actual_file_path )
         

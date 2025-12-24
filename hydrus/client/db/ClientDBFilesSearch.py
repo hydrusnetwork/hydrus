@@ -40,7 +40,7 @@ from hydrus.client.search import ClientSearchTagContext
 
 SHOWN_UNINITIALISED_SEARCH_ERROR = False
 
-def intersection_update_qhi( query_hash_ids: typing.Optional[ set[ int ] ], some_hash_ids: collections.abc.Collection[ int ], force_create_new_set = False ) -> set[ int ]:
+def intersection_update_qhi( query_hash_ids: set[ int ] | None, some_hash_ids: collections.abc.Collection[ int ], force_create_new_set = False ) -> set[ int ]:
     
     if query_hash_ids is None:
         
@@ -1103,7 +1103,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file query', cursor )
         
     
-    def _Do1PreInclusiveTagPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: typing.Optional[ set[ int ] ], db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> typing.Optional[ set[ int ] ]:
+    def _Do1PreInclusiveTagPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: set[ int ] | None, db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> set[ int ] | None:
         
         # ok these should ideally all be nice and fast without query_hash_ids
         
@@ -1303,7 +1303,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _Do2InclusiveTagPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: typing.Optional[ set[ int ] ], search_state: SearchState ) -> typing.Optional[ set[ int ] ]:
+    def _Do2InclusiveTagPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: set[ int ] | None, search_state: SearchState ) -> set[ int ] | None:
         
         location_context = file_search_context.GetLocationContext()
         tag_context = file_search_context.GetTagContext()
@@ -1435,7 +1435,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _Do3FileInfoPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: typing.Optional[ set[ int ] ], db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> set[ int ]:
+    def _Do3FileInfoPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: set[ int ] | None, db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> set[ int ]:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1519,7 +1519,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if not SHOWN_UNINITIALISED_SEARCH_ERROR:
                 
-                HydrusData.ShowText( 'Hey, the search you just performed came up with zero results in part because it failed to initialise properly. Please contact hydev with any details you have. You will not see this message again this boot.' )
+                HydrusData.ShowText( 'Hey, the search you just performed came up with zero results in part because it failed to initialise properly. Please contact hydev with any details you have.\n\nTo stop spam, this message will only show one time per program boot. The error may happen again, silently.' )
                 
                 SHOWN_UNINITIALISED_SEARCH_ERROR = True
                 
@@ -1768,7 +1768,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _Do5ExpensivePostFileCrossReferencePreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: typing.Optional[ set[ int ] ], db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> set[ int ]:
+    def _Do5ExpensivePostFileCrossReferencePreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, job_status: ClientThreading.JobStatus, query_hash_ids: set[ int ] | None, db_location_context: ClientDBFilesStorage.DBLocationContext, search_state: SearchState ) -> set[ int ]:
         
         # I have not rigorously tested that these are truly inexpensive, they just percolated like this in older code
         
@@ -2108,7 +2108,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
         job_status: ClientThreading.JobStatus,
         pred: ClientSearchPredicate.Predicate,
-        query_hash_ids: typing.Optional[ set[ int ] ]
+        query_hash_ids: set[ int ] | None
     ):
         
         ( service_key_or_none, tag_display_type, statuses, tag ) = pred.GetValue()
@@ -2168,7 +2168,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return result
         
     
-    def _DoAdvancedRatingPredicate( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+    def _DoAdvancedRatingPredicate( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: set[ int ] | None, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ] | None:
         
         ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = predicate.GetValue()
         
@@ -2358,7 +2358,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoAdvancedRatingPredicateExclusiveOnly( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: set[ int ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> set[ int ]:
+    def _DoAdvancedRatingPredicateExclusiveOnly( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: set[ int ], job_status: ClientThreading.JobStatus | None = None ) -> set[ int ]:
         
         ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = predicate.GetValue()
         
@@ -2370,7 +2370,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoAdvancedRatingPredicateInclusiveOnly( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+    def _DoAdvancedRatingPredicateInclusiveOnly( self, predicate: ClientSearchPredicate.Predicate, query_hash_ids: set[ int ] | None, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ] | None:
         
         ( logical_operator, service_specifier_primary, service_specifier_secondary, rated ) = predicate.GetValue()
         
@@ -2382,7 +2382,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+    def _DoNotePreds( self, system_predicates: ClientSearchFileSearchContext.FileSystemPredicates, query_hash_ids: set[ int ] | None, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ] | None:
         
         simple_preds = system_predicates.GetSimpleInfo()
         
@@ -2440,10 +2440,10 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
     def _DoOrPreds(
         self,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
-        job_status: typing.Optional[ ClientThreading.JobStatus ],
+        job_status: ClientThreading.JobStatus | None,
         or_predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ],
-        query_hash_ids: typing.Optional[ set[ int ] ]
-    ) -> typing.Optional[ set[ int ] ]:
+        query_hash_ids: set[ int ] | None
+    ) -> set[ int ] | None:
             
             # better typically to sort by fewest num of preds first, establishing query_hash_ids for longer chains
             def or_sort_key( p ):
@@ -2487,7 +2487,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
         
     
-    def _DoSimpleRatingPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+    def _DoSimpleRatingPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: set[ int ] | None, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ] | None:
         
         cancelled_hook = None
         
@@ -2599,7 +2599,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], allowed_rule_types: collections.abc.Collection[ str ] ) -> typing.Optional[ set[ int ] ]:
+    def _DoSpecificKnownURLPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: set[ int ] | None, allowed_rule_types: collections.abc.Collection[ str ] ) -> set[ int ] | None:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -2670,7 +2670,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def _DoTimestampPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: typing.Optional[ set[ int ] ], search_state: SearchState, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ set[ int ] ]:
+    def _DoTimestampPreds( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext, query_hash_ids: set[ int ] | None, search_state: SearchState, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ] | None:
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -2773,11 +2773,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
     def GetHashIdsFromQuery(
         self,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
-        job_status: typing.Optional[ ClientThreading.JobStatus ] = None,
-        query_hash_ids: typing.Optional[ set ] = None,
+        job_status: ClientThreading.JobStatus | None = None,
+        query_hash_ids: set[ int ] | None = None,
         apply_implicit_limit: bool = True,
-        sort_by: typing.Optional[ ClientMedia.MediaSort ] = None,
-        limit_sort_by: typing.Optional[ ClientMedia.MediaSort ] = None
+        sort_by: ClientMedia.MediaSort | None = None,
+        limit_sort_by: ClientMedia.MediaSort | None = None
     ) -> list[ int ]:
         
         if job_status is None:

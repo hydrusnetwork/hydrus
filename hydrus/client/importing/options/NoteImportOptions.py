@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -56,7 +55,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._names_to_name_overrides = dict( names_and_name_overrides )
         
     
-    def GetAllNameOverride( self ) -> typing.Optional[ str ]:
+    def GetAllNameOverride( self ) -> str | None:
         
         return self._all_name_override
         
@@ -311,7 +310,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._is_default
         
     
-    def SetAllNameOverride( self, all_name_override: typing.Optional[ str ] ):
+    def SetAllNameOverride( self, all_name_override: str | None ):
         
         self._all_name_override = all_name_override
         

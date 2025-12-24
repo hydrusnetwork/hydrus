@@ -1,6 +1,5 @@
 import collections.abc
 import re
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1190,7 +1189,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_joiner: ClientStrings.StringJoiner, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_joiner: ClientStrings.StringJoiner, test_data: collections.abc.Sequence[ str ] | None = None ):
         
         if test_data is None:
             
@@ -1322,7 +1321,7 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
+    def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, test_data = ClientParsing.ParsingTestData | None ):
         
         # TODO: make this a widget so I can embed it in other places without scrollbar fun
         # search all instances afterwards and fix whack layout flags. shouldn't have to expand since scrollbar is no longer in the way of min size calcs
@@ -1578,7 +1577,7 @@ SELECT_RANGE = 1
 
 class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_slicer: ClientStrings.StringSlicer, test_data: collections.abc.Sequence[ str ] | None = None ):
         
         if test_data is None:
             
@@ -1774,7 +1773,7 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Optional[ collections.abc.Sequence[ str ] ] = None ):
+    def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: collections.abc.Sequence[ str ] | None = None ):
         
         if test_data is None:
             
@@ -2072,7 +2071,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
+    def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data: ClientParsing.ParsingTestData | None = None ):
         
         super().__init__( parent )
         

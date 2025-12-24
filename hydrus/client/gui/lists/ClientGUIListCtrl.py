@@ -221,7 +221,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return self._column_list_type
         
     
-    def GetData( self, indices: typing.Optional[ collections.abc.Collection[ int ] ] = None ):
+    def GetData( self, indices: collections.abc.Collection[ int ] | None = None ):
         
         if indices is None:
             
@@ -981,7 +981,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def GetTopSelectedData( self ) -> typing.Optional[ typing.Any ]:
+    def GetTopSelectedData( self ) -> typing.Any | None:
         
         indices_iter = self._GetSelectedIndicesIterator()
         
@@ -1427,7 +1427,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def UpdateDatas( self, datas: typing.Optional[ collections.abc.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
+    def UpdateDatas( self, datas: collections.abc.Iterable[ object ] | None = None, check_for_changed_sort_data = False ):
         
         if datas is not None:
             
@@ -1461,7 +1461,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._buttonbox = QP.HBoxLayout()
         
-        self._listctrl: typing.Optional[ BetterListCtrlTreeView ] = None
+        self._listctrl: BetterListCtrlTreeView | None = None
         
         self._permitted_object_types = []
         self._import_add_callable = lambda x: None
@@ -1657,7 +1657,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         
     
-    def _GetExportObject( self ) -> typing.Optional[ HydrusSerialisable.SerialisableBase ]:
+    def _GetExportObject( self ) -> HydrusSerialisable.SerialisableBase | None:
         
         to_export = HydrusSerialisable.SerialisableList()
         

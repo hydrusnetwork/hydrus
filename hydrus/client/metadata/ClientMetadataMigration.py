@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
@@ -17,9 +16,9 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
     
     def __init__(
         self,
-        importers: typing.Optional[ collections.abc.Collection[ ClientMetadataMigrationImporters.SingleFileMetadataImporter ] ] = None,
-        string_processor: typing.Optional[ ClientStrings.StringProcessor ] = None,
-        exporter: typing.Optional[ ClientMetadataMigrationExporters.SingleFileMetadataExporter ] = None
+        importers: collections.abc.Collection[ ClientMetadataMigrationImporters.SingleFileMetadataImporter ] | None = None,
+        string_processor: ClientStrings.StringProcessor | None = None,
+        exporter: ClientMetadataMigrationExporters.SingleFileMetadataExporter | None = None
     ):
         
         if importers is None:
