@@ -6,7 +6,6 @@ import random
 import threading
 import time
 import traceback
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -714,7 +713,7 @@ class ServiceLocalRating( Service ):
             
         
     
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: float | None ):
         
         raise NotImplementedError()
         
@@ -722,7 +721,7 @@ class ServiceLocalRating( Service ):
 
 class ServiceLocalRatingIncDec( ServiceLocalRating ):
     
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ int ] ):
+    def ConvertNoneableRatingToString( self, rating: int | None ):
         
         if rating is None:
             
@@ -777,7 +776,7 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
         self._rating_svg = dictionary[ 'rating_svg' ]
         
     
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: float | None ):
         
         raise NotImplementedError()
         
@@ -793,7 +792,7 @@ class ServiceLocalRatingStars( ServiceLocalRating ):
 
 class ServiceLocalRatingLike( ServiceLocalRatingStars ):
     
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: float | None ):
         
         if rating is None:
             
@@ -871,7 +870,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
             
         
     
-    def ConvertNoneableRatingToString( self, rating: typing.Optional[ float ] ):
+    def ConvertNoneableRatingToString( self, rating: float | None ):
         
         if rating is None:
             

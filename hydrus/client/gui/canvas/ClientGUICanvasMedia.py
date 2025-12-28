@@ -830,7 +830,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._stop_for_slideshow = value
         
     
-    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = False ):
+    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = False ):
         
         if media == self._media:
             

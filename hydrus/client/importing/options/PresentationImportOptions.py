@@ -238,7 +238,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if not self._location_context.IsAllMediaFiles():
+        if not self._location_context.IsCombinedLocalFileDomains():
             
             if self._location_context.IsHydrusLocalFileStorage():
                 

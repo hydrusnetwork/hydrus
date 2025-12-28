@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -181,7 +179,7 @@ class RatingLikeSubPanel( QW.QWidget ):
         return CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, value ) )
         
     
-    def SetValue( self, action: int, service_key: bytes, rating: typing.Optional[ float ] ):
+    def SetValue( self, action: int, service_key: bytes, rating: float | None ):
         
         self._flip_or_set_action.SetValue( action )
         
@@ -316,7 +314,7 @@ class RatingNumericalSubPanel( QW.QWidget ):
         return CAC.ApplicationCommand( CAC.APPLICATION_COMMAND_TYPE_CONTENT, ( service_key, HC.CONTENT_TYPE_RATINGS, action, rating ) )
         
     
-    def SetValue( self, action: int, service_key: bytes, rating: typing.Optional[ float ] ):
+    def SetValue( self, action: int, service_key: bytes, rating: float | None ):
         
         self._flip_or_set_action.SetValue( action )
         

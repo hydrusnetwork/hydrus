@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import itertools
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -255,7 +254,7 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
     return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys )
     
 
-def OpenExternally( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+def OpenExternally( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     if media is None:
         
@@ -279,7 +278,7 @@ def OpenExternally( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bo
     return True
     
 
-def OpenFileLocation( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+def OpenFileLocation( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     if media is None:
         
@@ -301,7 +300,7 @@ def OpenFileLocation( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> 
     return True
     
 
-def OpenInWebBrowser( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+def OpenInWebBrowser( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     if media is None:
         
@@ -322,7 +321,7 @@ def OpenInWebBrowser( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> 
     
     return True
     
-def OpenNativeFileProperties( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+def OpenNativeFileProperties( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     if media is None:
         
@@ -344,7 +343,7 @@ def OpenNativeFileProperties( media: typing.Optional[ ClientMedia.MediaSingleton
     return True
 
 
-def OpenFileWithDialog( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+def OpenFileWithDialog( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     if media is None:
         

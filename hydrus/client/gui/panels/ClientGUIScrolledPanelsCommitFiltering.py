@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
@@ -96,7 +94,7 @@ class QuestionCommitInterstitialFilteringPanel( ClientGUIScrolledPanels.Resizing
 
 class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):
     
-    def __init__( self, parent, kept_label: typing.Optional[ str ], deletion_options ):
+    def __init__( self, parent, kept_label: str | None, deletion_options ):
         
         super().__init__( parent )
         

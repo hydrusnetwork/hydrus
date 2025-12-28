@@ -1,7 +1,6 @@
 import collections
 import math
 import random
-import typing
 
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusLists
@@ -930,7 +929,7 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Potential Duplicates Search Context'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, location_context: typing.Optional[ ClientLocation.LocationContext ] = None, initial_predicates = None ):
+    def __init__( self, location_context: ClientLocation.LocationContext | None = None, initial_predicates = None ):
         
         if location_context is None:
             

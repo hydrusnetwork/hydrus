@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusLists
@@ -12,7 +10,7 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 
-def AddRearrangeMenu( win: ClientGUIMediaResultsPanel.MediaResultsPanel, menu: QW.QMenu, selected_media: set[ ClientMedia.Media ], sorted_media: HydrusLists.FastIndexUniqueList, focused_media: typing.Optional[ ClientMedia.Media ], selection_is_contiguous: bool, earliest_index: int ):
+def AddRearrangeMenu( win: ClientGUIMediaResultsPanel.MediaResultsPanel, menu: QW.QMenu, selected_media: set[ ClientMedia.Media ], sorted_media: HydrusLists.FastIndexUniqueList, focused_media: ClientMedia.Media | None, selection_is_contiguous: bool, earliest_index: int ):
     
     if len( selected_media ) == 0 or len( selected_media ) == len( sorted_media ):
         

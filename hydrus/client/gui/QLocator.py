@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import collections.abc
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1059,7 +1058,7 @@ class QLocatorWidget(QW.QWidget):
         return height, itemCount
         
     
-    def getFirstVisibleResult( self ) -> typing.Optional[ int ]:
+    def getFirstVisibleResult( self ) -> int | None:
         
         for index in range( self.resultLayout.count() ):
             
@@ -1077,7 +1076,7 @@ class QLocatorWidget(QW.QWidget):
         return None
         
     
-    def getLastVisibleResult( self ) -> typing.Optional[ int ]:
+    def getLastVisibleResult( self ) -> int | None:
         
         for index in range( self.resultLayout.count() - 1, -1, -1 ):
             

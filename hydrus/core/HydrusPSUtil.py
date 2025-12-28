@@ -4,6 +4,8 @@ PSUTIL_OK = True
 PSUTIL_MODULE_NOT_FOUND = False
 PSUTIL_IMPORT_ERROR = 'psutil seems fine!'
 
+psutil_sdiskpart = None
+
 try:
     
     import psutil

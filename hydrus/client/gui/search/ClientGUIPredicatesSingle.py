@@ -1,6 +1,5 @@
 import os
 import re
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -2271,7 +2270,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
 
 class PredicateSystemRatingAdvanced( PanelPredicateSystemSingle ):
     
-    def __init__( self, parent: QW.QWidget, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate | None ):
         
         super().__init__( parent )
         
@@ -2384,7 +2383,7 @@ class PredicateSystemRatingAdvanced( PanelPredicateSystemSingle ):
 
 class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: ClientSearchPredicate.Predicate | None ):
         
         super().__init__( parent )
         
@@ -2507,7 +2506,7 @@ class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
 
 class PredicateSystemRatingLike( PanelPredicateSystemSingle ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: ClientSearchPredicate.Predicate | None ):
         
         super().__init__( parent )
         
@@ -2662,7 +2661,7 @@ class PredicateSystemRatingLike( PanelPredicateSystemSingle ):
 
 class PredicateSystemRatingNumerical( PanelPredicateSystemSingle ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: ClientSearchPredicate.Predicate | None ):
         
         super().__init__( parent )
         

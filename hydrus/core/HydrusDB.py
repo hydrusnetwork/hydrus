@@ -4,7 +4,6 @@ import sqlite3
 import threading
 import traceback
 import time
-import typing
 
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusConstants as HC
@@ -383,7 +382,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
         self._db = None
         self._is_connected = False
         
-        self._cursor_transaction_wrapper: typing.Optional[ HydrusDBBase.DBCursorTransactionWrapper ] = None
+        self._cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper | None = None
         
         if os.path.exists( os.path.join( self._db_dir, self._db_filenames[ 'main' ] ) ):
             

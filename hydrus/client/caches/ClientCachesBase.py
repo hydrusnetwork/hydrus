@@ -175,7 +175,7 @@ class DataCache( object ):
             
         
     
-    def GetIfHasData( self, key ) -> typing.Optional[ CacheableObject ]:
+    def GetIfHasData( self, key ) -> CacheableObject | None:
         
         with self._lock:
             

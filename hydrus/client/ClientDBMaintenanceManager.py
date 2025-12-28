@@ -149,7 +149,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     HydrusData.PrintException( e )
                     
-                    message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this boot. A full traceback of this error should be written to the log.'
+                    message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this program boot. A full traceback of this error should be written to the log.'
                     message += '\n' * 2
                     message += str( e )
                     

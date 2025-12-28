@@ -17,25 +17,31 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        media_canvas_panel = ClientGUICommon.StaticBox( self, 'hover windows and background' )
+        hover_windows_panel = ClientGUICommon.StaticBox( self, 'hover windows' )
         
-        self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+        self._hover_windows_need_window_focus_to_pop_in = QW.QCheckBox( hover_windows_panel )
+        self._hover_windows_need_window_focus_to_pop_in.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should the hover windows pop-in even when the media viewer is in the background?' ) )
+        self._enable_tags_hover_in_media_viewer = QW.QCheckBox( hover_windows_panel )
+        self._enable_tags_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enable interactable tags on mouseover in the media viewer.' ) )
+        self._enable_top_right_hover_in_media_viewer = QW.QCheckBox( hover_windows_panel )
+        self._enable_top_right_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enable interactable ratings and location on mouseover in the media viewer.' ) )
+        self._enable_notes_hover_in_media_viewer = QW.QCheckBox( hover_windows_panel )
+        self._enable_notes_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Enable interactable notes on mouseover in the media viewer.' ) )
+        self._hover_window_duplicates_always_on_top = QW.QCheckBox( hover_windows_panel )
+        self._hover_window_duplicates_always_on_top.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should the special duplicates hover window, which appears in the duplicate filter, always be viewable?' ) )
+        
+        background_panel = ClientGUICommon.StaticBox( self, 'background' )
+        
+        self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( background_panel )
         self._draw_tags_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the left list of tags in the background of the media viewer.' ) )
-        self._disable_tags_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
-        self._disable_tags_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the left list of tags in the media viewer (does not affect background draw).' ) )
-        self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+        self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( background_panel )
         self._draw_top_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the center-top file metadata in the background of the media viewer.' ) )
-        self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+        self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( background_panel )
         self._draw_top_right_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' ) )
-        self._disable_top_right_hover_in_media_viewer = QW.QCheckBox( media_canvas_panel )
-        self._disable_top_right_hover_in_media_viewer.setToolTip( ClientGUIFunctions.WrapToolTip( 'Disable hovering on the top-right ratings, inbox and URL information in the media viewer (does not affect background draw).' ) )
-        self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+        self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( background_panel )
         self._draw_notes_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the right list of notes in the background of the media viewer.' ) )
-        self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+        self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( background_panel )
         self._draw_bottom_right_index_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the bottom-right index string in the background of the media viewer.' ) )
-        
-        self._use_nice_resolution_strings = QW.QCheckBox( media_canvas_panel )
-        self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" instead of "1920x1080" for common resolutions.' ) )
         
         #
         
@@ -62,6 +68,9 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._hide_uninteresting_modified_time = QW.QCheckBox( top_hover_summary_panel )
         self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (specifically, the number of seconds since both events differs by less than 10%), hide the modified time in the top hover file info summary.' ) )
         
+        self._use_nice_resolution_strings = QW.QCheckBox( top_hover_summary_panel )
+        self._use_nice_resolution_strings.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use "1080p" style instead of "1920x1080" for common resolutions.' ) )
+        
         #
         
         preview_hovers_panel = ClientGUICommon.StaticBox( self, 'preview window hovers' )
@@ -75,13 +84,16 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         #
         
         self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
-        self._disable_tags_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
         self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
         self._draw_top_right_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ) )
-        self._disable_top_right_hover_in_media_viewer.setChecked( self._new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ) )
         self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
         self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
-        self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
+        
+        self._hover_windows_need_window_focus_to_pop_in.setChecked( self._new_options.GetBoolean( 'hover_windows_need_window_focus_to_pop_in' ) )
+        self._enable_tags_hover_in_media_viewer.setChecked( not self._new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ) )
+        self._enable_top_right_hover_in_media_viewer.setChecked( not self._new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ) )
+        self._enable_notes_hover_in_media_viewer.setChecked( not self._new_options.GetBoolean( 'disable_notes_hover_in_media_viewer' ) )
+        self._hover_window_duplicates_always_on_top.setChecked( self._new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ) )
         
         self._file_info_line_consider_archived_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_interesting' ) )
         self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
@@ -90,6 +102,7 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._file_info_line_consider_trash_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_time_interesting' ) )
         self._file_info_line_consider_trash_reason_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_trash_reason_interesting' ) )
         self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
+        self._use_nice_resolution_strings.setChecked( self._new_options.GetBoolean( 'use_nice_resolution_strings' ) )
         
         self._preview_window_hover_top_right_shows_popup.setChecked( self._new_options.GetBoolean( 'preview_window_hover_top_right_shows_popup' ) )
         self._draw_top_right_hover_in_preview_window_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_preview_window_background' ) )
@@ -98,18 +111,27 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Draw tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
-        rows.append( ( 'Do not pop-in tags hover-window on mouseover:', self._disable_tags_hover_in_media_viewer ) )
-        rows.append( ( 'Draw top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
-        rows.append( ( 'Draw top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
-        rows.append( ( 'Do not pop-in top-right hover-window on mouseover:', self._disable_top_right_hover_in_media_viewer ) )
-        rows.append( ( 'Draw notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
-        rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
-        rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
+        rows.append( ( 'Hover window pop-in requires window focus:', self._hover_windows_need_window_focus_to_pop_in ) )
+        rows.append( ( 'Pop-in tags (left) hover window on mouseover:', self._enable_tags_hover_in_media_viewer ) )
+        rows.append( ( 'Pop-in ratings and locations (top-right) hover window on mouseover:', self._enable_top_right_hover_in_media_viewer ) )
+        rows.append( ( 'Pop-in notes (right) hover window on mouseover:', self._enable_notes_hover_in_media_viewer ) )
+        rows.append( ( 'Pin the duplicates (right, duplicates filter) hover window so it is always visible:', self._hover_window_duplicates_always_on_top ) )
         
-        media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
+        hover_windows_gridbox = ClientGUICommon.WrapInGrid( hover_windows_panel, rows )
         
-        media_canvas_panel.Add( media_canvas_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        hover_windows_panel.Add( hover_windows_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'Draw tags (left) in the viewer background:', self._draw_tags_hover_in_media_viewer_background ) )
+        rows.append( ( 'Draw file information (top) in the viewer background:', self._draw_top_hover_in_media_viewer_background ) )
+        rows.append( ( 'Draw ratings and locations (top-right) in the viewer background:', self._draw_top_right_hover_in_media_viewer_background ) )
+        rows.append( ( 'Draw notes (right) in the viewer background:', self._draw_notes_hover_in_media_viewer_background ) )
+        rows.append( ( 'Draw index text (bottom-right) in the viewer background:', self._draw_bottom_right_index_in_media_viewer_background ) )
+        
+        background_gridbox = ClientGUICommon.WrapInGrid( background_panel, rows )
+        
+        background_panel.Add( background_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         rows = []
         
@@ -120,6 +142,7 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Show file trash times: ', self._file_info_line_consider_trash_time_interesting ) )
         rows.append( ( 'Show file trash reasons: ', self._file_info_line_consider_trash_reason_interesting ) )
         rows.append( ( 'Hide uninteresting modified times: ', self._hide_uninteresting_modified_time ) )
+        rows.append( ( 'Swap in common resolution labels:', self._use_nice_resolution_strings ) )
         
         top_hover_summary_gridbox = ClientGUICommon.WrapInGrid( top_hover_summary_panel, rows )
         
@@ -135,8 +158,8 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Show top-right hover window popup in the preview window: ', self._preview_window_hover_top_right_shows_popup ) )
-        rows.append( ( 'Draw top-right hover in preview window background: ', self._draw_top_right_hover_in_preview_window_background ) )
+        rows.append( ( 'Draw ratings and locations (top-right) in preview window background: ', self._draw_top_right_hover_in_preview_window_background ) )
+        rows.append( ( 'Pop-in this hover on mouseover: ', self._preview_window_hover_top_right_shows_popup ) )
         
         preview_hovers_gridbox = ClientGUICommon.WrapInGrid( preview_hovers_panel, rows )
         
@@ -151,7 +174,8 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, background_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hover_windows_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, preview_hovers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
@@ -173,13 +197,16 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     def UpdateOptions( self ):
         
         self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
-        self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', self._disable_tags_hover_in_media_viewer.isChecked() )
         self._new_options.SetBoolean( 'draw_top_hover_in_media_viewer_background', self._draw_top_hover_in_media_viewer_background.isChecked() )
         self._new_options.SetBoolean( 'draw_top_right_hover_in_media_viewer_background', self._draw_top_right_hover_in_media_viewer_background.isChecked() )
-        self._new_options.SetBoolean( 'disable_top_right_hover_in_media_viewer', self._disable_top_right_hover_in_media_viewer.isChecked() )
         self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
         self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
-        self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )
+        
+        self._new_options.SetBoolean( 'hover_windows_need_window_focus_to_pop_in', self._hover_windows_need_window_focus_to_pop_in.isChecked() )
+        self._new_options.SetBoolean( 'disable_tags_hover_in_media_viewer', not self._enable_tags_hover_in_media_viewer.isChecked() )
+        self._new_options.SetBoolean( 'disable_top_right_hover_in_media_viewer', not self._enable_top_right_hover_in_media_viewer.isChecked() )
+        self._new_options.SetBoolean( 'disable_notes_hover_in_media_viewer', not self._enable_notes_hover_in_media_viewer.isChecked() )
+        self._new_options.SetBoolean( 'hover_window_duplicates_always_on_top', self._hover_window_duplicates_always_on_top.isChecked() )
         
         self._new_options.SetBoolean( 'preview_window_hover_top_right_shows_popup', self._preview_window_hover_top_right_shows_popup.isChecked() )
         self._new_options.SetBoolean( 'draw_top_right_hover_in_preview_window_background', self._draw_top_right_hover_in_preview_window_background.isChecked() )
@@ -191,5 +218,6 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'file_info_line_consider_trash_time_interesting', self._file_info_line_consider_trash_time_interesting.isChecked() )
         self._new_options.SetBoolean( 'file_info_line_consider_trash_reason_interesting', self._file_info_line_consider_trash_reason_interesting.isChecked() )
         self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
+        self._new_options.SetBoolean( 'use_nice_resolution_strings', self._use_nice_resolution_strings.isChecked() )
         
     

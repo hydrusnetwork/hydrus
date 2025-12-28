@@ -35,6 +35,28 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_653"><a href="#version_653">version 653</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>I hacked a simple date range (x axis) into the file history chart. it is clunky, but if you want to zoom in on one year, it'll work. this persists through search changes, and there's a 'refit x axis' button to recalc for the current data in view</li>
+                        <li>reworked the naming and layout of the checkbox list in `options-&gt;media viewer hovers`</li>
+                        <li>`options-&gt;media viewer hovers` and the top hover eye icon get a new `Hover-window pop-in requires window focus`, default on</li>
+                        <li>`options-&gt;media viewer hovers` and the top hover eye icon get a new `Pop-in notes (right) hover window on mouseover`, default on, to handle the notes hover window</li>
+                        <li>also added the new 'pin the duplicates filter hover window' checkbox to these guys (it is also still in the cog menu of the hover itself)</li>
+                        <li>the `When finishing filtering, always delete from all possible domains` option is now simpler and more reliable. it had some old logic from the days when archive/delete allowed trashed files and sometimes not activate if there _were_ multiple domains (#1926)</li>
+                        <li>the archive/delete commit dialog when the above option is _off_ is simplified and, if there _are_ multiple domains to delete from, always puts 'combined local file domains', which now has a clearer label, at the top</li>
+                        <li>`system:duration` parsing now supports hours and minutes, and some funky stuff like '26000ms' works better (#1924)</li>
+                        <li>the hydrus network engine has two new global http headers: `Accept: image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8`, which preferences jpegs and pngs over webp, and `Cache-Control: no-transform`, which asks CDNs not to deliver "optimised" versions of files (often not honoured, though). all users who don't have a global header with those names already in place will get them on update. if you prefer something else, hit `network-&gt;data-&gt;manage http headers` to edit!</li>
+                        <li>fixed the 'refresh all pages on current page of pages' shortcut action, which was accidentally nullified by a recent rewrite</li>
+                        <li>fixed an issue with clientside services not deleting properly when editing services on a server and deleting more than one service at once</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>the file history chart can now take new data and will regen its internal series and axes and stuff. previously I swapped in a whole new chart widget on every new search. also cleaned up the layout of the wider panel here</li>
+                        <li>all `Typing.Optional` across the program (~300 instances I think) are replaced with `x | None`, which is python 3.10+ only. turns out we already had some of these, so no big worries, I hope, about lingering 3.9 users</li>
+                        <li>all `Typing.Union` across the program (~50 instances) is similarly replaced</li>
+                        <li>clarified some 'this message only shows one time per program boot' messages</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_652"><a href="#version_652">version 652</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

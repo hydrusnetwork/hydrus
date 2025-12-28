@@ -783,9 +783,9 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         
     
     def SetJSONComplex( self,
-        overwrite_types_and_objs: typing.Optional[ tuple[ collections.abc.Iterable[ int ], collections.abc.Iterable[ HydrusSerialisable.SerialisableBase ] ] ] = None,
-        set_objs: typing.Optional[ list[ HydrusSerialisable.SerialisableBase ] ] = None,
-        deletee_types_to_names: typing.Optional[ dict[ int, collections.abc.Iterable[ str ] ] ] = None
+        overwrite_types_and_objs: tuple[ collections.abc.Iterable[ int ], collections.abc.Iterable[ HydrusSerialisable.SerialisableBase ] ] | None = None,
+        set_objs: list[ HydrusSerialisable.SerialisableBase ] | None = None,
+        deletee_types_to_names: dict[ int, collections.abc.Iterable[ str ] ] | None = None
     ):
         
         if overwrite_types_and_objs is not None:

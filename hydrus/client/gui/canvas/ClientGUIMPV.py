@@ -2,7 +2,6 @@ import locale
 import os
 import threading
 import traceback
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -996,7 +995,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if probably_crashy:
                 
-                message = f'Sorry, this media appears to have a serious problem in mpv! To avoid crashes, I have unloaded it and will not allow it again this boot. The file is possibly truncated or otherwise corrupted, but if you think it is good, please send it to hydev for more testing. The specific errors should be written to the log.{media_line}'
+                message = f'Sorry, this media appears to have a serious problem in mpv! To avoid crashes, I have unloaded it and will not allow it again this program boot. The file is possibly truncated or otherwise corrupted, but if you think it is good, please send it to hydev for more testing. The specific errors should be written to the log.{media_line}'
                 
                 HydrusData.DebugPrint( message )
                 
@@ -1338,7 +1337,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = False ):
+    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = False ):
         
         if media == self._media:
             

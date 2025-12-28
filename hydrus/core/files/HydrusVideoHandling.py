@@ -1,7 +1,6 @@
 import numpy
 import os
 import re
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -883,7 +882,7 @@ class VideoRendererFFMPEG( object ):
         
         bufsize = self.depth * x * y
         
-        self.process_reader: typing.Optional[ HydrusSubprocess.SubprocessContextReader ] = None
+        self.process_reader: HydrusSubprocess.SubprocessContextReader | None = None
         
         self.bufsize = bufsize
         

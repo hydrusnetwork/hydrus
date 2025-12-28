@@ -8321,9 +8321,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if page is not None:
                     
-                    parent = page.parentWidget()
+                    parent = ClientGUIPages.GetParentNotebook( page )
                     
-                    if isinstance( parent, ClientGUIPages.PagesNotebook ):
+                    if parent is not None and isinstance( parent, ClientGUIPages.PagesNotebook ):
                         
                         parent.RefreshAllPages()
                         

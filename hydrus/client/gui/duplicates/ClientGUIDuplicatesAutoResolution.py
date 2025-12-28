@@ -1,6 +1,5 @@
 import collections.abc
 import threading
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -200,7 +199,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
     
     def _Edit( self ):
         
-        duplicates_auto_resolution_rule: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = self._duplicates_auto_resolution_rules.GetTopSelectedData()
+        duplicates_auto_resolution_rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule | None = self._duplicates_auto_resolution_rules.GetTopSelectedData()
         
         if duplicates_auto_resolution_rule is None:
             
@@ -508,7 +507,7 @@ class EditDuplicatesAutoResolutionRulePanel( ClientGUIScrolledPanels.EditPanel )
 
 class EditPairActionsWidget( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, action: int, delete_a: bool, delete_b: bool, duplicates_content_merge_options: typing.Optional[ ClientDuplicates.DuplicateContentMergeOptions ] ):
+    def __init__( self, parent, action: int, delete_a: bool, delete_b: bool, duplicates_content_merge_options: ClientDuplicates.DuplicateContentMergeOptions | None ):
         
         super().__init__( parent, 'pair actions' )
         

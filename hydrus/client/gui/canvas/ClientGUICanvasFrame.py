@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 
 from hydrus.core import HydrusConstants as HC
@@ -30,7 +28,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         
         super().__init__( parent_to_set, 'hydrus client media viewer', 'media_viewer' )
         
-        self._canvas_window: typing.Optional[ ClientGUICanvas.CanvasWithHovers ] = None
+        self._canvas_window: ClientGUICanvas.CanvasWithHovers | None = None
         self._we_are_hidden_and_cleaning_up_before_destroy = False
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'global', 'media_viewer' ] )

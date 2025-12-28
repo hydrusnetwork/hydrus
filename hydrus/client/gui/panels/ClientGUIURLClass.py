@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 import urllib.parse
 
 from qtpy import QtCore as QC
@@ -35,7 +34,7 @@ from hydrus.client.parsing import ClientParsing
 
 class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, default_value: typing.Optional[ str ] ):
+    def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, default_value: str | None ):
         
         super().__init__( parent )
         
@@ -130,7 +129,7 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( string_match, default_value )
         
     
-    def SetValue( self, string_match: ClientStrings.StringMatch, default_value: typing.Optional[ str ] ):
+    def SetValue( self, string_match: ClientStrings.StringMatch, default_value: str | None ):
         
         self._default_value.blockSignals( True )
         

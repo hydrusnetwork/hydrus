@@ -870,6 +870,8 @@ def SetDefaultDomainManagerData( domain_manager ):
     custom_header_dict = {}
     
     custom_header_dict[ 'User-Agent' ] = ( DEFAULT_USER_AGENT, ClientNetworkingDomain.VALID_APPROVED, 'This is the default User-Agent identifier for the client for all network connections.' )
+    custom_header_dict[ 'Accept' ] = ( 'image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8', ClientNetworkingDomain.VALID_APPROVED, 'Prefers jpeg/png over webp, but provides graceful fallback.' )
+    custom_header_dict[ 'Cache-Control' ] = ( 'no-transform', ClientNetworkingDomain.VALID_APPROVED, 'Tells CDNs not to deliver "optimised" versions of files. May not be honoured.' )
     
     network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
     

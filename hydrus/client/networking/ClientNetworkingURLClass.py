@@ -1,6 +1,5 @@
 import functools
 import re
-import typing
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -151,7 +150,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultValue( self, with_processing = False ) -> typing.Optional[ str ]:
+    def GetDefaultValue( self, with_processing = False ) -> str | None:
         
         if with_processing and self._default_value is not None:
             
@@ -212,7 +211,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
         return self._value_string_match.Matches( value )
         
     
-    def SetDefaultValue( self, default_value: typing.Optional[ str ] ):
+    def SetDefaultValue( self, default_value: str | None ):
         
         self._default_value = default_value
         
@@ -241,7 +240,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'URL Domain Mask'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, raw_domains: typing.Optional[ list[ str ] ] = None, domain_regexes: typing.Optional[ list[ str ] ] = None, match_subdomains: bool = False, keep_matched_subdomains: bool = False ):
+    def __init__( self, raw_domains: list[ str ] | None = None, domain_regexes: list[ str ] | None = None, match_subdomains: bool = False, keep_matched_subdomains: bool = False ):
         
         if raw_domains is None:
             

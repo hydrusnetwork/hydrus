@@ -29,7 +29,7 @@ class TestPanel( QW.QWidget ):
     
     MAX_CHARS_IN_PREVIEW = 1024 * 64
     
-    def __init__( self, parent, object_callable, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
+    def __init__( self, parent, object_callable, test_data: ClientParsing.ParsingTestData | None = None ):
         
         super().__init__( parent )
         

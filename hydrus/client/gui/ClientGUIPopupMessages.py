@@ -708,7 +708,7 @@ class JobStatusPopupQueue( object ):
             
         
     
-    def GetJobStatus( self, job_status_key: bytes ) -> typing.Optional[ ClientThreading.JobStatus ]:
+    def GetJobStatus( self, job_status_key: bytes ) -> ClientThreading.JobStatus | None:
         
         with self._lock:
             
@@ -731,7 +731,7 @@ class JobStatusPopupQueue( object ):
             
         
     
-    def GetNextJobStatusToShow( self ) -> typing.Optional[ ClientThreading.JobStatus ]:
+    def GetNextJobStatusToShow( self ) -> ClientThreading.JobStatus | None:
         
         with self._lock:
             
@@ -929,7 +929,7 @@ class PopupMessageManager( QW.QFrame ):
             
             sizer_item = self._message_vbox.itemAt( i )
             
-            message_window: typing.Optional[ PopupMessage ] = sizer_item.widget()
+            message_window: PopupMessage | None = sizer_item.widget()
             
             if not message_window:
                 
@@ -1062,7 +1062,7 @@ class PopupMessageManager( QW.QFrame ):
             
             sizer_item = self._message_vbox.itemAt( i )
             
-            message_window: typing.Optional[ PopupMessage ] = sizer_item.widget()
+            message_window: PopupMessage | None = sizer_item.widget()
             
             if message_window:
                 
@@ -1116,7 +1116,7 @@ class PopupMessageManager( QW.QFrame ):
         
         for i in range( self._message_vbox.count() ):
             
-            message_window: typing.Optional[ PopupMessage ] = self._message_vbox.itemAt( i ).widget()
+            message_window: PopupMessage | None = self._message_vbox.itemAt( i ).widget()
             
             if not message_window:
                 
@@ -1182,7 +1182,7 @@ class PopupMessageManager( QW.QFrame ):
             
             item = self._message_vbox.itemAt( i )
             
-            message_window: typing.Optional[ PopupMessage ] = item.widget()
+            message_window: PopupMessage | None = item.widget()
             
             if not message_window:
                 

@@ -1,10 +1,8 @@
-import typing
-
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusExceptions
 
-def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
+def GetEmbeddedFileText( pil_image: PILImage.Image ) -> str | None:
     
     def render_dict( d, prefix ):
         
@@ -72,7 +70,7 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
     return None
     
 
-def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
+def GetEXIFDict( pil_image: PILImage.Image ) -> dict | None:
     
     if pil_image.format in ( 'JPEG', 'JXL', 'TIFF', 'PNG', 'WEBP', 'HEIF', 'AVIF', 'MPO' ):
         

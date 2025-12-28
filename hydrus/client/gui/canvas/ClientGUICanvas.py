@@ -350,7 +350,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._service_keys_to_services = {}
         
-        self._current_media: typing.Optional[ ClientMedia.MediaSingleton ] = None
+        self._current_media: ClientMedia.MediaSingleton | None = None
         
         catch_mouse = True
         
@@ -396,7 +396,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _Delete( self, media = None, default_reason = None, file_service_key = None, just_get_content_update_packages = False ) -> typing.Union[ bool, collections.abc.Collection[ ClientContentUpdates.ContentUpdatePackage ] ]:
+    def _Delete( self, media = None, default_reason = None, file_service_key = None, just_get_content_update_packages = False ) -> bool | collections.abc.Collection[ ClientContentUpdates.ContentUpdatePackage ]:
         
         if media is None:
             
@@ -1477,7 +1477,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._location_context = location_context
         
     
-    def SetMedia( self, media: typing.Optional[ ClientMedia.MediaSingleton ], start_paused = None ):
+    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = None ):
         
         if media is not None and not self.isVisible():
             
@@ -3675,44 +3675,37 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             if len( deleted ) > 0:
                 
-                location_contexts_to_present_options_for = []
-                
-                possible_location_context_at_top = self._location_context.Duplicate()
-                
-                possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN ) )
-                
-                if len( possible_location_context_at_top.current_service_keys ) > 0:
-                    
-                    location_contexts_to_present_options_for.append( possible_location_context_at_top )
-                    
-                
-                current_local_service_keys = HydrusLists.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
-                
-                local_file_domain_service_keys = [ service_key for service_key in current_local_service_keys if CG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
-                
-                location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
-                
-                combined_local_file_domains_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
-                
-                if len( local_file_domain_service_keys ) > 1:
-                    
-                    location_contexts_to_present_options_for.append( combined_local_file_domains_location_context )
-                    
-                elif len( local_file_domain_service_keys ) == 1:
-                    
-                    if combined_local_file_domains_location_context in location_contexts_to_present_options_for:
-                        
-                        location_contexts_to_present_options_for.remove( combined_local_file_domains_location_context )
-                        
-                    
-                
-                location_contexts_to_present_options_for = HydrusLists.DedupeList( location_contexts_to_present_options_for )
-                
-                only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
-                
-                if only_allow_all_media_files:
+                if CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ):
                     
                     location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ]
+                    
+                else:
+                    
+                    location_contexts_to_present_options_for = []
+                    
+                    possible_location_context_at_top = self._location_context.Duplicate()
+                    
+                    possible_location_context_at_top.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE_DOMAINS, HC.LOCAL_FILE_DOMAIN ) )
+                    
+                    if len( possible_location_context_at_top.current_service_keys ) > 0:
+                        
+                        location_contexts_to_present_options_for.append( possible_location_context_at_top )
+                        
+                    
+                    current_local_service_keys = HydrusLists.MassUnion( [ m.GetLocationsManager().GetCurrent() for m in deleted ] )
+                    
+                    local_file_domain_service_keys = [ service_key for service_key in current_local_service_keys if CG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
+                    
+                    location_contexts_to_present_options_for.extend( [ ClientLocation.LocationContext.STATICCreateSimple( service_key ) for service_key in local_file_domain_service_keys ] )
+                    
+                    combined_local_file_domains_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
+                    
+                    if len( local_file_domain_service_keys ) > 1:
+                        
+                        location_contexts_to_present_options_for.insert( 0, combined_local_file_domains_location_context )
+                        
+                    
+                    location_contexts_to_present_options_for = HydrusLists.DedupeList( location_contexts_to_present_options_for )
                     
                 
                 for location_context in location_contexts_to_present_options_for:
@@ -3723,16 +3716,25 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                     if num_deletable > 0:
                         
+                        location_label = location_context.ToString( CG.client_controller.services_manager.GetName )
+                        
                         if location_context == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ):
                             
-                            location_label = 'combined local file domains'
+                            if num_deletable == 1:
+                                
+                                num_label = '1'
+                                
+                            else:
+                                
+                                num_label = f'all {HydrusNumbers.ToHumanInt( num_deletable )}'
+                                
+                            
+                            delete_label = f'delete {num_label} from {location_label}, sending directly to trash'
                             
                         else:
                             
-                            location_label = location_context.ToString( CG.client_controller.services_manager.GetName )
+                            delete_label = f'delete {HydrusNumbers.ToHumanInt( num_deletable )} from {location_label}'
                             
-                        
-                        delete_label = 'delete {} from {}'.format( HydrusNumbers.ToHumanInt( num_deletable ), location_label )
                         
                         deletion_options.append( ( location_context, delete_label ) )
                         

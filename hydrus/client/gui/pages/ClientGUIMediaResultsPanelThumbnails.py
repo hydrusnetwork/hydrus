@@ -693,7 +693,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                     message += '\n\n'
                     message += 'This page will handle ctrl+a and do its math correct (albeit slowly!), but you will not be able to scroll down all the way. This situation is probably not stable and you should rethink your query (e.g. adding a system:limit and doing the job in batches) before there is a real problem.'
                     message += '\n\n'
-                    message += 'You will not see this message again this program boot.'
+                    message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                     
                     ClientGUIDialogsMessage.ShowWarning( self, message )
                     

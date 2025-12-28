@@ -1,7 +1,6 @@
 import collections.abc
 import hashlib
 import os
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -96,7 +95,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration_ms, num_fram
     return HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
     
 
-def PrintMoreThumbErrorInfo( e: Exception, message, extra_description: typing.Optional[ str ] = None ):
+def PrintMoreThumbErrorInfo( e: Exception, message, extra_description: str | None = None ):
     
     if not isinstance( e, HydrusExceptions.NoThumbnailFileException ):
         

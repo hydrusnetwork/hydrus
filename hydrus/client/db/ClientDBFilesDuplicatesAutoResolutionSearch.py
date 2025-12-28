@@ -1,6 +1,5 @@
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusTime
 
@@ -136,7 +135,7 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
         
     
-    def GetResolutionPair( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ) -> typing.Optional[ tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] ]:
+    def GetResolutionPair( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ) -> tuple[ ClientMediaResult.MediaResult, ClientMediaResult.MediaResult ] | None:
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( rule.GetLocationContext() )
         

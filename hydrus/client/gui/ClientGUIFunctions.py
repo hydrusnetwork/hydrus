@@ -284,7 +284,7 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         
     
 
-def GetMouseScreen() -> typing.Optional[ QG.QScreen ]:
+def GetMouseScreen() -> QG.QScreen | None:
     
     return QW.QApplication.screenAt( QG.QCursor.pos() )
     

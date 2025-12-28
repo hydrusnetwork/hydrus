@@ -1,6 +1,5 @@
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -175,7 +174,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp_ms = None, max_last_viewed_timestamp_ms = None, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> set[ int ]:
+    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp_ms = None, max_last_viewed_timestamp_ms = None, job_status: ClientThreading.JobStatus | None = None ) -> set[ int ]:
         
         cancelled_hook = None
         
@@ -218,7 +217,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return tables_and_columns
         
     
-    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> int | None:
         
         if timestamp_data.location is None:
             
@@ -254,7 +253,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'UPDATE file_viewing_stats SET last_viewed_timestamp_ms = ? WHERE canvas_type = ? and hash_id = ?;', ( ( timestamp_data.timestamp_ms, timestamp_data.location, hash_id ) for hash_id in hash_ids ) )
         
     
-    def SetViews( self, hash_id: int, canvas_type: int, view_timestamp_ms: typing.Optional[ int ], views: int, viewtime_ms: int ):
+    def SetViews( self, hash_id: int, canvas_type: int, view_timestamp_ms: int | None, views: int, viewtime_ms: int ):
         
         self._Execute( 'INSERT OR IGNORE INTO file_viewing_stats ( hash_id, canvas_type, last_viewed_timestamp_ms, views, viewtime_ms ) VALUES ( ?, ?, ?, ?, ? );', ( hash_id, canvas_type, HydrusTime.GetNowMS(), 0, 0 ) )
         

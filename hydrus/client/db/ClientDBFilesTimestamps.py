@@ -1,6 +1,5 @@
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -105,7 +104,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         # can't clear a file timestamp or file viewing timestamp from here, can't do it from UI either, so we good for now
         
     
-    def GetHashIdsInRange( self, timestamp_type: int, timestamp_ranges_ms, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsInRange( self, timestamp_type: int, timestamp_ranges_ms, job_status: ClientThreading.JobStatus | None = None ):
         
         cancelled_hook = None
         
@@ -262,7 +261,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> int | None:
         
         result = None
         

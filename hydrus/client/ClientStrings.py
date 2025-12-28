@@ -5,7 +5,6 @@ import hashlib
 import html
 import random
 import re
-import typing
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -594,7 +593,7 @@ class StringJoiner( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Concatenator'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, joiner: str = '', join_tuple_size: typing.Optional[ int ] = None ):
+    def __init__( self, joiner: str = '', join_tuple_size: int | None = None ):
         
         super().__init__()
         
@@ -736,7 +735,7 @@ class StringMatch( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Match'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, match_type: int = STRING_MATCH_ANY, match_value: typing.Union[ str, int ] = '', min_chars = None, max_chars = None, example_string = DEFAULT_EXAMPLE_STRING ):
+    def __init__( self, match_type: int = STRING_MATCH_ANY, match_value: str | int = '', min_chars = None, max_chars = None, example_string = DEFAULT_EXAMPLE_STRING ):
         
         super().__init__()
         
@@ -1016,7 +1015,7 @@ class StringSlicer( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Selector/Slicer'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, index_start: typing.Optional[ int ] = None, index_end: typing.Optional[ int ] = None ):
+    def __init__( self, index_start: int | None = None, index_end: int | None = None ):
         
         super().__init__()
         
@@ -1034,7 +1033,7 @@ class StringSlicer( StringProcessingStep ):
         ( self._index_start, self._index_end ) = serialisable_info
         
     
-    def GetIndexStartEnd( self ) -> tuple[ typing.Optional[ int ], typing.Optional[ int ] ]:
+    def GetIndexStartEnd( self ) -> tuple[ int | None, int | None ]:
         
         return ( self._index_start, self._index_end )
         
@@ -1187,7 +1186,7 @@ class StringSorter( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Sorter'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, sort_type: int = CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc: bool = False, regex: typing.Optional[ str ] = None ):
+    def __init__( self, sort_type: int = CONTENT_PARSER_SORT_TYPE_HUMAN_SORT, asc: bool = False, regex: str | None = None ):
         
         super().__init__()
         
@@ -1211,7 +1210,7 @@ class StringSorter( StringProcessingStep ):
         return self._asc
         
     
-    def GetRegex( self ) -> typing.Optional[ str ]:
+    def GetRegex( self ) -> str | None:
         
         return self._regex
         
@@ -1321,7 +1320,7 @@ class StringSplitter( StringProcessingStep ):
     SERIALISABLE_NAME = 'String Splitter'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, separator: str = ',', max_splits: typing.Optional[ int ] = None ):
+    def __init__( self, separator: str = ',', max_splits: int | None = None ):
         
         super().__init__()
         

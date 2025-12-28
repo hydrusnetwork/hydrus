@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -62,7 +61,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
-def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None, for_metadata_conditional: bool = False ) -> list[ ClientSearchPredicate.Predicate ]:
+def EditPredicates( widget: QW.QWidget, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: ClientSearchFileSearchContext.FileSearchContext | None = None, for_metadata_conditional: bool = False ) -> list[ ClientSearchPredicate.Predicate ]:
     
     ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
     
@@ -190,7 +189,7 @@ def GetEditablePredicates( predicates: collections.abc.Collection[ ClientSearchP
 
 class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None, for_metadata_conditional: bool = False ):
+    def __init__( self, parent, predicates: collections.abc.Collection[ ClientSearchPredicate.Predicate ], empty_file_search_context: ClientSearchFileSearchContext.FileSearchContext | None = None, for_metadata_conditional: bool = False ):
         
         super().__init__( parent )
         

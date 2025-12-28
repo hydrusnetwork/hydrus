@@ -815,7 +815,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = False
         
     
-    def _GetNextGallerySeed( self, status: int ) -> typing.Optional[ GallerySeed ]:
+    def _GetNextGallerySeed( self, status: int ) -> GallerySeed | None:
         
         for gallery_seed in self._gallery_seeds:
             
@@ -877,7 +877,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = True
         
     
-    def AddGallerySeeds( self, gallery_seeds, parent_gallery_seed: typing.Optional[ GallerySeed ] = None ) -> int:
+    def AddGallerySeeds( self, gallery_seeds, parent_gallery_seed: GallerySeed | None = None ) -> int:
         
         if len( gallery_seeds ) == 0:
             

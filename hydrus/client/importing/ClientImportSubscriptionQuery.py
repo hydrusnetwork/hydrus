@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
@@ -109,7 +108,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._example_gallery_seed = None
         
     
-    def _DomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager, example_url: typing.Optional[ str ] ):
+    def _DomainOK( self, domain_manager: ClientNetworkingDomain.NetworkDomainManager, example_url: str | None ):
         
         if example_url is None:
             
@@ -177,7 +176,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return example_url
         
     
-    def _GetExampleNetworkContexts( self, example_url: typing.Optional[ str ], subscription_name: str ):
+    def _GetExampleNetworkContexts( self, example_url: str | None, subscription_name: str ):
         
         subscription_key = self._GenerateNetworkJobSubscriptionKey( subscription_name )
         

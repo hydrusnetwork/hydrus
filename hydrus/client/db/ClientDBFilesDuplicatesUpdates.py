@@ -1,7 +1,6 @@
 import collections.abc
 import itertools
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -179,7 +178,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
         return dupe_hash_ids
         
     
-    def _AddRowsToRowCacheAndAutoResolutionRules( self, rows: collections.abc.Collection[ tuple[ int, int, int ] ], only_for_this_file_service_key: typing.Optional[ bytes ] = None ):
+    def _AddRowsToRowCacheAndAutoResolutionRules( self, rows: collections.abc.Collection[ tuple[ int, int, int ] ], only_for_this_file_service_key: bytes | None = None ):
         
         auto_resolution_location_contexts = set( self.modules_files_duplicates_auto_resolution_storage.GetAllRuleLocationContexts() )
         
@@ -228,7 +227,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             
         
     
-    def _DeletePairsFromRowCacheAndAutoResolutionRules( self, deletee_pairs: collections.abc.Collection[ tuple[ int, int ] ], only_for_this_file_service_key: typing.Optional[ bytes ] = None ):
+    def _DeletePairsFromRowCacheAndAutoResolutionRules( self, deletee_pairs: collections.abc.Collection[ tuple[ int, int ] ], only_for_this_file_service_key: bytes | None = None ):
         
         auto_resolution_location_contexts = set( self.modules_files_duplicates_auto_resolution_storage.GetAllRuleLocationContexts() )
         

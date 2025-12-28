@@ -51,7 +51,7 @@ def AppendLoadingPredicate( predicates, label ):
     predicates.append( ClientSearchPredicate.Predicate( predicate_type = ClientSearchPredicate.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
     
 
-def InsertOtherPredicatesForRead( predicates: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearchPredicate.Predicate ] ):
+def InsertOtherPredicatesForRead( predicates: collections.abc.MutableSequence[ ClientSearchPredicate.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: ClientSearchPredicate.Predicate | None ):
     
     if include_unusual_predicate_types:
         
@@ -1846,7 +1846,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> ClientSearchPredicate.Predicate | None:
         
         raise NotImplementedError()
         
@@ -1869,14 +1869,14 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         return parsed_autocomplete_text
         
     
-    def _InitChildrenList( self ) -> typing.Optional[ ChildrenTab ]:
+    def _InitChildrenList( self ) -> ChildrenTab | None:
         
         tag_service_key = self._tag_context_button.GetValue().service_key
         
         return ChildrenTab( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._location_context_button.GetValue(), tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
         
     
-    def _InitFavouritesList( self ) -> typing.Optional[ typing.Union[ ListBoxTagsPredicatesAC, ListBoxTagsStringsAC ] ]:
+    def _InitFavouritesList( self ) -> ListBoxTagsPredicatesAC | ListBoxTagsStringsAC | None:
         
         return None
         
@@ -2144,7 +2144,7 @@ class AutoCompleteDropdownTagsFileSearchContext( AutoCompleteDropdownTags ):
         raise NotImplementedError()
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> ClientSearchPredicate.Predicate | None:
         
         raise NotImplementedError()
         
@@ -2306,7 +2306,7 @@ class AutocompleteDropdownTagsFileSearchContextORCapable( AutoCompleteDropdownTa
         ClientGUIFunctions.SetFocusLater( self._text_ctrl )
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> ClientSearchPredicate.Predicate | None:
         
         raise NotImplementedError()
         
@@ -2420,8 +2420,8 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         parent: QW.QWidget,
         page_key,
         file_search_context: ClientSearchFileSearchContext.FileSearchContext,
-        media_sort_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaSortControl ] = None,
-        media_collect_widget: typing.Optional[ ClientGUIMediaResultsPanelSortCollect.MediaCollectControl ] = None,
+        media_sort_widget: ClientGUIMediaResultsPanelSortCollect.MediaSortControl | None = None,
+        media_collect_widget: ClientGUIMediaResultsPanelSortCollect.MediaCollectControl | None = None,
         media_callable = None,
         synchronised = True,
         include_unusual_predicate_types = True,
@@ -2678,7 +2678,7 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         CGC.core().PopupMenu( self, menu )
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> ClientSearchPredicate.Predicate | None:
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -3479,7 +3479,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearchPredicate.Predicate ]:
+    def _GetCurrentBroadcastTextPredicate( self ) -> ClientSearchPredicate.Predicate | None:
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         

@@ -120,7 +120,7 @@ def GetNamespacesFromParsableContentDescriptions( parsable_content_descriptions:
     return namespaces
     
 
-def GetTitleFromParsedPosts( parsed_posts: list[ "ParsedPost" ] ) -> typing.Optional[ str ]:
+def GetTitleFromParsedPosts( parsed_posts: list[ "ParsedPost" ] ) -> str | None:
     
     titles = []
     
@@ -175,12 +175,12 @@ class ParsableContentDescription( object ):
         return ( self.name, self.content_type ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return 'unknown'
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'{HC.content_type_string_lookup[ self.content_type ]}: {self.name}'
         
@@ -210,12 +210,12 @@ class ParsableContentDescriptionHash( ParsableContentDescription ):
         return ( self.name, self.content_type, self.hash_type, self.hash_encoding ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return self.hash_type
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'{self.hash_type} hash'
         
@@ -255,12 +255,12 @@ class ParsableContentDescriptionHTTPHeaders( ParsableContentDescription ):
         return ( self.name, self.content_type, self.header_name ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return self.header_name
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'http header "{self.header_name}"'
         
@@ -289,12 +289,12 @@ class ParsableContentDescriptionNote( ParsableContentDescription ):
         return ( self.name, self.content_type, self.note_name ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return self.note_name
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'note "{self.note_name}"'
         
@@ -311,7 +311,7 @@ class ParsableContentDescriptionNote( ParsableContentDescription ):
 
 class ParsableContentDescriptionTag( ParsableContentDescription ):
     
-    def __init__( self, name: str, namespace: typing.Optional[ str ] ):
+    def __init__( self, name: str, namespace: str | None ):
         
         self.namespace = namespace
         
@@ -323,7 +323,7 @@ class ParsableContentDescriptionTag( ParsableContentDescription ):
         return ( self.name, self.content_type, self.namespace ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         if self.namespace is None:
             
@@ -335,7 +335,7 @@ class ParsableContentDescriptionTag( ParsableContentDescription ):
             
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         if parsed_text is None:
             
@@ -384,7 +384,7 @@ class ParsableContentDescriptionTag( ParsableContentDescription ):
 
 class ParsableContentDescriptionTimestamp( ParsableContentDescription ):
     
-    def __init__( self, name: str, timestamp_type: typing.Optional[ int ] ):
+    def __init__( self, name: str, timestamp_type: int | None ):
         
         self.timestamp_type = timestamp_type
         
@@ -396,7 +396,7 @@ class ParsableContentDescriptionTimestamp( ParsableContentDescription ):
         return ( self.name, self.content_type, self.timestamp_type ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         if self.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -408,7 +408,7 @@ class ParsableContentDescriptionTimestamp( ParsableContentDescription ):
             
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = self.GetShorthandContentSpecificInfoString()
         
@@ -448,12 +448,12 @@ class ParsableContentDescriptionTitle( ParsableContentDescription ):
         return ( self.name, self.content_type, self.priority ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return None
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'watcher page title (priority {self.priority})'
         
@@ -483,7 +483,7 @@ class ParsableContentDescriptionURL( ParsableContentDescription ):
         return ( self.name, self.content_type, self.url_type, self.priority ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         if self.url_type == HC.URL_TYPE_DESIRED:
             
@@ -507,7 +507,7 @@ class ParsableContentDescriptionURL( ParsableContentDescription ):
             
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         url_type_string = self.GetShorthandContentSpecificInfoString()
         
@@ -538,12 +538,12 @@ class ParsableContentDescriptionVariable( ParsableContentDescription ):
         return ( self.name, self.content_type, self.temp_variable_name ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return self.temp_variable_name
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         descriptor = f'temp variable "{self.temp_variable_name}"'
         
@@ -570,12 +570,12 @@ class ParsableContentDescriptionVeto( ParsableContentDescription ):
         return ( self.name, self.content_type ).__hash__()
         
     
-    def GetShorthandContentSpecificInfoString( self ) -> typing.Optional[ str ]:
+    def GetShorthandContentSpecificInfoString( self ) -> str | None:
         
         return self.name
         
     
-    def ToString( self, parsed_text: typing.Optional[ str ] = None ) -> str:
+    def ToString( self, parsed_text: str | None = None ) -> str:
         
         return f'veto: {self.name}'
         
@@ -710,7 +710,7 @@ class ParsedPost( object ):
         return tag_results
         
 
-    def GetTimestamp( self, desired_timestamp_type ) -> typing.Optional[ int ]:
+    def GetTimestamp( self, desired_timestamp_type ) -> int | None:
         
         timestamp_results = []
         
@@ -806,7 +806,7 @@ class ParsedPost( object ):
         return url_list
         
     
-    def GetVariable( self ) -> typing.Optional[ tuple[ str, str ] ]:
+    def GetVariable( self ) -> tuple[ str, str ] | None:
         
         for parsed_content in self.parsed_contents:
             

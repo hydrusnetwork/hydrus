@@ -211,7 +211,7 @@ shortcut_mouse_string_lookup = {
     SHORTCUT_MOUSE_SCROLL_RIGHT : 'scroll right'
 }
 
-def get_shortcut_mouse_string( shortcut_key: int, call_mouse_buttons_primary_secondary_override: typing.Optional[ bool ] = None ):
+def get_shortcut_mouse_string( shortcut_key: int, call_mouse_buttons_primary_secondary_override: bool | None = None ):
     
     if call_mouse_buttons_primary_secondary_override is None:
         
@@ -735,7 +735,7 @@ def ConvertKeyEventToSimpleTuple( event ):
 GLOBAL_MOUSE_SCROLL_DELTA_FOR_TRACKPADS = 0
 ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE = 15 * 8 # fifteen degrees, in eighths of a degree
 
-def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelEvent ] ):
+def ConvertMouseEventToShortcut( event: QG.QMouseEvent | QG.QWheelEvent ):
     
     key = None
     
@@ -859,7 +859,7 @@ def ConvertMouseEventToShortcut( event: typing.Union[ QG.QMouseEvent, QG.QWheelE
     return None
     
 
-def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: typing.Optional[ QC.QEvent ] = None, child_tlw_classes_who_can_pass_up: typing.Optional[ collections.abc.Collection[ type ] ] = None ):
+def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: QW.QWidget, event: QC.QEvent | None = None, child_tlw_classes_who_can_pass_up: collections.abc.Collection[ type ] | None = None ):
     
     do_focus_test = True
     

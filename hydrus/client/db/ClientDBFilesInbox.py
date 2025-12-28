@@ -1,6 +1,5 @@
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -134,7 +133,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def FillInMissingImportArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def FillInMissingImportArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ):
         
         if job_status is not None:
             
@@ -175,7 +174,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def FillInMissingLegacyArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def FillInMissingLegacyArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ):
         
         if job_status is not None:
             
@@ -232,7 +231,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def _IterateMissingArchiveTimestampData( self, import_timestamp_lambda = None, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def _IterateMissingArchiveTimestampData( self, import_timestamp_lambda = None, job_status: ClientThreading.JobStatus | None = None ):
         
         try:
             
@@ -344,7 +343,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def NumMissingImportArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> int:
+    def NumMissingImportArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ) -> int:
         
         if job_status is not None:
             
@@ -373,7 +372,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def NumMissingLegacyArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> int:
+    def NumMissingLegacyArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ) -> int:
         
         if job_status is not None:
             
@@ -402,7 +401,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def WeHaveMissingImportArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> bool:
+    def WeHaveMissingImportArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ) -> bool:
         
         if job_status is not None:
             
@@ -429,7 +428,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
         
     
-    def WeHaveMissingLegacyArchiveTimestamps( self, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> bool:
+    def WeHaveMissingLegacyArchiveTimestamps( self, job_status: ClientThreading.JobStatus | None = None ) -> bool:
         
         if job_status is not None:
             

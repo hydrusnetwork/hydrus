@@ -1,7 +1,6 @@
 import os
 import sqlite3
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -36,7 +35,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         HydrusData.Print( f'Deferred delete table {deletee_table_name} successfully dropped.' )
         
     
-    def _GetDeferredDeleteTableName( self ) -> tuple[ typing.Optional[ str ], typing.Optional[ int ] ]:
+    def _GetDeferredDeleteTableName( self ) -> tuple[ str | None, int | None ]:
         
         result = self._Execute( 'SELECT name, num_rows FROM deferred_delete_tables WHERE num_rows IS NOT NULL ORDER BY num_rows ASC;' ).fetchone()
         

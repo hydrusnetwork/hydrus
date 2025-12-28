@@ -141,7 +141,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                     
                     self.printed_connection_pool_error = True
                     
-                    HydrusData.Print( 'There was a problem clearing the connection pool, this message will not be printed again this boot:' )
+                    HydrusData.Print( 'There was a problem clearing the connection pool. The full error should follow. To stop spam, this message will only show one time per program boot. The error may happen again, silently.' )
                     HydrusData.PrintException( e, do_wait = False )
                     
                 

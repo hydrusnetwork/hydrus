@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -11,7 +10,7 @@ from hydrus.client import ClientGlobals as CG
 # This holds common calls for the various QMessageBox dialogs
 # a thread can call these safely and they'll block
 
-def ShowDialog( dialog_call: collections.abc.Callable, win: typing.Optional[ QW.QWidget ], title: str, message: str ):
+def ShowDialog( dialog_call: collections.abc.Callable, win: QW.QWidget | None, title: str, message: str ):
     
     if not isinstance( message, str ):
         
@@ -41,7 +40,7 @@ def ShowDialog( dialog_call: collections.abc.Callable, win: typing.Optional[ QW.
         
     
 
-def ShowCritical( win: typing.Optional[ QW.QWidget ], title: str, message: str ):
+def ShowCritical( win: QW.QWidget | None, title: str, message: str ):
     
     HydrusData.DebugPrint( title )
     HydrusData.DebugPrint( message )
@@ -49,12 +48,12 @@ def ShowCritical( win: typing.Optional[ QW.QWidget ], title: str, message: str )
     ShowDialog( QW.QMessageBox.critical, win, title, message )
     
 
-def ShowInformation( win: typing.Optional[ QW.QWidget ], message: str ):
+def ShowInformation( win: QW.QWidget | None, message: str ):
     
     ShowDialog( QW.QMessageBox.information, win, 'Information', message )
     
 
-def ShowWarning( win: typing.Optional[ QW.QWidget ], message: str ):
+def ShowWarning( win: QW.QWidget | None, message: str ):
     
     ShowDialog( QW.QMessageBox.warning, win, 'Warning', message )
     

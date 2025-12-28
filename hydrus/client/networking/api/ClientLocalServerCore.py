@@ -780,7 +780,7 @@ def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: C
         
     
 
-def ParseLocalFileDomainLocationContext( request: HydrusServerRequest.HydrusRequest ) -> typing.Optional[ ClientLocation.LocationContext ]:
+def ParseLocalFileDomainLocationContext( request: HydrusServerRequest.HydrusRequest ) -> ClientLocation.LocationContext | None:
     
     custom_location_context = ParseLocationContext( request, ClientLocation.LocationContext(), deleted_allowed = False )
     

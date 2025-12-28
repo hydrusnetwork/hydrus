@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import os
-import typing
 
 from PIL import ExifTags
 
@@ -1598,7 +1597,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: list[ tuple[ str, str ] ] ):
+    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: dict | None, file_text: str | None, extra_rows: list[ tuple[ str, str ] ] ):
         
         super().__init__( parent )
         
@@ -1816,6 +1815,8 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
+        self._have_initialised_x_axis = False
+        
         self._search_panel = QW.QWidget( self )
         
         # TODO: ok add 'num_steps' as a control, and a date range
@@ -1856,16 +1857,32 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._file_history_chart_panel = QW.QWidget( self )
+        self._rightmost_panel = QW.QWidget( self )
         
-        self._file_history_vbox = QP.VBoxLayout()
+        self._status_st = ClientGUICommon.BetterStaticText( self._rightmost_panel, label = f'loading{HC.UNICODE_ELLIPSIS}' )
         
-        self._status_st = ClientGUICommon.BetterStaticText( self._file_history_chart_panel, label = f'loading{HC.UNICODE_ELLIPSIS}' )
+        self._file_history_chart_panel = QW.QWidget( self._rightmost_panel )
         
         self._show_current = QW.QCheckBox( 'show all', self._file_history_chart_panel )
         self._show_inbox = QW.QCheckBox( 'show inbox', self._file_history_chart_panel )
         self._show_archive = QW.QCheckBox( 'show archive', self._file_history_chart_panel )
         self._show_deleted = QW.QCheckBox( 'show deleted', self._file_history_chart_panel )
+        
+        empty_file_history = {
+            'current' : [],
+            'deleted' : [],
+            'inbox' : [],
+            'archive' : [],
+        }
+        
+        self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, empty_file_history, True, True, True, True )
+        
+        self._file_history_chart.setMinimumSize( 720, 480 )
+        
+        self._start_date = QW.QDateEdit( self )
+        self._end_date = QW.QDateEdit( self )
+        self._auto_x_range = ClientGUICommon.BetterButton( self, 'refit x axis', self._AutoXRange )
+        self._auto_x_range.setToolTip( ClientGUIFunctions.WrapToolTip( 'Recalculate an x axis range based on the current data that is in view.' ) )
         
         self._show_current.setChecked( True )
         self._show_inbox.setChecked( True )
@@ -1879,26 +1896,63 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( button_hbox, self._show_archive, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._show_deleted, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self._file_history_chart = QW.QWidget( self._file_history_chart_panel )
+        start_end_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( self._file_history_vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( self._file_history_vbox, button_hbox, CC.FLAGS_CENTER )
-        QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( start_end_hbox, self._start_date, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( start_end_hbox, self._end_date, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( start_end_hbox, self._auto_x_range, CC.FLAGS_CENTER )
         
-        self._file_history_chart_panel.setLayout( self._file_history_vbox )
+        file_history_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( file_history_vbox, button_hbox, CC.FLAGS_CENTER )
+        QP.AddToLayout( file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( file_history_vbox, start_end_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._file_history_chart_panel.setLayout( file_history_vbox )
+        
+        rightmost_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( rightmost_vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( rightmost_vbox, self._file_history_chart_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        rightmost_vbox.addStretch( 0 )
+        
+        self._rightmost_panel.setLayout( rightmost_vbox )
         
         #
         
         self._hbox = QP.HBoxLayout()
         
         QP.AddToLayout( self._hbox, self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( self._hbox, self._file_history_chart_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._hbox, self._rightmost_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( self._hbox )
         
         self._tag_autocomplete.searchChanged.connect( self._RefreshSearch )
         
         self._RefreshSearch()
+        
+        self._show_current.clicked.connect( self._file_history_chart.FlipAllVisible )
+        self._show_inbox.clicked.connect( self._file_history_chart.FlipInboxVisible )
+        self._show_archive.clicked.connect( self._file_history_chart.FlipArchiveVisible )
+        self._show_deleted.clicked.connect( self._file_history_chart.FlipDeletedVisible )
+        
+        self._start_date.dateChanged.connect( self._UpdateXRange )
+        self._end_date.dateChanged.connect( self._UpdateXRange )
+        
+    
+    def _AutoXRange( self ):
+        
+        self._file_history_chart.AutoSetXRange()
+        
+        self._start_date.blockSignals( True )
+        self._end_date.blockSignals( True )
+        
+        self._start_date.setDate( self._file_history_chart.GetStartDate() )
+        self._end_date.setDate( self._file_history_chart.GetEndDate() )
+        
+        self._start_date.blockSignals( False )
+        self._end_date.blockSignals( False )
         
     
     def _CancelCurrentSearch( self ):
@@ -1946,32 +2000,22 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                self._file_history_vbox.removeWidget( self._file_history_chart )
+                self._file_history_chart.SetFileHistory( file_history )
                 
-                self._file_history_chart.deleteLater()
-                
-                show_current = self._show_current.isChecked()
-                show_inbox = self._show_inbox.isChecked()
-                show_archive = self._show_archive.isChecked()
-                show_deleted = self._show_deleted.isChecked()
-                
-                # TODO: presumably the thing here is to have SetValue on this widget so we can simply clear/set it rather than the mickey-mouse replace
-                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history, show_current, show_inbox, show_archive, show_deleted )
-                
-                self._file_history_chart.setMinimumSize( 720, 480 )
-                
-                self._show_current.clicked.connect( self._file_history_chart.FlipAllVisible )
-                self._show_inbox.clicked.connect( self._file_history_chart.FlipInboxVisible )
-                self._show_archive.clicked.connect( self._file_history_chart.FlipArchiveVisible )
-                self._show_deleted.clicked.connect( self._file_history_chart.FlipDeletedVisible )
-                
-                QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+                if not self._have_initialised_x_axis:
+                    
+                    self._have_initialised_x_axis = True
+                    
+                    self._AutoXRange()
+                    
+                else:
+                    
+                    self._UpdateXRange()
+                    
                 
                 self._status_st.setVisible( False )
-                self._show_current.setVisible( True )
-                self._show_inbox.setVisible( True )
-                self._show_archive.setVisible( True )
-                self._show_deleted.setVisible( True )
+                
+                self._file_history_chart_panel.setVisible( True )
                 
             finally:
                 
@@ -1997,11 +2041,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._status_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
         self._status_st.setVisible( True )
         
-        self._show_current.setVisible( False )
-        self._show_inbox.setVisible( False )
-        self._show_archive.setVisible( False )
-        self._show_deleted.setVisible( False )
-        self._file_history_chart.setVisible( False )
+        self._file_history_chart_panel.setVisible( False )
         
         self._job_status.Cancel()
         
@@ -2012,6 +2052,11 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._update_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
         self._update_job.start()
+        
+    
+    def _UpdateXRange( self ):
+        
+        self._file_history_chart.SetXRange( self._start_date.dateTime(), self._end_date.dateTime() )
         
     
 class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):

@@ -2,7 +2,6 @@ import os
 import platform
 import sqlite3
 import sys
-import typing
 
 # if you ever remove this, don't forget it is in HydrusBoot as the third party library check
 import yaml
@@ -113,7 +112,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 652
+SOFTWARE_VERSION = 653
 CLIENT_API_VERSION = 83
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -125,11 +124,6 @@ READ_BLOCK_SIZE = 256 * 1024
 lifetimes = [ ( 'one month', 30 * 86400 ), ( 'three months', 3 * 30 * 86400 ), ( 'six months', 6 * 30 * 86400 ), ( 'one year', 365 * 86400 ), ( 'two years', 2 * 365 * 86400 ), ( 'five years', 5 * 365 * 86400 ), ( 'does not expire', None ) ]
 
 USERPATH_SVG_ICON = 'star_shapes'
-
-# some typing stuff
-
-noneable_int = typing.Optional[ int ]
-noneable_str = typing.Optional[ str ]
 
 # Enums
 

@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 
@@ -418,7 +416,7 @@ def GetOutlinePx( diameter, ratio = _TARGET_OUTLINE_THICKNESS, min_thickness = _
     return max( min( diameter / ratio, max_thickness ), min_thickness )
     
 
-def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, height = _H, text: typing.Optional[ str ] = None, text_colour: typing.Optional[ QG.QColor ] = None ):
+def DrawShape( painter, star_type: ClientRatings.StarType, x, y, width = _W, height = _H, text: str | None = None, text_colour: QG.QColor | None = None ):
     
     if star_type.HasShape():
         

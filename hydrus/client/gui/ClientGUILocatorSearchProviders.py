@@ -11,7 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelLoading
 from hydrus.core import HydrusNumbers
 
-def GetSearchProvider( provider: int ) -> typing.Optional[ QAbstractLocatorSearchProvider ]:
+def GetSearchProvider( provider: int ) -> QAbstractLocatorSearchProvider | None:
     
     if provider == CC.COMMAND_PALETTE_PROVIDER_CALCULATOR:
         
@@ -228,7 +228,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         from hydrus.client.gui.pages import ClientGUIPages
         
         self.result_id_counter = 0
-        self.result_ids_to_pages: dict[ int, typing.Union[ ClientGUIPages.Page, ClientGUIPages.PagesNotebook ] ] = {}
+        self.result_ids_to_pages: dict[ int, ClientGUIPages.Page | ClientGUIPages.PagesNotebook ] = {}
         
     
     def title( self ):

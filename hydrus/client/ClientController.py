@@ -215,10 +215,10 @@ class Controller( HydrusController.HydrusController ):
         
         self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( QW.QApplication.instance() )
         
-        self.thumbnails_cache: typing.Optional[ ClientCaches.ThumbnailCache ] = None
+        self.thumbnails_cache: ClientCaches.ThumbnailCache | None = None
         
-        self.client_files_manager: typing.Optional[ ClientFilesManager.ClientFilesManager ] = None
-        self.services_manager: typing.Optional[ ClientServices.ServicesManager ] = None
+        self.client_files_manager: ClientFilesManager.ClientFilesManager | None = None
+        self.services_manager: ClientServices.ServicesManager | None = None
         
         Controller.my_instance = self
         

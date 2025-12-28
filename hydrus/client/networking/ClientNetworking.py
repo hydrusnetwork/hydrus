@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -82,7 +81,7 @@ class NetworkEngine( object ):
         self.controller.sub( self, 'RefreshOptions', 'notify_new_options' )
         
     
-    def _AssignCurrentLoginProcess( self, login_process: typing.Optional[ ClientNetworkingLogin.LoginProcess ] ):
+    def _AssignCurrentLoginProcess( self, login_process: ClientNetworkingLogin.LoginProcess | None ):
         
         self._current_login_process = login_process
         

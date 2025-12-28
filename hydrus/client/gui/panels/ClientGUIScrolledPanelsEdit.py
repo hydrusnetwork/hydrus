@@ -1331,7 +1331,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, names_to_notes: dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
+    def __init__( self, parent: QW.QWidget, names_to_notes: dict[ str, str ], name_to_start_on: str | None ):
         
         super().__init__( parent )
         

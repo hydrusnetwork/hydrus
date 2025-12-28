@@ -824,6 +824,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
         
     
+
 class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, paths ):

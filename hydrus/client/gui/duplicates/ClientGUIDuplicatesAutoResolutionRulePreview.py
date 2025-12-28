@@ -34,7 +34,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         
         self._value_callable = value_callable
         
-        self._value: typing.Optional[ ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ] = None
+        self._value: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule | None = None
         
         self._potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch(
             ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext(),

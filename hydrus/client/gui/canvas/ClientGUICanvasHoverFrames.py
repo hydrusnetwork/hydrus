@@ -461,8 +461,6 @@ class CanvasHoverFrame( QW.QFrame ):
         
         self._hover_panels_that_can_be_on_top_of_us = []
         
-        self._always_on_top = False
-        
         self._last_ideal_position = None
         
         self.hide()
@@ -478,6 +476,11 @@ class CanvasHoverFrame( QW.QFrame ):
     def _GetIdealSizeAndPosition( self ):
         
         raise NotImplementedError()
+        
+    
+    def _IsAlwaysShown( self ):
+        
+        return False
         
     
     def _LowerHover( self ):
@@ -504,7 +507,7 @@ class CanvasHoverFrame( QW.QFrame ):
     
     def _RaiseHover( self ):
         
-        if not self._is_currently_up :
+        if not self._is_currently_up:
             
             if HG.hover_window_report_mode:
                 
@@ -521,11 +524,6 @@ class CanvasHoverFrame( QW.QFrame ):
     def _ShouldBeHidden( self ):
         
         return self._current_media is None
-        
-    
-    def _ShouldBeShown( self ):
-        
-        return self._always_on_top
         
     
     def _SizeAndPosition( self ):
@@ -618,9 +616,16 @@ class CanvasHoverFrame( QW.QFrame ):
         
         current_focus_tlw = QW.QApplication.activeWindow()
         
-        focus_is_good = current_focus_tlw == self.window()
+        if CG.client_controller.new_options.GetBoolean( 'hover_windows_need_window_focus_to_pop_in' ):
+            
+            focus_is_good = current_focus_tlw == self.window()
+            
+        else:
+            
+            focus_is_good = True
+            
         
-        if self._ShouldBeShown():
+        if self._IsAlwaysShown():
             
             self._RaiseHover()
             
@@ -819,7 +824,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        self._window_always_on_top = False #can set this with a global option if you want
+        self._window_always_on_top = False # can set this with a global option if you want
 
         self._window_show_title_bar = True #should always start on
         
@@ -1221,16 +1226,19 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
 
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw tags hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top-right hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw tags (left) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw file information (top) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw ratings and locations (top-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes (right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw index text (bottom-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
 
         ClientGUIMenus.AppendSeparator( menu )
-
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not pop-in tags hover-window on mouseover', 'Disable hovering the tags window.', new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not pop-in top-right hover-window on mouseover', 'Disable hovering the ratings/notes window.', new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'hover window pop-in requires window focus', 'Should the hover windows be able to pop-in even when the window is in the background?', new_options.GetBoolean( 'hover_windows_need_window_focus_to_pop_in' ), flip_background_boolean, 'hover_windows_need_window_focus_to_pop_in' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in tags hover window on mouseover', 'Enable the tags hover window.', not new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in ratings and locations hover window on mouseover', 'Enable the ratings hover window.', not new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in notes hover window on mouseover', 'Enable the notes hover window.', not new_options.GetBoolean( 'disable_notes_hover_in_media_viewer' ), flip_background_boolean, 'disable_notes_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'pin the duplicates hover window so it is always visible', 'Ensure the special duplicates hover window is always visible in the duplicates filter.', new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ), flip_background_boolean, 'hover_window_duplicates_always_on_top' )
 
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -2112,6 +2120,11 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             return ( True, QC.QSize( 20, 20 ), QC.QPoint( -100, -100 ) )
             
         
+        if CG.client_controller.new_options.GetBoolean( 'disable_notes_hover_in_media_viewer'):
+            
+            return ( False, QC.QSize( 0, 0 ), QC.QPoint( 0, 0 ) )
+            
+        
         parent_window = self.parentWidget().window()
         
         parent_size = parent_window.size()
@@ -2288,8 +2301,6 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         super().__init__( parent, my_canvas, canvas_key )
         
-        self._always_on_top = CG.client_controller.new_options.GetBoolean( 'hover_window_duplicates_always_on_top' )
-        
         self._show_approve_deny = show_approve_deny
         
         self._current_index_string = ''
@@ -2325,7 +2336,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             HydrusData.Call( CG.client_controller.new_options.GetBoolean, 'hover_window_duplicates_always_on_top' )
         )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'this hover is always visible', 'By default, this hover is always visible. If you like, you can have it appear only on mouseover, like the others.', check_manager ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'pin this hover so it is always visible', 'By default, this hover is always visible. If you like, you can have it appear only on mouseover, like the others.', check_manager ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         self._cog_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
@@ -2567,9 +2578,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def _FlipAlwaysOnTop( self ):
         
-        new_value = CG.client_controller.new_options.FlipBoolean( 'hover_window_duplicates_always_on_top' )
-        
-        self._always_on_top = new_value
+        CG.client_controller.new_options.FlipBoolean( 'hover_window_duplicates_always_on_top' )
         
         self.DoRegularHideShow()
         
@@ -2687,6 +2696,11 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
         
         return ClientGUIAsync.AsyncQtUpdater( 'duplicate filter comparison statements - slow', self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+        
+    
+    def _IsAlwaysShown( self ):
+        
+        return CG.client_controller.new_options.GetBoolean( 'hover_window_duplicates_always_on_top' )
         
     
     def _PopulateStatements( self, statements_and_scores, names ):

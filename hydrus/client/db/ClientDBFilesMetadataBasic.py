@@ -1,6 +1,5 @@
 import collections.abc
 import sqlite3
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
@@ -226,7 +225,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return total_size
         
     
-    def SetForcedFiletype( self, hash_id: int, forced_mime: typing.Optional[ int ] ):
+    def SetForcedFiletype( self, hash_id: int, forced_mime: int | None ):
         
         self._Execute( 'DELETE FROM files_info_forced_filetypes WHERE hash_id = ?;', ( hash_id, ) )
         

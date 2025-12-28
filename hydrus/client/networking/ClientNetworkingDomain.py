@@ -3,7 +3,6 @@ import collections.abc
 import functools
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
@@ -101,7 +100,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _GetDefaultNoteImportOptionsForURL( self, referral_url: typing.Optional[ str ], file_or_post_url: str ):
+    def _GetDefaultNoteImportOptionsForURL( self, referral_url: str | None, file_or_post_url: str ):
         
         urls_to_examine_in_order = [ file_or_post_url ]
         
@@ -163,7 +162,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return self._file_post_default_note_import_options
         
     
-    def _GetDefaultTagImportOptionsForURL( self, referral_url: typing.Optional[ str ], file_or_post_url: str ):
+    def _GetDefaultTagImportOptionsForURL( self, referral_url: str | None, file_or_post_url: str ):
         
         urls_to_examine_in_order = [ file_or_post_url ]
         
@@ -1396,7 +1395,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetURLClass( self, url ) -> typing.Optional[ ClientNetworkingURLClass.URLClass ]:
+    def GetURLClass( self, url ) -> ClientNetworkingURLClass.URLClass | None:
         
         with self._lock:
             

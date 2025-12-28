@@ -70,7 +70,7 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditCookiePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, name: str, value: str, domain: str, path: str, expires: HC.noneable_int ):
+    def __init__( self, parent: QW.QWidget, name: str, value: str, domain: str, path: str, expires: int | None ):
         
         super().__init__( parent )
         

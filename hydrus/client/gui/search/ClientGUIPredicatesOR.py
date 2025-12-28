@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
@@ -19,7 +17,7 @@ from hydrus.client.search import ClientSearchPredicate
 
 class ORPredicateControl( QW.QWidget ):
     
-    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate, empty_file_search_context: typing.Optional[ ClientSearchFileSearchContext.FileSearchContext ] = None, for_metadata_conditional: bool = False ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearchPredicate.Predicate, empty_file_search_context: ClientSearchFileSearchContext.FileSearchContext | None = None, for_metadata_conditional: bool = False ):
         
         super().__init__( parent )
         

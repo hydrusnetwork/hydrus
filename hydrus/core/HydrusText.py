@@ -1,5 +1,4 @@
 import collections.abc
-import typing
 
 try:
     
@@ -301,7 +300,7 @@ def ElideText( text, max_length, elide_center = False ):
     return text
     
 
-def GetFirstLine( text: typing.Optional[ str ] ) -> str:
+def GetFirstLine( text: str | None ) -> str:
     
     if text is None:
         
@@ -318,7 +317,7 @@ def GetFirstLine( text: typing.Optional[ str ] ) -> str:
         
     
 
-def GetFirstLineSummary( text: typing.Optional[ str ] ) -> str:
+def GetFirstLineSummary( text: str | None ) -> str:
     
     if text is None:
         
@@ -365,7 +364,7 @@ def HumanTextSort( texts ):
     texts.sort( key = HumanTextSortKey ) 
     
 
-def LooksLikeHTML( file_data: typing.Union[ str, bytes ] ):
+def LooksLikeHTML( file_data: str | bytes ):
     # this will false-positive if it is json that contains html, ha ha
     
     if isinstance( file_data, bytes ):
@@ -409,7 +408,7 @@ def LooksLikeSVG( file_data ):
     return False
     
 
-def LooksLikeJSON( file_data: typing.Union[ str, bytes ] ) -> bool:
+def LooksLikeJSON( file_data: str | bytes ) -> bool:
     
     try:
         

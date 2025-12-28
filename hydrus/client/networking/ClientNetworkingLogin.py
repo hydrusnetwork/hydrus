@@ -77,7 +77,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self._login_script_keys_to_login_scripts = {}
         self._login_script_names_to_login_scripts = {}
         
-        self._current_login_process: typing.Optional[ LoginProcess ] = None
+        self._current_login_process: LoginProcess | None = None
         
         self._hydrus_login_script = LoginScriptHydrus()
         
@@ -654,10 +654,9 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetCurrentLoginProcess( self, login_process: typing.Optional[ "LoginProcess" ] ):
+    def SetCurrentLoginProcess( self, login_process: "LoginProcess | None" ):
         
         self._current_login_process = login_process
-        
         
     
     def SetDomainsToLoginInfo( self, domains_to_login_info ):
