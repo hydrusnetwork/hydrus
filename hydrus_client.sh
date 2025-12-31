@@ -1,5 +1,18 @@
 #!/bin/bash
 
+if [ "$(uname)" = "Darwin" ]; then
+    if sysctl -n hw.optional.arm64 >/dev/null 2>&1; then
+        if [ "$(sysctl -n hw.optional.arm64)" = "1" ] && [ "$(uname -m)" = "x86_64" ]; then
+            if command -v arch >/dev/null 2>&1; then
+                echo "Detected Rosetta shell on Apple Silicon. Relaunching under arm64..."
+                exec arch -arm64 /bin/bash "$0" "$@"
+            else
+                echo "Warning: running under Rosetta; performance may suffer."
+            fi
+        fi
+    fi
+fi
+
 pushd "$(dirname "$0")" || exit 1
 
 if [ ! -d "venv" ]; then
@@ -12,6 +25,13 @@ if ! source venv/bin/activate; then
     echo "The venv failed to activate, stopping now!"
     popd || exit 1
     exit 1
+fi
+
+if [ "$(uname)" = "Darwin" ]; then
+    py_arch="$(python -c 'import platform; print(platform.machine())' 2>/dev/null)"
+    if [ "$py_arch" = "x86_64" ]; then
+        echo "Warning: venv python is x86_64; install an arm64 Python/venv for best performance."
+    fi
 fi
 
 # You can copy this file to 'hydrus_client-user.sh' and add in your own launch parameters here if you like. A git pull won't overwrite that filename.

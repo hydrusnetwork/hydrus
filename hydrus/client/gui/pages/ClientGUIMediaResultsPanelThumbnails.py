@@ -1,3 +1,5 @@
+import bisect
+import collections
 import random
 import typing
 
@@ -12,6 +14,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
+from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -146,12 +149,21 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._drag_prefire_event_count = 0
         self._hashes_to_thumbnails_waiting_to_be_drawn: dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
         self._hashes_faded = set()
+        self._masonry_dirty = True
+        self._masonry_positions = []
+        self._masonry_column_entries = []
+        self._masonry_column_starts = []
+        self._masonry_page_to_indices = {}
+        self._masonry_index_to_pages = []
+        self._masonry_virtual_height = 0
         
         super().__init__( parent, page_key, page_manager, media_results )
         
         self._my_current_drag_object = None
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
+        self._thumbnail_layout_options = self._GetThumbnailLayoutOptions()
+        self._thumbnail_render_options = self._GetThumbnailRenderOptions()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
@@ -177,6 +189,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         CG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
+        CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def _CalculateVisiblePageIndices( self ):
@@ -189,7 +202,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
+        page_height = self._GetPageHeight()
         
         first_visible_page_index = earliest_y // page_height
         
@@ -317,6 +330,12 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
+        if self._UsingMasonryLayout():
+            
+            self._EnsureMasonryLayout()
+            
+            page_y_start = page_index * self._GetPageHeight()
+        
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
             display_media = thumbnail.GetDisplayMedia()
@@ -332,13 +351,32 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 self._StopFading( hash )
                 
-                thumbnail_col = thumbnail_index % self._num_columns
-                
-                thumbnail_row = thumbnail_index // self._num_columns
-                
-                x = thumbnail_col * thumbnail_span_width + thumbnail_margin
-                
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
+                if self._UsingMasonryLayout():
+                    
+                    if thumbnail_index >= len( self._masonry_positions ):
+                        
+                        continue
+                        
+                    
+                    rect = self._masonry_positions[ thumbnail_index ]
+                    
+                    if rect is None:
+                        
+                        continue
+                        
+                    
+                    x = rect.x()
+                    y = rect.y() - page_y_start
+                    
+                else:
+                    
+                    thumbnail_col = thumbnail_index % self._num_columns
+                    
+                    thumbnail_row = thumbnail_index // self._num_columns
+                    
+                    x = thumbnail_col * thumbnail_span_width + thumbnail_margin
+                    
+                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
                 painter.drawImage( x, y, thumbnail.GetQtImage( thumbnail, self, self.devicePixelRatio() ) )
                 
@@ -430,10 +468,208 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         return ThumbnailMediaSingleton( media_result )
         
     
+    def _GetThumbnailLayoutOptions( self ):
+        
+        new_options = CG.client_controller.new_options
+        
+        return (
+            tuple( HC.options[ 'thumbnail_dimensions' ] ),
+            new_options.GetInteger( 'thumbnail_border' ),
+            new_options.GetInteger( 'thumbnail_margin' ),
+            new_options.GetInteger( 'thumbnail_zoom_percent' ),
+            new_options.GetBoolean( 'thumbnail_masonry' ),
+            new_options.GetInteger( 'thumbnail_scale_type' )
+        )
+        
+    
+    def _GetThumbnailRenderOptions( self ):
+        
+        new_options = CG.client_controller.new_options
+        
+        return (
+            new_options.GetBoolean( 'draw_thumbnail_header' ),
+        )
+        
+    
+    def _UsingMasonryLayout( self ):
+        
+        return CG.client_controller.new_options.GetBoolean( 'thumbnail_masonry' )
+        
+    
+    def _GetThumbnailDimensions( self ):
+        
+        ( width, height ) = HC.options[ 'thumbnail_dimensions' ]
+        
+        zoom_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_zoom_percent' )
+        
+        if zoom_percent != 100:
+            
+            width = max( 1, int( round( width * ( zoom_percent / 100 ) ) ) )
+            height = max( 1, int( round( height * ( zoom_percent / 100 ) ) ) )
+            
+        
+        return ( width, height )
+        
+    
+    def GetThumbnailInnerDimensions( self, media: ClientMedia.Media ):
+        
+        ( base_width, base_height ) = self._GetThumbnailDimensions()
+        
+        if not self._UsingMasonryLayout():
+            
+            return ( base_width, base_height )
+            
+        
+        ( media_width, media_height ) = media.GetResolution()
+        
+        if media_width is None or media_height is None or media_width <= 0 or media_height <= 0:
+            
+            return ( base_width, base_height )
+            
+        
+        new_options = CG.client_controller.new_options
+        
+        thumbnail_scale_type = new_options.GetInteger( 'thumbnail_scale_type' )
+        
+        ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution(
+            ( media_width, media_height ),
+            ( base_width, base_height ),
+            thumbnail_scale_type,
+            100
+        )
+        
+        if thumb_width <= 0 or thumb_height <= 0:
+            
+            return ( base_width, base_height )
+            
+        
+        ratio = thumb_height / thumb_width
+        
+        target_height = max( 1, int( round( base_width * ratio ) ) )
+        
+        return ( base_width, target_height )
+        
+    
+    def _GetPageHeight( self ):
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+        
+        return max( 1, self._num_rows_per_canvas_page * thumbnail_span_height )
+        
+    
+    def _InvalidateMasonryLayout( self ):
+        
+        self._masonry_dirty = True
+        self._masonry_positions = []
+        self._masonry_column_entries = []
+        self._masonry_column_starts = []
+        self._masonry_page_to_indices = {}
+        self._masonry_index_to_pages = []
+        self._masonry_virtual_height = 0
+        
+    
+    def _EnsureMasonryLayout( self ):
+        
+        if not self._UsingMasonryLayout():
+            
+            return
+            
+        
+        if not self._masonry_dirty:
+            
+            return
+            
+        
+        self._masonry_dirty = False
+        
+        num_media = len( self._sorted_media )
+        
+        self._masonry_positions = [ None ] * num_media
+        self._masonry_page_to_indices = collections.defaultdict( list )
+        self._masonry_index_to_pages = [ [] for i in range( num_media ) ]
+        
+        if num_media == 0:
+            
+            return
+            
+        
+        new_options = CG.client_controller.new_options
+        
+        thumbnail_margin = new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_border = new_options.GetInteger( 'thumbnail_border' )
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+        
+        outer_width = thumbnail_span_width - ( thumbnail_margin * 2 )
+        
+        self._masonry_column_entries = [ [] for i in range( self._num_columns ) ]
+        self._masonry_column_starts = [ [] for i in range( self._num_columns ) ]
+        
+        column_heights = [ 0 ] * self._num_columns
+        
+        page_height = self._GetPageHeight()
+        
+        for ( index, thumbnail ) in enumerate( self._sorted_media ):
+            
+            ( inner_width, inner_height ) = self.GetThumbnailInnerDimensions( thumbnail )
+            
+            outer_height = inner_height + ( thumbnail_border * 2 )
+            
+            column_index = column_heights.index( min( column_heights ) )
+            
+            x = column_index * thumbnail_span_width + thumbnail_margin
+            y = column_heights[ column_index ] + thumbnail_margin
+            
+            rect = QC.QRect( x, y, outer_width, outer_height )
+            
+            self._masonry_positions[ index ] = rect
+            
+            self._masonry_column_entries[ column_index ].append( ( y, y + outer_height, index ) )
+            self._masonry_column_starts[ column_index ].append( y )
+            
+            column_heights[ column_index ] += outer_height + ( thumbnail_margin * 2 )
+            
+            start_page = y // page_height
+            end_page = ( y + outer_height ) // page_height
+            
+            for page_index in range( start_page, end_page + 1 ):
+                
+                self._masonry_page_to_indices[ page_index ].append( index )
+                self._masonry_index_to_pages[ index ].append( page_index )
+                
+            
+        
+        if len( column_heights ) > 0:
+            
+            self._masonry_virtual_height = max( column_heights )
+            
+        else:
+            
+            self._masonry_virtual_height = 0
+            
+        
     def _GetMediaCoordinates( self, media ):
         
         try: index = self._sorted_media.index( media )
         except: return ( -1, -1 )
+        
+        if self._UsingMasonryLayout():
+            
+            self._EnsureMasonryLayout()
+            
+            if index >= len( self._masonry_positions ):
+                
+                return ( -1, -1 )
+                
+            
+            rect = self._masonry_positions[ index ]
+            
+            if rect is None:
+                
+                return ( -1, -1 )
+                
+            
+            return ( rect.x(), rect.y() )
         
         row = index // self._num_columns
         column = index % self._num_columns
@@ -449,11 +685,33 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def _GetPageIndexFromThumbnailIndex( self, thumbnail_index ):
         
-        thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
-        
-        page_index = thumbnail_index // thumbnails_per_page
-        
-        return page_index
+        if self._UsingMasonryLayout():
+            
+            self._EnsureMasonryLayout()
+            
+            if thumbnail_index >= len( self._masonry_positions ):
+                
+                return 0
+                
+            
+            rect = self._masonry_positions[ thumbnail_index ]
+            
+            if rect is None:
+                
+                return 0
+                
+            
+            page_height = self._GetPageHeight()
+            
+            return rect.y() // page_height
+            
+        else:
+            
+            thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
+            
+            page_index = thumbnail_index // thumbnails_per_page
+            
+            return page_index
         
     
     def _GetThumbnailSpanDimensions( self ):
@@ -461,7 +719,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
-        return ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( thumbnail_border + thumbnail_margin ) * 2 )
+        return ClientData.AddPaddingToDimensions( self._GetThumbnailDimensions(), ( thumbnail_border + thumbnail_margin ) * 2 )
         
     
     def _GetThumbnailUnderMouse( self, mouse_event ):
@@ -473,10 +731,64 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         ( t_span_x, t_span_y ) = self._GetThumbnailSpanDimensions()
         
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+
+        if self._UsingMasonryLayout():
+            
+            self._EnsureMasonryLayout()
+            
+            x_mod = x % t_span_x
+            
+            if x_mod <= thumbnail_margin or x_mod > t_span_x - thumbnail_margin:
+                
+                return None
+                
+            
+            column_index = x // t_span_x
+            
+            if column_index >= self._num_columns:
+                
+                return None
+                
+            
+            if column_index >= len( self._masonry_column_entries ):
+                
+                return None
+                
+            
+            entries = self._masonry_column_entries[ column_index ]
+            
+            if len( entries ) == 0:
+                
+                return None
+                
+            
+            starts = self._masonry_column_starts[ column_index ]
+            
+            entry_index = bisect.bisect_right( starts, y ) - 1
+            
+            if entry_index < 0:
+                
+                return None
+                
+            
+            ( start_y, end_y, thumbnail_index ) = entries[ entry_index ]
+            
+            if y < start_y or y > end_y:
+                
+                return None
+                
+            
+            if thumbnail_index >= len( self._sorted_media ):
+                
+                return None
+                
+            
+            return self._sorted_media[ thumbnail_index ]
+            
+        
         x_mod = x % t_span_x
         y_mod = y % t_span_y
-        
-        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         if x_mod <= thumbnail_margin or y_mod <= thumbnail_margin or x_mod > t_span_x - thumbnail_margin or y_mod > t_span_y - thumbnail_margin:
             
@@ -508,22 +820,32 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def _GetThumbnailsFromPageIndex( self, page_index ):
         
-        num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
-        
-        start_index = num_thumbnails_per_page * page_index
-        
-        if start_index <= len( self._sorted_media ):
+        if self._UsingMasonryLayout():
             
-            end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
+            self._EnsureMasonryLayout()
             
-            thumbnails = [ ( index, self._sorted_media[ index ] ) for index in range( start_index, end_index ) ]
+            indices = self._masonry_page_to_indices.get( page_index, [] )
+            
+            return [ ( index, self._sorted_media[ index ] ) for index in indices if index < len( self._sorted_media ) ]
             
         else:
             
-            thumbnails = []
+            num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
             
-        
-        return thumbnails
+            start_index = num_thumbnails_per_page * page_index
+            
+            if start_index <= len( self._sorted_media ):
+                
+                end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
+                
+                thumbnails = [ ( index, self._sorted_media[ index ] ) for index in range( start_index, end_index ) ]
+                
+            else:
+                
+                thumbnails = []
+                
+            
+            return thumbnails
         
     
     def _MediaIsInCleanPage( self, thumbnail ):
@@ -537,19 +859,75 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             return False
             
         
-        if self._GetPageIndexFromThumbnailIndex( index ) in self._clean_canvas_pages:
+        if self._UsingMasonryLayout():
             
-            return True
+            self._EnsureMasonryLayout()
+            
+            if index < len( self._masonry_index_to_pages ):
+                
+                for page_index in self._masonry_index_to_pages[ index ]:
+                    
+                    if page_index in self._clean_canvas_pages:
+                        
+                        return True
+                        
+                    
+                
+            
+            return False
             
         else:
             
-            return False
+            if self._GetPageIndexFromThumbnailIndex( index ) in self._clean_canvas_pages:
+                
+                return True
+                
+            else:
+                
+                return False
             
         
     
     def _MediaIsVisible( self, media ):
         
         if media is not None:
+            
+            if self._UsingMasonryLayout():
+                
+                try:
+                    
+                    index = self._sorted_media.index( media )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    return False
+                    
+                
+                self._EnsureMasonryLayout()
+                
+                if index >= len( self._masonry_positions ):
+                    
+                    return False
+                    
+                
+                rect = self._masonry_positions[ index ]
+                
+                if rect is None:
+                    
+                    return False
+                    
+                
+                visible_rect = QP.ScrollAreaVisibleRect( self )
+                
+                visible_rect_y = visible_rect.y()
+                
+                visible_rect_height = visible_rect.height()
+                
+                bottom_edge_below_top_of_view = visible_rect_y < rect.y() + rect.height()
+                top_edge_above_bottom_of_view = rect.y() < visible_rect_y + visible_rect_height
+                
+                return bottom_edge_below_top_of_view and top_edge_above_bottom_of_view
+                
             
             ( x, y ) = self._GetMediaCoordinates( media )
             
@@ -632,6 +1010,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         self._DirtyAllPages()
         
+        if self._UsingMasonryLayout():
+            
+            self._InvalidateMasonryLayout()
+        
         self.widget().update()
         
     
@@ -646,18 +1028,27 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
-            num_media = len( self._sorted_media )
-            
-            num_rows = max( 1, num_media // self._num_columns )
-            
-            if num_media % self._num_columns > 0:
+            if self._UsingMasonryLayout():
                 
-                num_rows += 1
+                self._EnsureMasonryLayout()
+                
+                virtual_height = self._masonry_virtual_height
+                
+            else:
+                
+                num_media = len( self._sorted_media )
+                
+                num_rows = max( 1, num_media // self._num_columns )
+                
+                if num_media % self._num_columns > 0:
+                    
+                    num_rows += 1
+                    
+                
+                virtual_height = num_rows * thumbnail_span_height
                 
             
             virtual_width = my_width
-            
-            virtual_height = num_rows * thumbnail_span_height
             
             yUnit = self.verticalScrollBar().singleStep()
             
@@ -783,6 +1174,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 self._DeleteAllDirtyPages()
                 
             
+            if self._UsingMasonryLayout():
+                
+                self._InvalidateMasonryLayout()
+                
+            
             self.widget().update()
             
         
@@ -800,6 +1196,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         super()._RemoveMediaDirectly( singleton_media, collected_media )
         
         self._EndShiftSelect()
+        
+        if self._UsingMasonryLayout():
+            
+            self._InvalidateMasonryLayout()
         
         self._RecalculateVirtualSize()
         
@@ -856,6 +1256,41 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
             
+            if self._UsingMasonryLayout():
+                
+                try:
+                    
+                    index = self._sorted_media.index( media )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    return
+                    
+                
+                self._EnsureMasonryLayout()
+                
+                if index >= len( self._masonry_positions ):
+                    
+                    return
+                    
+                
+                rect = self._masonry_positions[ index ]
+                
+                if rect is None:
+                    
+                    return
+                    
+                
+                if rect.y() < visible_rect_y:
+                    
+                    self.ensureVisible( 0, rect.y(), 0, 0 )
+                    
+                elif rect.y() > visible_rect_y + visible_rect_height - ( rect.height() * percent_visible ):
+                    
+                    self.ensureVisible( 0, rect.y() + rect.height() )
+                    
+                return
+                
             if y < visible_rect_y:
                 
                 self.ensureVisible( 0, y, 0, 0 )
@@ -906,6 +1341,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             if len( thumbnails ) > 0:
                 
+                if self._UsingMasonryLayout():
+                    
+                    self._InvalidateMasonryLayout()
+                    
                 self._RecalculateVirtualSize()
                 
                 CG.client_controller.thumbnails_cache.Waterfall( self._page_key, thumbnails )
@@ -1088,6 +1527,34 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         if len( affected_thumbnails ) > 0:
             
             self._RedrawMedia( affected_thumbnails )
+            
+        
+    
+    def NotifyNewOptions( self ):
+        
+        new_layout_options = self._GetThumbnailLayoutOptions()
+        new_render_options = self._GetThumbnailRenderOptions()
+        
+        if new_layout_options != self._thumbnail_layout_options:
+            
+            self._thumbnail_layout_options = new_layout_options
+            self._thumbnail_render_options = new_render_options
+            
+            self.ThumbnailsReset()
+            
+        elif new_render_options != self._thumbnail_render_options:
+            
+            self._thumbnail_render_options = new_render_options
+            
+            self.RedrawAllThumbnails()
+            
+        else:
+            
+            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+            
+            thumbnail_scroll_rate = float( CG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
+            
+            self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
             
         
     
@@ -1882,6 +2349,10 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._hashes_to_thumbnails_waiting_to_be_drawn = {}
         self._hashes_faded = set()
         
+        if self._UsingMasonryLayout():
+            
+            self._InvalidateMasonryLayout()
+        
         self._ReinitialisePageCacheIfNeeded()
         
         self._RecalculateVirtualSize()
@@ -1901,7 +2372,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         page_indices_to_painters = {}
         
-        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
+        page_height = self._GetPageHeight()
         
         for hash in HydrusLists.IterateListRandomlyAndFast( hashes ):
             
@@ -1922,44 +2393,106 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                     expected_thumbnail = None
                     
                 
-                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
-                
                 if expected_thumbnail != thumbnail_draw_object.thumbnail:
-                    
-                    delete_entry = True
-                    
-                elif page_index not in self._clean_canvas_pages:
                     
                     delete_entry = True
                     
                 else:
                     
-                    thumbnail_col = thumbnail_index % self._num_columns
-                    
-                    thumbnail_row = thumbnail_index // self._num_columns
-                    
-                    x = thumbnail_col * thumbnail_span_width + thumbnail_margin
-                    
-                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
-                    
-                    if page_index not in page_indices_to_painters:
+                    if self._UsingMasonryLayout():
                         
-                        canvas_page = self._clean_canvas_pages[ page_index ]
+                        self._EnsureMasonryLayout()
                         
-                        painter = QG.QPainter( canvas_page )
+                        if thumbnail_index >= len( self._masonry_positions ):
+                            
+                            delete_entry = True
+                            
+                        else:
+                            
+                            rect = self._masonry_positions[ thumbnail_index ]
+                            
+                            if rect is None:
+                                
+                                delete_entry = True
+                                
+                            else:
+                                
+                                pages_for_thumb = []
+                                
+                                if thumbnail_index < len( self._masonry_index_to_pages ):
+                                    
+                                    pages_for_thumb = self._masonry_index_to_pages[ thumbnail_index ]
+                                    
+                                
+                                clean_pages = [ page_index for page_index in pages_for_thumb if page_index in self._clean_canvas_pages ]
+                                
+                                if len( clean_pages ) == 0:
+                                    
+                                    delete_entry = True
+                                    
+                                else:
+                                    
+                                    for page_index in clean_pages:
+                                        
+                                        if page_index not in page_indices_to_painters:
+                                            
+                                            canvas_page = self._clean_canvas_pages[ page_index ]
+                                            
+                                            painter = QG.QPainter( canvas_page )
+                                            
+                                            page_indices_to_painters[ page_index ] = painter
+                                            
+                                        
+                                        painter = page_indices_to_painters[ page_index ]
+                                        
+                                        y = rect.y() - ( page_index * page_height )
+                                        
+                                        thumbnail_draw_object.DrawToPainter( rect.x(), y, painter )
+                                        
+                                        page_virtual_y = page_height * page_index
+                                        
+                                        self.widget().update( QC.QRect( rect.x(), page_virtual_y + y, rect.width(), rect.height() ) )
+                                        
+                                    
+                                
+                            
                         
-                        page_indices_to_painters[ page_index ] = painter
+                    else:
                         
-                    
-                    painter = page_indices_to_painters[ page_index ]
-                    
-                    thumbnail_draw_object.DrawToPainter( x, y, painter )
-                    
-                    #
-                    
-                    page_virtual_y = page_height * page_index
-                    
-                    self.widget().update( QC.QRect( x, page_virtual_y + y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
+                        page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                        
+                        if page_index not in self._clean_canvas_pages:
+                            
+                            delete_entry = True
+                            
+                        else:
+                            
+                            thumbnail_col = thumbnail_index % self._num_columns
+                            
+                            thumbnail_row = thumbnail_index // self._num_columns
+                            
+                            x = thumbnail_col * thumbnail_span_width + thumbnail_margin
+                            
+                            y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
+                            
+                            if page_index not in page_indices_to_painters:
+                                
+                                canvas_page = self._clean_canvas_pages[ page_index ]
+                                
+                                painter = QG.QPainter( canvas_page )
+                                
+                                page_indices_to_painters[ page_index ] = painter
+                                
+                            
+                            painter = page_indices_to_painters[ page_index ]
+                            
+                            thumbnail_draw_object.DrawToPainter( x, y, painter )
+                            
+                            #
+                            
+                            page_virtual_y = page_height * page_index
+                            
+                            self.widget().update( QC.QRect( x, page_virtual_y + y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
                     
                 
             
@@ -2038,7 +2571,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
                 
-                page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
+                page_height = self._parent._GetPageHeight()
                 
                 page_indices_to_display = self._parent._CalculateVisiblePageIndices()
                 
@@ -2229,7 +2762,9 @@ class Thumbnail( Selectable ):
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         
-        ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
+        inner_dimensions = media_panel.GetThumbnailInnerDimensions( media )
+        
+        ( width, height ) = ClientData.AddPaddingToDimensions( inner_dimensions, thumbnail_border * 2 )
         
         qt_image_width = int( width * device_pixel_ratio )
         
@@ -2344,19 +2879,34 @@ class Thumbnail( Selectable ):
             
         
         thumbnail_dpr_percent = new_options.GetInteger( 'thumbnail_dpr_percent' )
+        thumbnail_dpr = thumbnail_dpr_percent / 100
         
         if thumbnail_dpr_percent != 100:
             
-            thumbnail_dpr = thumbnail_dpr_percent / 100
+            raw_thumbnail_qt_image.setDevicePixelRatio( thumbnail_dpr )
+            
+        
+        # qt_image.deviceIndepedentSize isn't supported in Qt5 lmao
+        device_independent_thumb_size = raw_thumbnail_qt_image.size() / thumbnail_dpr
+        
+        device_independent_thumb_width = device_independent_thumb_size.width()
+        device_independent_thumb_height = device_independent_thumb_size.height()
+        
+        if int( round( device_independent_thumb_width ) ) != inner_dimensions[ 0 ] or int( round( device_independent_thumb_height ) ) != inner_dimensions[ 1 ]:
+            
+            scaled_width = max( 1, int( round( inner_dimensions[ 0 ] * thumbnail_dpr ) ) )
+            scaled_height = max( 1, int( round( inner_dimensions[ 1 ] * thumbnail_dpr ) ) )
+            
+            raw_thumbnail_qt_image = raw_thumbnail_qt_image.scaled(
+                scaled_width,
+                scaled_height,
+                QC.Qt.AspectRatioMode.KeepAspectRatio,
+                QC.Qt.TransformationMode.SmoothTransformation
+            )
             
             raw_thumbnail_qt_image.setDevicePixelRatio( thumbnail_dpr )
             
-            # qt_image.deviceIndepedentSize isn't supported in Qt5 lmao
             device_independent_thumb_size = raw_thumbnail_qt_image.size() / thumbnail_dpr
-            
-        else:
-            
-            device_independent_thumb_size = raw_thumbnail_qt_image.size()
             
         
         x_offset = ( width - device_independent_thumb_size.width() ) // 2
@@ -2391,9 +2941,11 @@ class Thumbnail( Selectable ):
                 self._last_lower_summary = lower_summary
                 
             
-            if len( upper_summary ) > 0 or len( lower_summary ) > 0:
+            draw_thumbnail_header = new_options.GetBoolean( 'draw_thumbnail_header' )
+            
+            if ( draw_thumbnail_header and len( upper_summary ) > 0 ) or len( lower_summary ) > 0:
                 
-                if len( upper_summary ) > 0:
+                if draw_thumbnail_header and len( upper_summary ) > 0:
                     
                     text_colour_with_alpha = upper_tag_summary_generator.GetTextColour()
                     

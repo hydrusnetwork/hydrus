@@ -39,16 +39,30 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         tt += '\n' * 2
         tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusNumbers.FloatToPercentage( self.devicePixelRatio() ) )
         self._thumbnail_dpr_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+
+        self._thumbnail_zoom_percent = QP.LabelledSlider( thumbnail_appearance_box )
+        self._thumbnail_zoom_percent.SetRange( 50, 300 )
+        self._thumbnail_zoom_percent.SetInterval( 10 )
+        tt = 'Scale the displayed thumbnail size without regenerating them. Useful for quick zoom adjustments while browsing.'
+        self._thumbnail_zoom_percent.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( thumbnail_appearance_box, min=0, max=100 )
         
         self._fade_thumbnails = QW.QCheckBox( thumbnail_appearance_box )
         tt = 'Whenever thumbnails change (appearing on a page, selecting, an icon or tag banner changes), they normally fade from the old to the new. If you would rather they change instantly, in one frame, uncheck this.'
         self._fade_thumbnails.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
+
         self._allow_blurhash_fallback = QW.QCheckBox( thumbnail_appearance_box )
         tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
         self._allow_blurhash_fallback.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+
+        self._thumbnail_masonry = QW.QCheckBox( thumbnail_appearance_box )
+        tt = 'Lay out thumbnails in a masonry column layout with variable heights.'
+        self._thumbnail_masonry.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+
+        self._draw_thumbnail_header = QW.QCheckBox( thumbnail_appearance_box )
+        tt = 'Show the top tag summary header on thumbnails.'
+        self._draw_thumbnail_header.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -86,10 +100,13 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._thumbnail_scale_type.SetValue( self._new_options.GetInteger( 'thumbnail_scale_type' ) )
         self._thumbnail_dpr_percentage.setValue( self._new_options.GetInteger( 'thumbnail_dpr_percent' ) )
+        self._thumbnail_zoom_percent.SetValue( self._new_options.GetInteger( 'thumbnail_zoom_percent' ) )
         
         self._video_thumbnail_percentage_in.setValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
         
         self._allow_blurhash_fallback.setChecked( self._new_options.GetBoolean( 'allow_blurhash_fallback' ) )
+        self._thumbnail_masonry.setChecked( self._new_options.GetBoolean( 'thumbnail_masonry' ) )
+        self._draw_thumbnail_header.setChecked( self._new_options.GetBoolean( 'draw_thumbnail_header' ) )
         
         self._fade_thumbnails.setChecked( self._new_options.GetBoolean( 'fade_thumbnails' ) )
         
@@ -121,9 +138,12 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Thumbnail margin: ', self._thumbnail_margin ) )
         rows.append( ( 'Thumbnail scaling: ', self._thumbnail_scale_type ) )
         rows.append( ( 'Thumbnail UI-scale supersampling %: ', self._thumbnail_dpr_percentage ) )
+        rows.append( ( 'Thumbnail zoom %: ', self._thumbnail_zoom_percent ) )
         rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
         rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
         rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
+        rows.append( ( 'Use masonry thumbnail layout: ', self._thumbnail_masonry ) )
+        rows.append( ( 'Show thumbnail header: ', self._draw_thumbnail_header ) )
         
         gridbox = ClientGUICommon.WrapInGrid( thumbnail_appearance_box, rows )
         
@@ -186,6 +206,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetInteger( 'thumbnail_scale_type', self._thumbnail_scale_type.GetValue() )
         self._new_options.SetInteger( 'thumbnail_dpr_percent', self._thumbnail_dpr_percentage.value() )
+        self._new_options.SetInteger( 'thumbnail_zoom_percent', self._thumbnail_zoom_percent.GetValue() )
         
         self._new_options.SetInteger( 'video_thumbnail_percentage_in', self._video_thumbnail_percentage_in.value() )
         
@@ -195,6 +216,8 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
         
         self._new_options.SetBoolean( 'allow_blurhash_fallback', self._allow_blurhash_fallback.isChecked() )
+        self._new_options.SetBoolean( 'thumbnail_masonry', self._thumbnail_masonry.isChecked() )
+        self._new_options.SetBoolean( 'draw_thumbnail_header', self._draw_thumbnail_header.isChecked() )
         
         self._new_options.SetBoolean( 'fade_thumbnails', self._fade_thumbnails.isChecked() )
         
