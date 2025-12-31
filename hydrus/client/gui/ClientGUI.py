@@ -8049,6 +8049,53 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._canvas_frames = [ frame for frame in self._canvas_frames if QP.isValid( frame ) ]
         
     
+    def GetMediaViewerInfo( self ):
+        
+        self.MaintainCanvasFrameReferences()
+        
+        for frame in self._canvas_frames:
+            
+            if frame._canvas_window is not None:
+                
+                current_media = frame._canvas_window._current_media
+                
+                if current_media is not None:
+                    
+                    info = {}
+                    
+                    # Basic file info
+                    info[ 'hash' ] = current_media.GetHash()
+                    info[ 'size' ] = current_media.GetSize()
+                    info[ 'mime' ] = current_media.GetMime()
+                    info[ 'width' ], info[ 'height' ] = current_media.GetResolution()
+                    info[ 'duration' ] = current_media.GetDurationMS()
+                    info[ 'num_frames' ] = current_media.GetNumFrames()
+                    info[ 'has_audio' ] = current_media.HasAudio()
+                    info[ 'is_inbox' ] = current_media.HasInbox()
+                    
+                    # Extended file info from FileInfoManager
+                    file_info_manager = current_media.GetFileInfoManager()
+                    info[ 'has_exif' ] = file_info_manager.has_exif
+                    info[ 'has_icc_profile' ] = file_info_manager.has_icc_profile
+                    info[ 'has_transparency' ] = file_info_manager.has_transparency
+                    info[ 'blurhash' ] = file_info_manager.blurhash
+                    info[ 'pixel_hash' ] = file_info_manager.pixel_hash
+                    
+                    # Notes
+                    info[ 'has_notes' ] = current_media.HasNotes()
+                    
+                    # URLs from LocationsManager
+                    locations_manager = current_media.GetLocationsManager()
+                    info[ 'urls' ] = list( locations_manager.GetURLs() )
+                    
+                    return info
+                    
+                
+            
+        
+        return None
+        
+    
     def MaintainMemory( self ):
         
         self._menu_updater_database.update()
