@@ -2,6 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -87,11 +88,13 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         prefetch_panel = ClientGUICommon.StaticBox( self, 'image prefetch', can_expand = True, start_expanded = False )
         
-        self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 50 )
-        self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 50 )
+        # Allow higher prefetch counts for users with plenty of memory
+        self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 500 )
+        self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 500 )
         
         self._duplicate_filter_prefetch_num_pairs = ClientGUICommon.BetterSpinBox( prefetch_panel, min = 0, max = 25 )
         
+        self._prefetch_label_memory_estimate = ClientGUICommon.BetterStaticText( prefetch_panel )
         self._prefetch_label_warning = ClientGUICommon.BetterStaticText( prefetch_panel )
         self._prefetch_label_warning.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you boost the prefetch numbers, make sure your image cache is big enough to handle it! Doubly so if you frequently load images that at 100% are far larger than your screen size. You really don\'t want to be prefetching more than your cache can hold!' ) )
         
@@ -261,6 +264,7 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Num previous to prefetch in Media Viewer:', self._media_viewer_prefetch_num_previous ) )
         rows.append( ( 'Num next to prefetch in Media Viewer:', self._media_viewer_prefetch_num_next ) )
         rows.append( ( 'Num pairs to prefetch in Duplicate Filter:', self._duplicate_filter_prefetch_num_pairs ) )
+        rows.append( ( 'Approx prefetch memory (Media Viewer / Duplicate Filter):', self._prefetch_label_memory_estimate ) )
         rows.append( ( 'Prefetch numbers exceed cache prefetch limit?', self._prefetch_label_warning ) )
         
         gridbox = ClientGUICommon.WrapInGrid( prefetch_panel, rows )
@@ -409,6 +413,13 @@ class SpeedAndMemoryPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         num_prefetch_media_viewer = 1 + self._media_viewer_prefetch_num_previous.value() + self._media_viewer_prefetch_num_next.value()
         num_prefetch_duplicate_filter = 2 + ( self._duplicate_filter_prefetch_num_pairs.value() * 2 )
+        
+        media_prefetch_1080p = num_prefetch_media_viewer * image_1080p
+        media_prefetch_4k = num_prefetch_media_viewer * image_4k
+        duplicate_prefetch_1080p = num_prefetch_duplicate_filter * image_1080p
+        duplicate_prefetch_4k = num_prefetch_duplicate_filter * image_4k
+        
+        self._prefetch_label_memory_estimate.setText( 'MV: {} @1080p, {} @4k | DF: {} @1080p, {} @4k'.format( HydrusData.ToHumanBytes( media_prefetch_1080p ), HydrusData.ToHumanBytes( media_prefetch_4k ), HydrusData.ToHumanBytes( duplicate_prefetch_1080p ), HydrusData.ToHumanBytes( duplicate_prefetch_4k ) ) )
         
         if num_prefetch_media_viewer * image_1080p > available_prefetch_bytes:
             

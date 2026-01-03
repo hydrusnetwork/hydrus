@@ -17,7 +17,8 @@ class HydrusLogger( object ):
         self._db_dir = db_dir
         self._prefix = prefix
         
-        self._currently_crash_reporting = False
+        crash_env = os.environ.get( 'HYDRUS_FAULTHANDLER', '' ).strip().lower()
+        self._currently_crash_reporting = crash_env in { '1', 'true', 'yes', 'on' }
         
         self._lock = threading.Lock()
         

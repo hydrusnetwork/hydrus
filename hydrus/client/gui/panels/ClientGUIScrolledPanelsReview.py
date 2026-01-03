@@ -365,9 +365,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
     def _CanSetMaxNumBytes( self ):
-        
-        only_one_location_is_limitless = len( [ 1 for base_location in self._media_base_locations if base_location.max_num_bytes is None ] ) == 1
-        
         base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
         if len( base_locations ) > 0:
@@ -375,12 +372,6 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             base_location = base_locations[0]
             
             if base_location in self._media_base_locations:
-                
-                if base_location.max_num_bytes is None and only_one_location_is_limitless:
-                    
-                    return False
-                    
-                
                 return True
                 
             
@@ -923,10 +914,13 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             if base_location in self._media_base_locations:
                 
                 max_num_bytes = base_location.max_num_bytes
+                old_max_num_bytes = max_num_bytes
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit max size' ) as dlg:
                     
-                    message = 'If a location goes over its set size, it will schedule to migrate some files to other locations. At least one media location must have no limit.'
+                    message = 'If a location goes over its set size, it will schedule to migrate some files to other locations.'
+                    message += '\n' * 2
+                    message += 'If you set limits on all locations, make sure the total limits are above your current file size. Otherwise, some locations may remain over their limits.'
                     message += '\n' * 2
                     message += 'This is not precise (it works on average size, and thumbnails can add a bit), so give it some padding. Also, in general, remember it is not healthy to fill any hard drive more than 90% full.'
                     message += '\n' * 2
@@ -947,6 +941,25 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         max_num_bytes = control.GetValue()
                         
                         base_location.max_num_bytes = max_num_bytes
+                        
+                        if all( base_location.max_num_bytes is not None for base_location in self._media_base_locations ):
+                            
+                            total_max_num_bytes = sum( ( base_location.max_num_bytes for base_location in self._media_base_locations ) )
+                            
+                            if total_max_num_bytes < self._hydrus_local_file_storage_total_size:
+                                
+                                warning = 'Your total size limits are below your current file size. Some locations will remain over their limits until you raise a limit or remove files. Continue?'
+                                
+                                result = ClientGUIDialogsQuick.GetYesNo( self, warning )
+                                
+                                if result != QW.QDialog.DialogCode.Accepted:
+                                    
+                                    base_location.max_num_bytes = old_max_num_bytes
+                                    
+                                    return
+                                    
+                                
+                            
                         
                         self._SaveToDB()
                         
