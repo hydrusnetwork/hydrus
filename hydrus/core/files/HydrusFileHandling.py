@@ -396,6 +396,32 @@ def GetExtraHashesFromPath( path ):
     sha512 = h_sha512.digest()
     
     return ( md5, sha1, sha512 )
+
+
+def GetHashAndExtraHashesFromPath( path ):
+    
+    h_sha256 = hashlib.sha256()
+    h_md5 = hashlib.md5()
+    h_sha1 = hashlib.sha1()
+    h_sha512 = hashlib.sha512()
+    
+    with open( path, 'rb' ) as f:
+        
+        for block in HydrusPaths.ReadFileLikeAsBlocks( f ):
+            
+            h_sha256.update( block )
+            h_md5.update( block )
+            h_sha1.update( block )
+            h_sha512.update( block )
+            
+        
+    
+    sha256 = h_sha256.digest()
+    md5 = h_md5.digest()
+    sha1 = h_sha1.digest()
+    sha512 = h_sha512.digest()
+    
+    return ( sha256, ( md5, sha1, sha512 ) )
     
 
 def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
