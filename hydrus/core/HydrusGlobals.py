@@ -43,12 +43,12 @@ export_folders_running = False
 
 boot_with_network_traffic_paused_command_line = False
 
-db_profile_min_job_time_ms = 16
-callto_profile_min_job_time_ms = 10
+db_profile_min_job_time_ms = 1
+callto_profile_min_job_time_ms = 1
 server_profile_min_job_time_ms = 10
-menu_profile_min_job_time_ms = 16
-pubsub_profile_min_job_time_ms = 5
-ui_timer_profile_min_job_time_ms = 5
+menu_profile_min_job_time_ms = 1
+pubsub_profile_min_job_time_ms = 1
+ui_timer_profile_min_job_time_ms = 1
 
 macos_antiflicker_test = False
 
