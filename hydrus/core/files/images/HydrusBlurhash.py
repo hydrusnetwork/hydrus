@@ -1,9 +1,14 @@
+import functools
+
 import numpy
 import cv2
 
 from hydrus.external import blurhash as external_blurhash
 
 from hydrus.core.files.images import HydrusImageHandling
+
+_BLURHASH_DECODE_CACHE_MAX = 256
+_BLURHASH_DECODE_CACHE_MAX_DIMENSION = 256
 
 # pretty grunky but it seems to all work and this is low level so I'll endure it
 def rgb_to_hsl( r, g, b ):
@@ -202,6 +207,16 @@ def GetBlurhashFromNumPy( numpy_image: numpy.ndarray ) -> str:
 def GetNumpyFromBlurhash( blurhash, width, height ) -> numpy.ndarray:
     
     # this thing is super slow, they recommend even in the documentation to render small and scale up
+    if width > _BLURHASH_DECODE_CACHE_MAX_DIMENSION or height > _BLURHASH_DECODE_CACHE_MAX_DIMENSION:
+        
+        return _GetNumpyFromBlurhashUncached( blurhash, width, height )
+        
+    
+    return _GetNumpyFromBlurhashCached( blurhash, width, height )
+
+
+def _GetNumpyFromBlurhashUncached( blurhash, width, height ) -> numpy.ndarray:
+    
     if width > 32 or height > 32:
         
         numpy_image = numpy.array( external_blurhash.blurhash_decode( blurhash, 32, 32 ), dtype = 'uint8' )
@@ -212,6 +227,15 @@ def GetNumpyFromBlurhash( blurhash, width, height ) -> numpy.ndarray:
         
         numpy_image = numpy.array( external_blurhash.blurhash_decode( blurhash, width, height ), dtype = 'uint8' )
         
+    
+    return numpy_image
+
+
+@functools.lru_cache( maxsize = _BLURHASH_DECODE_CACHE_MAX )
+def _GetNumpyFromBlurhashCached( blurhash, width, height ) -> numpy.ndarray:
+    
+    numpy_image = _GetNumpyFromBlurhashUncached( blurhash, width, height )
+    numpy_image.setflags( write = False )
     
     return numpy_image
     

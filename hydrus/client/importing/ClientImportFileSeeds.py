@@ -34,6 +34,7 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTikTok
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.parsing import ClientParsing
 from hydrus.client.parsing import ClientParsingResults
@@ -684,9 +685,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         tags = parsed_post.GetTags()
         
-        self._tags.update( tags )
-        
         names_and_notes = parsed_post.GetNamesAndNotes()
+        
+        tiktok_tags = ClientTikTok.GetTikTokTagsFromParsedMetadata(
+            parsed_post.GetURLs( ClientTikTok.TIKTOK_URL_TYPES ),
+            names_and_notes,
+            tags
+        )
+        
+        if len( tiktok_tags ) > 0:
+            
+            tags.update( tiktok_tags )
+            
+        
+        self._tags.update( tags )
         
         self._names_and_notes_dict.update( names_and_notes )
         

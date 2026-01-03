@@ -332,6 +332,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         super().__init__( parent )
         
         self.setObjectName( 'HydrusMediaViewer' )
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
         
         self.setSizePolicy( QW.QSizePolicy.Policy.Expanding, QW.QSizePolicy.Policy.Expanding )
         
@@ -857,6 +858,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         try:
             
             painter = QG.QPainter( self )
+            painter.setClipRegion( event.region() )
             
             self._DrawBackgroundBitmap( painter )
             
