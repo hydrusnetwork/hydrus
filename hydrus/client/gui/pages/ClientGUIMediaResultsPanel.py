@@ -10,6 +10,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
@@ -131,6 +132,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         
         self._had_changes_to_tag_presentation_while_hidden = False
+        self._sort_generation = 0
+        self._seriation_sort_in_progress = False
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'media', 'thumbnails' ] )
         
@@ -1988,6 +1991,161 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self.Sort()
         
     
+    def _IsSeriationSort( self, media_sort ):
+        
+        if media_sort is None:
+            
+            return False
+            
+        
+        ( sort_metatype, sort_data ) = media_sort.sort_type
+        
+        if sort_metatype != 'system':
+            
+            return False
+            
+        
+        return sort_data in (
+            CC.SORT_FILES_BY_SERIATION,
+            CC.SORT_FILES_BY_SERIATION_TAGS,
+            CC.SORT_FILES_BY_SERIATION_VISUAL_TAGS
+        )
+        
+    
+    def _SortFinished( self ):
+        
+        pass
+        
+    
+    def _QTApplySeriationSort( self, sort_generation, ordered_medias, exception ):
+        
+        if not QP.isValid( self ):
+            
+            return
+            
+        
+        if sort_generation != self._sort_generation:
+            
+            return
+            
+        
+        self._seriation_sort_in_progress = False
+        
+        if exception is not None:
+            
+            HydrusData.ShowException( exception )
+            
+            return
+            
+        
+        if ordered_medias is None:
+            
+            return
+            
+        
+        order_lookup = { media : i for ( i, media ) in enumerate( ordered_medias ) }
+        max_index = len( order_lookup )
+        
+        self._sorted_media.sort( key = lambda m: order_lookup.get( m, max_index ), reverse = False )
+        
+        self._RecalcHashes()
+        
+        self._SortFinished()
+        
+    
+    def _THREADSeriationSort( self, sort_generation, media_sort, medias_snapshot ):
+        
+        ordered_medias = None
+        exception = None
+        
+        try:
+            
+            ( sort_metatype, sort_data ) = media_sort.sort_type
+            reverse = media_sort.sort_order == CC.SORT_DESC
+            
+            if sort_data == CC.SORT_FILES_BY_SERIATION:
+                
+                ordered_medias = ClientMedia.GetSeriationOrderingForMediasByBlurhash( medias_snapshot, reverse )
+                
+            elif sort_data == CC.SORT_FILES_BY_SERIATION_TAGS:
+                
+                ordered_medias = ClientMedia.GetSeriationOrderingForMediasByTags( medias_snapshot, reverse, media_sort.tag_context )
+                
+            elif sort_data == CC.SORT_FILES_BY_SERIATION_VISUAL_TAGS:
+                
+                ordered_medias = ClientMedia.GetSeriationOrderingForMediasByVisualAndTags( medias_snapshot, reverse, media_sort.tag_context )
+                
+            else:
+                
+                ordered_medias = medias_snapshot
+                
+            
+        except Exception as e:
+            
+            exception = e
+            
+        
+        CG.client_controller.CallAfterQtSafe(
+            self,
+            self._QTApplySeriationSort,
+            sort_generation,
+            ordered_medias,
+            exception
+        )
+        
+    
+    def Sort( self, media_sort = None, secondary_sort = None ):
+        
+        self._sort_generation += 1
+        sort_generation = self._sort_generation
+        
+        if media_sort is None:
+            
+            media_sort = self._media_sort
+            
+        
+        if secondary_sort is None:
+            
+            if self._secondary_media_sort is None:
+                
+                secondary_sort = CG.client_controller.new_options.GetFallbackSort()
+                
+            else:
+                
+                secondary_sort = self._secondary_media_sort
+                
+            
+        
+        if not self._IsSeriationSort( media_sort ):
+            
+            self._seriation_sort_in_progress = False
+            
+            ClientMedia.ListeningMediaList.Sort( self, media_sort = media_sort, secondary_sort = secondary_sort )
+            
+            self._SortFinished()
+            
+            return
+            
+        
+        self._seriation_sort_in_progress = True
+        
+        self._media_sort = media_sort
+        self._secondary_media_sort = secondary_sort
+        
+        for media in self._collected_media:
+            
+            media.Sort( media_sort = media_sort, secondary_sort = secondary_sort )
+            
+        
+        medias_snapshot = HydrusLists.FastIndexUniqueList( list( self._sorted_media ) )
+        
+        self._secondary_media_sort.Sort( self._location_context, self._tag_context, medias_snapshot )
+        
+        medias_snapshot = list( medias_snapshot )
+        
+        CG.client_controller.CallToThread( self._THREADSeriationSort, sort_generation, media_sort, medias_snapshot )
+        
+    
     def GetColour( self, colour_type ):
         
         if CG.client_controller.new_options.GetBoolean( 'override_stylesheet_colours' ):
@@ -2791,6 +2949,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             super().__init__( parent )
             
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
             self._parent = parent
             
         
@@ -2799,6 +2958,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             try:
                 
                 painter = QG.QPainter( self )
+                painter.setClipRegion( event.region() )
                 
                 bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
                 

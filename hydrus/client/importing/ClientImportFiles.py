@@ -5,6 +5,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files.images import HydrusBlurhash
+from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
@@ -223,7 +224,7 @@ class FileImportJob( object ):
             status_hook( 'calculating hash' )
             
         
-        hash = HydrusFileHandling.GetHashFromPath( self._temp_path )
+        ( hash, self._extra_hashes ) = HydrusFileHandling.GetHashAndExtraHashesFromPath( self._temp_path )
         
         if HG.file_import_report_mode:
             
@@ -307,6 +308,20 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job file info: {}'.format( self._file_info ) )
             
         
+        numpy_image = None
+        
+        if mime in HC.IMAGES or mime in HC.VIEWABLE_IMAGE_PROJECT_FILES:
+            # Reuse a single decode for image-derived metadata to avoid repeated loads.
+            try:
+                
+                numpy_image = HydrusImageHandling.GenerateNumPyImage( self._temp_path, mime, human_file_description = self._human_file_description )
+                
+            except:
+                
+                numpy_image = None
+                
+            
+        
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
             if status_hook is not None:
@@ -329,7 +344,19 @@ class FileImportJob( object ):
             
             extra_description = f'File with hash "{self.GetHash().hex()}".'
             
-            thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in, extra_description = extra_description )
+            if mime in HC.IMAGES and numpy_image is not None:
+                
+                try:
+                    
+                    thumbnail_numpy = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
+                    
+                except:
+                    
+                    thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in, extra_description = extra_description )
+                
+            else:
+                
+                thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy( self._temp_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in, extra_description = extra_description )
             
             # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
             self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
@@ -356,7 +383,21 @@ class FileImportJob( object ):
                 HydrusData.ShowText( 'File import job generating perceptual_hashes' )
                 
             
-            self._perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( self._temp_path, mime )
+            if numpy_image is None:
+                
+                self._perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( self._temp_path, mime )
+                
+            else:
+                
+                try:
+                    
+                    self._perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashesNumPy( numpy_image )
+                    
+                except:
+                    
+                    self._perceptual_hashes = set()
+                    
+                
             
             if HG.file_import_report_mode:
                 
@@ -364,21 +405,29 @@ class FileImportJob( object ):
                 
             
         
-        if HG.file_import_report_mode:
+        if self._extra_hashes is None:
             
-            HydrusData.ShowText( 'File import job generating other hashes' )
+            if HG.file_import_report_mode:
+                
+                HydrusData.ShowText( 'File import job generating other hashes' )
+                
             
-        
-        if status_hook is not None:
+            if status_hook is not None:
+                
+                status_hook( 'generating additional hashes' )
+                
             
-            status_hook( 'generating additional hashes' )
-            
-        
-        self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
+            self._extra_hashes = HydrusFileHandling.GetExtraHashesFromPath( self._temp_path )
         
         #
         
-        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration_ms, num_frames = num_frames, resolution = ( width, height ) )
+        if numpy_image is not None and mime in HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY:
+            
+            self._has_transparency = HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image )
+            
+        else:
+            
+            self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration_ms, num_frames = num_frames, resolution = ( width, height ) )
         
         has_exif = False
         
@@ -403,7 +452,20 @@ class FileImportJob( object ):
         
         self._has_exif = has_exif
         
-        self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime )
+        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA and raw_pil_image is not None:
+            
+            try:
+                
+                self._has_human_readable_embedded_metadata = HydrusImageMetadata.HasHumanReadableEmbeddedMetadata( raw_pil_image )
+                
+            except:
+                
+                self._has_human_readable_embedded_metadata = False
+                
+            
+        else:
+            
+            self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime )
         
         has_icc_profile = False
         
@@ -439,7 +501,13 @@ class FileImportJob( object ):
             
             try:
                 
-                self._pixel_hash = HydrusImageHandling.GetImagePixelHash( self._temp_path, mime )
+                if numpy_image is None:
+                    
+                    self._pixel_hash = HydrusImageHandling.GetImagePixelHash( self._temp_path, mime )
+                    
+                else:
+                    
+                    self._pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 
             except:
                 

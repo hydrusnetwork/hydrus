@@ -2359,7 +2359,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _InitialiseMenubar( self ):
         
-        use_native_menubar = CG.client_controller.new_options.GetBoolean( 'use_native_menubar' )
+        # On macOS, force the native menubar regardless of the stored option to ensure consistent OS-style behaviour.
+        use_native_menubar = True if HC.PLATFORM_MACOS else CG.client_controller.new_options.GetBoolean( 'use_native_menubar' )
         
         if use_native_menubar:
             
