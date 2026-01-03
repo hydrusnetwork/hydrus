@@ -36,6 +36,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvasMediaLayout
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
@@ -296,7 +297,6 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
         return QC.QSize( media_width, media_height )
         
     
-
 def CalculateMediaSize( media, zoom ):
     
     if media.GetMime() in HC.AUDIO or not media.HasUsefulResolution():
@@ -1664,6 +1664,12 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def _ControlsBarUsesReservedSpace( self ):
+        
+        # QVideoWidget can sit above other widgets, so reserve space for the scrubber bar.
+        return isinstance( self._media_window, QtMediaPlayer )
+        
+    
     def _MakeMediaWindow( self ):
         
         old_media_window = self._media_window
@@ -1859,6 +1865,7 @@ class MediaContainer( QW.QWidget ):
         is_near = False
         show_small_instead_of_hiding = None
         force_show = False
+        controls_bar_visibility_changed = False
         
         if not ShouldHaveAnimationBar( self._media, self._show_action ):
             
@@ -1903,6 +1910,7 @@ class MediaContainer( QW.QWidget ):
                 self._animation_bar.setGubbinsVisible( True )
                 self._animation_bar.repaint() # this is probably not needed
                 
+                controls_bar_visibility_changed = True
                 do_layout = True
                 
             
@@ -1936,6 +1944,12 @@ class MediaContainer( QW.QWidget ):
                 
                 self._controls_bar.layout() # this is probably not needed
                 
+                controls_bar_visibility_changed = True
+        
+        if controls_bar_visibility_changed and self._ControlsBarUsesReservedSpace():
+            
+            self._SizeAndPositionChildren()
+            
             
         
     
@@ -1946,13 +1960,22 @@ class MediaContainer( QW.QWidget ):
             self._embed_button.setFixedSize( self.size() )
             self._embed_button.move( QC.QPoint( 0, 0 ) )
             
+            controls_bar_rect = self.GetIdealControlsBarRect( full_size = self._controls_bar_show_full )
+            
             if self._media_window is not None:
                 
-                self._media_window.setFixedSize( self.size() )
-                self._media_window.move( QC.QPoint( 0, 0 ) )
+                media_rect = QC.QRect( QC.QPoint( 0, 0 ), self.size() )
                 
-            
-            controls_bar_rect = self.GetIdealControlsBarRect( full_size = self._controls_bar_show_full )
+                media_height = ClientGUICanvasMediaLayout.CalculateMediaHeightForControlsBar(
+                    media_rect.height(),
+                    controls_bar_rect.height(),
+                    self._ControlsBarUsesReservedSpace(),
+                    self._controls_bar.isHidden()
+                )
+                
+                media_rect.setHeight( media_height )
+                self._media_window.setFixedSize( media_rect.size() )
+                self._media_window.move( media_rect.topLeft() )
             
             if controls_bar_rect.size() != self._controls_bar.size():
                 
@@ -2586,7 +2609,14 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        media_size = self._media_window.size()
+        if self._ControlsBarUsesReservedSpace() and not self._controls_bar.isHidden():
+            
+            media_size = self.size()
+            
+        else:
+            
+            media_size = self._media_window.size()
+            
         media_width = media_size.width()
         media_height = media_size.height()
         
