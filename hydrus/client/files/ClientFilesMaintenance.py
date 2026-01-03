@@ -149,7 +149,7 @@ All missing/incorrect files will also have their hashes, tags, and URLs exported
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : '''This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.''',
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : '''This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.''',
     REGENERATE_FILE_DATA_JOB_BLURHASH : '''This generates a very small version of the file's thumbnail that can be used as a placeholder while the thumbnail loads.''',
-    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : '''This looks at a file's known URLs and adds local tags like "site:tiktok" and "creator:<handle>" if it detects TikTok URLs. No network requests are made.'''
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : '''This looks at a file's known URLs and adds downloader tags like "site:tiktok" and "creator:<handle>" if it detects TikTok URLs. No network requests are made.'''
 }
 
 NORMALISED_BIG_JOB_WEIGHT = 100
@@ -1076,7 +1076,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
         tags_manager = media_result.GetTagsManager()
-        existing_tags = tags_manager.GetCurrentAndPending( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+        existing_tags = tags_manager.GetCurrentAndPending( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
         
         tags_to_add.difference_update( existing_tags )
         
@@ -1093,7 +1093,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         ]
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
-            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY,
+            CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY,
             content_updates
         )
         
