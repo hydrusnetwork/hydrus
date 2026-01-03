@@ -382,6 +382,8 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         super().__init__( parent )
         
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
+        
         self._canvas_type = canvas_type
         self._background_colour_generator = background_colour_generator
         
@@ -720,6 +722,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             
             painter = QG.QPainter( self )
+            painter.setClipRegion( event.region() )
             
             if self._canvas_qt_pixmap is None:
                 
@@ -989,6 +992,8 @@ class AnimationBar( QW.QWidget ):
     def __init__( self, parent ):
         
         super().__init__( parent )
+        
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
         
         self._qss_colours = {
             'hab_border' : QG.QColor( 0, 0, 0 ),
@@ -1328,6 +1333,7 @@ class AnimationBar( QW.QWidget ):
         try:
             
             painter = QG.QPainter( self )
+            painter.setClipRegion( event.region() )
             
             if self._CurrentMediaWindowIsBad() or self._next_draw_info is None:
                 
@@ -3075,6 +3081,8 @@ class EmbedButton( QW.QWidget ):
         
         super().__init__( parent )
         
+        self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
+        
         self._background_colour_generator = background_colour_generator
         
         self._media = None
@@ -3161,6 +3169,7 @@ class EmbedButton( QW.QWidget ):
         try:
             
             painter = QG.QPainter( self )
+            painter.setClipRegion( event.region() )
             
             self._Redraw( painter )
             
@@ -3939,6 +3948,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             
             painter = QG.QPainter( self )
+            painter.setClipRegion( event.region() )
             
             if self._image_renderer is None or not self._image_renderer.IsReady():
                 

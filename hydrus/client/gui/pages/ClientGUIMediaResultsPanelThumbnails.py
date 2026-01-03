@@ -2529,6 +2529,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             super().__init__( parent )
             
             self.setMouseTracking( True )
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
             
             self._parent = parent
             
@@ -2568,6 +2569,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                     
                 
                 painter = QG.QPainter( self )
+                painter.setClipRegion( event.region() )
                 
                 ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
                 

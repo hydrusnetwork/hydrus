@@ -95,6 +95,7 @@ def GetBlurhashToSortableCall( sort_data: int ):
 SERIATION_VISUAL_WEIGHT = 0.7
 SERIATION_TAG_WEIGHT = 0.3
 SERIATION_VISUAL_BIN_SIZE = 32
+SERIATION_VISUAL_JACCARD_BUCKET_SIZE = 4
 SERIATION_MAX_VISUAL_CANDIDATES = 200
 SERIATION_MAX_TAG_CANDIDATES = 200
 SERIATION_MAX_TAG_KEYS = 5
@@ -137,10 +138,10 @@ def _ColourDistance( c1, c2 ):
     return ( r1 - r2 ) ** 2 + ( g1 - g2 ) ** 2 + ( b1 - b2 ) ** 2
     
 
-def _TagDistance( t1, t2 ):
+def _JaccardDistance( s1, s2 ):
     
-    intersection = len( t1.intersection( t2 ) )
-    union = len( t1 ) + len( t2 ) - intersection
+    intersection = len( s1.intersection( s2 ) )
+    union = len( s1 ) + len( s2 ) - intersection
     
     if union == 0:
         
@@ -148,6 +149,18 @@ def _TagDistance( t1, t2 ):
         
     
     return 1.0 - ( intersection / union )
+
+
+def _TagDistance( t1, t2 ):
+    
+    return _JaccardDistance( t1, t2 )
+    
+
+def _BuildVisualJaccardFeature( numpy_image, bucket_size: int ):
+    
+    flat = numpy_image.reshape( -1 )
+    
+    return frozenset( ( i, int( v ) // bucket_size ) for ( i, v ) in enumerate( flat ) )
     
 
 def _TrimCandidates( candidates, score_fn, max_candidates ):
@@ -375,7 +388,7 @@ def GetSeriationOrderingForMediasByBlurhash( medias: list[ "Media" ], reverse: b
             
             average_colour = HydrusBlurhash.GetAverageColourFromBlurhash( blurhash )
             numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, 8, 8 )
-            feature = tuple( numpy_image.reshape( -1 ).tolist() )
+            feature = _BuildVisualJaccardFeature( numpy_image, SERIATION_VISUAL_JACCARD_BUCKET_SIZE )
             
         except Exception:
             
@@ -411,19 +424,9 @@ def GetSeriationOrderingForMediasByBlurhash( medias: list[ "Media" ], reverse: b
     
     count = len( medias_with_features )
     candidate_sets = _BuildVisualCandidateSets( average_colours, visual_bin_size, max_visual_candidates )
-    max_visual_distance = 255 * 255 * len( visual_features[ 0 ] )
-    
     def distance( i, j ):
         
-        total = 0
-        
-        for ( a, b ) in zip( visual_features[ i ], visual_features[ j ] ):
-            
-            diff = a - b
-            total += diff * diff
-            
-        
-        return total / max_visual_distance
+        return _JaccardDistance( visual_features[ i ], visual_features[ j ] )
         
     
     ( rs, gs, bs ) = ( 0, 0, 0 )
@@ -541,7 +544,7 @@ def GetSeriationOrderingForMediasByVisualAndTags( medias: list[ "Media" ], rever
                 
                 average_colour = HydrusBlurhash.GetAverageColourFromBlurhash( blurhash )
                 numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, 8, 8 )
-                visual_feature = tuple( numpy_image.reshape( -1 ).tolist() )
+                visual_feature = _BuildVisualJaccardFeature( numpy_image, SERIATION_VISUAL_JACCARD_BUCKET_SIZE )
                 
             except Exception:
                 
@@ -604,37 +607,9 @@ def GetSeriationOrderingForMediasByVisualAndTags( medias: list[ "Media" ], rever
         candidates_by_index.append( combined )
         
     
-    feature_length = None
-    
-    for feature in visual_features:
-        
-        if feature is not None:
-            
-            feature_length = len( feature )
-            break
-            
-        
-    
-    if feature_length is None:
-        
-        max_visual_distance = 1
-        
-    else:
-        
-        max_visual_distance = 255 * 255 * feature_length
-        
-    
     def visual_distance( f1, f2 ):
         
-        total = 0
-        
-        for ( a, b ) in zip( f1, f2 ):
-            
-            diff = a - b
-            total += diff * diff
-            
-        
-        return total / max_visual_distance
+        return _JaccardDistance( f1, f2 )
         
     
     def distance( i, j ):

@@ -2791,6 +2791,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             super().__init__( parent )
             
+            self.setAttribute( QC.Qt.WidgetAttribute.WA_OpaquePaintEvent, True )
             self._parent = parent
             
         
@@ -2799,6 +2800,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             try:
                 
                 painter = QG.QPainter( self )
+                painter.setClipRegion( event.region() )
                 
                 bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
                 
