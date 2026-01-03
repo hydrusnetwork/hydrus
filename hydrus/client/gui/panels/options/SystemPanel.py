@@ -29,6 +29,9 @@ class SystemPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._file_system_waits_on_wakeup = QW.QCheckBox( sleep_panel )
         self._file_system_waits_on_wakeup.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' ) )
+
+        self._allow_missing_file_locations = QW.QCheckBox( sleep_panel )
+        self._allow_missing_file_locations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Allow file locations to be temporarily unavailable (e.g. removable drives or a NAS). This avoids repair prompts on boot, but files in the missing location will be unavailable until it returns.' ) )
         
         #
         
@@ -37,6 +40,7 @@ class SystemPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._wake_delay_period.setValue( self._new_options.GetInteger( 'wake_delay_period' ) )
         
         self._file_system_waits_on_wakeup.setChecked( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
+        self._allow_missing_file_locations.setChecked( self._new_options.GetBoolean( 'allow_missing_file_locations' ) )
         
         #
         
@@ -45,6 +49,7 @@ class SystemPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Allow wake-from-system-sleep detection:', self._do_sleep_check ) )
         rows.append( ( 'After a wake from system sleep, wait this many seconds before allowing new network access:', self._wake_delay_period ) )
         rows.append( ( 'Include the file system in this wait: ', self._file_system_waits_on_wakeup ) )
+        rows.append( ( 'Allow missing file locations (e.g. removable/NAS):', self._allow_missing_file_locations ) )
         
         gridbox = ClientGUICommon.WrapInGrid( sleep_panel, rows )
         
@@ -65,5 +70,6 @@ class SystemPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'do_sleep_check', self._do_sleep_check.isChecked() )
         self._new_options.SetInteger( 'wake_delay_period', self._wake_delay_period.value() )
         self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.isChecked() )
+        self._new_options.SetBoolean( 'allow_missing_file_locations', self._allow_missing_file_locations.isChecked() )
         
     

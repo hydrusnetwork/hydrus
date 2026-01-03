@@ -734,6 +734,10 @@ class ClientFilesManager( object ):
         for subfolder in subfolders:
             
             if not subfolder.PathExists():
+                if CG.client_controller.new_options.GetBoolean( 'allow_missing_file_locations' ) and not subfolder.base_location.PathExists():
+                    
+                    continue
+                    
                 
                 raise HydrusExceptions.DirectoryMissingException( f'The directory {subfolder.path} was not found! Reconnect the missing location or shut down the client immediately!' )
                 
@@ -877,12 +881,17 @@ class ClientFilesManager( object ):
     def _ReinitMissingLocations( self ):
         
         self._missing_subfolders = set()
+        allow_missing_locations = CG.client_controller.new_options.GetBoolean( 'allow_missing_file_locations' )
         
         for subfolders in self._prefix_umbrellas_to_client_files_subfolders.values():
             
             for subfolder in subfolders:
                 
                 if not subfolder.PathExists():
+                    if allow_missing_locations and not subfolder.base_location.PathExists():
+                        
+                        continue
+                        
                     
                     self._missing_subfolders.add( subfolder )
                     
@@ -1390,6 +1399,44 @@ class ClientFilesManager( object ):
     def GetMissingSubfolders( self ):
         
         return self._missing_subfolders
+        
+    
+    def GetMissingFilePrefixesAndHexLength( self ):
+        
+        with self._master_locations_rwlock.read:
+            
+            file_subfolders = [
+                subfolder
+                for subfolders in self._prefix_umbrellas_to_client_files_subfolders.values()
+                for subfolder in subfolders
+                if subfolder.IsForFiles()
+            ]
+            prefix_hex_length = self._shortest_prefix
+            
+        
+        if len( file_subfolders ) == 0:
+            
+            return ( set(), prefix_hex_length )
+            
+        
+        base_locations = { subfolder.base_location for subfolder in file_subfolders }
+        missing_base_locations = { base_location for base_location in base_locations if not base_location.PathExists() }
+        
+        missing_prefixes = set()
+        
+        for subfolder in file_subfolders:
+            
+            if subfolder.base_location in missing_base_locations:
+                
+                missing_prefixes.add( subfolder.prefix )
+                
+            elif not subfolder.PathExists():
+                
+                missing_prefixes.add( subfolder.prefix )
+                
+            
+        
+        return ( missing_prefixes, prefix_hex_length )
         
     
     def GetAllSubfolders( self ) -> collections.abc.Collection[ ClientFilesPhysical.FilesStorageSubfolder ]:

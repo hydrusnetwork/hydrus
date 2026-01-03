@@ -56,6 +56,14 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         tt = 'This is a fairly advanced option. It only fires if the sort is simple enough for the database to do the limited sort. Some people like it, some do not. If you turn it on and _do_ want to sort a limited set by a different sort, hit "searching immediately" to pause search updates.'
         self._refresh_search_page_on_system_limited_sort_changed.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
+        self._hide_missing_file_locations_in_search = QW.QCheckBox( misc_panel )
+        tt = 'If some file storage locations are missing (e.g. an offline NAS), hide those files from search results. Nothing is deleted or changed.'
+        self._hide_missing_file_locations_in_search.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._hide_missing_file_paths_in_search = QW.QCheckBox( misc_panel )
+        tt = 'Hide files from search results if their expected file path is missing. This may be slow for large result sets.'
+        self._hide_missing_file_paths_in_search.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         #
         
         self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
@@ -80,6 +88,9 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._forced_search_limit.SetValue( self._new_options.GetNoneableInteger( 'forced_search_limit' ) )
         
         self._refresh_search_page_on_system_limited_sort_changed.setChecked( self._new_options.GetBoolean( 'refresh_search_page_on_system_limited_sort_changed' ) )
+        
+        self._hide_missing_file_locations_in_search.setChecked( self._new_options.GetBoolean( 'search_hide_files_in_missing_file_locations' ) )
+        self._hide_missing_file_paths_in_search.setChecked( self._new_options.GetBoolean( 'search_hide_files_with_missing_paths' ) )
         
         #
         
@@ -108,6 +119,8 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Implicit system:limit for all searches: ', self._forced_search_limit ) )
         rows.append( ( 'If explicit system:limit, then refresh search when file sort changes: ', self._refresh_search_page_on_system_limited_sort_changed ) )
+        rows.append( ( 'Hide files in missing file locations in search results: ', self._hide_missing_file_locations_in_search ) )
+        rows.append( ( 'Hide files with missing file paths in search results: ', self._hide_missing_file_paths_in_search ) )
         
         gridbox = ClientGUICommon.WrapInGrid( misc_panel, rows )
         
@@ -141,5 +154,7 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetNoneableInteger( 'forced_search_limit', self._forced_search_limit.GetValue() )
         
         self._new_options.SetBoolean( 'refresh_search_page_on_system_limited_sort_changed', self._refresh_search_page_on_system_limited_sort_changed.isChecked() )
+        self._new_options.SetBoolean( 'search_hide_files_in_missing_file_locations', self._hide_missing_file_locations_in_search.isChecked() )
+        self._new_options.SetBoolean( 'search_hide_files_with_missing_paths', self._hide_missing_file_paths_in_search.isChecked() )
         
     
