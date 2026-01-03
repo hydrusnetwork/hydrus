@@ -92,6 +92,633 @@ def GetBlurhashToSortableCall( sort_data: int ):
     return sort_data_to_blurhash_to_sortable_calls.get( sort_data, HydrusBlurhash.ConvertBlurhashToSortableLightness )
     
 
+SERIATION_VISUAL_WEIGHT = 0.7
+SERIATION_TAG_WEIGHT = 0.3
+SERIATION_VISUAL_BIN_SIZE = 32
+SERIATION_MAX_VISUAL_CANDIDATES = 200
+SERIATION_MAX_TAG_CANDIDATES = 200
+SERIATION_MAX_TAG_KEYS = 5
+SERIATION_MAX_HYBRID_CANDIDATES = 250
+
+
+def _GetSeriationInteger( name, default_value ):
+    
+    try:
+        
+        value = CG.client_controller.new_options.GetInteger( name )
+        
+        return max( 1, int( value ) )
+        
+    except Exception:
+        
+        return default_value
+        
+    
+
+def _GetSeriationFloat( name, default_value ):
+    
+    try:
+        
+        value = CG.client_controller.new_options.GetFloat( name )
+        
+        return max( 0.0, float( value ) )
+        
+    except Exception:
+        
+        return default_value
+        
+    
+
+def _ColourDistance( c1, c2 ):
+    
+    ( r1, g1, b1 ) = c1
+    ( r2, g2, b2 ) = c2
+    
+    return ( r1 - r2 ) ** 2 + ( g1 - g2 ) ** 2 + ( b1 - b2 ) ** 2
+    
+
+def _TagDistance( t1, t2 ):
+    
+    intersection = len( t1.intersection( t2 ) )
+    union = len( t1 ) + len( t2 ) - intersection
+    
+    if union == 0:
+        
+        return 0.0
+        
+    
+    return 1.0 - ( intersection / union )
+    
+
+def _TrimCandidates( candidates, score_fn, max_candidates ):
+    
+    if len( candidates ) <= max_candidates:
+        
+        return set( candidates )
+        
+    
+    trimmed = sorted( candidates, key = lambda i: ( score_fn( i ), i ) )
+    
+    return set( trimmed[ : max_candidates ] )
+    
+
+def _BuildVisualCandidateSets( average_colours, bin_size: int, max_candidates: int ):
+    
+    bins = collections.defaultdict( list )
+    
+    for ( i, colour ) in enumerate( average_colours ):
+        
+        if colour is None:
+            
+            continue
+            
+        
+        ( r, g, b ) = colour
+        key = ( int( r ) // bin_size, int( g ) // bin_size, int( b ) // bin_size )
+        
+        bins[ key ].append( i )
+        
+    
+    candidates_by_index = [ set() for _ in average_colours ]
+    
+    for ( i, colour ) in enumerate( average_colours ):
+        
+        if colour is None:
+            
+            continue
+            
+        
+        ( r, g, b ) = colour
+        key = ( int( r ) // bin_size, int( g ) // bin_size, int( b ) // bin_size )
+        
+        for dx in ( -1, 0, 1 ):
+            
+            for dy in ( -1, 0, 1 ):
+                
+                for dz in ( -1, 0, 1 ):
+                    
+                    neighbour_key = ( key[0] + dx, key[1] + dy, key[2] + dz )
+                    
+                    candidates_by_index[ i ].update( bins.get( neighbour_key, [] ) )
+                    
+                
+            
+        
+        candidates_by_index[ i ].discard( i )
+        
+        if len( candidates_by_index[ i ] ) > max_candidates:
+            
+            candidates_by_index[ i ] = _TrimCandidates(
+                candidates_by_index[ i ],
+                lambda j, c = colour: _ColourDistance( average_colours[ j ], c ),
+                max_candidates
+            )
+            
+        
+    
+    return candidates_by_index
+    
+
+def _BuildTagCandidateSets( tag_sets, max_candidates: int, max_tags_per_item: int ):
+    
+    tag_counts = collections.Counter()
+    tag_to_indices = collections.defaultdict( list )
+    
+    for ( i, tags ) in enumerate( tag_sets ):
+        
+        if tags is None or len( tags ) == 0:
+            
+            continue
+            
+        
+        tag_counts.update( tags )
+        
+        for tag in tags:
+            
+            tag_to_indices[ tag ].append( i )
+            
+        
+    
+    candidates_by_index = [ set() for _ in tag_sets ]
+    
+    for ( i, tags ) in enumerate( tag_sets ):
+        
+        if tags is None or len( tags ) == 0:
+            
+            continue
+            
+        
+        sorted_tags = sorted( tags, key = lambda t: ( tag_counts[ t ], t ) )
+        
+        for tag in sorted_tags[ : max_tags_per_item ]:
+            
+            candidates_by_index[ i ].update( tag_to_indices[ tag ] )
+            
+            if len( candidates_by_index[ i ] ) >= max_candidates:
+                
+                break
+                
+            
+        
+        candidates_by_index[ i ].discard( i )
+        
+        if len( candidates_by_index[ i ] ) > max_candidates:
+            
+            candidates_by_index[ i ] = _TrimCandidates(
+                candidates_by_index[ i ],
+                lambda j, t = tags: _TagDistance( t, tag_sets[ j ] ),
+                max_candidates
+            )
+            
+        
+    
+    return ( candidates_by_index, tag_counts )
+    
+
+def _PickFallbackIndex( unvisited, fallback_indices ):
+    
+    for i in fallback_indices:
+        
+        if i in unvisited:
+            
+            return i
+            
+        
+    
+    return next( iter( unvisited ) )
+    
+
+def _GetGreedySeriationOrderWithCandidates( count: int, distance, start_index: int, candidates_by_index, fallback_indices ):
+    
+    unvisited = set( range( count ) )
+    order = []
+    current_index = start_index
+    
+    # Greedy nearest-neighbor path across the feature space, limited to candidate sets.
+    while len( unvisited ) > 0:
+        
+        if current_index not in unvisited:
+            
+            current_index = _PickFallbackIndex( unvisited, fallback_indices )
+            
+        
+        order.append( current_index )
+        unvisited.discard( current_index )
+        
+        if len( unvisited ) == 0:
+            
+            break
+            
+        
+        best_index = None
+        best_distance = None
+        
+        for i in candidates_by_index[ current_index ]:
+            
+            if i not in unvisited:
+                
+                continue
+                
+            
+            value = distance( i, current_index )
+            
+            if best_distance is None or value < best_distance:
+                
+                best_distance = value
+                best_index = i
+                
+            
+        
+        if best_index is None:
+            
+            current_index = _PickFallbackIndex( unvisited, fallback_indices )
+            
+        else:
+            
+            current_index = best_index
+            
+        
+    
+    return order
+    
+
+def GetSeriationOrderingForMediasByBlurhash( medias: list[ "Media" ], reverse: bool ):
+    
+    medias_with_features = []
+    medias_without_features = []
+    visual_features = []
+    average_colours = []
+    visual_bin_size = _GetSeriationInteger( 'seriation_visual_bin_size', SERIATION_VISUAL_BIN_SIZE )
+    max_visual_candidates = _GetSeriationInteger( 'seriation_max_visual_candidates', SERIATION_MAX_VISUAL_CANDIDATES )
+    
+    for media in medias:
+        
+        display_media = media.GetDisplayMedia()
+        
+        if display_media is None:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        blurhash = display_media.GetMediaResult().GetFileInfoManager().blurhash
+        
+        if blurhash is None:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        try:
+            
+            average_colour = HydrusBlurhash.GetAverageColourFromBlurhash( blurhash )
+            numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, 8, 8 )
+            feature = tuple( numpy_image.reshape( -1 ).tolist() )
+            
+        except Exception:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        if len( feature ) == 0:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        medias_with_features.append( media )
+        visual_features.append( feature )
+        average_colours.append( average_colour )
+        
+    
+    if len( medias_with_features ) <= 1:
+        
+        ordered_medias = list( medias_with_features )
+        ordered_medias.extend( medias_without_features )
+        
+        if reverse:
+            
+            ordered_medias.reverse()
+            
+        
+        return ordered_medias
+        
+    
+    count = len( medias_with_features )
+    candidate_sets = _BuildVisualCandidateSets( average_colours, visual_bin_size, max_visual_candidates )
+    max_visual_distance = 255 * 255 * len( visual_features[ 0 ] )
+    
+    def distance( i, j ):
+        
+        total = 0
+        
+        for ( a, b ) in zip( visual_features[ i ], visual_features[ j ] ):
+            
+            diff = a - b
+            total += diff * diff
+            
+        
+        return total / max_visual_distance
+        
+    
+    ( rs, gs, bs ) = ( 0, 0, 0 )
+    
+    for ( r, g, b ) in average_colours:
+        
+        rs += r
+        gs += g
+        bs += b
+        
+    
+    centroid = ( rs / count, gs / count, bs / count )
+    
+    start_index = min( range( count ), key = lambda i: _ColourDistance( average_colours[ i ], centroid ) )
+    fallback_indices = sorted( range( count ), key = lambda i: _ColourDistance( average_colours[ i ], centroid ) )
+    
+    order = _GetGreedySeriationOrderWithCandidates( count, distance, start_index, candidate_sets, fallback_indices )
+    ordered_medias = [ medias_with_features[ i ] for i in order ]
+    ordered_medias.extend( medias_without_features )
+    
+    if reverse:
+        
+        ordered_medias.reverse()
+        
+    
+    return ordered_medias
+    
+
+def GetSeriationOrderingForMediasByTags( medias: list[ "Media" ], reverse: bool, tag_context: ClientSearchTagContext.TagContext ):
+    
+    medias_with_features = []
+    medias_without_features = []
+    tag_sets = []
+    
+    for media in medias:
+        
+        tags_manager = media.GetTagsManager()
+        tags = set( tags_manager.GetCurrentAndPending( tag_context.service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+        
+        if len( tags ) == 0:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        medias_with_features.append( media )
+        tag_sets.append( tags )
+        
+    
+    if len( medias_with_features ) <= 1:
+        
+        ordered_medias = list( medias_with_features )
+        ordered_medias.extend( medias_without_features )
+        
+        if reverse:
+            
+            ordered_medias.reverse()
+            
+        
+        return ordered_medias
+        
+    
+    max_tag_candidates = _GetSeriationInteger( 'seriation_max_tag_candidates', SERIATION_MAX_TAG_CANDIDATES )
+    max_tag_keys = _GetSeriationInteger( 'seriation_max_tag_keys', SERIATION_MAX_TAG_KEYS )
+    ( candidate_sets, tag_counts ) = _BuildTagCandidateSets( tag_sets, max_tag_candidates, max_tag_keys )
+    count = len( medias_with_features )
+    
+    def distance( i, j ):
+        
+        return _TagDistance( tag_sets[ i ], tag_sets[ j ] )
+        
+    
+    start_index = max( range( count ), key = lambda i: sum( tag_counts[ tag ] for tag in tag_sets[ i ] ) )
+    fallback_indices = sorted( range( count ), key = lambda i: -sum( tag_counts[ tag ] for tag in tag_sets[ i ] ) )
+    
+    order = _GetGreedySeriationOrderWithCandidates( count, distance, start_index, candidate_sets, fallback_indices )
+    ordered_medias = [ medias_with_features[ i ] for i in order ]
+    ordered_medias.extend( medias_without_features )
+    
+    if reverse:
+        
+        ordered_medias.reverse()
+        
+    
+    return ordered_medias
+    
+
+def GetSeriationOrderingForMediasByVisualAndTags( medias: list[ "Media" ], reverse: bool, tag_context: ClientSearchTagContext.TagContext ):
+    
+    medias_with_features = []
+    medias_without_features = []
+    visual_features = []
+    average_colours = []
+    tag_sets = []
+    
+    for media in medias:
+        
+        tags_manager = media.GetTagsManager()
+        tags = set( tags_manager.GetCurrentAndPending( tag_context.service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+        
+        display_media = media.GetDisplayMedia()
+        blurhash = None
+        average_colour = None
+        visual_feature = None
+        
+        if display_media is not None:
+            
+            blurhash = display_media.GetMediaResult().GetFileInfoManager().blurhash
+            
+        
+        if blurhash is not None:
+            
+            try:
+                
+                average_colour = HydrusBlurhash.GetAverageColourFromBlurhash( blurhash )
+                numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, 8, 8 )
+                visual_feature = tuple( numpy_image.reshape( -1 ).tolist() )
+                
+            except Exception:
+                
+                average_colour = None
+                visual_feature = None
+                
+            
+        
+        if visual_feature is None and len( tags ) == 0:
+            
+            medias_without_features.append( media )
+            
+            continue
+            
+        
+        medias_with_features.append( media )
+        visual_features.append( visual_feature )
+        average_colours.append( average_colour )
+        tag_sets.append( tags )
+        
+    
+    if len( medias_with_features ) <= 1:
+        
+        ordered_medias = list( medias_with_features )
+        ordered_medias.extend( medias_without_features )
+        
+        if reverse:
+            
+            ordered_medias.reverse()
+            
+        
+        return ordered_medias
+        
+    
+    count = len( medias_with_features )
+    max_tag_candidates = _GetSeriationInteger( 'seriation_max_tag_candidates', SERIATION_MAX_TAG_CANDIDATES )
+    max_tag_keys = _GetSeriationInteger( 'seriation_max_tag_keys', SERIATION_MAX_TAG_KEYS )
+    visual_bin_size = _GetSeriationInteger( 'seriation_visual_bin_size', SERIATION_VISUAL_BIN_SIZE )
+    max_visual_candidates = _GetSeriationInteger( 'seriation_max_visual_candidates', SERIATION_MAX_VISUAL_CANDIDATES )
+    max_hybrid_candidates = _GetSeriationInteger( 'seriation_max_hybrid_candidates', SERIATION_MAX_HYBRID_CANDIDATES )
+    visual_weight = _GetSeriationFloat( 'seriation_visual_weight', SERIATION_VISUAL_WEIGHT )
+    tag_weight = _GetSeriationFloat( 'seriation_tag_weight', SERIATION_TAG_WEIGHT )
+    
+    if visual_weight == 0.0 and tag_weight == 0.0:
+        
+        visual_weight = SERIATION_VISUAL_WEIGHT
+        tag_weight = SERIATION_TAG_WEIGHT
+        
+    
+    ( tag_candidates, tag_counts ) = _BuildTagCandidateSets( tag_sets, max_tag_candidates, max_tag_keys )
+    visual_candidates = _BuildVisualCandidateSets( average_colours, visual_bin_size, max_visual_candidates )
+    
+    candidates_by_index = []
+    
+    for i in range( count ):
+        
+        combined = set()
+        combined.update( visual_candidates[ i ] )
+        combined.update( tag_candidates[ i ] )
+        candidates_by_index.append( combined )
+        
+    
+    feature_length = None
+    
+    for feature in visual_features:
+        
+        if feature is not None:
+            
+            feature_length = len( feature )
+            break
+            
+        
+    
+    if feature_length is None:
+        
+        max_visual_distance = 1
+        
+    else:
+        
+        max_visual_distance = 255 * 255 * feature_length
+        
+    
+    def visual_distance( f1, f2 ):
+        
+        total = 0
+        
+        for ( a, b ) in zip( f1, f2 ):
+            
+            diff = a - b
+            total += diff * diff
+            
+        
+        return total / max_visual_distance
+        
+    
+    def distance( i, j ):
+        
+        total = 0.0
+        weight_sum = 0.0
+        
+        if visual_features[ i ] is not None and visual_features[ j ] is not None:
+            
+            total += visual_weight * visual_distance( visual_features[ i ], visual_features[ j ] )
+            weight_sum += visual_weight
+            
+        
+        if len( tag_sets[ i ] ) > 0 and len( tag_sets[ j ] ) > 0:
+            
+            total += tag_weight * _TagDistance( tag_sets[ i ], tag_sets[ j ] )
+            weight_sum += tag_weight
+            
+        
+        if weight_sum == 0.0:
+            
+            return 1.0
+            
+        
+        return total / weight_sum
+        
+    
+    for i in range( count ):
+        
+        if len( candidates_by_index[ i ] ) > max_hybrid_candidates:
+            
+            candidates_by_index[ i ] = _TrimCandidates(
+                candidates_by_index[ i ],
+                lambda j, idx = i: distance( idx, j ),
+                max_hybrid_candidates
+            )
+            
+        
+    centroid = None
+    colours = [ c for c in average_colours if c is not None ]
+    
+    if len( colours ) > 0:
+        
+        ( rs, gs, bs ) = ( 0, 0, 0 )
+        
+        for ( r, g, b ) in colours:
+            
+            rs += r
+            gs += g
+            bs += b
+            
+        
+        colour_count = len( colours )
+        centroid = ( rs / colour_count, gs / colour_count, bs / colour_count )
+        
+    
+    if centroid is not None:
+        
+        start_index = min(
+            range( count ),
+            key = lambda i: _ColourDistance( average_colours[ i ], centroid ) if average_colours[ i ] is not None else float( 'inf' )
+        )
+        fallback_indices = sorted(
+            range( count ),
+            key = lambda i: _ColourDistance( average_colours[ i ], centroid ) if average_colours[ i ] is not None else float( 'inf' )
+        )
+        
+    else:
+        
+        start_index = max( range( count ), key = lambda i: sum( tag_counts[ tag ] for tag in tag_sets[ i ] ) )
+        fallback_indices = sorted( range( count ), key = lambda i: -sum( tag_counts[ tag ] for tag in tag_sets[ i ] ) )
+        
+    
+    order = _GetGreedySeriationOrderWithCandidates( count, distance, start_index, candidates_by_index, fallback_indices )
+    ordered_medias = [ medias_with_features[ i ] for i in order ]
+    ordered_medias.extend( medias_without_features )
+    
+    if reverse:
+        
+        ordered_medias.reverse()
+        
+    
+    return ordered_medias
+    
 def GetLocalFileServiceKeys( flat_medias: collections.abc.Collection[ "MediaSingleton" ] ):
     
     local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
@@ -2832,6 +3459,9 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_GREEN_RED ] = ( 'greens first', 'reds first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_CHROMATICITY_BLUE_YELLOW ] = ( 'blues first', 'yellows first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_AVERAGE_COLOUR_HUE ] = ( 'rainbow - red first', 'rainbow - purple first', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_SERIATION ] = ( 'forward', 'reverse', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_SERIATION_TAGS ] = ( 'forward', 'reverse', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_SERIATION_VISUAL_TAGS ] = ( 'forward', 'reverse', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )
@@ -2899,6 +3529,30 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         if sort_data == CC.SORT_FILES_BY_RANDOM:
             
             media_results_list.random_sort()
+            
+        elif sort_data == CC.SORT_FILES_BY_SERIATION:
+            
+            ordered_medias = GetSeriationOrderingForMediasByBlurhash( list( media_results_list ), self.sort_order == CC.SORT_DESC )
+            order_lookup = { media : i for ( i, media ) in enumerate( ordered_medias ) }
+            max_index = len( order_lookup )
+            
+            media_results_list.sort( key = lambda m: order_lookup.get( m, max_index ), reverse = False )
+            
+        elif sort_data == CC.SORT_FILES_BY_SERIATION_TAGS:
+            
+            ordered_medias = GetSeriationOrderingForMediasByTags( list( media_results_list ), self.sort_order == CC.SORT_DESC, self.tag_context )
+            order_lookup = { media : i for ( i, media ) in enumerate( ordered_medias ) }
+            max_index = len( order_lookup )
+            
+            media_results_list.sort( key = lambda m: order_lookup.get( m, max_index ), reverse = False )
+            
+        elif sort_data == CC.SORT_FILES_BY_SERIATION_VISUAL_TAGS:
+            
+            ordered_medias = GetSeriationOrderingForMediasByVisualAndTags( list( media_results_list ), self.sort_order == CC.SORT_DESC, self.tag_context )
+            order_lookup = { media : i for ( i, media ) in enumerate( ordered_medias ) }
+            max_index = len( order_lookup )
+            
+            media_results_list.sort( key = lambda m: order_lookup.get( m, max_index ), reverse = False )
             
         else:
             
