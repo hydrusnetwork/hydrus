@@ -2331,11 +2331,14 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
+    def _SortFinished( self ):
+        
+        self._NotifyThumbnailsHaveMoved()
+        
+    
     def Sort( self, media_sort = None ):
         
         super().Sort( media_sort )
-        
-        self._NotifyThumbnailsHaveMoved()
         
     
     def ThumbnailsReset( self ):
