@@ -1,4 +1,6 @@
+import collections
 import collections.abc
+import os
 import random
 import sqlite3
 import typing
@@ -7,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusRustStorage
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
@@ -291,6 +294,104 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         super().__init__( 'client file search using tags', cursor )
         
     
+    def _TryRustGetHashIdsFromTagIds(
+        self,
+        tag_display_type: int,
+        file_service_key: bytes,
+        tag_context: ClientSearchTagContext.TagContext,
+        tag_ids: collections.abc.Collection[ int ],
+        hash_ids,
+        do_hash_table_join: bool
+    ):
+        
+        if tag_display_type != ClientTags.TAG_DISPLAY_STORAGE:
+            
+            return None
+            
+        
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        
+        if file_service_id != self.modules_services.combined_file_service_id:
+            
+            return None
+            
+        
+        if len( tag_ids ) == 0:
+            
+            return set()
+            
+        
+        if tag_context.service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
+            
+        else:
+            
+            tag_service_ids = [ self.modules_services.GetServiceId( tag_context.service_key ) ]
+            
+        
+        statuses = []
+        
+        if tag_context.include_current_tags:
+            
+            statuses.append( HC.CONTENT_STATUS_CURRENT )
+            
+        
+        if tag_context.include_pending_tags:
+            
+            statuses.append( HC.CONTENT_STATUS_PENDING )
+            
+        
+        if len( statuses ) == 0:
+            
+            return set()
+            
+        
+        for tag_service_id in tag_service_ids:
+            
+            ( current_mappings_table_name, _deleted_mappings_table_name, pending_mappings_table_name, _petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+            
+            if HC.CONTENT_STATUS_CURRENT in statuses:
+                
+                if not HydrusRustStorage.EnsureMappings( HydrusRustStorage.GetMappingsStore(), self._c, tag_service_id, HC.CONTENT_STATUS_CURRENT, current_mappings_table_name ):
+                    
+                    return None
+                    
+                
+            
+            if HC.CONTENT_STATUS_PENDING in statuses:
+                
+                if not HydrusRustStorage.EnsureMappings( HydrusRustStorage.GetMappingsStore(), self._c, tag_service_id, HC.CONTENT_STATUS_PENDING, pending_mappings_table_name ):
+                    
+                    return None
+                    
+                
+            
+        
+        filter_hash_ids = None
+        
+        if do_hash_table_join and hash_ids is not None:
+            
+            filter_hash_ids = set( hash_ids )
+            
+        
+        result_hash_ids = set()
+        
+        for status in statuses:
+            
+            rust_results = HydrusRustStorage.GetHashIdsForTagIds( tag_service_ids, status, tag_ids, hash_ids_filter = filter_hash_ids )
+            
+            if rust_results is None:
+                
+                return None
+                
+            
+            result_hash_ids.update( rust_results )
+            
+        
+        return result_hash_ids
+            
+        
     def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearchTagContext.TagContext, hash_ids, namespace_wildcard = '*', job_status = None ):
         
         if namespace_wildcard == '*':
@@ -306,6 +407,60 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             ( file_service_keys, file_location_is_cross_referenced ) = location_context.GetCoveringCurrentFileServiceKeys()
             
+            if HydrusRustStorage.IsPrimary() and tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and self.modules_services.combined_file_service_id in { self.modules_services.GetServiceId( file_service_key ) for file_service_key in file_service_keys }:
+                
+                if tag_context.service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                    
+                    tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                    
+                else:
+                    
+                    tag_service_ids = [ self.modules_services.GetServiceId( tag_context.service_key ) ]
+                    
+                
+                statuses = []
+                
+                if tag_context.include_current_tags:
+                    
+                    statuses.append( HC.CONTENT_STATUS_CURRENT )
+                    
+                
+                if tag_context.include_pending_tags:
+                    
+                    statuses.append( HC.CONTENT_STATUS_PENDING )
+                    
+                
+                counts_by_hash_id = collections.Counter()
+                
+                for tag_service_id in tag_service_ids:
+                    
+                    for status in statuses:
+                        
+                        tags_by_hash = HydrusRustStorage.GetTagIdsForHashes( tag_service_id, status, hash_ids )
+                        
+                        if tags_by_hash is None:
+                            
+                            continue
+                            
+                        
+                        for ( hash_id, tag_ids ) in tags_by_hash.items():
+                            
+                            counts_by_hash_id[ hash_id ] += len( tag_ids )
+                            
+                        
+                    
+                
+                results = [ ( hash_id, count ) for ( hash_id, count ) in counts_by_hash_id.items() if count > 0 ]
+                
+                if not file_location_is_cross_referenced:
+                    
+                    filtered_hash_ids = self.modules_files_storage.FilterHashIds( location_context, set( counts_by_hash_id.keys() ) )
+                    
+                    results = [ ( hash_id, count ) for ( hash_id, count ) in results if hash_id in filtered_hash_ids ]
+                    
+                
+                return results
+                
             mapping_and_tag_table_names = set()
             
             for file_service_key in file_service_keys:
@@ -501,11 +656,54 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         
         tag_id = self.modules_tags.GetTagId( tag )
         
+        if hash_ids is not None and not isinstance( hash_ids, set ):
+            
+            hash_ids = set( hash_ids )
+        
         for file_service_id in file_service_ids:
             
             for tag_service_id in tag_service_ids:
                 
                 ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+                
+                if HydrusRustStorage.IsPrimary() and file_service_id == self.modules_services.combined_file_service_id:
+                    
+                    for status in statuses:
+                        
+                        if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
+                            
+                            ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, tag_id )
+                            
+                            search_tag_ids = self.modules_tag_siblings.GetChainMembersFromIdeal( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_id )
+                            
+                        else:
+                            
+                            search_tag_ids = ( tag_id, )
+                            
+                        
+                        if len( search_tag_ids ) == 0:
+                            
+                            continue
+                            
+                        
+                        rust_hash_ids = HydrusRustStorage.GetHashIdsForTagIds( ( tag_service_id, ), status, search_tag_ids )
+                        
+                        if rust_hash_ids is None:
+                            
+                            continue
+                            
+                        
+                        if hash_ids is not None:
+                            
+                            result_hash_ids.update( rust_hash_ids.intersection( hash_ids ) )
+                            
+                        else:
+                            
+                            result_hash_ids.update( rust_hash_ids )
+                            
+                        
+                    
+                    continue
                 
                 if file_service_id == self.modules_services.combined_file_service_id:
                     
@@ -637,6 +835,13 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
                 
                 do_hash_table_join = True
                 
+            
+        
+        rust_results = self._TryRustGetHashIdsFromTagIds( tag_display_type, file_service_key, tag_context, tag_ids, hash_ids, do_hash_table_join )
+        
+        if rust_results is not None:
+            
+            return rust_results
             
         
         result_hash_ids = set()
@@ -996,6 +1201,112 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         
     
     def GetHashIdsThatHaveTagsSimpleLocation( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearchTagContext.TagContext, namespace_ids_table_name = None, hash_ids_table_name = None, job_status = None ):
+        
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
+        
+        if HydrusRustStorage.IsPrimary() and tag_display_type == ClientTags.TAG_DISPLAY_STORAGE and file_service_id == self.modules_services.combined_file_service_id:
+            
+            if tag_context.service_key == CC.COMBINED_TAG_SERVICE_KEY:
+                
+                tag_service_ids = list( self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ) )
+                
+            else:
+                
+                tag_service_ids = [ self.modules_services.GetServiceId( tag_context.service_key ) ]
+                
+            
+            statuses = []
+            
+            if tag_context.include_current_tags:
+                
+                statuses.append( HC.CONTENT_STATUS_CURRENT )
+                
+            
+            if tag_context.include_pending_tags:
+                
+                statuses.append( HC.CONTENT_STATUS_PENDING )
+                
+            
+            if len( statuses ) == 0:
+                
+                return set()
+                
+            
+            filter_hash_ids = None
+            
+            if hash_ids_table_name is not None:
+                
+                filter_hash_ids = self._STI( self._Execute( 'SELECT hash_id FROM {};'.format( hash_ids_table_name ) ) )
+                
+                if len( filter_hash_ids ) == 0:
+                    
+                    return set()
+                    
+                
+            
+            result_hash_ids = set()
+            
+            if namespace_ids_table_name is None:
+                
+                for tag_service_id in tag_service_ids:
+                    
+                    for status in statuses:
+                        
+                        rust_hash_ids = HydrusRustStorage.GetHashIdsWithMappings( tag_service_id, status )
+                        
+                        if rust_hash_ids is None:
+                            
+                            continue
+                            
+                        
+                        result_hash_ids.update( rust_hash_ids )
+                        
+                        if job_status is not None and job_status.IsCancelled():
+                            
+                            return set()
+                            
+                        
+                    
+                
+                if filter_hash_ids is not None:
+                    
+                    result_hash_ids.intersection_update( filter_hash_ids )
+                    
+                
+                return result_hash_ids
+                
+            
+            for tag_service_id in tag_service_ids:
+                
+                tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
+                
+                tag_ids = self._STL( self._Execute( 'SELECT DISTINCT tag_id FROM {} CROSS JOIN {} USING ( namespace_id );'.format( tags_table_name, namespace_ids_table_name ) ) )
+                
+                if len( tag_ids ) == 0:
+                    
+                    continue
+                    
+                
+                for status in statuses:
+                    
+                    rust_hash_ids = HydrusRustStorage.GetHashIdsForTagIds( ( tag_service_id, ), status, tag_ids, hash_ids_filter = filter_hash_ids )
+                    
+                    if rust_hash_ids is None:
+                        
+                        continue
+                        
+                    
+                    result_hash_ids.update( rust_hash_ids )
+                    
+                    if job_status is not None and job_status.IsCancelled():
+                        
+                        return set()
+                        
+                    
+                
+            
+            return result_hash_ids
+            
         
         mapping_and_tag_table_names = self.modules_tag_search.GetMappingAndTagTables( tag_display_type, file_service_key, tag_context )
         
@@ -2974,6 +3285,118 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         if job_status.IsCancelled():
             
             return []
+            
+        
+        #
+        
+        if CG.client_controller.new_options.GetBoolean( 'search_hide_files_in_missing_file_locations' ):
+            
+            if query_hash_ids is not None and len( query_hash_ids ) > 0:
+                
+                client_files_manager = CG.client_controller.client_files_manager
+                
+                if client_files_manager is not None:
+                    
+                    ( missing_prefixes, prefix_hex_length ) = client_files_manager.GetMissingFilePrefixesAndHexLength()
+                    
+                    if len( missing_prefixes ) > 0:
+                        
+                        file_location_is_all_local = self.modules_services.LocationContextIsCoveredByHydrusLocalFileStorage( location_context )
+                        
+                        if file_location_is_all_local:
+                            
+                            hash_ids_to_check = query_hash_ids
+                            
+                        else:
+                            
+                            hash_ids_to_check = self.modules_files_storage.FilterHashIdsToStatus(
+                                self.modules_services.hydrus_local_file_storage_service_id,
+                                query_hash_ids,
+                                HC.CONTENT_STATUS_CURRENT
+                            )
+                            
+                        
+                        if len( hash_ids_to_check ) > 0:
+                            
+                            hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = hash_ids_to_check )
+                            
+                            missing_hash_ids = {
+                                hash_id
+                                for ( hash_id, file_hash ) in hash_ids_to_hashes.items()
+                                if f'f{file_hash.hex()[ : prefix_hex_length ]}' in missing_prefixes
+                            }
+                            
+                            if len( missing_hash_ids ) > 0:
+                                
+                                query_hash_ids.difference_update( missing_hash_ids )
+                                
+                            
+                        
+                    
+                
+            
+        
+        if CG.client_controller.new_options.GetBoolean( 'search_hide_files_with_missing_paths' ):
+            
+            if query_hash_ids is not None and len( query_hash_ids ) > 0:
+                
+                client_files_manager = CG.client_controller.client_files_manager
+                
+                if client_files_manager is not None:
+                    
+                    file_location_is_all_local = self.modules_services.LocationContextIsCoveredByHydrusLocalFileStorage( location_context )
+                    
+                    if file_location_is_all_local:
+                        
+                        hash_ids_to_check = query_hash_ids
+                        
+                    else:
+                        
+                        hash_ids_to_check = self.modules_files_storage.FilterHashIdsToStatus(
+                            self.modules_services.hydrus_local_file_storage_service_id,
+                            query_hash_ids,
+                            HC.CONTENT_STATUS_CURRENT
+                        )
+                        
+                    
+                    if len( hash_ids_to_check ) > 0:
+                        
+                        with self._MakeTemporaryIntegerTable( hash_ids_to_check, 'hash_id' ) as temp_hash_ids_table_name:
+                            
+                            hash_ids_to_mimes = dict( self._Execute( 'SELECT hash_id, mime FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_hash_ids_table_name ) ) )
+                            
+                        
+                        if len( hash_ids_to_mimes ) > 0:
+                            
+                            hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = set( hash_ids_to_mimes.keys() ) )
+                            
+                            missing_hash_ids = set()
+                            
+                            for ( hash_id, file_hash ) in hash_ids_to_hashes.items():
+                                
+                                mime = hash_ids_to_mimes.get( hash_id )
+                                
+                                if mime is None:
+                                    
+                                    continue
+                                    
+                                
+                                expected_path = client_files_manager.GetFilePath( file_hash, mime, check_file_exists = False )
+                                
+                                if not os.path.exists( expected_path ):
+                                    
+                                    missing_hash_ids.add( hash_id )
+                                    
+                                
+                            
+                            if len( missing_hash_ids ) > 0:
+                                
+                                query_hash_ids.difference_update( missing_hash_ids )
+                                
+                            
+                        
+                    
+                
             
         
         #

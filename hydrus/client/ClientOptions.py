@@ -246,6 +246,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'remember_last_advanced_file_deletion_reason' : True,
             'remember_last_advanced_file_deletion_special_action' : False,
             'do_macos_debug_dialog_menus' : False,
+            'allow_missing_file_locations' : False,
+            'search_hide_files_in_missing_file_locations' : False,
+            'search_hide_files_with_missing_paths' : False,
             'save_default_tag_service_tab_on_change' : True,
             'force_animation_scanbar_show' : False,
             'call_mouse_buttons_primary_secondary' : False,
@@ -283,6 +286,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_recenter_media_on_window_resize': True,
             'allow_blurhash_fallback' : True,
             'fade_thumbnails' : True,
+            'thumbnail_masonry' : False,
             'slideshow_always_play_duration_media_once_through' : False,
             'enable_truncated_images_pil' : True,
             'do_icc_profile_normalisation' : True,
@@ -316,6 +320,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'mpv_loop_playlist_instead_of_file' : False,
             'draw_thumbnail_rating_background' : True,
             'draw_thumbnail_numerical_ratings_collapsed_always' : False,
+            'draw_thumbnail_header' : True,
             'show_destination_page_when_dnd_url' : True,
             'confirm_non_empty_downloader_page_close' : True,
             'confirm_all_page_closes' : False,
@@ -497,6 +502,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'thumbnail_border' : 1,
             'thumbnail_margin' : 2,
             'thumbnail_dpr_percent' : 100,
+            'thumbnail_zoom_percent' : 100,
             'file_maintenance_idle_throttle_files' : 1,
             'file_maintenance_idle_throttle_time_delta' : 2,
             'file_maintenance_active_throttle_files' : 1,
@@ -553,6 +559,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'tag_list_tag_display_type_sidebar' : ClientTags.TAG_DISPLAY_SELECTION_LIST,
             'tag_list_tag_display_type_media_viewer_hover' : ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
             'command_palette_num_chars_for_results_threshold' : 0,
+            'seriation_visual_bin_size' : 32,
+            'seriation_max_visual_candidates' : 200,
+            'seriation_max_tag_candidates' : 200,
+            'seriation_max_tag_keys' : 5,
+            'seriation_max_hybrid_candidates' : 250,
         }
         
         self._dictionary[ 'floats' ] = {
@@ -568,6 +579,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'dialog_rating_icon_size_px' : ClientGUIPainterShapes.SIZE.width(),
             'dialog_rating_incdec_width_px' : ClientGUIPainterShapes.SIZE.width() * 2, #deprecated
             'dialog_rating_incdec_height_px' : ClientGUIPainterShapes.SIZE.height(),
+            'seriation_visual_weight' : 0.7,
+            'seriation_tag_weight' : 0.3,
         }
         
         #

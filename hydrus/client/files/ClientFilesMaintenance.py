@@ -27,6 +27,7 @@ from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTikTok
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
 REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL = 1
@@ -52,6 +53,7 @@ REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF = 20
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD = 21
 REGENERATE_FILE_DATA_JOB_BLURHASH = 22
 REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY = 23
+REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT = 24
 
 regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'regenerate file metadata',
@@ -77,7 +79,8 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'determine if the file has non-EXIF embedded metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'determine if the file has an icc profile',
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'regenerate pixel hashes',
-    REGENERATE_FILE_DATA_JOB_BLURHASH: 'regenerate blurhash'
+    REGENERATE_FILE_DATA_JOB_BLURHASH: 'regenerate blurhash',
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : 'add tiktok site/creator tags from known URLs'
 }
 
 # wrapped in triple quotes so I don't have to backslash escape so much
@@ -145,7 +148,8 @@ All missing/incorrect files will also have their hashes, tags, and URLs exported
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : '''This loads the file to see if it has non-EXIF human-readable embedded metadata, which can be shown in the media viewer and searched with "system:image has human-readable embedded metadata".''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : '''This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.''',
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : '''This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.''',
-    REGENERATE_FILE_DATA_JOB_BLURHASH : '''This generates a very small version of the file's thumbnail that can be used as a placeholder while the thumbnail loads.'''
+    REGENERATE_FILE_DATA_JOB_BLURHASH : '''This generates a very small version of the file's thumbnail that can be used as a placeholder while the thumbnail loads.''',
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : '''This looks at a file's known URLs and adds downloader tags like "site:tiktok" and "creator:<handle>" if it detects TikTok URLs. No network requests are made.'''
 }
 
 NORMALISED_BIG_JOB_WEIGHT = 100
@@ -174,7 +178,8 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 25,
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 100,
-    REGENERATE_FILE_DATA_JOB_BLURHASH: 15
+    REGENERATE_FILE_DATA_JOB_BLURHASH: 15,
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : 1
 }
 
 regen_file_enum_to_overruled_jobs = {
@@ -201,7 +206,8 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : [],
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : [],
-    REGENERATE_FILE_DATA_JOB_BLURHASH: []
+    REGENERATE_FILE_DATA_JOB_BLURHASH: [],
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT : []
 }
 
 ALL_REGEN_JOBS_IN_RUN_ORDER = [
@@ -214,6 +220,7 @@ ALL_REGEN_JOBS_IN_RUN_ORDER = [
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY,
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT,
     REGENERATE_FILE_DATA_JOB_FILE_METADATA,
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL,
     REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL,
@@ -241,6 +248,7 @@ ALL_REGEN_JOBS_IN_HUMAN_ORDER = [
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY,
+    REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT,
     REGENERATE_FILE_DATA_JOB_FILE_METADATA,
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL,
     REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL,
@@ -1045,6 +1053,56 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _EnrichTikTokTags( self, media_result ):
+        
+        urls = media_result.GetLocationsManager().GetURLs()
+        
+        if len( urls ) == 0:
+            
+            return None
+            
+        
+        tags_to_add = ClientTikTok.GetTikTokTagsFromURLs( urls )
+        
+        description_text = ClientTikTok.GetTikTokDescriptionTextFromNotes( media_result.GetNotesManager() )
+        
+        if description_text is not None:
+            
+            tags_to_add.update( ClientTikTok.GetTikTokHashtagTagsFromText( description_text ) )
+        
+        if len( tags_to_add ) == 0:
+            
+            return None
+            
+        
+        tags_manager = media_result.GetTagsManager()
+        existing_tags = tags_manager.GetCurrentAndPending( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE )
+        
+        tags_to_add.difference_update( existing_tags )
+        
+        if len( tags_to_add ) == 0:
+            
+            return None
+            
+        
+        hash = media_result.GetHash()
+        
+        content_updates = [
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, { hash } ) )
+            for tag in tags_to_add
+        ]
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates(
+            CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY,
+            content_updates
+        )
+        
+        CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+        
+        return len( tags_to_add )
+        
+    
+    
     
     def _RegenSimilarFilesMetadata( self, media_result ):
         
@@ -1211,6 +1269,10 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         elif job_type == REGENERATE_FILE_DATA_JOB_BLURHASH:
                             
                             additional_data = self._RegenBlurhash( media_result )
+                            
+                        elif job_type == REGENERATE_FILE_DATA_JOB_TIKTOK_TAG_ENRICHMENT:
+                            
+                            additional_data = self._EnrichTikTokTags( media_result )
                             
                         elif job_type in (
                             REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD,

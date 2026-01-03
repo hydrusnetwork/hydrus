@@ -14,23 +14,8 @@ def DedupeList( xs: collections.abc.Iterable ):
         return list( xs )
         
     
-    xs_seen = set()
-    
-    xs_return = []
-    
-    for x in xs:
-        
-        if x in xs_seen:
-            
-            continue
-            
-        
-        xs_return.append( x )
-        
-        xs_seen.add( x )
-        
-    
-    return xs_return
+    # dict preserves insertion order, so this removes duplicates while keeping the first occurrence
+    return list( dict.fromkeys( xs ) )
     
 
 class FastIndexUniqueList( collections.abc.MutableSequence ):
