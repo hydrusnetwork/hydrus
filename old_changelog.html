@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_654"><a href="#version_654">version 654</a></h2>
+                    <ul>
+                        <li><h3>command palette</h3></li>
+                        <li>reorganised the command palette options panel and updated how the character search threshold works. you can now say 'show all my x initially' for a particular search result type and then set a character limit for the general searches. the default and min value for the character search threshold is now 1</li>
+                        <li><h3>slideshow</h3></li>
+                        <li>the slideshow menu in the media viewer has been shuffled a bit to tuck everything together</li>
+                        <li>the slideshow menu now also appears in the top hover of the normal 'browser' media viewer, in a new icon button beside the 'move randomly' button</li>
+                        <li>the sildeshow menu now has a 'slideshows move randomly' option. this thing is a global setting, mostly a test. let me know how it works out</li>
+                        <li><h3>misc</h3></li>
+                        <li>the manage subscription dialog now nags you with red text if you set a downloader that appears to fetch from multiple sites (i.e. it is an NGUG that has multiple domains in its example urls). although it sounds temptingly convenient to set up a sub with a multi-site NGUG, they don't work so great like this, so the panel now says so and tells you what to do instead</li>
+                        <li>added a `When finishing archive/delete filtering, delay activation of multiple deletion choice buttons` checkbox, default True, to `options-&gt;files and trash`, so you can now disable the 1.2 second delay on the delete/commit buttons when there are multiple deletion choices</li>
+                        <li>made new svg icons for 'image', (which turns up when hydrus can't find a thumb for an image file), 'images' which turns up in the command palette as a 'media' proxy for media menu results, and the new 'slideshow' icon button. I like how these look at high res, but the smaller ones look bleh tbh. we'll have a review of all my new svgs when I finally add icon button sizing options and boost the default up a bit</li>
+                        <li>`options-&gt;media viewer` now has split up mouse and seek bar settings. the seek bar panel has a new `Seek bar full-height pop-in requires window focus` checkbox, which is now default **True**</li>
+                        <li>fixed svg resolution fetching (and probably all sorts of related svg gubbins) in PyQt6 (this is an alternate version of Qt some source users may be running)</li>
+                        <li><h3>boring and cleanup</h3></li>
+                        <li>overhauled how the command palette does some search string handling and cleaned up a couple of logic things like whitespace no longer counts as a new char, etc..</li>
+                        <li>the code behind the slideshow is all cleaner and decoupled application command stuff</li>
+                        <li>I went through and renamed some 'scanbar' labels to the more canonical 'seek bar'</li>
+                        <li>the 'eye' icon button in the media viewer top hover is recollected into window/hovers/rendering submenu categories</li>
+                        <li>fixed the vacuum command to no longer check the temp dir for free space in the lower-db call--the newer 'vacuum into' command we use no longer needs a temp copy</li>
+                        <li>might have fixed a bad 'Go!' confirmation dialog string generation in `migrate tags` that hits users for whom Mercury is in retrograde</li>
+                        <li>improved the error handling for when my new async subprocess reader tries to read from a process that terminates early</li>
+                        <li>fixed some unit test 'call after' job scheduling stuff with the same anti-deadlock handling I added to the main client a while ago</li>
+                        <li><h3>admin and docs</h3></li>
+                        <li>created a hydrus_dev@proton.me email address and added it to all my contact lists. please feel free to email me there if you prefer--I'll check it as often as my gmail</li>
+                        <li>to stop new users missing it, the 'Wayland' warning box in the Linux install and source help now starts uncollapsed</li>
+                        <li>added a note about `libxkbcommon` for X11 support on Fedora too</li>
+                        <li>wrote a 'help I had a file identifier missing error.txt' document for the db dir to handle the 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa34bf0b9abf7683e3955781212d0d1899' emergency hash-recovery situation</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_653"><a href="#version_653">version 653</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
