@@ -777,6 +777,10 @@ class GlobalIcons( object ):
         self.dump_recoverable = self._GetSVGOrPNGPathIcon( 'dump_recoverable' )
         self.dump_fail = self._GetSVGOrPNGPathIcon( 'dump_fail' )
         
+        self.image = self._GetSVGOrPNGPathIcon( 'image' )
+        self.images = self._GetSVGOrPNGPathIcon( 'images' )
+        self.slideshow = self._GetSVGOrPNGPathIcon( 'slideshow' )
+        
         self.family = self._GetSVGOrPNGPathIcon( 'family' )
         self.keyboard = self._GetSVGOrPNGPathIcon( 'keyboard' )
         self.help = self._GetSVGOrPNGPathIcon( 'help' )

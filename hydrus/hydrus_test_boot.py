@@ -90,13 +90,27 @@ def boot():
             
             HG.view_shutdown = True
             
-            controller.pubimmediate( 'wake_daemons' )
+            try:
+                
+                controller.pubimmediate( 'wake_daemons' )
+                
+            except:
+                
+                pass
+                
             
             HG.model_shutdown = True
             
-            controller.pubimmediate( 'wake_daemons' )
-            
-            controller.TidyUp()
+            try:
+                
+                controller.pubimmediate( 'wake_daemons' )
+                
+                controller.TidyUp()
+                
+            except:
+                
+                pass
+                
             
         
     except:
@@ -118,13 +132,18 @@ def boot():
             input( 'Press any key to exit.' )
             
         
-        if controller.was_successful:
+        try:
             
-            sys.exit( 0 )
+            if controller.was_successful:
+                
+                sys.exit( 0 )
+                
             
-        else:
+        except:
             
-            sys.exit( 1 )
+            pass
             
+        
+        sys.exit( 1 )
         
     

@@ -18,12 +18,12 @@ def QtLoadSVGRenderer( path: str ):
         
     except:
         
-        raise  HydrusExceptions.DamagedOrUnusualFileException( 'Could not load SVG file.' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load SVG file.' )
         
     
     if not renderer.isValid():
         
-        raise  HydrusExceptions.DamagedOrUnusualFileException( 'SVG file is invalid!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'SVG file is invalid!' )
         
     
     return renderer
@@ -79,13 +79,15 @@ def GetSVGResolution( path: str ):
             
             renderer = QtLoadSVGRenderer( path )
             
-            resolution = renderer.defaultSize().toTuple()
+            default_size = renderer.defaultSize()
+            
+            resolution = ( default_size.width(), default_size.height() )
             
             return resolution
             
-        except:
+        except Exception as e:
             
-            raise HydrusExceptions.NoResolutionFileException()
+            raise HydrusExceptions.NoResolutionFileException( e )
             
         
     

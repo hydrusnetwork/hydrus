@@ -335,6 +335,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'manage_tags_show_deleted_mappings' : False,
             'mpv_destruction_test' : False,
             'hover_window_duplicates_always_on_top' : True,
+            'animated_scanbar_pop_in_requires_focus' : True,
+            'slideshows_progress_randomly' : False,
+            'archive_delete_commit_panel_delays_multiple_delete_choices' : True,
         }
         
         #
@@ -552,7 +555,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'page_nav_history_max_entries' : 100,
             'tag_list_tag_display_type_sidebar' : ClientTags.TAG_DISPLAY_SELECTION_LIST,
             'tag_list_tag_display_type_media_viewer_hover' : ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
-            'command_palette_num_chars_for_results_threshold' : 0,
+            'command_palette_num_chars_for_results_threshold' : 1,
         }
         
         self._dictionary[ 'floats' ] = {

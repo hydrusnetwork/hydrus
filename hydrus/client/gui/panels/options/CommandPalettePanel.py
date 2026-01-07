@@ -18,7 +18,7 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._command_palette_panel = ClientGUICommon.StaticBox( self, 'command palette' )
         
-        self._command_palette_num_chars_for_results_threshold = ClientGUICommon.BetterSpinBox( self._command_palette_panel, initial = 1, min = 0, max = 64 )
+        self._command_palette_num_chars_for_results_threshold = ClientGUICommon.BetterSpinBox( self._command_palette_panel, initial = 1, min = 1, max = 64 )
         
         self._command_palette_show_page_of_pages = QW.QCheckBox( self._command_palette_panel )
         self._command_palette_show_page_of_pages.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show "page of pages" as selectable page results. This will focus the page, and whatever sub-page it previously focused (including none, if it has no child pages).' ) )
@@ -72,17 +72,17 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Show results after typing this many characters:', self._command_palette_num_chars_for_results_threshold ) )
-        rows.append( ( 'Show "page of pages" results:', self._command_palette_show_page_of_pages ) )
-        rows.append( ( 'Initially show all page results (otherwise wait for typing):', self._command_palette_initially_show_all_pages ) )
+        rows.append( ( 'Initially show all page results:', self._command_palette_initially_show_all_pages ) )
+        rows.append( ( 'Initially show page history results:', self._command_palette_initially_show_history ) )
+        rows.append( ( 'Initially show favourite search results:', self._command_palette_initially_show_favourite_searches ) )
+        rows.append( ( 'Start searching when this many characters have been typed:', self._command_palette_num_chars_for_results_threshold ) )
         rows.append( ( 'Max page results to show:', self._command_palette_limit_page_results ) )
-        rows.append( ( 'Initially show page history results (otherwise wait for typing):', self._command_palette_initially_show_history ) )
         rows.append( ( 'Max page history to show:', self._command_palette_limit_history_results ) )
-        rows.append( ( 'Initially show favourite search results (otherwise wait for typing):', self._command_palette_initially_show_favourite_searches ) )
         rows.append( ( 'Max favourite searches to show:', self._command_palette_limit_favourite_searches_results ) )
-        rows.append( ( 'Open favourite search results in a new page:', self._command_palette_fav_searches_open_new_page ) )
-        rows.append( ( 'ADVANCED: Show main menubar results (after typing):', self._command_palette_show_main_menu ) )
-        rows.append( ( 'ADVANCED: Show media menu results (after typing):', self._command_palette_show_media_menu ) )
+        rows.append( ( 'Include "page of pages" page results:', self._command_palette_show_page_of_pages ) )
+        rows.append( ( 'Open favourite searches in a new page:', self._command_palette_fav_searches_open_new_page ) )
+        rows.append( ( 'ADVANCED: Search main menubar:', self._command_palette_show_main_menu ) )
+        rows.append( ( 'ADVANCED: Search media menu:', self._command_palette_show_media_menu ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -102,10 +102,6 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         command_palette_provider_order.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         command_palette_provider_order.Add( self._command_palette_provider_order, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._command_palette_panel.Add( command_palette_provider_order, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._command_palette_num_chars_for_results_threshold.valueChanged.connect( self._UpdateWidgets )
-        
-        self._UpdateWidgets()
         
         vbox = QP.VBoxLayout()
         
@@ -158,15 +154,6 @@ class CommandPalettePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             return CC.command_palette_provider_str_lookup[ provider ]
             
-        
-    
-    def _UpdateWidgets( self ):
-        
-        they_are_relevant = self._command_palette_num_chars_for_results_threshold.value() == 0
-        
-        self._command_palette_initially_show_all_pages.setEnabled( they_are_relevant )
-        self._command_palette_initially_show_history.setEnabled( they_are_relevant )
-        self._command_palette_initially_show_favourite_searches.setEnabled( they_are_relevant )
         
     
     def UpdateOptions( self ):

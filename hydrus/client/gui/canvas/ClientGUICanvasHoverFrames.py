@@ -28,6 +28,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
+from hydrus.client.gui.canvas import ClientGUICanvasMenus
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
@@ -41,6 +42,8 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
+
+# TODO: Clean this file up. split things into different files, put the rating stuff in its own guy, all that
 
 class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
 
@@ -1203,10 +1206,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
 
             self.window().show()
             self.update()
-
+            
 
         def flip_always_on_top():
-
+            
             self._window_always_on_top = not self._window_always_on_top
             
             self.parentWidget().window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
@@ -1216,36 +1219,51 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             self.window().show()
 
             self.update()
+            
         
         new_options = CG.client_controller.new_options
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, flip_always_on_top )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'show titlebar', 'Toggle the OS frame of this window.', self._window_show_title_bar, flip_show_window_title_bar )
-
-        ClientGUIMenus.AppendSeparator( menu )
+        #
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw tags (left) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw file information (top) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw ratings and locations (top-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes (right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw index text (bottom-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
-
-        ClientGUIMenus.AppendSeparator( menu )
+        window_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'hover window pop-in requires window focus', 'Should the hover windows be able to pop-in even when the window is in the background?', new_options.GetBoolean( 'hover_windows_need_window_focus_to_pop_in' ), flip_background_boolean, 'hover_windows_need_window_focus_to_pop_in' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in tags hover window on mouseover', 'Enable the tags hover window.', not new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in ratings and locations hover window on mouseover', 'Enable the ratings hover window.', not new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'pop-in notes hover window on mouseover', 'Enable the notes hover window.', not new_options.GetBoolean( 'disable_notes_hover_in_media_viewer' ), flip_background_boolean, 'disable_notes_hover_in_media_viewer' )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'pin the duplicates hover window so it is always visible', 'Ensure the special duplicates hover window is always visible in the duplicates filter.', new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ), flip_background_boolean, 'hover_window_duplicates_always_on_top' )
-
-        ClientGUIMenus.AppendSeparator( menu )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, flip_always_on_top )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'show titlebar', 'Toggle the OS frame of this window.', self._window_show_title_bar, flip_show_window_title_bar )
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw transparency as checkerboard in media viewer', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER ) )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw transparency as checkerboard in media viewer (duplicate filter)', 'Set whether to draw transparency as something that stands out more in the duplicate filter.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER ) )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'instead of checkerboard, use a bright greenscreen', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ) )
+        ClientGUIMenus.AppendMenu( menu, window_menu, 'window' )
+        
+        #
+        
+        hovers_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw tags (left) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw file information (top) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw ratings and locations (top-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw notes (right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw index text (bottom-right) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
+        
+        ClientGUIMenus.AppendSeparator( hovers_menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'hover window pop-in requires window focus', 'Should the hover windows be able to pop-in even when the window is in the background?', new_options.GetBoolean( 'hover_windows_need_window_focus_to_pop_in' ), flip_background_boolean, 'hover_windows_need_window_focus_to_pop_in' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pop-in tags hover window on mouseover', 'Enable the tags hover window.', not new_options.GetBoolean( 'disable_tags_hover_in_media_viewer' ), flip_background_boolean, 'disable_tags_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pop-in ratings and locations hover window on mouseover', 'Enable the ratings hover window.', not new_options.GetBoolean( 'disable_top_right_hover_in_media_viewer' ), flip_background_boolean, 'disable_top_right_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pop-in notes hover window on mouseover', 'Enable the notes hover window.', not new_options.GetBoolean( 'disable_notes_hover_in_media_viewer' ), flip_background_boolean, 'disable_notes_hover_in_media_viewer' )
+        ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pin the duplicates hover window so it is always visible', 'Ensure the special duplicates hover window is always visible in the duplicates filter.', new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ), flip_background_boolean, 'hover_window_duplicates_always_on_top' )
+        
+        ClientGUIMenus.AppendMenu( menu, hovers_menu, 'hovers' )
+        
+        #
+        
+        rendering_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
+        ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'draw transparency as checkerboard in media viewer', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER ) )
+        ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'draw transparency as checkerboard in media viewer (duplicate filter)', 'Set whether to draw transparency as something that stands out more in the duplicate filter.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER ) )
+        ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'instead of checkerboard, use a bright greenscreen', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ) )
+        
+        ClientGUIMenus.AppendMenu( menu, rendering_menu, 'rendering' )
         
         CGC.core().PopupMenu( self, menu )
         
@@ -1509,8 +1527,6 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
     
     def _ShowZoomOptionsMenu( self ):
         
-        new_options = CG.client_controller.new_options
-        
         menu = ClientGUIMenus.GenerateMenu( self )
         
         ClientGUIMenus.AppendMenuItem( menu, 'recenter media', 'Restore the media position to the center point.', self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESET_PAN_TO_CENTER ) )
@@ -1562,8 +1578,23 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         QP.AddToLayout( self._top_left_hbox, self._random_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
+        self._slideshow_button = ClientGUICommon.IconButton( self, CC.global_icons().slideshow, self._ShowSlideshowMenu )
+        
+        self._slideshow_button.setToolTip( 'slideshow' )
+        self._slideshow_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
+        
+        QP.AddToLayout( self._top_left_hbox, self._slideshow_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
     
-
+    def _ShowSlideshowMenu( self ):
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        ClientGUICanvasMenus.AppendSlideshowMenu( self._my_canvas, menu, self._my_canvas.SlideshowIsRunning(), do_submenu = False )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
 
 class InboxIconClickFilter( QC.QObject ):
     

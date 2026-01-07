@@ -1861,6 +1861,17 @@ class MediaContainer( QW.QWidget ):
         else:
             
             is_near = self.MouseIsNearAnimationBar()
+            
+            if CG.client_controller.new_options.GetBoolean( 'animated_scanbar_pop_in_requires_focus' ):
+                
+                current_focus_tlw = QW.QApplication.activeWindow()
+                
+                if current_focus_tlw != self.window():
+                    
+                    is_near = False
+                    
+                
+            
             show_small_instead_of_hiding = CG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
             force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or CG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
             

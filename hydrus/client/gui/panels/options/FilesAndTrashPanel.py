@@ -38,8 +38,12 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._confirm_multiple_local_file_services_move = QW.QCheckBox( self )
         
         self._only_show_delete_from_all_local_domains_when_filtering = QW.QCheckBox( self )
-        tt = 'When you finish filtering, if the files you chose to delete are in multiple local file domains, you are usually given the option of where you want to delete them from. If you always want to delete them from all locations and do not want the more complicated confirmation dialog, check this.'
+        tt = 'When you finish archive/delete filtering, if the files you chose to delete are in multiple local file domains, you are usually given the option of where you want to delete them from. If you always want to delete them from all locations and do not want the more complicated confirmation dialog, check this.'
         self._only_show_delete_from_all_local_domains_when_filtering.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._archive_delete_commit_panel_delays_multiple_delete_choices = QW.QCheckBox( self )
+        tt = 'When you finish archive/delete filtering, if you have multiple choices for deletion domain, the final confirmation panel will not enable its buttons for a second or so, just to catch you from spamming enter through it too quickly. Disable this if you find it more annoying than helpful.'
+        self._archive_delete_commit_panel_delays_multiple_delete_choices.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._remove_filtered_files = QW.QCheckBox( self )
         self._remove_filtered_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will remove all archived/deleted files from the source thumbnail page when you commit your archive/delete filter run.' ) )
@@ -100,6 +104,7 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._confirm_multiple_local_file_services_move.setChecked( self._new_options.GetBoolean( 'confirm_multiple_local_file_services_move' ) )
         
         self._only_show_delete_from_all_local_domains_when_filtering.setChecked( self._new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) )
+        self._archive_delete_commit_panel_delays_multiple_delete_choices.setChecked( self._new_options.GetBoolean( 'archive_delete_commit_panel_delays_multiple_delete_choices' ) )
         
         self._remove_filtered_files.setChecked( HC.options[ 'remove_filtered_files' ] )
         self._remove_filtered_files_even_when_skipped.setChecked( self._new_options.GetBoolean( 'remove_filtered_files_even_when_skipped' ) )
@@ -139,7 +144,8 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Confirm when moving files across local file domains: ', self._confirm_multiple_local_file_services_move ) )
         rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
         rows.append( ( 'When maintenance physically deletes files, wait this long between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
-        rows.append( ( 'When finishing filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
+        rows.append( ( 'When finishing archive/delete filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
+        rows.append( ( 'When finishing archive/delete filtering, delay activation of multiple deletion choice buttons: ', self._archive_delete_commit_panel_delays_multiple_delete_choices ) )
         rows.append( ( 'Remove files from view when they are archive/delete filtered: ', self._remove_filtered_files ) )
         rows.append( ( '--even skipped files: ', self._remove_filtered_files_even_when_skipped ) )
         rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
@@ -256,6 +262,7 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'do_not_do_chmod_mode', self._do_not_do_chmod_mode.isChecked() )
         
         self._new_options.SetBoolean( 'only_show_delete_from_all_local_domains_when_filtering', self._only_show_delete_from_all_local_domains_when_filtering.isChecked() )
+        self._new_options.SetBoolean( 'archive_delete_commit_panel_delays_multiple_delete_choices', self._archive_delete_commit_panel_delays_multiple_delete_choices.isChecked() )
         
         self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', HydrusTime.MillisecondiseS( self._ms_to_wait_between_physical_file_deletes.GetValue() ) )
         

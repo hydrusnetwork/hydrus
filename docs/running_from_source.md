@@ -270,6 +270,17 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
 === "Linux"
 
+    !!! warning "Wayland (and MPV)"
+        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, but some of these issues, particularly mpv embedding, seem to be intractable.
+        
+        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
+        
+        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
+        
+        You should be able to see which window manager hydrus thinks it is running under in `help->about`, on the "Qt" row.
+        
+        I expect to revisit this question in future versions of Qt and Wayland, and I plan to try a different mpv embedding technique that I know Wayland should support--we'll see if the situation stabilises.
+    
     !!! note "Qt compatibility"
         
         If the program fails to run, and from terminal it says something like this:
@@ -288,17 +299,10 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         
         Or check your OS's package manager.
         
+        One user reports that Fedora might need `libxkbcommon` too.
+        
         If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in `install_dir/static/requirements/advanced` for more info, and you can also work off this list: [PySide6](https://pypi.org/project/PySide6/#history)
         
-    
-    ??? warning "Wayland (and MPV)"
-        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all.
-        
-        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a copy of `hydrus_client.sh` called `hydrus_client-user.sh`) should do it. The 'xcb' should force X11.
-        
-        It does not work for everyone, though. If it fails, another user says that also setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
-        
-        I expect to revisit this question in future versions of Qt and Wayland--we'll see if the situation stabilises.
     
     Run 'hydrus_client.sh' to start the client. Don't forget to `chmod +x hydrus_client.sh` if you need it.
     

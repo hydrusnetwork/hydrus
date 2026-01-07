@@ -423,7 +423,21 @@ class SubprocessContext( object ):
                     continue
                     
                 
-                chunk = self.process.stdout.read( self._bufsize )
+                if self.process.returncode is not None:
+                    
+                    return
+                    
+                
+                try:
+                    
+                    chunk = self.process.stdout.read( self._bufsize )
+                    
+                except ValueError: # probably got terminated at an inconvenient time
+                    
+                    HydrusData.Print( f'Probably not a big deal, but the Subprocess Command "{self._cmd}" closed its stdout early. If this keeps happening, please let hydev know!' )
+                    
+                    return
+                    
                 
                 if len( chunk ) == 0:
                     

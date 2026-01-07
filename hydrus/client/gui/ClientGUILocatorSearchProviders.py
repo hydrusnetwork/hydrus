@@ -99,7 +99,23 @@ class CalculatorSearchProvider( QCalculatorSearchProvider ):
         
     
 
-class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
+class HydrusSearchProvider( QAbstractLocatorSearchProvider ):
+    
+    def _UserHasTypedEnoughToSearch( self, query: str ) -> bool:
+        
+        query = query.strip()
+        
+        # if user has typed something, we are now in search mode and want to test against this
+        if 0 < len( query ) < CG.client_controller.new_options.GetInteger( 'command_palette_num_chars_for_results_threshold' ):
+            
+            return False
+            
+        
+        return True
+        
+    
+
+class FavSearchesSearchProvider( HydrusSearchProvider ):
     
     def __init__( self, parent = None ):
         
@@ -155,7 +171,17 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_ids_to_fav_searches = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_favourite_searches' ) ):
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook():
+            
+            return
+            
+        
+        if query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_favourite_searches' ):
+            
+            return
+            
+        
+        if not self._UserHasTypedEnoughToSearch( query_casefold ):
             
             return
             
@@ -219,7 +245,7 @@ class FavSearchesSearchProvider( QAbstractLocatorSearchProvider ):
         
     
 
-class PagesSearchProvider( QAbstractLocatorSearchProvider ):
+class PagesSearchProvider( HydrusSearchProvider ):
     
     def __init__( self, parent = None ):
         
@@ -264,7 +290,17 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_ids_to_pages = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_all_pages' ) ):
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook():
+            
+            return
+            
+        
+        if query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_all_pages' ):
+            
+            return
+            
+        
+        if not self._UserHasTypedEnoughToSearch( query_casefold ):
             
             return
             
@@ -361,7 +397,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         return str() #TODO fill this in
         
     
-class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
+class PagesHistorySearchProvider( HydrusSearchProvider ):
     
     def __init__( self, parent = None ):
         
@@ -402,7 +438,17 @@ class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
         self.result_ids_to_page_keys = {}
         self.result_id_counter = 0
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory() or ( query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_history' ) ):
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+            
+            return
+            
+        
+        if query == "" and not CG.client_controller.new_options.GetBoolean( 'command_palette_initially_show_history' ):
+            
+            return
+            
+        
+        if not self._UserHasTypedEnoughToSearch( query_casefold ):
             
             return
             
@@ -465,7 +511,27 @@ class PagesHistorySearchProvider( QAbstractLocatorSearchProvider ):
         
     
 
-class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
+class HydrusSearchProviderCrazyLaggy( HydrusSearchProvider ):
+    
+    # why is a search result with like 120 items so slow? ~it is a mystery~
+    
+    def _UserHasTypedEnoughToSearch( self, query: str ) -> bool:
+        
+        if not super()._UserHasTypedEnoughToSearch( query ):
+            
+            return False
+            
+        
+        if len( query ) < 3:
+            
+            return False
+            
+        
+        return True
+        
+    
+
+class MainMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
     
     def __init__( self, parent = None ):
         
@@ -501,21 +567,23 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
         
         query_casefold = query.casefold()
         
+        self.result_ids_to_pages = {}
+        
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+            
+            return
+            
+        
         if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_main_menu' ):
             
             return
             
         
-        if len( query ) < 3:
+        if not self._UserHasTypedEnoughToSearch( query_casefold ):
             
             return
             
-        self.result_ids_to_pages = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui._menubar:
-            
-            return
-            
         menubar = CG.client_controller.gui._menubar
         
         # helper function to traverse menu and generate entries
@@ -529,10 +597,11 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
             for action in menu.actions():
                 
                 actionText = action.text().replace( "&", "" )
-                if action.menu():
                 
+                if action.menu():
+                    
                     new_parent_name = parent_name + " | " + actionText if parent_name else actionText
-
+                    
                     result.extend( get_menu_items( action.menu(), new_parent_name ) )
                     
                 else:
@@ -562,32 +631,38 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     self.result_ids_to_actions[ self.result_id_counter ] = action
                     
                     self.result_id_counter += 1
+                    
+                
 
             return result
+            
         
         menu_data = get_menu_items( menubar, '' )
         
         if menu_data:
-        
+            
             self.resultsAvailable.emit( jobID, menu_data )
+            
+        
 
 
     def stopJobs( self, jobs ):
-
+        
         self.result_ids_to_actions = {}
         
-        
+    
     def hideTitle( self ):
         
         return False
         
-        
+    
     def titleIconPath( self ):
         
         return str() #TODO fill this in
+        
+    
 
-
-class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
+class MediaMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
     
     def __init__( self, parent = None ):
         
@@ -596,17 +671,17 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         self.result_id_counter = 0
         self.result_ids_to_actions: dict[ int, QW.QAction ] = {}
         self.menu = None
-
+        
 
     def title( self ):
         
         return "Media"
-
+        
 
     def suggestedReservedItemCount( self ):
         
         return 64
-
+        
 
     def resultSelected( self, resultID: int ):
         
@@ -618,25 +693,27 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
             
             self.result_ids_to_actions = {}
             self.menu = None
-
+            
+        
 
     def processQuery( self, query: str, context, jobID: int ):
         
         query_casefold = query.casefold()
+        
+        self.result_ids_to_pages = {}
+        self.menu = None
+        
+        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+            
+            return
+            
         
         if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_media_menu' ):
             
             return
             
         
-        if len( query ) < 3:
-            
-            return
-            
-        self.result_ids_to_pages = {}
-        self.menu = None
-        
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetTopLevelNotebook():
+        if not self._UserHasTypedEnoughToSearch( query_casefold ):
             
             return
             
@@ -684,7 +761,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     primary_text = highlight_result_text( actionText, query )
                     secondary_text = escape( parent_name )
                     
-                    result.append( QLocatorSearchResult( self.result_id_counter, 'images.png', 'images.png', True, [ primary_text, secondary_text ] ) )
+                    result.append( QLocatorSearchResult( self.result_id_counter, 'images.svg', 'images.svg', True, [ primary_text, secondary_text ] ) )
                     
                     self.result_ids_to_actions[ self.result_id_counter ] = action
                     

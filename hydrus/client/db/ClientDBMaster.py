@@ -119,7 +119,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                             
                             if not pubbed_error:
                                 
-                                HydrusData.ShowText( 'A file identifier was missing! This is a serious error that means your client database had an orphan file id! You have very likely encountered database corruption, perhaps recently, or perhaps years ago, please check the "help my db is broke.txt" document under install_dir/db folder as background reading. Additional info has been written to the log.' )
+                                HydrusData.ShowText( 'A file identifier was missing! This is a serious error that means your client database had an orphan file id! You have very likely encountered database corruption, perhaps recently, or perhaps years ago, please check the "help I had a file identifier missing error.txt" document under install_dir/db folder. Additional info has been written to the log.' )
                                 
                                 pubbed_error = True
                                 

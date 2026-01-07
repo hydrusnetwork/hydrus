@@ -121,8 +121,10 @@ extra:
     - icon: fontawesome/brands/tumblr
       link: https://hydrus.tumblr.com/
     - icon: fontawesome/solid/envelope
-      link: mailto:hydrus.admin@gmail.com
+      link: mailto:hydrus_dev@proton.me
     - icon: fontawesome/brands/discord
+      link: mailto:hydrus.admin@gmail.com
+    - icon: fontawesome/solid/envelope
       link: https://discord.gg/wPHPCUZ
     - icon: fontawesome/brands/patreon
       link: https://www.patreon.com/hydrus_dev

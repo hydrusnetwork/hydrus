@@ -1587,6 +1587,8 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
     
 class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, gug_key_and_name, update_callable = None ):
         
         super().__init__( parent, 'gallery selector', self._Edit )
@@ -1725,6 +1727,8 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
             
             self._update_callable( gug_key_and_name )
             
+        
+        self.valueChanged.emit()
         
     
     def GetValue( self ):

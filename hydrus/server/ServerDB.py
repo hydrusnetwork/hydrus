@@ -5046,7 +5046,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 try:
                     
-                    HydrusDB.CheckCanVacuumCursor( db_path, self._c )
+                    HydrusDB.CheckCanVacuumIntoCursor( db_path, self._c )
                     
                 except Exception as e:
                     

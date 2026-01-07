@@ -1,0 +1,38 @@
+*** The purpose of this document ***
+
+If you were doing normal hydrus work, often right after a crash, and had a message about a missing 'file identifier', and then it said something about a hash that started with lots of "a"s, like "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa34bf0b9abf7683e3955781212d0d1899", this document will help you get back on track.
+
+
+*** What happened? ***
+
+Hydrus keeps an SHA256-hash-based identifier for every file. Each identifier gets an accompanying number id, like 123456. Your hydrus saw a number for a file, let's say in some "this search should have this file" result, and then when it needed the hash, let's say it tried to load the file for display in the UI, the hash definiton was missing! Hydrus has knowledge about a file but does not know what its name is. You may well have the file in your file storage, but since its name is hash based, which one?
+
+This happen mostly after:
+
+1) You have a power cut or particularly unlucky program crash that cuts the program off during file import. Because of a technical issue with the 'WAL' journalling we use with SQLite, a bad crash can cause one of the four .db files we use to have accepted a transaction while another file will be ~90 seconds in the past and not know that transaction has happened. Your client.db file table has the number, but the client.master.db definition table never got the hash. This usually just affects a small number of recent files since it is transaction based. Easy to recover from.
+
+2) You have had hard drive corruption, either recently or very long ago, and your client.master.db has lost many master definitions. Your client has tried to look up a hash and has discovered the hole. Can be hundreds of thousands of definitions and frustrating to recover from. You are probably in the midst of doing 'help my db is broke.txt' work. Best solution here is to rollback to a backup, but if you can't, continue with this document.
+
+
+*** What to do next? ***
+
+First off, check 'help my db is broke.txt' as background reading. If there is any chance of hardware damage (power cut, drive failure), you might like to do a chkdsk or integrity check on your .db files. If this was due to a program crash, no worries, your database cannot be malformed from that.
+
+Then, we want to tell hydrus to scan itself for bad items and clear them out.
+
+1) Load up your 'client - date.log' and search for "Database master hash definition" or similar. Look for all the hashes that it talks about, which should all start with lots of "a"s.
+
+1a) IF YOU ONLY HAVE A FEW HASHES MISSING: Copy them to a notepad. In the client, create a new 'system:hash' predicate and paste your list of bad hashes. The client should load up a bunch of ghost files with no thumbnails that it will then complain about to you, since they appear to be missing from disk. Wait out/ignore any popup errors and, if they have URLs, ctrl+a->right-click->urls->force metadata refetch->(all the url types you guess are good). Wait for that downloader page to finish. Maybe it fixes some files. Then go back to your missing file page and ctrl+a->right-click->delete. These records are broken, repaired only enough to get them to load; you cannot use them for much unless you want to pick through them one by one.
+
+1b) IF YOU HAVE THOUSANDS OF HASHES MISSING: Open up _database->file maintenance->manage scheduled jobs_. Go to 'add new work', load up 'system:everything' and click 'run this search'. Then add 'if file is missing, then if has URL try to redownload, else remove record'. Go to the 'scheduled work' tab and hurry all those jobs along. Wait for them to finish, and then, if you can, wait for the new url downloader page, if any, to finish too. Then go back to 'add new work' and add 'if file is missing, remove record (leave no delete record)'. You may get more error reports about missing identifiers here. Hydrus may report that it was able to auto-heal some.
+
+2) Hit database->db maintenance->clear orphan file records. It probably won't find any problems.
+
+3) Hit database->file maintenance->clear orphan files. It will probably find as many files as you had hashes that were non-URL-recoverable. These are your actual files, with their actual hash names. The routine will export them to a new subfolder beneath install_dir/db. Wait for it to finish, and then import all those files back into the program. You have lost all your metadata like tags and archive status etc... but the files are recovered.
+
+
+*** Going forward ***
+
+Your client should now have a consistent and correct understanding of which files it has and what their names are. If the problem that cause this was bad, you may have other issue. Feel free to contact me if you need more help.
+
+If this issue was due to a power cut, I strongly recommend you check out buying a 'UPS', Uninterrupted Power Supply, for your critical tech. There are a range of models, so browse the options and buy something that will fit your setup. A normal consumer one is basically a bulky power strip, about $70, and keeps a computer on for about 9 minutes, which covers 90%+ of all power events. You can usually hook them up to your computer's USB too and your OS will hibernate if the battery runs low and you aren't around to turn it off. It can be a real lifesaver, particularly if you live in a place with regular storms/tornadoes.

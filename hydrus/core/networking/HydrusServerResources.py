@@ -901,7 +901,7 @@ class HydrusResource( Resource ):
                 
                 HydrusData.DebugPrint( failure.getTraceback() )
                 
-                error_summary = f'The "{self._service.GetName()}" encountered an error it could not handle!\n\nHere is a full traceback of what happened. If you are using the hydrus client, it will be saved to your log. Please forward it to hydrus.admin@gmail.com:\n\n' + failure.getTraceback()
+                error_summary = f'The "{self._service.GetName()}" encountered an error it could not handle!\n\nHere is a full traceback of what happened. If you are using the hydrus client, it will be saved to your log. Please forward it to hydrus_dev@proton.me:\n\n' + failure.getTraceback()
                 
             
             # TODO: maybe pull the cbor stuff down to hydrus core here and respond with Dumps( blah, requested_mime ) instead

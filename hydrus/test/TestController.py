@@ -188,6 +188,8 @@ class Controller( object ):
         self.run_finished = False
         self.was_successful = False
         
+        self.main_qt_thread = self.app.thread()
+        
         self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( QW.QApplication.instance() )
         
         self._test_db = None
@@ -396,6 +398,11 @@ class Controller( object ):
         return HydrusData.GenerateKey()
         
     
+    def AmInTheMainQtThread( self ) -> bool:
+        
+        return QC.QThread.currentThread() == self.main_qt_thread
+        
+    
     def CallBlockingToQt( self, win, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
@@ -414,6 +421,11 @@ class Controller( object ):
                 
                 job_status.Finish()
                 
+            
+        
+        if self.AmInTheMainQtThread():
+            
+            return func( *args, **kwargs )
             
         
         job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )

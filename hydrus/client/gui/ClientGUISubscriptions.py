@@ -4,6 +4,7 @@ import threading
 import time
 import typing
 
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -285,6 +286,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._query_panel = ClientGUICommon.StaticBox( self, 'site and queries' )
         
+        label = 'You have selected a downloader that appears to download from multiple sites. Subscriptions make careful timing calculations based on file velocity, and multiple sites offering new files at different times will confuse things! Also, errors or certain search 404s that block a sub query will stop work for all sites in the downloader. Unless you are certain this complex downloader sources data from the same unified stream behind the scenes, and this single website simply has a complicated multi-domain setup, I strongly recommend you duplicate this whole subscription in the dialog above and set each duplicate to check each respective site separately. The subs will clear faster, and your check timings and DEAD results will be far more efficient and reliable!'
+        
+        self._multi_domain_ngug_warning_label = ClientGUICommon.BetterStaticText( self._query_panel, label = label )
+        self._multi_domain_ngug_warning_label.setWordWrap( True )
+        self._multi_domain_ngug_warning_label.setObjectName( 'HydrusWarning' )
+        self._multi_domain_ngug_warning_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._query_panel, gug_key_and_name )
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
@@ -418,6 +426,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._query_panel.Add( self._multi_domain_ngug_warning_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._query_panel.Add( queries_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -492,6 +501,28 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._checker_options.valueChanged.connect( self._CheckerOptionsUpdated )
         
         self._UpdateDelayText()
+        
+        self._gug_key_and_name.valueChanged.connect( self._UpdateNGUGWidget )
+        
+        self._UpdateNGUGWidget()
+        
+    
+    def _UpdateNGUGWidget( self ):
+        
+        gug_key_and_name = self._gug_key_and_name.GetValue()
+        
+        try:
+            
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            
+            show_warning = gug.IsMultiDomainNGUG()
+            
+        except:
+            
+            show_warning = False
+            
+        
+        self._multi_domain_ngug_warning_label.setVisible( show_warning )
         
     
     def _AddQuery( self ):

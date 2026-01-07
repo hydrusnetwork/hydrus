@@ -204,6 +204,11 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
+    def IsMultiDomainNGUG( self ):
+        
+        return False
+        
+    
     def SetGUGKey( self, gug_key: bytes ):
         
         self._gallery_url_generator_key = gug_key
@@ -364,6 +369,25 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
             return False
             
+        
+    
+    def IsMultiDomainNGUG( self ):
+        
+        try:
+            
+            example_urls = self.GetExampleURLs()
+            
+        except:
+            
+            return False
+            
+        
+        example_url_domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( url ) for url in example_urls }
+        
+        # not perfect, but it'll do for most cases for now
+        example_url_second_level_domains = { ClientNetworkingFunctions.ConvertDomainIntoSecondLevelDomain( domain ) for domain in example_url_domains }
+        
+        return len( example_url_second_level_domains ) > 1
         
     
     def RegenerateGUGKey( self ):

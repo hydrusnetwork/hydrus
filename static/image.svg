@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg id="svg1" width="200mm" height="200mm" version="1.1" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+ <defs id="defs1">
+  <linearGradient id="linearGradient4" x1="19.113" x2="149.29" y1="20.285" y2="150.46" gradientUnits="userSpaceOnUse">
+   <stop id="stop3" stop-color="#1ad4e5" offset="0"/>
+   <stop id="stop4" stop-color="#47dceb" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient6" x1="51.921" x2="162.78" y1="75.283" y2="186.14" gradientUnits="userSpaceOnUse">
+   <stop id="stop5" stop-color="#2dd22d" offset="0"/>
+   <stop id="stop6" stop-color="#28bd28" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient8" x1="51.921" x2="162.78" y1="75.283" y2="186.14" gradientUnits="userSpaceOnUse">
+   <stop id="stop7" stop-color="#404040" offset="0"/>
+   <stop id="stop8" stop-color="#262626" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient10" x1="11.219" x2="188" y1="11.17" y2="189.28" gradientUnits="userSpaceOnUse">
+   <stop id="stop9" stop-color="#404040" offset="0"/>
+   <stop id="stop10" stop-color="#2e2e2e" offset="1"/>
+  </linearGradient>
+  <linearGradient id="linearGradient12" x1="55.329" x2="90.363" y1="35.37" y2="70.404" gradientUnits="userSpaceOnUse">
+   <stop id="stop11" stop-color="#404040" offset="0"/>
+   <stop id="stop12" stop-color="#262626" offset="1"/>
+  </linearGradient>
+  <filter id="filter20" x="-.08917" y="-.08917" width="1.1783" height="1.1783" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood19" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur19" in="SourceGraphic" result="blur" stdDeviation="4.500000"/>
+   <feOffset id="feOffset19" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite19" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite20" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+  <filter id="filter23" x="-.06899" y="-.11423" width="1.138" height="1.2285" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood22" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur22" in="SourceGraphic" result="blur" stdDeviation="3.000000"/>
+   <feOffset id="feOffset22" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite22" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite23" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+  <filter id="filter25" x="-.28829" y="-.28829" width="1.5766" height="1.5766" color-interpolation-filters="sRGB">
+   <feFlood id="feFlood23" flood-color="rgb(0,0,0)" flood-opacity=".49804" in="SourceGraphic" result="flood"/>
+   <feGaussianBlur id="feGaussianBlur23" in="SourceGraphic" result="blur" stdDeviation="3.000000"/>
+   <feOffset id="feOffset23" dx="0.000000" dy="0.000000" in="blur" result="offset"/>
+   <feComposite id="feComposite24" in="flood" in2="offset" operator="in" result="comp1"/>
+   <feComposite id="feComposite25" in="SourceGraphic" in2="comp1" result="comp2"/>
+  </filter>
+ </defs>
+ <g id="layer3">
+  <rect id="rect3" x="11.323" y="12.853" width="175.97" height="174.13" fill="url(#linearGradient4)" style="paint-order:fill markers stroke"/>
+ </g>
+ <g id="layer2" stroke-linecap="round" stroke-linejoin="round" stroke-width="10">
+  <circle id="path1" cx="73.225" cy="52.202" r="21.159" fill="#eaea48" filter="url(#filter25)" stroke="url(#linearGradient12)" style="paint-order:fill markers stroke"/>
+  <path id="path3" d="m116.75 165.71-70.08-70.08-34.734 34.734-0.30603 58.604h176.73l0.1052-70.367-37.441-36.436-58.91 58.91z" fill="url(#linearGradient6)" filter="url(#filter23)" stroke="url(#linearGradient8)" style="paint-order:fill markers stroke"/>
+ </g>
+ <g id="layer1">
+  <rect id="rect1" x="11.323" y="11.629" width="177.19" height="177.19" fill-opacity="0" filter="url(#filter20)" stroke="url(#linearGradient10)" stroke-linecap="round" stroke-linejoin="round" stroke-width="10" style="paint-order:stroke fill markers"/>
+ </g>
+</svg>

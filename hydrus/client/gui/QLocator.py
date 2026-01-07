@@ -407,8 +407,18 @@ class QCalculatorSearchProvider(QAbstractLocatorSearchProvider):
 # also added char threshold
 class QLocatorWidget(QW.QWidget):
     finished = QC.Signal()
-    def __init__(self, parent = None, width: int = 600, resultHeight: int = 36, titleHeight: int = 36, primaryTextWidth: int = 320, secondaryTextWidth: int = 200, maxVisibleItemCount: int = 8, numCharsForResultsThreshold: int = 0):
-        super().__init__(parent)
+    def __init__(
+        self,
+        parent = None,
+        width: int = 600,
+        resultHeight: int = 36,
+        titleHeight: int = 36,
+        primaryTextWidth: int = 320,
+        secondaryTextWidth: int = 200,
+        maxVisibleItemCount: int = 8
+    ):
+        
+        super().__init__( parent )
         
         self.alignment = QC.Qt.AlignmentFlag.AlignCenter
         self.resultHeight = resultHeight
@@ -417,7 +427,6 @@ class QLocatorWidget(QW.QWidget):
         self.locator = None
         self.secondaryTextWidth = secondaryTextWidth
         self.maxVisibleItemCount = maxVisibleItemCount
-        self.numCharsForResultsThreshold = numCharsForResultsThreshold
         self.reservedItemCounts = []
         self.visibleResultItemCounts = []
         self.currentJobIds = []
@@ -801,11 +810,6 @@ class QLocatorWidget(QW.QWidget):
         if self.currentJobIds:
             self.locator.stopJobs(self.currentJobIds)
         
-        if len( query ) < self.numCharsForResultsThreshold:
-            
-            return
-            
-        
         self.lastQuery = query
         self.queryTimer.start()
     
@@ -1092,11 +1096,6 @@ class QLocatorWidget(QW.QWidget):
             
         
         return None
-        
-    
-    def setNumCharsForResultsThreshold( self, numCharsForResultsThreshold: int ):
-        
-        self.numCharsForResultsThreshold = numCharsForResultsThreshold
         
     
     def setResultVisible(self, widget: QW.QWidget, visible: bool):

@@ -32,6 +32,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
+from hydrus.client.gui.canvas import ClientGUICanvasMenus
 from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
@@ -1566,6 +1567,16 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self.update()
             
+        
+    
+    def SlideshowIsRunning( self ) -> bool:
+        
+        return False
+        
+    
+    def SupportsSlideshow( self ) -> bool:
+        
+        return False
         
     
     def ZoomChanged( self ):
@@ -3268,16 +3279,6 @@ class CanvasMediaList( CanvasWithHovers ):
         self.SetMedia( self._media_list.GetPrevious( self._current_media ) )
         
     
-    def _ShowRandom( self ):
-        
-        self.SetMedia( self._media_list.GetRandom( self._current_media ) )
-        
-    
-    def _UndoRandom( self ):
-        
-        self.SetMedia( self._media_list.UndoRandom( self._current_media ) )
-        
-    
     def _StartSlideshow( self, interval: float ):
         
         pass
@@ -3859,6 +3860,16 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
         
     
+    def _ShowRandom( self ):
+        
+        self.SetMedia( self._media_list.GetRandom( self._current_media ) )
+        
+    
+    def _UndoRandom( self ):
+        
+        self.SetMedia( self._media_list.UndoRandom( self._current_media ) )
+        
+    
     def Archive( self, canvas_key ):
         
         if self._canvas_key == canvas_key:
@@ -3997,6 +4008,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
             
         
     
+
 class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results, first_hash ):
@@ -4169,7 +4181,15 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 return
                 
             
-            self._ShowNext()
+            if CG.client_controller.new_options.GetBoolean( 'slideshows_progress_randomly' ):
+                
+                self._ShowRandom()
+                
+            else:
+                
+                self._ShowNext()
+                
+                
             
             self._RegisterNextSlideshowPresentation()
             
@@ -4230,12 +4250,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             period = float( period_str )
             
-            self._StartSlideshow( period )
-            
         except:
             
             ClientGUIDialogsMessage.ShowWarning( self, 'Could not parse that slideshow period!' )
             
+            return
+            
+        
+        self._StartSlideshow( period )
         
     
     def _StopSlideshow( self ):
@@ -4273,6 +4295,21 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             if action == CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW:
                 
                 self._PausePlaySlideshow()
+                
+            elif action == CAC.SIMPLE_START_SLIDESHOW:
+                
+                data = command.GetSimpleData()
+                
+                if data is None:
+                    
+                    self._StartSlideshowCustomPeriod()
+                    
+                else:
+                    
+                    period_seconds = data
+                    
+                    self._StartSlideshow( period_seconds )
+                    
                 
             elif action == CAC.SIMPLE_SHOW_MENU:
                 
@@ -4374,26 +4411,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
                 
             
-            slideshow = ClientGUIMenus.GenerateMenu( menu )
-            
-            slideshow_durations = CG.client_controller.new_options.GetSlideshowDurations()
-            
-            for slideshow_duration in slideshow_durations:
-                
-                pretty_duration = HydrusTime.TimeDeltaToPrettyTimeDelta( slideshow_duration )
-                
-                ClientGUIMenus.AppendMenuItem( slideshow, pretty_duration, f'Start a slideshow that changes media every {pretty_duration}.', self._StartSlideshow, slideshow_duration )
-                
-            
-            ClientGUIMenus.AppendMenuItem( slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
-            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshowCustomPeriod )
-            
-            ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
-            
-            if self._slideshow_is_running:
-                
-                ClientGUIMenus.AppendMenuItem( menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
-                
+            ClientGUICanvasMenus.AppendSlideshowMenu( self, menu, self._slideshow_is_running )
             
             ClientGUIMenus.AppendSeparator( menu )
             
@@ -4497,6 +4515,16 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             CGC.core().PopupMenu( self, menu )
             
+        
+    
+    def SlideshowIsRunning( self ) -> bool:
+        
+        return self._slideshow_is_running
+        
+    
+    def SupportsSlideshow( self ) -> bool:
+        
+        return True
         
     
     def TIMERUIUpdate( self ):

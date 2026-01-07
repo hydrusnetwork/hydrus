@@ -681,8 +681,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             titleHeight = 36,
             primaryTextWidth = 430,
             secondaryTextWidth = 280,
-            maxVisibleItemCount = 16,
-            numCharsForResultsThreshold = command_palette_num_chars_for_results_threshold
+            maxVisibleItemCount = 16
         )
         self._locator_widget.setDefaultStylingEnabled( False )
         self._locator_widget.setLocator( self._locator )
@@ -4645,8 +4644,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         ClientGUIFunctions.UpdateAppDisplayName()
-        
-        self._locator_widget.setNumCharsForResultsThreshold( CG.client_controller.new_options.GetInteger( 'command_palette_num_chars_for_results_threshold' ) )
         
         self._controller.pub( 'wake_daemons' )
         self.SetStatusBarDirty()

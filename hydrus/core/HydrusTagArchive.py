@@ -42,7 +42,7 @@ import sqlite3
 # the tag import options widget when people sync with these archives.
 
 
-# And also feel free to contact me directly at hydrus.admin@gmail.com if you need help.
+# And also feel free to contact me directly at hydrus_dev@proton.me if you need help.
 
 HASH_TYPE_MD5 = 0 # 16 bytes long
 HASH_TYPE_SHA1 = 1 # 20 bytes long

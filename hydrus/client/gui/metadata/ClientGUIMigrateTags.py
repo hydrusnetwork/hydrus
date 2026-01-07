@@ -517,7 +517,13 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             extra_info = ''
             
         
-        title = f'taking {source_content_statuses_strings[ content_statuses ]} {HC.content_type_string_lookup[ content_type ]}{extra_info} from "{source.GetName()}" and {destination_action_strings[ content_action ]} "{destination.GetName()}"'
+        content_statuses_string = source_content_statuses_strings[ tuple( content_statuses ) ]
+        content_type_string = HC.content_type_string_lookup[ content_type ]
+        source_name = source.GetName()
+        destination_action_string = destination_action_strings[ content_action ]
+        destination_name = destination.GetName()
+        
+        title = f'taking {content_statuses_string} {content_type_string}{extra_info} from "{source_name}" and {destination_action_string} "{destination_name}"'
         
         message = 'Migrations can make huge changes. They can be cancelled early, but any work they do cannot always be undone. Please check that this summary looks correct:'
         message += '\n' * 2

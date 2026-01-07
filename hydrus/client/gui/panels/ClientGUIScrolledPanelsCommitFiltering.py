@@ -161,7 +161,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
                 QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
-            delay_delete_buttons = len( deletion_options ) > 0
+            delay_delete_buttons = len( deletion_options ) > 0 and CG.client_controller.new_options.GetBoolean( 'archive_delete_commit_panel_delays_multiple_delete_choices' )
             delayed_delete_buttons = []
             
             for ( location_context, delete_label ) in deletion_options:

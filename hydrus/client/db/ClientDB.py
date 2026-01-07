@@ -8774,6 +8774,29 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 653:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                if new_options.GetInteger( 'command_palette_num_chars_for_results_threshold' ) == 0:
+                    
+                    new_options.SetInteger( 'command_palette_num_chars_for_results_threshold', 1 )
+                    
+                    self.modules_serialisable.SetJSONDump( new_options )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8939,7 +8962,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                HydrusDB.CheckCanVacuumCursor( db_path, self._c )
+                HydrusDB.CheckCanVacuumIntoCursor( db_path, self._c )
                 
             except Exception as e:
                 
