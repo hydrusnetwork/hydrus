@@ -165,3 +165,52 @@ class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceCli
         return response_context
         
     
+
+class HydrusResourceClientAPIRestrictedManagePagesGetMediaViewer( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        from hydrus.core import HydrusConstants as HC
+        
+        def do_it():
+            
+            return CG.client_controller.gui.GetMediaViewerInfo()
+            
+        
+        file_info = CG.client_controller.CallBlockingToQtTLW( do_it )
+        
+        if file_info is None:
+            
+            raise HydrusExceptions.NotFoundException( 'No media viewer is currently open or no file is being viewed!' )
+            
+        
+        media_viewer_file = {
+            'hash': file_info[ 'hash' ].hex(),
+            'size': file_info[ 'size' ],
+            'mime': HC.mime_string_lookup.get( file_info[ 'mime' ], 'unknown' ),
+            'width': file_info[ 'width' ],
+            'height': file_info[ 'height' ],
+            'duration': file_info[ 'duration' ],
+            'num_frames': file_info[ 'num_frames' ],
+            'has_audio': file_info[ 'has_audio' ],
+            'is_inbox': file_info[ 'is_inbox' ],
+            'has_exif': file_info[ 'has_exif' ],
+            'has_icc_profile': file_info[ 'has_icc_profile' ],
+            'has_transparency': file_info[ 'has_transparency' ],
+            'blurhash': file_info[ 'blurhash' ],
+            'pixel_hash': file_info[ 'pixel_hash' ].hex() if file_info[ 'pixel_hash' ] is not None else None,
+            'has_notes': file_info[ 'has_notes' ],
+            'urls': file_info[ 'urls' ]
+        }
+        
+        body_dict = {
+            'media_viewer_file': media_viewer_file
+        }
+        
+        body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
