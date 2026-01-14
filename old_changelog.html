@@ -35,6 +35,46 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_655"><a href="#version_655">version 655</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>for all the normal page sidebars, the sections above the taglist (e.g. 'search' on a search page, or 'gallery downloader' and 'highlighted query' on a gallery download page) are now collapsible (there's a little up/down arrow button in the corner). if you want to do some taglist work, you can now make it really big. this is just a hacky test though, so let me know how it feels</li>
+                        <li>the 'eye' icon in the media viewer now has 'always start new media viewers always on top' (which works nice generally) and 'always start new media viewers without titlebar/frame' (which is a little flickery since I schedule it to happen 100ms after window init because of technical gubbins). neither plays very well with start-fullscreen mode. I also reworded the titlebar option logical grammar from 'show titlebar (default on)' to 'hide titlebar/frame (default off)'</li>
+                        <li>the 'pause network/subs' menu items in the system tray icon are now checkbox items. the ugly 'unpause x' grammar is gone!</li>
+                        <li>if you do not have a file, the file info lines that appear in the thumbnail flyout menu and the main gui status, which normally say stuff like 'imported 3 days ago' now explicitly say "you do not have this file, (but you did once|but your client has heard a bit about it|and you have never had it)". I hope this will forestall some confusion these advanced media results cause (usually under a 'all known files' search)</li>
+                        <li>the unhelpful and incorrect 'archived: unknown time' statement no longer appears for non-local files</li>
+                        <li>if a site delivers `451: Unavailable For Legal Reasons`, the file and gallery download objects now catch this and assign an 'ignored' state with an appropriate note. previously this was counting as an ugly uncaught error and causing subs to break and so on (this caused my 'do not use NGUGs here' 'edit subscription' warning label last week). if you have been hit by this (seems like danbooru is doing it?), I don't know if it is because of your region or certain queries (e.g. 'do not post' artists); let me know how the workflow is with these results now being ignored--maybe we want this to be an outright errorthat will auto-pause subs and such, just with the now-nicer error description? I've been thinking about making subs cleverer about region-based captcha blocks, recognising that this is a temporary block that should cause hydrus to stop talking to the domain entirely, but not considering it an error _per se_ and backing out of the current job non-destructively so it can try resuming where it left off again later, so if this is part of that, we'll want to throw it in the mix</li>
+                        <li><h3>Client API</h3></li>
+                        <li>with thanks to a user for the skeleton, I fleshed out and added `/manage_pages/get_media_viewers` to the Client API. this thing fetches all the current open media viewers, tells you an id and type for each, and says what media is currently in view. this also clears issue #1583</li>
+                        <li>wrote a (bad) unit test for this and some documentation</li>
+                        <li>Client API version is now 84</li>
+                        <li><h3>Client API deprecation</h3></li>
+                        <li>I am formalising my Client API deprecation schedule since I have been procrastinating on this cleanup yet don't want to suddenly delete something mysteriously two years after the fact</li>
+                        <li>if you send `hide_service_keys_tags=false` to a `file_metadata` Client API call, the user now gets a `FutureWarning` deprecation log entry. the behaviour this parameter supports will be deleted on v668 (three months from now)</li>
+                        <li>same for the `set_user_agent` command. you'll get a `FutureWarning` if a script calls it, and it will be deleted in v668</li>
+                        <li>`hide_x=true` is ugly logic, so we'll go with `use_deprecated_x=false` default going forward</li>
+                        <li>I am going to add a `use_deprecated_services_structure=false` default to the `services` call in v668, to hide the old service structure. it will similarly get a warning and a three month timeout, to be deleted in v681</li>
+                        <li><h3>boring file storage cleanup</h3></li>
+                        <li>an early 'umbrella' experiment for dynamic file storage prefix-length is removed and some validity checking is simplified</li>
+                        <li>in prep for the move to a storage system with three-character prefix (4096 folders), moved a bunch of prefix-handling to a central location and made it length-agnostic</li>
+                        <li>KISSed some of this code. it is still a bit of a mess though tbh</li>
+                        <li>wrote a method to 'granularise' a file storage structure, moving a base location from subfolders in the form '/f83' to '/f83/0' - '/f83/f', with file migration and handling weird files and stuff. when we move to three-character storage, we'll not only be granularising our main storage, but we'll want to do this one-time manually on our backups as well</li>
+                        <li><h3>other boring stuff</h3></li>
+                        <li>the 'edit default duplicate metadata merge options' button in the duplicates page is shuffled down to the 'duplicate filter' box</li>
+                        <li>fixed a quiet layout sizing warning in the petition processing page when the checkboxlists have no content</li>
+                        <li>added a note to 'help my db is broke.txt' about a clone crashing</li>
+                        <li><h3>future build</h3></li>
+                        <li>I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.</li>
+                        <li>in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out</li>
+                        <li>special notes for this time: nothing crazy, we'll see if the new Qt kicks up a fuss anywhere strange</li>
+                        <li>the specific changes this week are--</li>
+                        <li>`requests` `2.32.4` to `2.32.5`</li>
+                        <li>`mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`</li>
+                        <li>`PySide6` (Qt) normal `6.8.3` to `6.9.3`</li>
+                        <li>`PySide6` (Qt) test `6.9.3` to `6.10.1`</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_654"><a href="#version_654">version 654</a></h2>
                     <ul>
                         <li><h3>command palette</h3></li>

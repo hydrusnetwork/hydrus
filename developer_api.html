@@ -3430,6 +3430,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#manage_pages_get_media_viewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /manage_pages/get_media_viewers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#manage_pages_get_pages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5003,6 +5014,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#manage_pages_get_media_viewers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GET /manage_pages/get_media_viewers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#manage_pages_get_pages" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -6112,8 +6134,8 @@ Accept: application/json
 </ul>
 </dd>
 <dt>Example request:</dt>
-<dd>for URL <code>http://safebooru.org/index.php?page=post&amp;s=view&amp;id=2753608</code>:
-<div class="highlight"><pre><span></span><code>/add_urls/get_url_files?url=http%3A%2F%2Fsafebooru.org%2Findex.php%3Fpage%3Dpost%26s%3Dview%26id%3D2753608
+<dd>for URL <code>http://somebooru.org/index.php?page=post&amp;s=view&amp;id=2753608</code>:
+<div class="highlight"><pre><span></span><code>/add_urls/get_url_files?url=http%3A%2F%2Fsomebooru.org%2Findex.php%3Fpage%3Dpost%26s%3Dview%26id%3D2753608
 </code></pre></div></dd>
 <dt>Response:</dt>
 <dd>Some JSON which files are known to be mapped to that URL. Note this needs a database hit, so it may be delayed if the client is otherwise busy. Don't rely on this to always be fast. 
@@ -7034,10 +7056,10 @@ Accept: application/json
 <li>system:does not have a url matching regex index\.php</li>
 <li>system:has url https://somebooru.org/posts/123456</li>
 <li>system:does not have url https://somebooru.org/posts/123456</li>
-<li>system:has domain safebooru.com</li>
-<li>system:does not have domain safebooru.com</li>
-<li>system:has a url with class safebooru file page</li>
-<li>system:does not have a url with url class safebooru file page</li>
+<li>system:has domain somebooru.com</li>
+<li>system:does not have domain somebooru.com</li>
+<li>system:has a url with class somebooru file page</li>
+<li>system:does not have a url with url class somebooru file page</li>
 <li>system:tag as number page &lt; 5</li>
 <li>system:has notes</li>
 <li>system:no notes</li>
@@ -8430,7 +8452,209 @@ This request will also return any cookies for subdomains. The session system in 
 </code></pre></div>
 <p>Send an empty string to reset the client back to the default User-Agent, which should be <code>Mozilla/5.0 (compatible; Hydrus Client)</code>.</p>
 <h2 id="managing_pages">Managing Pages<a class="headerlink" href="#managing_pages" title="Permanent link">&para;</a></h2>
-<p>This refers to the pages of the main client UI.</p>
+<p>This refers to the pages and viewers of the main client UI.</p>
+<h3 id="manage_pages_get_media_viewers"><strong>GET <code>/manage_pages/get_media_viewers</code></strong><a class="headerlink" href="#manage_pages_get_media_viewers" title="Permanent link">&para;</a></h3>
+<p><em>Get information about the currently open media viewer windows. Does not include the small preview viewers embedded into the bottom-left of normal search pages.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Manage Pages permission needed.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<p>Arguments: n/a</p>
+<dl>
+<dt>Response description</dt>
+<dd>A JSON List of Objects, each representing a media viewer that is open and what media they are currently looking at. The list might be empty, will often have one viewer, and for some users will have two or three.
+<div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;media_viewers&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;canvas_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;canvas_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;f0bfad96c34f91d457f32baa30592957873ece1f3f6639458d52bf72a8fe0868&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;current_media&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;file_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2732536</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;8d1c40c73d6f6bf0c33fe010d28c9eacdb4c010bfac1eebe8303810e5abc226d&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">645363</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;mime&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;image/jpeg&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;filetype_human&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;jpeg&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;filetype_enum&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;ext&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;.jpg&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;num_frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;num_words&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;has_audio&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;blurhash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;UCL.@[}N8zKr*^7|B4I0}?G09G-mKgVr+~os&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;pixel_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;886e4f0102efde11cc0307bb431eb2c628c327485e61c9ce2b0ee5180238cd67&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;filetype_forced&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;thumbnail_width&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">119</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;thumbnail_height&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">120</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;notes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                </span><span class="nt">&quot;file_services&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;current&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;6c6f63616c2066696c6573&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;muh files&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local file domain&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;time_imported&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1768168342.422</span>
+<span class="w">                        </span><span class="p">},</span>
+<span class="w">                        </span><span class="nt">&quot;616c6c206c6f63616c2066696c6573&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus local file storage&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local file domain&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;time_imported&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1768168342.422</span>
+<span class="w">                        </span><span class="p">},</span>
+<span class="w">                        </span><span class="nt">&quot;616c6c206c6f63616c206d65646961&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;combined local file domains&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local media domain&quot;</span><span class="p">,</span>
+<span class="w">                            </span><span class="nt">&quot;time_imported&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1768168342.422</span>
+<span class="w">                        </span><span class="p">}</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="nt">&quot;deleted&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="nt">&quot;time_modified&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1767681014.0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;time_modified_details&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;somebooru.org&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1767681014.0</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;local&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1768168342.197</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="nt">&quot;is_inbox&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;is_local&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;is_trashed&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;is_deleted&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;has_transparency&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;has_exif&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;has_human_readable_embedded_metadata&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;has_icc_profile&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;known_urls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="s2">&quot;https://somebooru.org//images/1063/blah.jpg&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;https://somebooru.org/index.php?id=123456&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
+<span class="w">                    </span><span class="s2">&quot;https://twitter.com/blah/status/123456&quot;</span>
+<span class="w">                </span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;ipfs_multihashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                </span><span class="nt">&quot;detailed_known_urls&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org//images/1063/blah.jpg&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown url&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown url&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;can_parse&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;cannot_parse_reason&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;unknown url class&quot;</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org/index.php?id=123456&amp;page=post&amp;s=view&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;post url&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;somebooru file page&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;can_parse&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;normalised_url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://twitter.com/blah/status/123456&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;url_type_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;post url&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;match_name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;twitter tweet&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;can_parse&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;ratings&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;f1de621a87caa9317a6ad780bc096fd88e14975da5c122e4ae611babf3c2917f&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">                    </span><span class="nt">&quot;be0e7517d7b567880bcb6fbff7de3fd6085ac7fc3416fc4b982b598867ab43dd&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="nt">&quot;tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="nt">&quot;616c6c206b6e6f776e2074616773&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all known tags&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined tag domain&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;storage_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                                </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;arm cannon&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;white skin&quot;</span>
+<span class="w">                            </span><span class="p">]</span>
+<span class="w">                        </span><span class="p">},</span>
+<span class="w">                        </span><span class="nt">&quot;display_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                                </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;arm cannon&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;white skin&quot;</span>
+<span class="w">                            </span><span class="p">]</span>
+<span class="w">                        </span><span class="p">}</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my tags&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag domain&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;storage_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{},</span>
+<span class="w">                        </span><span class="nt">&quot;display_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="nt">&quot;9623237dfe205de278071b053c49568dfab2c7502b0b65978831dbf11ad9a7d4&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;public tag repo&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus tag repository&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;storage_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                                </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;arm cannon&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;white skin&quot;</span>
+<span class="w">                            </span><span class="p">]</span>
+<span class="w">                        </span><span class="p">},</span>
+<span class="w">                        </span><span class="nt">&quot;display_tags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                            </span><span class="nt">&quot;1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                                </span><span class="s2">&quot;1girl&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;arm cannon&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">                                </span><span class="s2">&quot;white skin&quot;</span>
+<span class="w">                            </span><span class="p">]</span>
+<span class="w">                        </span><span class="p">}</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">},</span>
+<span class="w">                </span><span class="nt">&quot;file_viewing_statistics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;media viewer&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;views&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;viewtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;preview viewer&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;views&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;viewtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">                    </span><span class="p">},</span>
+<span class="w">                    </span><span class="p">{</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;canvas_type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;client api viewer&quot;</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;views&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;viewtime&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0</span><span class="p">,</span>
+<span class="w">                        </span><span class="nt">&quot;last_viewed_timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</code></pre></div></dd>
+</dl>
+<p>Although this looks pretty beastly, it is actually just three keys:</p>
+<ul>
+<li><code>canvas_type</code> - An enum with the following definition:  <ul>
+<li>0 - Normal Navigable Media Viewer</li>
+<li>1 - Preview Canvas (you should not see this)</li>
+<li>2 - Duplicates Filter</li>
+<li>3 - Archive/Delete Filter</li>
+</ul>
+</li>
+<li><code>canvas_key</code> - An identifier for this particular media viewer. If we end up adding commands for media viewers, we'll pivot around this id.</li>
+<li><code>current_media</code> - In edge cases, <code>null</code>, but otherwise just a normal media result as you'd see in <a href="#get_files_file_metadata">/get_files/file_metadata</a> that shows all available info about the file currently in view.</li>
+</ul>
 <h3 id="manage_pages_get_pages"><strong>GET <code>/manage_pages/get_pages</code></strong><a class="headerlink" href="#manage_pages_get_pages" title="Permanent link">&para;</a></h3>
 <p><em>Get the page structure of the current UI session.</em></p>
 <dl>
@@ -8800,7 +9024,7 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="w">      </span><span class="nt">&quot;creation_time&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">1700689162.6635988</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;status_text_1&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downloading files for \&quot;elf\&quot; (1/1)&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;status_text_2&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;file 4/27: downloading file&quot;</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;status_title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subscriptions - safebooru&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;status_title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subscriptions - somebooru&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;had_error&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;is_cancellable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;is_cancelled&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
@@ -8808,7 +9032,7 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="w">      </span><span class="nt">&quot;is_pausable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;is_paused&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;is_working&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">      </span><span class="nt">&quot;nice_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subscriptions - safebooru\r\ndownloading files for \&quot;elf\&quot; (1/1)\r\nfile 4/27: downloading file&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;nice_string&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;subscriptions - somebooru\r\ndownloading files for \&quot;elf\&quot; (1/1)\r\nfile 4/27: downloading file&quot;</span><span class="p">,</span>
 <span class="w">      </span><span class="nt">&quot;popup_gauge_2&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">        </span><span class="mi">3</span><span class="p">,</span>
 <span class="w">        </span><span class="mi">27</span>
@@ -8819,7 +9043,7 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="w">          </span><span class="s2">&quot;cd6ebafb8b39b3455fe382cba0daeefea87848950a6af7b3f000b05b43f2d4f2&quot;</span><span class="p">,</span>
 <span class="w">          </span><span class="s2">&quot;422cebabc95fabcc6d9a9488060ea88fd2f454e6eb799de8cafa9acd83595d0d&quot;</span>
 <span class="w">        </span><span class="p">],</span>
-<span class="w">        </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;safebooru: elf&quot;</span>
+<span class="w">        </span><span class="nt">&quot;label&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;somebooru: elf&quot;</span>
 <span class="w">      </span><span class="p">},</span>
 <span class="w">      </span><span class="nt">&quot;network_job&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;url&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://somebooru.org//images/12345/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg&quot;</span><span class="p">,</span>
@@ -9209,7 +9433,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 26, 2025 21:51:35 UTC">November 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 14, 2026 21:06:30 UTC">January 14, 2026</span>
   </span>
 
     
