@@ -1,74 +1,85 @@
-import collections.abc
 import os
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusExceptions
+from hydrus.core.files import HydrusFilesPhysicalStorage
 
 from hydrus.client import ClientThreading
-
-def CheckFullPrefixCoverage( merge_target, prefixes ):
-    
-    missing_prefixes = GetMissingPrefixes( merge_target, prefixes )
-    
-    if len( missing_prefixes ) > 0:
-        
-        list_of_problems = ', '.join( missing_prefixes )
-        
-        raise HydrusExceptions.DataMissing( 'Missing storage spaces! They are, or are sub-divisions of:' + list_of_problems )
-        
-    
-
-def GetMissingPrefixes( merge_target: str, prefixes: collections.abc.Collection[ str ], min_prefix_length_allowed = 3, prefixes_are_filtered: bool = False ):
-    
-    # given a merge target of 'tf'
-    # do these prefixes, let's say { tf0, tf1, tf2, tf3, tf4, tf5, tf6, tf7, tf8, tf9, tfa, tfb, tfc, tfd, tfe, tff }, add up to 'tf'?
-    
-    hex_chars = '0123456789abcdef'
-    
-    if prefixes_are_filtered:
-        
-        matching_prefixes = prefixes
-        
-    else:
-        
-        matching_prefixes = { prefix for prefix in prefixes if prefix.startswith( merge_target ) }
-        
-    
-    missing_prefixes = []
-    
-    for char in hex_chars:
-        
-        expected_prefix = merge_target + char
-        
-        if expected_prefix in matching_prefixes:
-            
-            # we are good
-            pass
-            
-        else:
-            
-            matching_prefixes_for_this_char = { prefix for prefix in prefixes if prefix.startswith( expected_prefix ) }
-            
-            if len( matching_prefixes_for_this_char ) > 0 or len( expected_prefix ) < min_prefix_length_allowed:
-                
-                missing_for_this_char = GetMissingPrefixes( expected_prefix, matching_prefixes_for_this_char, prefixes_are_filtered = True )
-                
-                missing_prefixes.extend( missing_for_this_char )
-                
-            else:
-                
-                missing_prefixes.append( expected_prefix )
-                
-            
-        
-    
-    return missing_prefixes
-    
 
 # TODO: A 'FilePath' or 'FileLocation' or similar that holds the path or IO stream, and/or temp_path to use for import calcs, and hash once known, and the human description like 'this came from blah URL'
 # then we spam that all over the import pipeline and when we need a nice error, we ask that guy to describe himself
 # search up 'human_file_description' to see what we'd be replacing
+
+def GranulariseStorageFolder( base_location_path: str, prefix_type, starting_prefix_length, target_prefix_length ):
+    
+    base_location = FilesStorageBaseLocation( base_location_path, 1 )
+    
+    starting_viable_prefixes = set( HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, prefix_length = starting_prefix_length ) )
+    ending_viable_prefixes = set( HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, prefix_length = target_prefix_length ) )
+    
+    for starting_viable_prefix in starting_viable_prefixes:
+        
+        source_subfolder = FilesStorageSubfolder( starting_viable_prefix, base_location )
+        
+        if not source_subfolder.PathExists():
+            
+            continue
+            
+        
+        all_filenames_to_move = list( os.listdir( source_subfolder.path ) )
+        
+        ending_viable_subfolders = [ FilesStorageSubfolder( ending_viable_prefix, base_location ) for ending_viable_prefix in ending_viable_prefixes if ending_viable_prefix.startswith( starting_viable_prefix ) ]
+        
+        for ending_viable_subfolder in ending_viable_subfolders:
+            
+            ending_viable_subfolder.MakeSureExists()
+            
+        
+        hex_prefixes_to_ending_viable_subfolders = { subfolder.hex_prefix : subfolder for subfolder in ending_viable_subfolders }
+        
+        for filename in all_filenames_to_move:
+            
+            source_path = source_subfolder.GetFilePath( filename )
+            
+            if os.path.isdir( source_path ):
+                
+                if filename in ending_viable_prefixes:
+                    
+                    # no worries, we are probably continuing a previous job that stopped early
+                    pass
+                    
+                else:
+                    
+                    HydrusData.Print( f'When granularising folders, I saw a weird directory, "{source_path}"! How did this thing sneak into Hydrus File Storage? Maybe it is an old prefix stub--an fragment of a previous maintenance job? You probably want to check it out and clean it up (if it is called like "file_storage/f23/3" and is empty, just delete it).' )
+                    
+                
+                continue
+                
+            
+            filename_prefix = filename[ : target_prefix_length ]
+            
+            if filename_prefix in hex_prefixes_to_ending_viable_subfolders:
+                
+                destination_subfolder = hex_prefixes_to_ending_viable_subfolders[ filename_prefix ]
+                
+                destination_path = destination_subfolder.GetFilePath( filename )
+                
+                HydrusPaths.MergeFile( source_path, destination_path )
+                
+            else:
+                
+                HydrusData.Print( f'When granularising folders, I failed to find a destination for the file with path "{source_path}"! I imagine it does not have a nice normal hex name and snuck into Hydrus File Storage by accident. You probably want to clean it up.')
+                
+            
+        
+        if len( os.listdir( source_subfolder.path ) ) == 0:
+            
+            HydrusData.Print( f'When granularising folders, I finished migrating out of the path "{source_subfolder.path}", and since it was empty when I was done, I deleted it!' )
+            
+            HydrusPaths.RecyclePath( source_subfolder.path )
+            
+        
+    
 
 class FilesStorageBaseLocation( object ):
     
@@ -289,10 +300,10 @@ class FilesStorageSubfolder( object ):
         #
         
         first_char = self.prefix[0]
-        hex_chars = self.prefix[1:]
+        self.hex_prefix = self.prefix[1:]
         
         # convert 'b' to ['b'], 'ba' to ['ba'], 'bad' to ['ba', 'd'], and so on  
-        our_subfolders = [ hex_chars[ i : i + 2 ] for i in range( 0, len( hex_chars ), 2 ) ]
+        our_subfolders = [ self.hex_prefix[ i : i + 2 ] for i in range( 0, len( self.hex_prefix ), 2 ) ]
         
         # restore the f/t char
         our_subfolders[0] = first_char + our_subfolders[0]

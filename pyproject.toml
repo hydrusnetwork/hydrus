@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v654"
+version = "v655"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -68,7 +68,7 @@ mpv-new = [
     "mpv==1.0.7",
 ]
 mpv-test = [
-    "mpv==1.0.7",
+    "mpv==1.0.8",
 ]
 opencv-new = [
     "opencv-python-headless==4.11.0.86",

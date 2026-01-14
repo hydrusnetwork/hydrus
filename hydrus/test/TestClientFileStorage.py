@@ -1,8 +1,8 @@
 import os
 import unittest
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core.files import HydrusFilesPhysicalStorage
 
 from hydrus.client.files import ClientFilesPhysical
 
@@ -10,8 +10,8 @@ from hydrus.test import TestGlobals as TG
 
 def get_good_prefixes():
     
-    good_prefixes = [ f'f{prefix}' for prefix in HydrusData.IterateHexPrefixes() ]
-    good_prefixes.extend( [ f't{prefix}' for prefix in HydrusData.IterateHexPrefixes() ] )
+    good_prefixes = list( HydrusFilesPhysicalStorage.IteratePrefixes( 'f' ) )
+    good_prefixes.extend( HydrusFilesPhysicalStorage.IteratePrefixes( 't' ) )
     
     return good_prefixes
     
@@ -122,11 +122,8 @@ class TestClientFileStorage( unittest.TestCase ):
         
         good_prefixes = get_good_prefixes()
         
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f', good_prefixes ), [] )
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't', good_prefixes ), [] )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f1', good_prefixes ), [] )
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't6', good_prefixes ), [] )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 'f', good_prefixes ), [] )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 't', good_prefixes ), [] )
         
         #
         
@@ -140,32 +137,14 @@ class TestClientFileStorage( unittest.TestCase ):
             good_prefixes.remove( prefix )
             
         
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f', good_prefixes ), f1_series )
-        
-        #
-        
-        hex_chars = '0123456789abcdef'
-        
-        good_prefixes = get_good_prefixes()
-        
-        good_prefixes.append( 'f14' )
-        good_prefixes.append( 't63' )
-        
-        good_prefixes.append( 'f145' )
-        good_prefixes.append( 't634' )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f', good_prefixes ), [] )
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't', good_prefixes ), [] )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f1', good_prefixes ), [] )
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't6', good_prefixes ), [] )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 'f', good_prefixes ), f1_series )
         
         #
         
         # same deal but missing everything
         good_prefixes = [ prefix for prefix in get_good_prefixes() if prefix.startswith( 'f' ) ]
         
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f', [] ), good_prefixes )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 'f', [] ), good_prefixes )
         
         #
         
@@ -173,46 +152,27 @@ class TestClientFileStorage( unittest.TestCase ):
         
         good_prefixes.remove( 'f53' )
         
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f', good_prefixes ), [ 'f53' ] )
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't', good_prefixes ), [] )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 'f5', good_prefixes ), [ 'f53' ] )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 'f', good_prefixes ), [ 'f53' ] )
+        self.assertEqual( HydrusFilesPhysicalStorage.GetMissingPrefixes( 't', good_prefixes ), [] )
         
         #
         
         good_prefixes = get_good_prefixes()
         
-        good_prefixes.remove( 't11' )
-        good_prefixes.extend( [ f't11{i}' for i in hex_chars ] )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't', good_prefixes ), [] )
-        
-        good_prefixes.remove( 't46' )
-        good_prefixes.remove( 't115' )
-        
-        self.assertEqual( ClientFilesPhysical.GetMissingPrefixes( 't', good_prefixes ), [ 't115', 't46' ] )
-        
-        #
-        
-        good_prefixes = get_good_prefixes()
-        
-        good_prefixes = [ f'f{prefix}' for prefix in HydrusData.IterateHexPrefixes() ]
-        good_prefixes.extend( [ f't{prefix}' for prefix in HydrusData.IterateHexPrefixes() ] )
-        
-        ClientFilesPhysical.CheckFullPrefixCoverage( 'f', good_prefixes )
-        ClientFilesPhysical.CheckFullPrefixCoverage( 't', good_prefixes )
+        HydrusFilesPhysicalStorage.CheckFullPrefixCoverage( 'f', good_prefixes )
+        HydrusFilesPhysicalStorage.CheckFullPrefixCoverage( 't', good_prefixes )
         
         good_prefixes.remove( 'f00' )
         good_prefixes.remove( 't06' )
         
         with self.assertRaises( HydrusExceptions.DataMissing ):
             
-            ClientFilesPhysical.CheckFullPrefixCoverage( 'f', good_prefixes )
+            HydrusFilesPhysicalStorage.CheckFullPrefixCoverage( 'f', good_prefixes )
             
         
         with self.assertRaises( HydrusExceptions.DataMissing ):
             
-            ClientFilesPhysical.CheckFullPrefixCoverage( 't', good_prefixes )
+            HydrusFilesPhysicalStorage.CheckFullPrefixCoverage( 't', good_prefixes )
             
         
         

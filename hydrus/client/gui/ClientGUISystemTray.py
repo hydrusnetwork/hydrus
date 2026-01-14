@@ -67,13 +67,13 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         ClientGUIMenus.AppendSeparator( new_menu )
         
-        self._network_traffic_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'network traffic', 'Pause/resume network traffic', self.flip_pause_network_jobs.emit )
+        self._network_traffic_menu_item = ClientGUIMenus.AppendMenuCheckItem( new_menu, 'pause network traffic', 'Pause/resume network traffic', False, self.flip_pause_network_jobs.emit )
         
-        self._UpdateNetworkTrafficMenuItemLabel()
+        self._UpdateNetworkTrafficMenuItemCheck()
         
-        self._subscriptions_paused_menu_item = ClientGUIMenus.AppendMenuItem( new_menu, 'subscriptions', 'Pause/resume subscriptions', self.flip_pause_subscription_jobs.emit )
+        self._subscriptions_paused_menu_item = ClientGUIMenus.AppendMenuCheckItem( new_menu, 'pause subscriptions', 'Pause/resume subscriptions', False, self.flip_pause_subscription_jobs.emit )
         
-        self._UpdateSubscriptionsMenuItemLabel()
+        self._UpdateSubscriptionsMenuItemCheck()
         
         ClientGUIMenus.AppendSeparator( new_menu )
         
@@ -93,11 +93,12 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         self._UpdateTooltip()
         
     
-    def _UpdateNetworkTrafficMenuItemLabel( self ):
+    def _UpdateNetworkTrafficMenuItemCheck( self ):
         
-        label = 'unpause network traffic' if self._network_traffic_paused else 'pause network traffic'
-        
-        self._network_traffic_menu_item.setText( label )
+        if self._network_traffic_menu_item is not None:
+            
+            self._network_traffic_menu_item.setChecked( self._network_traffic_paused )
+            
         
     
     def _UpdateRestoreMinimiseMenuItemLabel( self ):
@@ -143,13 +144,11 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         return menu_regenerated
         
     
-    def _UpdateSubscriptionsMenuItemLabel( self ):
+    def _UpdateSubscriptionsMenuItemCheck( self ):
         
         if self._subscriptions_paused_menu_item is not None:
             
-            label = 'unpause subscriptions' if self._subscriptions_paused else 'pause subscriptions'
-            
-            self._subscriptions_paused_menu_item.setText( label )
+            self._subscriptions_paused_menu_item.setChecked( self._subscriptions_paused )
             
         
     
@@ -217,7 +216,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             self._network_traffic_paused = network_traffic_paused
             
-            self._UpdateNetworkTrafficMenuItemLabel()
+            self._UpdateNetworkTrafficMenuItemCheck()
             
             self._UpdateTooltip()
             
@@ -229,7 +228,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
             
             self._subscriptions_paused = subscriptions_paused
             
-            self._UpdateSubscriptionsMenuItemLabel()
+            self._UpdateSubscriptionsMenuItemCheck()
             
             self._UpdateTooltip()
             

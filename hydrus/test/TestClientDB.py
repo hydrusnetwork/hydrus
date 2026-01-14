@@ -9,6 +9,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
+from hydrus.core.files import HydrusFilesPhysicalStorage
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -1408,15 +1409,20 @@ class TestClientDB( unittest.TestCase ):
         
         base_location = ClientFilesPhysical.FilesStorageBaseLocation( client_files_default, 1 )
         
-        for prefix in HydrusData.IterateHexPrefixes():
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 'f' ):
             
-            for c in ( 'f', 't' ):
-                
-                subfolder = ClientFilesPhysical.FilesStorageSubfolder( c + prefix, base_location )
-                
-                self.assertTrue( os.path.exists( subfolder.path ) )
-                self.assertTrue( subfolder.PathExists() )
-                
+            subfolder = ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location )
+            
+            self.assertTrue( os.path.exists( subfolder.path ) )
+            self.assertTrue( subfolder.PathExists() )
+            
+        
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 't' ):
+            
+            subfolder = ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location )
+            
+            self.assertTrue( os.path.exists( subfolder.path ) )
+            self.assertTrue( subfolder.PathExists() )
             
         
     

@@ -338,6 +338,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'animated_scanbar_pop_in_requires_focus' : True,
             'slideshows_progress_randomly' : False,
             'archive_delete_commit_panel_delays_multiple_delete_choices' : True,
+            'always_start_media_viewers_always_on_top' : False,
+            'always_start_media_viewers_frameless' : False,
         }
         
         #

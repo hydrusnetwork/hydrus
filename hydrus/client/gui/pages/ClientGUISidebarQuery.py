@@ -120,7 +120,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         self._query_job_status.Finish()
         
-        self._search_panel = ClientGUICommon.StaticBox( self, 'search' )
+        self._search_panel = ClientGUICommon.StaticBox( self, 'search', start_expanded = True, can_expand = True )
         
         synchronised = self._page_manager.GetVariable( 'synchronised' )
         

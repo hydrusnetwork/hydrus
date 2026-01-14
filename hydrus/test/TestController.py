@@ -19,6 +19,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusTemp
+from hydrus.core.files import HydrusFilesPhysicalStorage
 from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientAPI
@@ -284,12 +285,14 @@ class Controller( object ):
         
         base_location = ClientFilesPhysical.FilesStorageBaseLocation( client_files_default, 1 )
         
-        for prefix in HydrusData.IterateHexPrefixes():
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 'f' ):
             
-            for c in ( 'f', 't' ):
-                
-                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, base_location ) )
-                
+            client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location ) )
+            
+        
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 't' ):
+            
+            client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location ) )
             
         
         self._name_read_responses[ 'client_files_subfolders' ] = client_files_subfolders
@@ -652,6 +655,11 @@ class Controller( object ):
     def GetMainTLW( self ):
         
         return self.win
+        
+    
+    def GetMediaViewersAPIInfo( self ):
+        
+        raise NotImplementedError()
         
     
     def GetNewOptions( self ):

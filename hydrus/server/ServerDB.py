@@ -18,6 +18,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
+from hydrus.core.files import HydrusFilesPhysicalStorage
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.server import ServerFiles
@@ -386,7 +387,7 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusPaths.MakeSureDirectoryExists( self._files_dir )
         
-        for prefix in HydrusData.IterateHexPrefixes():
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( '', prefix_length = 2 ):
             
             new_dir = os.path.join( self._files_dir, prefix )
             

@@ -129,7 +129,9 @@ And wait a bit. It'll report its progress as it tries to copy your db. It will b
 
 If the clone says some errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! That probably isn't a real error, and even if it is, 'fts' stuff will be automatically fixed on the next boot. Same if you get any errors about 'sqlite_stat1' table.
 
-Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. This means some data has been lost. If this is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data with some work once you are working again.
+Some users have reported the sqlite terminal crashing during a very large clone. This has never happened to me, and I cannot explain it if your system is ok. I do not _think_ SQLite will crash from bad data alone, but I guess it could just be some bug. The executable is going to be munching through a multi-GB file, so if you have a crash and your OS has strange temp/swap settings, that might be it. One user says they had crashes and discovered with a memtest that they had bad memory. Another possibility in our context is if the hard drive still has I/O issues. Try copying the .db file somewhere, with the intention of cloning it from a different area of your hard drive (or even a completely different drive)--if your OS has a serious read/write error trying to copy the file, then that's probably what was causing SQLite to have trouble, and you now need to think about more serious drive recovery before you move forward on fixing hydrus.
+
+Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. If it is more than, say, 8% reduction, this probably means some data has been lost (a little bit is ok, since a clone is basically a VACUUM). If the loss is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data once you are working again. If your client.db loses lots of data, I am afraid this is not a great situation.
 
 If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db, swapping in the good where the bad was.
 
@@ -154,7 +156,7 @@ You do not have to do an integrity_check after you clone. If you know your curre
 
 ** repair **
 
-This command tries to fix a database file in place. I do not recommend it as it works very very slowly. While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
+This command tries to fix a database file in place. I do not recommend it as it works very very slowly--I have heard of users running .recover on a client.mappings.db and it not being finished a whole week later! While it may be able to recover some rows a clones would lose, it cannot fix everything and may leave you with a database that is still malformed, so you'll want to run integrity_check again and do a clone if needed.
 
 It is very important you have a backup copy of the broken file(s) here, as this edits the file in place.
 
@@ -214,9 +216,9 @@ That new file should be good, so swap it in like you would a clone, and try boot
 
 If none of the operations can make a functional database, you may simply be fugged. I am sorry. Feel free to contact me and we'll see what the best way forward is.
 
-Also, if you recover ok but still get problems, please contact me. You'll likely see a bad tag count here or there.
+Even if everything went great, you'll likely see a bad tag count here or there, which the section after this may fix. If it doesn't, hit me up.
 
-Check install_dir/help/contact.html for ways to get me.
+Check the contact page in the help (install_dir/help/contact.html in a built install) for ways to get me.
 
 
 *** after fixing: recovering files ***

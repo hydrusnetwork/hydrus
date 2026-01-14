@@ -233,7 +233,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         #
         
-        self._petition_numbers_panel = ClientGUICommon.StaticBox( self, 'counts' )
+        self._petition_numbers_panel = ClientGUICommon.StaticBox( self, 'counts', start_expanded = True, can_expand = True )
         
         self._petition_account_key = QW.QLineEdit( self._petition_numbers_panel )
         self._petition_account_key.setPlaceholderText( 'account id filter' )
@@ -286,7 +286,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         #
         
-        self._petitions_panel = ClientGUICommon.StaticBox( self, 'petitions' )
+        self._petitions_panel = ClientGUICommon.StaticBox( self, 'petitions', start_expanded = True, can_expand = True )
         
         self._petitions_summary_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._petitions_panel )
         
@@ -301,7 +301,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         #
         
-        self._petition_panel = ClientGUICommon.StaticBox( self, 'highlighted petition' )
+        self._petition_panel = ClientGUICommon.StaticBox( self, 'highlighted petition', start_expanded = True, can_expand = True )
         
         self._num_files_to_show = ClientGUICommon.NoneableSpinCtrl( self._petition_panel, 256, message = 'number of files to show', min = 1 )
         
@@ -1162,7 +1162,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         else:
             
             ideal_height_in_rows = 1
-            pixels_per_row = 16
+            ( width_gumpf, pixels_per_row ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, 1 ) )
             
         
         ideal_height_in_pixels = ( ideal_height_in_rows * pixels_per_row ) + ( contents.frameWidth() * 2 )
