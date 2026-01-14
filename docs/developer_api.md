@@ -860,9 +860,9 @@ Arguments:
     *   `doublecheck_file_system`: true or false (optional, defaults False)
 
 Example request:
-:   for URL `http://safebooru.org/index.php?page=post&s=view&id=2753608`:
+:   for URL `http://somebooru.org/index.php?page=post&s=view&id=2753608`:
     ```
-    /add_urls/get_url_files?url=http%3A%2F%2Fsafebooru.org%2Findex.php%3Fpage%3Dpost%26s%3Dview%26id%3D2753608
+    /add_urls/get_url_files?url=http%3A%2F%2Fsomebooru.org%2Findex.php%3Fpage%3Dpost%26s%3Dview%26id%3D2753608
     ```
 
 Response: 
@@ -1859,10 +1859,10 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:does not have a url matching regex index\\.php
     *   system:has url https://somebooru.org/posts/123456
     *   system:does not have url https://somebooru.org/posts/123456
-    *   system:has domain safebooru.com
-    *   system:does not have domain safebooru.com
-    *   system:has a url with class safebooru file page
-    *   system:does not have a url with url class safebooru file page
+    *   system:has domain somebooru.com
+    *   system:does not have domain somebooru.com
+    *   system:has a url with class somebooru file page
+    *   system:does not have a url with url class somebooru file page
     *   system:tag as number page < 5
     *   system:has notes
     *   system:no notes
@@ -3369,7 +3369,210 @@ Send an empty string to reset the client back to the default User-Agent, which s
 
 ## Managing Pages
 
-This refers to the pages of the main client UI.
+This refers to the pages and viewers of the main client UI.
+
+### **GET `/manage_pages/get_media_viewers`** { id="manage_pages_get_media_viewers" }
+
+_Get information about the currently open media viewer windows. Does not include the small preview viewers embedded into the bottom-left of normal search pages._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+
+Required Headers: n/a
+
+Arguments: n/a
+
+Response description
+:   A JSON List of Objects, each representing a media viewer that is open and what media they are currently looking at. The list might be empty, will often have one viewer, and for some users will have two or three.
+```json title="Example response"
+{
+    "media_viewers": [
+        {
+            "canvas_type": 0,
+            "canvas_key": "f0bfad96c34f91d457f32baa30592957873ece1f3f6639458d52bf72a8fe0868",
+            "current_media": {
+                "file_id": 2732536,
+                "hash": "8d1c40c73d6f6bf0c33fe010d28c9eacdb4c010bfac1eebe8303810e5abc226d",
+                "size": 645363,
+                "mime": "image/jpeg",
+                "filetype_human": "jpeg",
+                "filetype_enum": 1,
+                "ext": ".jpg",
+                "width": 2000,
+                "height": 2000,
+                "duration": null,
+                "num_frames": null,
+                "num_words": null,
+                "has_audio": false,
+                "blurhash": "UCL.@[}N8zKr*^7|B4I0}?G09G-mKgVr+~os",
+                "pixel_hash": "886e4f0102efde11cc0307bb431eb2c628c327485e61c9ce2b0ee5180238cd67",
+                "filetype_forced": false,
+                "thumbnail_width": 119,
+                "thumbnail_height": 120,
+                "notes": {},
+                "file_services": {
+                    "current": {
+                        "6c6f63616c2066696c6573": {
+                            "name": "muh files",
+                            "type": 2,
+                            "type_pretty": "local file domain",
+                            "time_imported": 1768168342.422
+                        },
+                        "616c6c206c6f63616c2066696c6573": {
+                            "name": "hydrus local file storage",
+                            "type": 15,
+                            "type_pretty": "virtual combined local file domain",
+                            "time_imported": 1768168342.422
+                        },
+                        "616c6c206c6f63616c206d65646961": {
+                            "name": "combined local file domains",
+                            "type": 21,
+                            "type_pretty": "virtual combined local media domain",
+                            "time_imported": 1768168342.422
+                        }
+                    },
+                    "deleted": {}
+                },
+                "time_modified": 1767681014.0,
+                "time_modified_details": {
+                    "somebooru.org": 1767681014.0,
+                    "local": 1768168342.197
+                },
+                "is_inbox": true,
+                "is_local": true,
+                "is_trashed": false,
+                "is_deleted": false,
+                "has_transparency": false,
+                "has_exif": false,
+                "has_human_readable_embedded_metadata": true,
+                "has_icc_profile": false,
+                "known_urls": [
+                    "https://somebooru.org//images/1063/blah.jpg",
+                    "https://somebooru.org/index.php?id=123456&page=post&s=view",
+                    "https://twitter.com/blah/status/123456"
+                ],
+                "ipfs_multihashes": {},
+                "detailed_known_urls": [
+                    {
+                        "normalised_url": "https://somebooru.org//images/1063/blah.jpg",
+                        "url_type": 5,
+                        "url_type_string": "unknown url",
+                        "match_name": "unknown url",
+                        "can_parse": false,
+                        "cannot_parse_reason": "unknown url class"
+                    },
+                    {
+                        "normalised_url": "https://somebooru.org/index.php?id=123456&page=post&s=view",
+                        "url_type": 0,
+                        "url_type_string": "post url",
+                        "match_name": "somebooru file page",
+                        "can_parse": true
+                    },
+                    {
+                        "normalised_url": "https://twitter.com/blah/status/123456",
+                        "url_type": 0,
+                        "url_type_string": "post url",
+                        "match_name": "twitter tweet",
+                        "can_parse": true
+                    }
+                ],
+                "ratings": {
+                    "f1de621a87caa9317a6ad780bc096fd88e14975da5c122e4ae611babf3c2917f": null,
+                    "be0e7517d7b567880bcb6fbff7de3fd6085ac7fc3416fc4b982b598867ab43dd": 0,
+                },
+                "tags": {
+                    "616c6c206b6e6f776e2074616773": {
+                        "name": "all known tags",
+                        "type": 10,
+                        "type_pretty": "virtual combined tag domain",
+                        "storage_tags": {
+                            "1": [
+                                "1girl",
+                                "arm cannon",
+                                "blonde hair",
+                                "blue eyes",
+                                "white skin"
+                            ]
+                        },
+                        "display_tags": {
+                            "1": [
+                                "1girl",
+                                "arm cannon",
+                                "blonde hair",
+                                "blue eyes",
+                                "white skin"
+                            ]
+                        }
+                    },
+                    "6c6f63616c2074616773": {
+                        "name": "my tags",
+                        "type": 5,
+                        "type_pretty": "local tag domain",
+                        "storage_tags": {},
+                        "display_tags": {}
+                    },
+                    "9623237dfe205de278071b053c49568dfab2c7502b0b65978831dbf11ad9a7d4": {
+                        "name": "public tag repo",
+                        "type": 0,
+                        "type_pretty": "hydrus tag repository",
+                        "storage_tags": {
+                            "1": [
+                                "1girl",
+                                "arm cannon",
+                                "blonde hair",
+                                "blue eyes",
+                                "white skin"
+                            ]
+                        },
+                        "display_tags": {
+                            "1": [
+                                "1girl",
+                                "arm cannon",
+                                "blonde hair",
+                                "blue eyes",
+                                "white skin"
+                            ]
+                        }
+                    }
+                },
+                "file_viewing_statistics": [
+                    {
+                        "canvas_type": 0,
+                        "canvas_type_pretty": "media viewer",
+                        "views": 0,
+                        "viewtime": 0.0,
+                        "last_viewed_timestamp": null
+                    },
+                    {
+                        "canvas_type": 1,
+                        "canvas_type_pretty": "preview viewer",
+                        "views": 0,
+                        "viewtime": 0.0,
+                        "last_viewed_timestamp": null
+                    },
+                    {
+                        "canvas_type": 4,
+                        "canvas_type_pretty": "client api viewer",
+                        "views": 0,
+                        "viewtime": 0.0,
+                        "last_viewed_timestamp": null
+                    }
+                ]
+            }
+        }
+    ]
+}
+```
+
+Although this looks pretty beastly, it is actually just three keys:
+
+- `canvas_type` - An enum with the following definition:  
+    - 0 - Normal Navigable Media Viewer
+    - 1 - Preview Canvas (you should not see this)
+    - 2 - Duplicates Filter
+    - 3 - Archive/Delete Filter
+- `canvas_key` - An identifier for this particular media viewer. If we end up adding commands for media viewers, we'll pivot around this id.
+- `current_media` - In edge cases, `null`, but otherwise just a normal media result as you'd see in [/get\_files/file\_metadata](#get_files_file_metadata) that shows all available info about the file currently in view.
 
 ### **GET `/manage_pages/get_pages`** { id="manage_pages_get_pages" }
 
@@ -3755,7 +3958,7 @@ Response:
       "creation_time": 1700689162.6635988,
       "status_text_1": "downloading files for \"elf\" (1/1)",
       "status_text_2": "file 4/27: downloading file",
-      "status_title": "subscriptions - safebooru",
+      "status_title": "subscriptions - somebooru",
       "had_error": false,
       "is_cancellable": true,
       "is_cancelled": false,
@@ -3763,7 +3966,7 @@ Response:
       "is_pausable": false,
       "is_paused": false,
       "is_working": true,
-      "nice_string": "subscriptions - safebooru\r\ndownloading files for \"elf\" (1/1)\r\nfile 4/27: downloading file",
+      "nice_string": "subscriptions - somebooru\r\ndownloading files for \"elf\" (1/1)\r\nfile 4/27: downloading file",
       "popup_gauge_2": [
         3,
         27
@@ -3774,7 +3977,7 @@ Response:
           "cd6ebafb8b39b3455fe382cba0daeefea87848950a6af7b3f000b05b43f2d4f2",
           "422cebabc95fabcc6d9a9488060ea88fd2f454e6eb799de8cafa9acd83595d0d"
         ],
-        "label": "safebooru: elf"
+        "label": "somebooru: elf"
       },
       "network_job": {
         "url": "https://somebooru.org//images/12345/4d7f62bb8675cef84760d6263e4c254c5129ef56.jpg",

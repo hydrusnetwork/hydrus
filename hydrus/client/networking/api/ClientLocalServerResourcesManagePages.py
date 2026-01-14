@@ -165,3 +165,26 @@ class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceCli
         return response_context
         
     
+
+class HydrusResourceClientAPIRestrictedManagePagesGetMediaViewers( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        def do_it():
+            
+            return CG.client_controller.gui.GetMediaViewersAPIInfo()
+            
+        
+        media_viewers_info = CG.client_controller.CallBlockingToQtTLW( do_it )
+        
+        body_dict = {
+            'media_viewers': media_viewers_info
+        }
+        
+        body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    

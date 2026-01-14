@@ -1317,7 +1317,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, page_key, name = 'gallery query' ):
         
-        super().__init__( parent, name )
+        super().__init__( parent, name, start_expanded = True, can_expand = True )
         
         self._page_key = page_key
         
@@ -1747,7 +1747,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent, page_key, name = 'watcher' ):
         
-        super().__init__( parent, name )
+        super().__init__( parent, name, start_expanded = True, can_expand = True )
         
         self._page_key = page_key
         self._watcher = None

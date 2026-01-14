@@ -1,7 +1,7 @@
 import os
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core.files import HydrusFilesPhysicalStorage
 
 from hydrus.server import ServerGlobals as SG
 
@@ -59,7 +59,7 @@ def IterateAllPaths( file_type ):
     
     files_dir = SG.server_controller.GetFilesDir()
     
-    for prefix in HydrusData.IterateHexPrefixes():
+    for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( '', prefix_length = 2 ):
         
         dir = os.path.join( files_dir, prefix )
         

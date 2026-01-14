@@ -26,9 +26,9 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
     thisSearchDefinitelyHasNoPairs = QC.Signal()
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, synchronised = True, page_key = None, put_searches_side_by_side = False ):
+    def __init__( self, parent: QW.QWidget, potential_duplicates_search_context: ClientPotentialDuplicatesSearchContext.PotentialDuplicatesSearchContext, synchronised = True, page_key = None, put_searches_side_by_side = False, collapsible = False ):
         
-        super().__init__( parent, 'potential duplicate pairs search' )
+        super().__init__( parent, 'potential duplicate pairs search', start_expanded = True, can_expand = collapsible )
         
         #
         
@@ -608,7 +608,7 @@ class PotentialDuplicatesSortWidget( QW.QWidget ):
         
         #
         
-        hbox = QP.HBoxLayout()
+        hbox = QP.HBoxLayout( margin = 0 )
         
         QP.AddToLayout( hbox, self._sort_type, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._sort_asc, CC.FLAGS_CENTER_PERPENDICULAR )

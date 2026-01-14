@@ -169,6 +169,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         manage_pages.putChild( b'add_files', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesAddFiles( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'focus_page', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesFocusPage( self._service, self._client_requests_domain ) )
+        manage_pages.putChild( b'get_media_viewers', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesGetMediaViewers( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_pages', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesGetPages( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'get_page_info', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesGetPageInfo( self._service, self._client_requests_domain ) )
         manage_pages.putChild( b'refresh_page', ClientLocalServerResourcesManagePages.HydrusResourceClientAPIRestrictedManagePagesRefreshPage( self._service, self._client_requests_domain ) )

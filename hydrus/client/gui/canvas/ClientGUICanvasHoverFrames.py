@@ -827,9 +827,23 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        self._window_always_on_top = False # can set this with a global option if you want
-
-        self._window_show_title_bar = True #should always start on
+        self._window_always_on_top = False
+        
+        # it is a bit beardy managing this from this hover window rather than the canvas, but it is fine for now
+        # if we want a shortcut or something I guess we'll migrate to the canvas proper
+        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' ):
+            
+            self._window_always_on_top = True
+            
+            self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, True )
+            
+        
+        self._window_hide_frame = False # should always start with titlebar/frame (to establish taskbar gubbins?)
+        
+        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_frameless' ):
+            
+            CG.client_controller.CallLaterQtSafe( self, 0.1, 'removing titlebar from media viewer', self._FlipHideWindowFrame )
+            
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
@@ -1136,6 +1150,31 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         new_options.SetStringList( 'default_media_viewer_custom_shortcuts', default_media_viewer_custom_shortcuts )
         
     
+    def _FlipCanvasAlwaysOnTop( self ):
+        
+        self._window_always_on_top = not self._window_always_on_top
+        
+        self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+        
+        self.window().show()
+        
+        self.update()
+        
+    
+    def _FlipHideWindowFrame( self ):
+        
+        window_real_geom = self.window().geometry()
+        
+        self._window_hide_frame = not self._window_hide_frame
+        
+        self.window().setWindowFlag( QC.Qt.WindowType.FramelessWindowHint, self._window_hide_frame )
+        
+        self.window().setGeometry( window_real_geom )
+        
+        self.window().show()
+        self.update()
+        
+    
     def _ShowFileEmbeddedMetadata( self ):
         
         if self._current_media is None:
@@ -1194,33 +1233,6 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             self.update()
             
         
-        def flip_show_window_title_bar():
-            
-            window_real_geom = self.window().geometry()
-            
-            self._window_show_title_bar = not self._window_show_title_bar
-            
-            self.window().setWindowFlag( QC.Qt.WindowType.FramelessWindowHint, not self._window_show_title_bar )
-            
-            self.window().setGeometry( window_real_geom )
-
-            self.window().show()
-            self.update()
-            
-
-        def flip_always_on_top():
-            
-            self._window_always_on_top = not self._window_always_on_top
-            
-            self.parentWidget().window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
-            self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
-
-            self.parentWidget().window().show()
-            self.window().show()
-
-            self.update()
-            
-        
         new_options = CG.client_controller.new_options
         
         menu = ClientGUIMenus.GenerateMenu( self )
@@ -1229,8 +1241,16 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         window_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, flip_always_on_top )
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'show titlebar', 'Toggle the OS frame of this window.', self._window_show_title_bar, flip_show_window_title_bar )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._window_always_on_top, self._FlipCanvasAlwaysOnTop )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'remove titlebar/frame', 'Toggle the OS frame of this window.', self._window_hide_frame, self._FlipHideWindowFrame )
+        
+        ClientGUIMenus.AppendSeparator( window_menu )
+        
+        checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_viewers_always_on_top' )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers always on top', 'Set whether all new media viewers should start in this state.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
+        
+        checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_viewers_frameless' )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers without titlebar/frame', 'Set whether all new media viewers should start in this state.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
         
         ClientGUIMenus.AppendMenu( menu, window_menu, 'window' )
         

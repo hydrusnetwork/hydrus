@@ -776,6 +776,11 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return self._my_shortcuts_handler.GetCustomShortcutNames()
         
     
+    def GetCanvasKey( self ):
+        
+        return self._canvas_key
+        
+    
     def GetColour( self, colour_type ):
         
         if self._new_options.GetBoolean( 'override_stylesheet_colours' ):

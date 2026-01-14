@@ -50,20 +50,6 @@ class FilterPanel( QW.QWidget ):
         
         new_options = CG.client_controller.new_options
         
-        self._options_panel = ClientGUICommon.StaticBox( self, 'merge options' )
-        
-        menu_template_items = []
-        
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
-        
-        if new_options.GetBoolean( 'advanced_mode' ):
-            
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
-            
-        
-        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._options_panel, 'edit default duplicate metadata merge options', menu_template_items )
-        
         #
         
         potential_duplicates_search_context = self._page_manager.GetVariable( 'potential_duplicates_search_context' )
@@ -77,13 +63,25 @@ class FilterPanel( QW.QWidget ):
             synchronised = True
             
         
-        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key )
+        self._potential_duplicates_search_context = ClientGUIPotentialDuplicatesSearchContext.EditPotentialDuplicatesSearchContextPanel( self, potential_duplicates_search_context, synchronised = synchronised, page_key = self._page_key, collapsible = True )
         
         self._potential_duplicates_search_context.valueChanged.connect( self._PotentialDuplicatesSearchContextChanged )
         
         #
         
-        self._filtering_panel = ClientGUICommon.StaticBox( self, 'duplicate filter' )
+        self._filtering_panel = ClientGUICommon.StaticBox( self, 'duplicate filter', start_expanded = True, can_expand = True )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
+        
+        if new_options.GetBoolean( 'advanced_mode' ):
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
+            
+        
+        self._edit_merge_options = ClientGUIMenuButton.MenuButton( self._filtering_panel, 'edit default duplicate metadata merge options', menu_template_items )
         
         duplicate_pair_sort_type = page_manager.GetVariable( 'duplicate_pair_sort_type' )
         duplicate_pair_sort_asc = page_manager.GetVariable( 'duplicate_pair_sort_asc' )
@@ -110,7 +108,7 @@ class FilterPanel( QW.QWidget ):
         
         #
         
-        random_filtering_panel = ClientGUICommon.StaticBox( self, 'quick and dirty processing' )
+        random_filtering_panel = ClientGUICommon.StaticBox( self, 'quick and dirty processing', start_expanded = True, can_expand = True )
         
         self._show_some_dupes = ClientGUICommon.BetterButton( random_filtering_panel, 'show some random potential duplicates', self.ShowRandomPotentialDupes )
         tt = 'This will randomly select a file in the current pair search and show you all the directly or transitively potential files that are also in the same domain. Sometimes this will just be a pair, others it might be a hundred alternates, but they should all look similar.'
@@ -122,7 +120,7 @@ class FilterPanel( QW.QWidget ):
         
         #
         
-        self._options_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._filtering_panel.Add( self._edit_merge_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
@@ -141,7 +139,6 @@ class FilterPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._potential_duplicates_search_context, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, random_filtering_panel, CC.FLAGS_EXPAND_PERPENDICULAR )

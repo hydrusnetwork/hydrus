@@ -1,8 +1,8 @@
 import os
 import sqlite3
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
+from hydrus.core.files import HydrusFilesPhysicalStorage
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBModule
@@ -54,8 +54,8 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         all_prefixes = { subfolder.prefix for subfolder in subfolders }
         
-        missing_prefixes_f = ClientFilesPhysical.GetMissingPrefixes( 'f', all_prefixes )
-        missing_prefixes_t = ClientFilesPhysical.GetMissingPrefixes( 't', all_prefixes )
+        missing_prefixes_f = HydrusFilesPhysicalStorage.GetMissingPrefixes( 'f', all_prefixes )
+        missing_prefixes_t = HydrusFilesPhysicalStorage.GetMissingPrefixes( 't', all_prefixes )
         
         if len( missing_prefixes_f ) > 0 or len( missing_prefixes_t ) > 0:
             
@@ -134,10 +134,14 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         portable_path = HydrusPaths.ConvertAbsPathToPortablePath( default_abs_path )
         
-        for hex_prefix in HydrusData.IterateHexPrefixes():
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 'f' ):
             
-            self._Execute( 'INSERT INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( 'f' + hex_prefix, portable_path, False ) )
-            self._Execute( 'INSERT INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( 't' + hex_prefix, portable_path, False ) )
+            self._Execute( 'INSERT INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_path, False ) )
+            
+        
+        for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( 't' ):
+            
+            self._Execute( 'INSERT INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_path, False ) )
             
         
         self._Execute( 'INSERT INTO ideal_client_files_locations ( location, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( portable_path, 1, None ) )

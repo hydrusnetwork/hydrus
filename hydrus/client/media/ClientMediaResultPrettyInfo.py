@@ -149,6 +149,28 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
         
         seen_local_file_service_timestamps_ms.add( timestamp_ms )
         
+    else:
+        
+        if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in deleted_service_keys:
+            
+            line = 'you do not have this file, but you did once'
+            
+        else:
+            
+            if file_info_manager.size is None:
+                
+                line = 'you do not have this file, and you have never had it'
+                
+            else:
+                
+                line = 'you do not have this file, but your client has heard a bit about it'
+                
+            
+        
+        line_is_interesting = True
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( line, line_is_interesting ) )
+        
     
     local_file_services = CG.client_controller.services_manager.GetLocalMediaFileServices()
     
@@ -343,7 +365,7 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     #
     
-    if not locations_manager.inbox:
+    if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in current_service_keys and not locations_manager.inbox:
         
         state_archived_timestamp = not only_interesting_lines or CG.client_controller.new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' )
         

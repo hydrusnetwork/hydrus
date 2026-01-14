@@ -168,6 +168,11 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         self._canvas_window.ResetMediaWindowCenterPosition()
         
     
+    def GetCanvas( self ) -> ClientGUICanvas.CanvasWithHovers | None:
+        
+        return self._canvas_window
+        
+    
     def PauseMedia( self ):
         
         self._canvas_window.PauseMedia()

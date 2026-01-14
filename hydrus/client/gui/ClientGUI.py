@@ -57,6 +57,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
 from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.exporting import ClientGUIExport
@@ -91,6 +92,7 @@ from hydrus.client.gui.services import ClientGUIModalServersideServiceActions
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaResultAPI
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -527,7 +529,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._pages_count_dirty = True
         self._pages_history_dirty = True
         
-        self._canvas_frames = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
+        self._canvas_frames: list[ ClientGUICanvasFrame.CanvasFrame ] = [] # Keep references to canvas frames so they won't get garbage collected (canvas frames don't have a parent)
         
         self._persistent_mpv_widgets = []
         self._isolated_mpv_widgets = []
@@ -7865,10 +7867,45 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         return mpv_widget
         
     
-    def GetTopLevelNotebook( self ):
+    def GetMediaViewersAPIInfo( self ):
         
-        return self._notebook
+        self.MaintainCanvasFrameReferences()
         
+        media_viewers = []
+        
+        for frame in self._canvas_frames:
+            
+            canvas_window = frame.GetCanvas()
+            
+            if canvas_window is None:
+                
+                continue
+                
+            
+            # TODO: we could add pos/size stuff here maybe, and similar for the main gui in a diff call?
+            
+            media_viewer_info_dict = {
+                'canvas_type' : canvas_window.GetCanvasType(),
+                'canvas_key' : canvas_window.GetCanvasKey().hex(),
+            }
+            
+            current_media = canvas_window.GetMedia()
+            
+            if current_media is None:
+                
+                media_viewer_info_dict[ 'current_media' ] = None
+                
+            else:
+                
+                media_viewer_info_dict[ 'current_media' ] = ClientMediaResultAPI.GetMediaResultAPIDict( current_media.GetMediaResult() )
+                
+            
+            media_viewers.append( media_viewer_info_dict )
+            
+        
+        return media_viewers
+        
+    
     def GetNotebookCurrentPage( self ):
         
         return self._notebook.GetCurrentMediaPage()
@@ -7896,6 +7933,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def GetPagesHistory( self ):
         
         return self._page_nav_history.GetHistory()
+        
+    
+    def GetTopLevelNotebook( self ):
+        
+        return self._notebook
         
     
     def GetTotalPageCounts( self ):
@@ -8247,6 +8289,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_undo.update()
         
     
+    def NotifyPageJustChanged( self ):
+        
+        current_page = self._notebook.GetCurrentMediaPage()
+        
+        if current_page is not None:
+            
+            self._page_nav_history.AddPage( current_page )
+            
+        
+        self._menu_updater_set_pages_history_dirty.Update()
+        
+    
     def NotifyPendingUploadFinished( self, service_key: bytes ):
         
         self._currently_uploading_pending.discard( service_key )
@@ -8555,18 +8609,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         page.RefreshQuery()
         
     
-    def NotifyPageJustChanged( self ):
-        
-        current_page = self._notebook.GetCurrentMediaPage()
-        
-        if current_page is not None:
-            
-            self._page_nav_history.AddPage( current_page )
-            
-        
-        self._menu_updater_set_pages_history_dirty.Update()
-        
-    
     def RefreshStatusBar( self ):
         
         self._RefreshStatusBar()
@@ -8589,11 +8631,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def RegisterCanvasFrameReference( self, frame ):
+    def RegisterCanvasFrameReference( self, canvas_frame: ClientGUICanvasFrame.CanvasFrame ):
         
         self.MaintainCanvasFrameReferences()
         
-        self._canvas_frames.append( frame )
+        self._canvas_frames.append( canvas_frame )
         
     
     def RegisterUIUpdateWindow( self, window ):

@@ -22,6 +22,7 @@ from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
+from hydrus.core.files import HydrusFilesPhysicalStorage
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientAPI
@@ -6086,6 +6087,43 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+    def _test_manage_pages_media_viewers( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'manage_pages' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        # this sucks as a test tbh
+        # it would be nice if we had the actual Client GUI, but that's not easy atm so maybe we pull the api generating code out of there and test that separately or whatever with fake UI objects
+        
+        expected_response = [ 1, 2, 3 ]
+        
+        with mock.patch.object( TG.test_controller.gui, 'GetMediaViewersAPIInfo', return_value = expected_response ):
+            
+            path = '/manage_pages/get_media_viewers'
+            
+            connection.request( 'GET', path, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        media_viewers = d[ 'media_viewers' ]
+        
+        self.assertEqual( media_viewers, expected_response )
+        
+    
     def _test_manage_services( self, connection, set_up_permissions ):
         
         # this stuff is super dependent on the db requests, which aren't tested in this class, but we can do the arg parsing and wrapper
@@ -8272,7 +8310,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( locations[0][ 'ideal_weight' ], 1 )
         self.assertEqual( locations[0][ 'max_num_bytes' ], None )
         self.assertEqual( locations[0][ 'path' ], os.path.join( TG.test_controller.db_dir, 'client_files' ) )
-        self.assertEqual( set( locations[0][ 'prefixes' ] ), { f'f{p}' for p in HydrusData.IterateHexPrefixes() }.union( { f't{p}' for p in HydrusData.IterateHexPrefixes() } ) )
+        self.assertEqual( set( locations[0][ 'prefixes' ] ), set( HydrusFilesPhysicalStorage.IteratePrefixes( 'f' ) ).union( HydrusFilesPhysicalStorage.IteratePrefixes( 't' ) ) )
         
     
     def _test_permission_failures( self, connection, set_up_permissions ):
@@ -8314,6 +8352,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_manage_duplicate_potential_pairs( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_headers( connection, set_up_permissions )
+        self._test_manage_pages_media_viewers( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
         

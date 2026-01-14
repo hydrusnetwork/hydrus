@@ -2,7 +2,6 @@ import collections
 import collections.abc
 import decimal
 import fractions
-import itertools
 import os
 import struct
 import sys
@@ -256,18 +255,6 @@ def GetTypeName( obj_type ):
     else:
         
         return repr( obj_type )
-        
-    
-
-def IterateHexPrefixes():
-    
-    hex_chars = '0123456789abcdef'
-    
-    for ( one, two ) in itertools.product( hex_chars, hex_chars ):
-        
-        prefix = one + two
-        
-        yield prefix
         
     
 

@@ -85,6 +85,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.BandwidthException
         
+    elif status_code == 451:
+        
+        eclass = HydrusExceptions.CensorshipException
+        
     elif status_code in ( 509, 529 ):
         
         eclass = HydrusExceptions.BandwidthException

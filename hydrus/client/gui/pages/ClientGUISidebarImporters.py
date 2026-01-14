@@ -140,7 +140,7 @@ class SidebarImporterHDD( SidebarImporter ):
         
         super().__init__( parent, page, page_manager )
         
-        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'imports' )
+        self._import_queue_panel = ClientGUICommon.StaticBox( self, 'imports', start_expanded = True, can_expand = True )
         
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         
@@ -256,7 +256,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         #
         
-        self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
+        self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader', start_expanded = True, can_expand = True )
         
         #
         
@@ -1394,7 +1394,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         
         #
         
-        self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers' )
+        self._watchers_panel = ClientGUICommon.StaticBox( self, 'watchers', start_expanded = True, can_expand = True )
         
         self._watchers_status_st_top = ClientGUICommon.BetterStaticText( self._watchers_panel, ellipsize_end = True )
         self._watchers_status_st_bottom = ClientGUICommon.BetterStaticText( self._watchers_panel, ellipsize_end = True )
@@ -2564,7 +2564,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         
         #
         
-        self._simple_downloader_panel = ClientGUICommon.StaticBox( self, 'simple downloader' )
+        self._simple_downloader_panel = ClientGUICommon.StaticBox( self, 'simple downloader', start_expanded = True, can_expand = True )
         
         #
         
@@ -2966,7 +2966,7 @@ class SidebarImporterURLs( SidebarImporter ):
         
         #
         
-        self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader' )
+        self._url_panel = ClientGUICommon.StaticBox( self, 'url downloader', start_expanded = True, can_expand = True )
         
         #
         
