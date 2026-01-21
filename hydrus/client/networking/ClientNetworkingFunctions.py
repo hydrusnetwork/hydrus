@@ -138,14 +138,13 @@ def ConvertDomainIntoSecondLevelDomain( domain ):
         return ClientNetworkingDomainTLDExtract.ConvertDomainIntoSecondLevelDomain( domain )
         
     
-    domains = ConvertDomainIntoAllApplicableDomains( domain )
-    
-    if len( domains ) == 0:
+    # produces the 'co.uk' "second level domain" issue
+    while domain.count( '.' ) > 1:
         
-        raise HydrusExceptions.URLClassException( 'That url or domain did not seem to be valid!' )
+        domain = ConvertDomainIntoNextLevelDomain( domain )
         
     
-    return domains[-1]
+    return domain
     
 
 def ConvertDomainIntoSortable( domain: str ):
