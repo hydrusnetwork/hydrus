@@ -59,6 +59,7 @@ def AppendPathUntilNoConflicts( path ):
     
     return good_path_absent_ext + ext
     
+
 def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
     
     try:
@@ -90,6 +91,11 @@ def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
         
     
     return portable_path
+    
+
+def ConvertAbsPathToRealPath( abs_path ):
+    
+    return os.path.realpath( abs_path, strict = False )
     
 
 def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):

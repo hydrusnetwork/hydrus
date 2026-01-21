@@ -1227,6 +1227,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, str, self._AddExampleURL, self._EditExampleURL )
         
+        self._example_urls.AddSimpleCopyPasteTextButtons()
+        
         #
         
         formula_panel = QW.QWidget( edit_notebook )

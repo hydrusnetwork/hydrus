@@ -210,6 +210,25 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, second_level_domain )
             
         
+        # a failsafe to handle tldextract
+        # if we have previously put session info in a larger, higher-level bucket, we'll use (keep using) that instead
+        if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+            
+            second_level_domain = network_context.context_data
+            
+            if second_level_domain.count( '.' ) > 1:
+                
+                top_level_domain = ClientNetworkingFunctions.ConvertDomainIntoTopLevelDomain( second_level_domain )
+                
+                top_level_domain_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, top_level_domain ) 
+                
+                if top_level_domain_network_context in self._network_contexts_to_session_containers:
+                    
+                    return top_level_domain_network_context
+                    
+                
+            
+        
         return network_context
         
     
@@ -344,14 +363,6 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
                 
             
             #
-            
-            # tumblr can't into ssl for some reason, and the data subdomain they use has weird cert properties, looking like amazon S3
-            # perhaps it is inward-facing somehow? whatever the case, let's just say fuck it for tumblr
-            
-            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN and network_context.context_data == 'tumblr.com':
-                
-                session.verify = False
-                
             
             if not CG.client_controller.new_options.GetBoolean( 'verify_regular_https' ):
                 

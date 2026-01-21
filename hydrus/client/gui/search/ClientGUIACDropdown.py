@@ -261,7 +261,7 @@ def ReadFetch(
                 
             else:
                 
-                exact_match_predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status )
+                exact_match_predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, job_status = job_status )
                 
                 small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
                 
@@ -291,7 +291,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_status.IsCancelled():
                         
@@ -405,7 +405,7 @@ def ReadFetch(
                 
                 # now spend time fetching siblings if needed
                 
-                predicates = CG.client_controller.Read( 'media_predicates', tag_context, tags_to_count, parsed_autocomplete_text.inclusive, job_status = job_status )
+                predicates = CG.client_controller.Read( 'media_predicates', tag_context, tags_to_count, job_status = job_status )
                 
                 results_cache = ClientSearchAutocomplete.PredicateResultsCacheMedia( predicates )
                 
@@ -431,22 +431,16 @@ def ReadFetch(
         
         matches = ClientSearchPredicate.SortPredicates( matches )
         
-        if not parsed_autocomplete_text.inclusive:
-            
-            for match in matches:
-                
-                match.SetInclusive( False )
-                
-            
-        
-    
-    allow_auto_wildcard_conversion = True
     
     matches = HydrusLists.FastIndexUniqueList( matches )
+    
+    allow_auto_wildcard_conversion = True
     
     InsertTagPredicates( matches, tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion, insert_if_does_not_exist = False )
     
     InsertOtherPredicatesForRead( matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
+    
+    ClientSearchPredicate.SetPredicatesInclusivity( matches, parsed_autocomplete_text.inclusive )
     
     if job_status.IsCancelled():
         

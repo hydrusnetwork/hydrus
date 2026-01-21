@@ -31,6 +31,7 @@ from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.files import ClientFilesPhysical
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
@@ -417,9 +418,14 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         path = base_location.path
         
-        if os.path.exists( path ):
+        pretty_location = path
+        
+        if base_location.real_path != base_location.path:
             
-            pretty_location = path
+            pretty_location = f'{pretty_location} (Real path: {base_location.real_path})'
+            
+        
+        if os.path.exists( path ):
             
             try:
                 
@@ -445,7 +451,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            pretty_location = 'DOES NOT EXIST: {}'.format( path )
+            pretty_location = f'DOES NOT EXIST: {pretty_location}'
             
             pretty_free_space = 'DOES NOT EXIST'
             
@@ -894,7 +900,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _SelectPathToAdd( self ):
         
-        with QP.DirDialog( self, 'Select location' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select location' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -957,7 +963,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _SetThumbnailLocation( self ):
         
-        with QP.DirDialog( self, 'Select thumbnail location' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select thumbnail location' ) as dlg:
             
             if self._ideal_thumbnails_base_location_override is not None:
                 
@@ -1578,7 +1584,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def EventLainClick( self, event ):
         
-        with QP.FileDialog( self, 'Select the pngs to add.', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, 'Select the pngs to add.', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

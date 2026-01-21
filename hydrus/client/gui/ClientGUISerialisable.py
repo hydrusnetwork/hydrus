@@ -13,6 +13,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPathWidgets
 
 class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -22,7 +23,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._payload_obj = payload_obj
         
-        self._filepicker = QP.FilePickerCtrl( self, wildcard = 'PNG (*.png)' )
+        self._filepicker = ClientGUIPathWidgets.FilePickerCtrl( self, wildcard = 'PNG (*.png)' )
         self._filepicker.SetSaveMode( True )
         
         flp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._filepicker, 64 )
@@ -182,6 +183,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         CG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
         
     
+
 class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, payload_objs ):
@@ -190,7 +192,7 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._payload_objs = payload_objs
         
-        self._directory_picker = QP.DirPickerCtrl( self )
+        self._directory_picker = ClientGUIPathWidgets.DirPickerCtrl( self )
         
         dp_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._directory_picker, 52 )
         

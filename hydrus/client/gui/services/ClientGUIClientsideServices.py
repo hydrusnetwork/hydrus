@@ -27,6 +27,7 @@ from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAPI
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -3090,7 +3091,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
             
         
-        with QP.DirDialog( self, 'Select export location.' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select export location.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

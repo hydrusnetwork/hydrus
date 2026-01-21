@@ -17,9 +17,9 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportControl
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.networking import ClientNetworkingJobs
 
 class GalleryImport( HydrusSerialisable.SerialisableBase ):
@@ -68,10 +68,10 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         self._files_paused = start_file_queue_paused
         self._gallery_paused = start_gallery_queue_paused
         
-        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         self._file_import_options.SetIsDefault( True )
         
-        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         self._note_import_options = NoteImportOptions.NoteImportOptions()
         self._note_import_options.SetIsDefault( True )
@@ -265,11 +265,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
             
             with self._lock:
                 
-                real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                real_presentation_import_options = FileImportOptionsLegacy.GetRealPresentationImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
                 should_present = self._publish_to_page and file_seed.ShouldPresent( real_presentation_import_options )
                 
@@ -593,7 +593,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         if presentation_import_options is None:
             
-            presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( fio, FileImportOptions.IMPORT_TYPE_LOUD )
+            presentation_import_options = FileImportOptionsLegacy.GetRealPresentationImportOptions( fio, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
             
         
         return fsc.GetPresentedHashes( presentation_import_options )
@@ -813,7 +813,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def SetFileImportOptions( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         with self._lock:
             
@@ -863,7 +863,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         with self._lock:
             
@@ -919,7 +919,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
                 ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
                 
@@ -1097,10 +1097,10 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         self._do_not_allow_new_dupes = False
         self._merge_simultaneous_pends_to_one_importer = False
         
-        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         self._file_import_options.SetIsDefault( True )
         
-        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         self._note_import_options = NoteImportOptions.NoteImportOptions()
         self._note_import_options.SetIsDefault( True )
@@ -1481,7 +1481,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+    def GetFileImportOptions( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         with self._lock:
             

@@ -82,6 +82,16 @@ def CleanUpOldTempPaths():
         
     
 
+def GetCurrentSQLiteTempDir():
+    
+    if 'SQLITE_TMPDIR' in os.environ:
+        
+        return os.environ[ 'SQLITE_TMPDIR' ]
+        
+    
+    return GetCurrentTempDir()
+    
+
 def GetCurrentTempDir():
     
     return tempfile.gettempdir()

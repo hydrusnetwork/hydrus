@@ -2,6 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 
@@ -64,7 +65,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         
         filename = 'keys.txt'
         
-        with QP.FileDialog( self, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile, default_filename = filename ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile, default_filename = filename ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

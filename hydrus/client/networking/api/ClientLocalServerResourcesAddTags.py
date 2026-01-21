@@ -262,8 +262,6 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         parsed_autocomplete_text = ClientSearchAutocomplete.ParsedAutocompleteText( search, tag_autocomplete_options, collapse_search_characters )
         
-        parsed_autocomplete_text.SetInclusive( True )
-        
         return parsed_autocomplete_text
         
     
@@ -295,6 +293,8 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
             
             matches = ClientSearchPredicate.SortPredicates( matches )
             
+            ClientSearchPredicate.SetPredicatesInclusivity( predicates, parsed_autocomplete_text.inclusive )
+            
         
         return matches
         
@@ -317,7 +317,13 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         body_dict = {}
         
+        body_dict[ 'autocomplete_text' ] = {
+            'search_text' : parsed_autocomplete_text.GetSearchText( False, allow_auto_wildcard_conversion = False ),
+            'inclusive' : parsed_autocomplete_text.inclusive,
+        }
+        
         # TODO: Ok so we could add sibling/parent info here if the tag display type is storage, or in both cases. probably only if client asks for it
+        # these predicates are now aware that they are inclusive/exclusive, also. adding an 'inclusive' feels spammy, but consider it
         
         tags = [ { 'value' : match.GetValue(), 'count' : match.GetCount().GetMinCount() } for match in matches ]
         

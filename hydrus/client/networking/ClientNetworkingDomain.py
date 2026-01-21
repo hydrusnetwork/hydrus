@@ -58,10 +58,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
-        from hydrus.client.importing.options import TagImportOptions
+        from hydrus.client.importing.options import TagImportOptionsLegacy
         
-        self._file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
-        self._watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
+        self._file_post_default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
+        self._watchable_default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
         
         self._url_class_keys_to_default_tag_import_options = {}
         
@@ -584,10 +584,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            from hydrus.client.importing.options import TagImportOptions
+            from hydrus.client.importing.options import TagImportOptionsLegacy
             
-            file_post_default_tag_import_options = TagImportOptions.TagImportOptions()
-            watchable_default_tag_import_options = TagImportOptions.TagImportOptions()
+            file_post_default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
+            watchable_default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
             
             url_class_keys_to_default_tag_import_options = {}
             
@@ -2323,6 +2323,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return new_url_class_keys_to_parser_keys
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER ] = NetworkDomainManager
 
 class DomainMetadataPackage( HydrusSerialisable.SerialisableBase ):

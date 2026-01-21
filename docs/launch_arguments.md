@@ -28,10 +28,11 @@ Lets you customise where hydrus should use for its base database directory. This
 
 ##**`--temp_dir TEMP_DIR`**
 
-This tells all aspects of the client, including the SQLite database, to use a different path for temp operations. This would be by default your system temp path, such as:
+This tells all aspects of the client, including the SQLite database (unless the overriding `SQLITE_TMPDIR` environment variable is set), to use a different path for temp operations. This would be by default your system temp path, such as:
 
 ```
 C:\Users\You\AppData\Local\Temp
+/tmp
 ```
 
 But you can also check it in _help->about_. A handful of database operations (PTR tag processing, vacuums) require a lot of free space, so if your system drive is very full, or you have unusual ramdisk-based temp storage limits, you may want to relocate to another location or drive.

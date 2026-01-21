@@ -20,6 +20,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPathWidgets
 
 class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
@@ -119,7 +120,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         system_panel = ClientGUICommon.StaticBox( self, 'system' )
         
-        self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
+        self._mpv_conf_path = ClientGUIPathWidgets.FilePickerCtrl( system_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
         
         self._use_system_ffmpeg = QW.QCheckBox( system_panel )
         self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using any static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )

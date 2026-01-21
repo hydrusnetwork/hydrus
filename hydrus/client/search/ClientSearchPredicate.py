@@ -2973,6 +2973,35 @@ def MergePredicates( predicates: collections.abc.Collection[ Predicate ] ):
     return list( master_predicate_dict.values() )
     
 
+NON_INCLUSIVE_CAPABLE_PREDICATE_TYPES = {
+    PREDICATE_TYPE_TAG,
+    PREDICATE_TYPE_NAMESPACE,
+    PREDICATE_TYPE_WILDCARD
+}
+
+def SetPredicatesInclusivity( predicates: list[ Predicate ], inclusive: bool ):
+    
+    # it is lame to set it every time, but how these lists can be populated from caches and stuff gets complicated, so we'll be comprehensively KISS
+    
+    if inclusive:
+        
+        for predicate in predicates:
+            
+            predicate.SetInclusive( True )
+            
+        
+    else:
+        
+        for predicate in predicates:
+            
+            if predicate.GetType() in NON_INCLUSIVE_CAPABLE_PREDICATE_TYPES:
+                
+                predicate.SetInclusive( False )
+                
+            
+        
+    
+
 def SortPredicates( predicates: list[ Predicate ] ):
     
     key = lambda p: ( - p.GetCount().GetMinCount(), p.ToString() )

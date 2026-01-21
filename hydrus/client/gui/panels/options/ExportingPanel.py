@@ -9,6 +9,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPathWidgets
 
 class ExportingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
@@ -52,7 +53,7 @@ class ExportingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._export_folder_panel = ClientGUICommon.StaticBox( self, 'export folder' )
         
-        self._export_location = QP.DirPickerCtrl( self._export_folder_panel )
+        self._export_location = ClientGUIPathWidgets.DirPickerCtrl( self._export_folder_panel )
         
         #
         

@@ -38,6 +38,7 @@ from hydrus.client.gui import ClientGUIAboutWindow
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -1084,7 +1085,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == 'move':
             
-            with QP.DirDialog( self, 'Select location.' ) as dlg_3:
+            with ClientGUIDialogsFiles.DirDialog( self, 'Select location.' ) as dlg_3:
                 
                 if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
                     
@@ -1215,7 +1216,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if result == 'file':
                 
-                with QP.FileDialog( self, 'select where to save content', default_filename = 'output.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile ) as f_dlg:
+                with ClientGUIDialogsFiles.FileDialog( self, 'select where to save content', default_filename = 'output.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, fileMode = QW.QFileDialog.FileMode.AnyFile ) as f_dlg:
                     
                     if f_dlg.exec() == QW.QDialog.DialogCode.Accepted:
                         
@@ -1486,14 +1487,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_status.SetStatusTitle( 'sub gap downloader test' )
         
-        from hydrus.client.importing.options import FileImportOptions
+        from hydrus.client.importing.options import FileImportOptionsLegacy
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
-        from hydrus.client.importing.options import TagImportOptions
+        from hydrus.client.importing.options import TagImportOptionsLegacy
         
-        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         from hydrus.client.importing.options import NoteImportOptions
         
@@ -2257,7 +2258,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
-        with QP.DirDialog( self, 'Select location.' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select location.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -6706,7 +6707,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         from hydrus.client.files.images import ClientVisualDataTuningSuite
         
-        test_dir = QW.QFileDialog.getExistingDirectory( self, '', '' )
+        test_dir = ClientGUIDialogsQuick.GetExistingDirectory( self, 'select dir', '' )
         
         if test_dir == '':
             
@@ -6731,7 +6732,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         from hydrus.client.files.images import ClientVisualDataTuningSuite
         
-        test_dir = QW.QFileDialog.getExistingDirectory( self, '', '' )
+        test_dir = ClientGUIDialogsQuick.GetExistingDirectory( self, 'select dir', '' )
         
         if test_dir == '':
             
@@ -6922,7 +6923,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ClientGUIDialogsMessage.ShowInformation( self, backup_intro )
         
-        with QP.DirDialog( self, 'Select backup location.' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select backup location.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

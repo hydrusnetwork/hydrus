@@ -515,15 +515,29 @@ class PairComparatorRelativeVisualDuplicates( PairComparator ):
         
         if media_result_a.GetMime() in HC.IMAGES and media_result_b.GetMime() in HC.IMAGES:
             
-            visual_data_a = ClientDuplicatesComparisonStatements.GetVisualData( media_result_a )
-            visual_data_b = ClientDuplicatesComparisonStatements.GetVisualData( media_result_b )
+            try:
+                
+                visual_data_a = ClientDuplicatesComparisonStatements.GetVisualData( media_result_a )
+                visual_data_b = ClientDuplicatesComparisonStatements.GetVisualData( media_result_b )
+                
+            except:
+                
+                return False
+                
             
             ( simple_seems_good, simple_result, simple_score_statement ) = ClientVisualData.FilesAreVisuallySimilarSimple( visual_data_a, visual_data_b )
             
             if simple_seems_good:
                 
-                visual_data_tiled_a = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_a )
-                visual_data_tiled_b = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_b )
+                try:
+                    
+                    visual_data_tiled_a = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_a )
+                    visual_data_tiled_b = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_b )
+                    
+                except:
+                    
+                    return False
+                    
                 
                 ( regional_seems_good, regional_result, regional_score_statement ) = ClientVisualData.FilesAreVisuallySimilarRegional( visual_data_tiled_a, visual_data_tiled_b )
                 

@@ -13,7 +13,8 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import PrefetchImportOptions
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
@@ -792,12 +793,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'default_file_import_options' ] = HydrusSerialisable.SerialisableDictionary()
         
-        from hydrus.client.importing.options import FileImportOptions
+        from hydrus.client.importing.options import FileImportOptionsLegacy
+        
+        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+        
+        prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
+        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
         
         exclude_deleted = True
-        preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
-        preimport_url_check_type = FileImportOptions.DO_CHECK
-        preimport_url_check_looks_for_neighbour_spam = True
         allow_decompression_bombs = True
         min_size = None
         max_size = None
@@ -815,20 +819,20 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
         
-        quiet_file_import_options = FileImportOptions.FileImportOptions()
+        quiet_file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         
-        quiet_file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        quiet_file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
+        quiet_file_import_options.SetPrefetchImportOptions( prefetch_import_options )
+        quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         quiet_file_import_options.SetPresentationImportOptions( presentation_import_options )
         quiet_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
         
-        loud_file_import_options = FileImportOptions.FileImportOptions()
+        loud_file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         
-        loud_file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        loud_file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
+        loud_file_import_options.SetPrefetchImportOptions( prefetch_import_options )
+        loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         loud_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         
@@ -1251,11 +1255,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultFileImportOptions( self, options_type ) -> FileImportOptions.FileImportOptions:
+    def GetDefaultFileImportOptions( self, options_type ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         with self._lock:
             
-            if options_type == FileImportOptions.IMPORT_TYPE_LOUD:
+            if options_type == FileImportOptionsLegacy.IMPORT_TYPE_LOUD:
                 
                 key = 'loud'
                 
@@ -1878,7 +1882,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if options_type == FileImportOptions.IMPORT_TYPE_LOUD:
+            if options_type == FileImportOptionsLegacy.IMPORT_TYPE_LOUD:
                 
                 key = 'loud'
                 

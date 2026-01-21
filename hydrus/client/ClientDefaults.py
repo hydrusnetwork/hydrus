@@ -909,13 +909,13 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     #
     
-    from hydrus.client.importing.options import TagImportOptions
+    from hydrus.client.importing.options import TagImportOptionsLegacy
     
-    service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True )
+    service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True )
     
     service_keys_to_service_tag_import_options = { CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY : service_tag_import_options }
     
-    tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+    tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
     
     domain_manager.SetDefaultFilePostTagImportOptions( tag_import_options )
     

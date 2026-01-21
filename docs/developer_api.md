@@ -1261,6 +1261,10 @@ Response:
 :   
 ```json title="Example response"
 {
+  "autocomplete_text" : {
+    "search_text" : "kim",
+    "inclusive" : true,
+  },
   "tags" : [
     {
       "value" : "series:kim possible", 
@@ -1279,6 +1283,8 @@ Response:
 ```
 
 The `tags` list will be sorted by descending count. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
+
+The `autocomplete_text` structure lets you know how hydrus sees the search. `search_text` is a basic cleaned-up version of what text the user entered, and `inclusive` is whether they prepended their search text with a hyphen '-' character. If the user has entered an exclusive search, you may with to prepend all the results' display, similarly, with a hypen.
 
 Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.
 

@@ -50,7 +50,7 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes, no_temp_needed = False ):
         
     else:
         
-        temp_dir = HydrusTemp.GetCurrentTempDir()
+        temp_dir = HydrusTemp.GetCurrentSQLiteTempDir()
         
         temp_disk_free_space = HydrusPaths.GetFreeSpace( temp_dir )
         
@@ -62,14 +62,14 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes, no_temp_needed = False ):
             
             if temp_disk_free_space is not None and temp_disk_free_space < space_needed:
                 
-                raise Exception( f'I believe you need about {HydrusData.ToHumanBytes( space_needed )} on your db\'s disk partition (perhaps only temporarily), which I think also holds your temporary path ({temp_dir}), but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.' )
+                raise Exception( f'I believe you need about {HydrusData.ToHumanBytes( space_needed )} on your db\'s disk partition (perhaps only temporarily), which I think also holds your SQLite temporary path ({temp_dir}), but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.' )
                 
             
         else:
             
             if temp_disk_free_space is not None and temp_disk_free_space < temp_space_needed:
                 
-                message = f'I believe you need about {HydrusData.ToHumanBytes( temp_space_needed )} on your temporary path\'s disk partition, which I think is "{temp_dir}", but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.'
+                message = f'I believe you need about {HydrusData.ToHumanBytes( temp_space_needed )} free on the disk partition holding your SQLite temporary path, which I think is "{temp_dir}", but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.'
                 
                 temp_total_space = HydrusPaths.GetTotalSpace( temp_dir )
                 
@@ -693,7 +693,7 @@ class DBCursorTransactionWrapper( DBBase ):
         
     
     def _ZeroJournal( self ):
-    
+        
         if HG.db_journal_mode not in ( 'PERSIST', 'WAL' ):
             
             return

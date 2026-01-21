@@ -32,6 +32,7 @@ from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPathWidgets
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -241,7 +242,7 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = QW.QLineEdit( self._path_box )
         
-        self._path = QP.DirPickerCtrl( self._path_box )
+        self._path = ClientGUIPathWidgets.DirPickerCtrl( self._path_box )
         
         #
         
@@ -618,7 +619,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export_path_box = ClientGUICommon.StaticBox( self, 'export path' )
         
-        self._directory_picker = QP.DirPickerCtrl( self._export_path_box )
+        self._directory_picker = ClientGUIPathWidgets.DirPickerCtrl( self._export_path_box )
         self._directory_picker.dirPickerChanged.connect( self._RefreshPaths )
         
         self._open_location = QW.QPushButton( 'open this location', self._export_path_box )

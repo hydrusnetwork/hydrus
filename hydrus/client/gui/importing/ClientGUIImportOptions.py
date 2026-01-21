@@ -26,17 +26,18 @@ from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
 
 class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     isDefaultChanged = QC.Signal( bool )
     
-    def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptions.FileImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
+    def __init__( self, parent: QW.QWidget, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, show_downloader_options: bool, allow_default_selection: bool ):
         
         super().__init__( parent )
         
@@ -48,7 +49,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if file_import_options.IsDefault():
             
-            file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD ).Duplicate()
+            file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_LOUD ).Duplicate()
             
             file_import_options.SetIsDefault( True )
             
@@ -80,27 +81,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        pre_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'pre-import checks' )
+        prefetch_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'prefetch logic', can_expand = True, start_expanded = False )
         
-        filetype_selector_panel = ClientGUICommon.StaticBox( pre_import_panel, 'allowed filetypes' )
-        
-        self._exclude_deleted = QW.QCheckBox( pre_import_panel )
-        
-        tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
-        tt += '\n' * 2
-        tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
-        
-        self._exclude_deleted.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        #
-        
-        self._preimport_hash_check_type = ClientGUICommon.BetterChoice( default_panel )
-        self._preimport_url_check_type = ClientGUICommon.BetterChoice( default_panel )
+        self._preimport_hash_check_type = ClientGUICommon.BetterChoice( prefetch_import_panel )
+        self._preimport_url_check_type = ClientGUICommon.BetterChoice( prefetch_import_panel )
         
         jobs = [
-            ( 'do not check', FileImportOptions.DO_NOT_CHECK ),
-            ( 'check', FileImportOptions.DO_CHECK ),
-            ( 'check - and matches are dispositive', FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+            ( 'do not check', PrefetchImportOptions.DO_NOT_CHECK),
+            ( 'check', PrefetchImportOptions.DO_CHECK ),
+            ( 'check - and matches are dispositive', PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
         ]
         
         for ( display_string, client_data ) in jobs:
@@ -120,7 +109,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preimport_hash_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         self._preimport_url_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._preimport_url_check_looks_for_neighbour_spam = QW.QCheckBox( pre_import_panel )
+        self._preimport_url_check_looks_for_neighbour_spam = QW.QCheckBox( prefetch_import_panel )
         
         tt = 'When a file-url mapping is found, an additional check can be performed to see if it is trustworthy.'
         tt += '\n' * 2
@@ -129,6 +118,20 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
         
         self._preimport_url_check_looks_for_neighbour_spam.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        pre_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'pre-import checks' )
+        
+        filetype_selector_panel = ClientGUICommon.StaticBox( pre_import_panel, 'allowed filetypes' )
+        
+        self._exclude_deleted = QW.QCheckBox( pre_import_panel )
+        
+        tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
+        tt += '\n' * 2
+        tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
+        
+        self._exclude_deleted.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -230,6 +233,27 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        st = ClientGUICommon.BetterStaticText( prefetch_import_panel, label = 'BE CAREFUL, PREFETCH LOGIC IS ADVANCED' )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        st.setWordWrap( True )
+        st.setObjectName( 'HydrusWarning' )
+        
+        prefetch_import_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
+        rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
+        rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( prefetch_import_panel, rows )
+        
+        prefetch_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        prefetch_import_panel.setVisible( show_downloader_options )
+        
+        #
+        
         filetype_selector_panel.Add( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         pre_import_panel.Add( filetype_selector_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -239,20 +263,6 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
-        
-        if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
-            rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
-            rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
-            
-        else:
-            
-            self._preimport_hash_check_type.setVisible( False )
-            self._preimport_url_check_type.setVisible( False )
-            self._preimport_url_check_looks_for_neighbour_spam.setVisible( False )
-            
-        
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
         rows.append( ( 'minimum filesize: ', self._min_size ) )
         rows.append( ( 'maximum filesize: ', self._max_size ) )
@@ -300,6 +310,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         specific_vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( specific_vbox, prefetch_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -337,8 +348,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _LoadDefaultOptions( self ):
         
-        loud_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
-        quiet_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
+        loud_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
+        quiet_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_QUIET )
         
         choice_tuples = []
         
@@ -362,13 +373,17 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._SetValue( default_file_import_options )
         
     
-    def _SetValue( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def _SetValue( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         self._use_default_dropdown.SetValue( file_import_options.IsDefault() )
         
-        ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
+        prefetch_import_options = file_import_options.GetPrefetchImportOptions()
         
-        preimport_url_check_looks_for_neighbour_spam = file_import_options.PreImportURLCheckLooksForNeighbourSpam()
+        preimport_hash_check_type = prefetch_import_options.GetPreImportHashCheckType()
+        preimport_url_check_type = prefetch_import_options.GetPreImportURLCheckType()
+        preimport_url_check_looks_for_neighbour_spam = prefetch_import_options.PreImportURLCheckLooksForNeighbourSpam()
+        
+        ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
         
         mimes = file_import_options.GetAllowedSpecificFiletypes()
         
@@ -448,9 +463,9 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
         preimport_url_check_type = self._preimport_url_check_type.GetValue()
         
-        if preimport_hash_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
             
-            self._preimport_url_check_type.SetValue( FileImportOptions.DO_CHECK )
+            self._preimport_url_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
             
         
     
@@ -459,12 +474,12 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
         preimport_url_check_type = self._preimport_url_check_type.GetValue()
         
-        if preimport_hash_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
             
-            self._preimport_hash_check_type.SetValue( FileImportOptions.DO_CHECK )
+            self._preimport_hash_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
             
         
-        self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != FileImportOptions.DO_NOT_CHECK )
+        self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != PrefetchImportOptions.DO_NOT_CHECK )
         
     
     def _UpdateDoArchiveWidget( self ):
@@ -512,11 +527,11 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         self._destination_location_context_st.style().polish( self._destination_location_context_st )
         
     
-    def GetValue( self ) -> FileImportOptions.FileImportOptions:
+    def GetValue( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         is_default = self._use_default_dropdown.GetValue()
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         
         if is_default:
             
@@ -524,10 +539,13 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
         else:
             
+            prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+            
+            prefetch_import_options.SetPreImportHashCheckType( self._preimport_hash_check_type.GetValue() )
+            prefetch_import_options.SetPreImportURLCheckType( self._preimport_url_check_type.GetValue() )
+            prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( self._preimport_url_check_looks_for_neighbour_spam.isChecked() )
+            
             exclude_deleted = self._exclude_deleted.isChecked()
-            preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
-            preimport_url_check_type = self._preimport_url_check_type.GetValue()
-            preimport_url_check_looks_for_neighbour_spam = self._preimport_url_check_looks_for_neighbour_spam.isChecked()
             allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
             min_size = self._min_size.GetValue()
             max_size = self._max_size.GetValue()
@@ -543,8 +561,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
             destination_location_context = self._destination_location_context.GetValue()
             
-            file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-            file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
+            file_import_options.SetPrefetchImportOptions( prefetch_import_options )
+            file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
             file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
             file_import_options.SetDestinationLocationContext( destination_location_context )
             file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
@@ -1048,7 +1066,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptionsLegacy.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
         super().__init__( parent )
         
@@ -1244,18 +1262,18 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.valueChanged.emit()
         
     
-    def GetValue( self ) -> TagImportOptions.ServiceTagImportOptions:
+    def GetValue( self ) -> TagImportOptionsLegacy.ServiceTagImportOptions:
         
         get_tags = self._get_tags_checkbox.isChecked()
         
         get_tags_filter = self._get_tags_filter_button.GetValue()
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
         
         return service_tag_import_options
         
     
-    def SetValue( self, service_tag_import_options: TagImportOptions.ServiceTagImportOptions ):
+    def SetValue( self, service_tag_import_options: TagImportOptionsLegacy.ServiceTagImportOptions ):
         
         ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
         
@@ -1273,7 +1291,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     isDefaultChanged = QC.Signal( bool )
     
-    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool, allow_default_selection: bool ):
+    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, show_downloader_options: bool, allow_default_selection: bool ):
         
         super().__init__( parent )
         
@@ -1514,7 +1532,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._SetValue( default_tag_import_options )
         
     
-    def _SetValue( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def _SetValue( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
         
@@ -1601,13 +1619,13 @@ Please note that once you know what tags you like, you can (and should) set up t
         self._tag_whitelist_button.setText( label )
         
     
-    def GetValue( self ) -> TagImportOptions.TagImportOptions:
+    def GetValue( self ) -> TagImportOptionsLegacy.TagImportOptionsLegacy:
         
         is_default = self._use_default_dropdown.GetValue()
         
         if is_default:
             
-            tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+            tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
             
         else:
             
@@ -1619,7 +1637,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             tag_blacklist = self._tag_blacklist_button.GetValue()
             tag_whitelist = list( self._tag_whitelist )
             
-            tag_import_options = TagImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+            tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
             
         
         return tag_import_options
@@ -1648,7 +1666,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+    def GetFileImportOptions( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         if self._file_import_options_panel is None:
             
@@ -1668,7 +1686,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._note_import_options_panel.GetValue()
         
     
-    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
+    def GetTagImportOptions( self ) -> TagImportOptionsLegacy.TagImportOptionsLegacy:
         
         if self._tag_import_options_panel is None:
             
@@ -1754,7 +1772,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._notebook.setTabText( index, label )
         
     
-    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def SetFileImportOptions( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         file_import_options = file_import_options.Duplicate()
         
@@ -1790,7 +1808,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._note_import_options_panel.isDefaultChanged.connect( self._UpdateNoteImportOptionsTabName )
         
     
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         tag_import_options = tag_import_options.Duplicate()
         
@@ -1812,9 +1830,9 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
 class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     importOptionsChanged = QC.Signal()
-    fileImportOptionsChanged = QC.Signal( FileImportOptions.FileImportOptions )
+    fileImportOptionsChanged = QC.Signal( FileImportOptionsLegacy.FileImportOptionsLegacy )
     noteImportOptionsChanged = QC.Signal( NoteImportOptions.NoteImportOptions )
-    tagImportOptionsChanged = QC.Signal( TagImportOptions.TagImportOptions )
+    tagImportOptionsChanged = QC.Signal( TagImportOptionsLegacy.TagImportOptionsLegacy )
     
     def __init__( self, parent, show_downloader_options: bool, allow_default_selection: bool ):
         
@@ -1924,7 +1942,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             file_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( file_import_options, FileImportOptions.FileImportOptions ):
+            if not isinstance( file_import_options, FileImportOptionsLegacy.FileImportOptionsLegacy ):
                 
                 raise Exception( 'Not a File Import Options!' )
                 
@@ -2006,7 +2024,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             tag_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( tag_import_options, TagImportOptions.TagImportOptions ):
+            if not isinstance( tag_import_options, TagImportOptionsLegacy.TagImportOptionsLegacy ):
                 
                 raise Exception( 'Not a Tag Import Options!' )
                 
@@ -2150,7 +2168,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         self._SetFileImportOptions( file_import_options )
@@ -2176,7 +2194,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         self._SetTagImportOptions( tag_import_options )
         
@@ -2283,7 +2301,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         my_action.setToolTip( ClientGUIFunctions.WrapToolTip( summary ) )
         
     
-    def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def _SetFileImportOptions( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         self._file_import_options = file_import_options
         
@@ -2301,7 +2319,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self.noteImportOptionsChanged.emit( self._note_import_options )
         
     
-    def _SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def _SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         self._tag_import_options = tag_import_options
         
@@ -2310,7 +2328,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self.tagImportOptionsChanged.emit( self._tag_import_options )
         
     
-    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+    def GetFileImportOptions( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         if self._file_import_options is None:
             
@@ -2330,7 +2348,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         return self._note_import_options
         
     
-    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
+    def GetTagImportOptions( self ) -> TagImportOptionsLegacy.TagImportOptionsLegacy:
         
         if self._tag_import_options is None:
             
@@ -2340,7 +2358,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         return self._tag_import_options
         
     
-    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def SetFileImportOptions( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         self._SetFileImportOptions( file_import_options )
         
@@ -2350,7 +2368,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self._SetNoteImportOptions( note_import_options )
         
     
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         self._SetTagImportOptions( tag_import_options )
         

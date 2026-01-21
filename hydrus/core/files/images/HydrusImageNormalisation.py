@@ -162,7 +162,7 @@ def ConvertGammaChromaticityPNGToSRGB( pil_image ):
             transformed = srgb_encode( transformed )
             
             # Restore to image shape
-            corrected_rgb = transformed.reshape( shape )
+            corrected_rgb = numpy.reshape( transformed, shape )
             
             # If alpha present, preserve it
             if work_tile_alpha is not None:

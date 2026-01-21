@@ -25,7 +25,9 @@ from hydrus.client import ClientSerialisable
 from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -440,6 +442,13 @@ class AddEditDeleteListBox( QW.QWidget ):
         pass
         
     
+    def _CopyTextToClipboard( self ):
+        
+        separated_text = '\n'.join( [ obj for obj in self.GetData( only_selected = True ) ] )
+        
+        CG.client_controller.pub( 'clipboard', 'text', separated_text )
+        
+    
     def _Delete( self ):
         
         num_selected = self._listbox.GetNumSelected()
@@ -617,7 +626,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -739,6 +748,35 @@ class AddEditDeleteListBox( QW.QWidget ):
         return ( num_added, bad_object_type_names, other_bad_errors )
         
     
+    def _PasteTextFromClipboard( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
+            
+            return
+            
+        
+        try:
+            
+            urls = HydrusText.DeserialiseNewlinedTexts( raw_text )
+            
+        except Exception as e:
+            
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
+            
+            raise
+            
+        
+        self.AddDatas( urls )
+        
+    
     def _SetNonDupeName( self, obj ):
         
         pass
@@ -776,6 +814,18 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         
         self.listBoxChanged.emit()
+        
+    
+    def AddSimpleCopyPasteTextButtons( self ):
+        
+        button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._CopyTextToClipboard )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
+        self._enabled_only_on_selection_buttons.append( button )
+        
+        button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._PasteTextFromClipboard )
+        QP.AddToLayout( self._buttons_hbox, button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self._ShowHideButtons()
         
     
     def AddDefaultsButton( self, defaults_callable ):
@@ -1182,7 +1232,7 @@ class QueueListBox( QW.QWidget ):
     
     def _ImportFromPNG( self ):
         
-        with QP.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, 'select the png or pngs with the encoded data', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFiles, wildcard = 'PNG (*.png)' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

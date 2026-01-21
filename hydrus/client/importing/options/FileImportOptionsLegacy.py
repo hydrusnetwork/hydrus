@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -19,7 +20,7 @@ from hydrus.client.search import ClientSearchPredicate
 IMPORT_TYPE_QUIET = 0
 IMPORT_TYPE_LOUD = 1
 
-def GetRealFileImportOptions( file_import_options: "FileImportOptions", loud_or_quiet: int ) -> "FileImportOptions":
+def GetRealFileImportOptions( file_import_options: "FileImportOptionsLegacy", loud_or_quiet: int ) -> "FileImportOptionsLegacy":
     
     if file_import_options.IsDefault():
         
@@ -29,31 +30,25 @@ def GetRealFileImportOptions( file_import_options: "FileImportOptions", loud_or_
     return file_import_options
     
 
-def GetRealPresentationImportOptions( file_import_options: "FileImportOptions", loud_or_quiet: int ) -> PresentationImportOptions.PresentationImportOptions:
+def GetRealPresentationImportOptions( file_import_options: "FileImportOptionsLegacy", loud_or_quiet: int ) -> PresentationImportOptions.PresentationImportOptions:
     
     real_file_import_options = GetRealFileImportOptions( file_import_options, loud_or_quiet )
     
     return real_file_import_options.GetPresentationImportOptions()
     
 
-DO_NOT_CHECK = 0
-DO_CHECK = 1
-DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE = 2
-
-class FileImportOptions( HydrusSerialisable.SerialisableBase ):
+class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
-    SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 12
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY
+    SERIALISABLE_NAME = 'File Import Options (Legacy)'
+    SERIALISABLE_VERSION = 13
     
     def __init__( self ):
         
         super().__init__()
         
+        self._prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
         self._exclude_deleted = True
-        self._preimport_hash_check_type = DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
-        self._preimport_url_check_type = DO_CHECK
-        self._preimport_url_check_looks_for_neighbour_spam = True
         self._allow_decompression_bombs = True
         self._filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
         self._min_size = None
@@ -88,18 +83,20 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         serialisable_filetype_filter_predicate = self._filetype_filter_predicate.GetSerialisableTuple()
         
-        pre_import_options = ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
+        serialisable_prefetch_import_options = self._prefetch_import_options.GetSerialisableTuple()
+        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
         post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_archive_on_already_in_db_files, self._do_import_destinations_on_already_in_db_files )
         serialisable_presentation_import_options = self._presentation_import_options.GetSerialisableTuple()
         
-        return ( pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default )
+        return ( serialisable_prefetch_import_options, pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default ) = serialisable_info
+        ( serialisable_prefetch_import_options, pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default ) = serialisable_info
         
-        ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
+        self._prefetch_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_prefetch_import_options )
+        ( self._exclude_deleted, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
         ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls, self._do_archive_on_already_in_db_files, self._do_import_destinations_on_already_in_db_files ) = post_import_options
         self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
         
@@ -258,20 +255,20 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if do_not_check_hashes_before_importing:
                 
-                preimport_hash_check_type = DO_NOT_CHECK
+                preimport_hash_check_type = PrefetchImportOptions.DO_NOT_CHECK
                 
             else:
                 
-                preimport_hash_check_type = DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
+                preimport_hash_check_type = PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
                 
             
             if do_not_check_known_urls_before_importing:
                 
-                preimport_url_check_type = DO_NOT_CHECK
+                preimport_url_check_type = PrefetchImportOptions.DO_NOT_CHECK
                 
             else:
                 
-                preimport_url_check_type = DO_CHECK
+                preimport_url_check_type = PrefetchImportOptions.DO_CHECK
                 
             
             preimport_url_check_looks_for_neighbour_spam = True
@@ -339,6 +336,27 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
             
             return ( 12, new_serialisable_info )
+            
+        
+        if version == 12:
+            
+            ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default ) = old_serialisable_info
+            
+            ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbour_spam, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
+            
+            prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+            
+            prefetch_import_options.SetPreImportHashCheckType( preimport_hash_check_type )
+            prefetch_import_options.SetPreImportURLCheckType( preimport_url_check_type )
+            prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
+            
+            serialisable_prefetch_import_options = prefetch_import_options.GetSerialisableTuple()
+            
+            pre_import_options = ( exclude_deleted, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
+            
+            new_serialisable_info = ( serialisable_prefetch_import_options, pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
+            
+            return ( 13, new_serialisable_info )
             
         
     
@@ -515,24 +533,19 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._do_import_destinations_on_already_in_db_files
         
     
+    def GetPrefetchImportOptions( self ) -> PrefetchImportOptions.PrefetchImportOptions:
+        
+        return self._prefetch_import_options
+        
+    
     def GetPresentationImportOptions( self ) -> PresentationImportOptions.PresentationImportOptions:
         
         return self._presentation_import_options
         
     
-    def GetPreImportHashCheckType( self ):
-        
-        return self._preimport_hash_check_type
-        
-    
-    def GetPreImportURLCheckType( self ):
-        
-        return self._preimport_url_check_type
-        
-    
     def GetPreImportOptions( self ):
         
-        pre_import_options = ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
+        pre_import_options = ( self._exclude_deleted, self._allow_decompression_bombs, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution )
         
         return pre_import_options
         
@@ -610,11 +623,6 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._is_default
         
     
-    def PreImportURLCheckLooksForNeighbourSpam( self ) -> bool:
-        
-        return self._preimport_url_check_looks_for_neighbour_spam
-        
-    
     def SetAllowedSpecificFiletypes( self, mimes ) -> None:
         
         mimes = ClientSearchPredicate.ConvertSpecificFiletypesToSummary( mimes, only_searchable = False )
@@ -649,9 +657,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._associate_source_urls = associate_source_urls
         
     
-    def SetPreImportURLCheckLooksForNeighbourSpam( self, preimport_url_check_looks_for_neighbour_spam: bool ):
+    def SetPrefetchImportOptions( self, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
         
-        self._preimport_url_check_looks_for_neighbour_spam = preimport_url_check_looks_for_neighbour_spam
+        self._prefetch_import_options = prefetch_import_options
         
     
     def SetPresentationImportOptions( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
@@ -659,11 +667,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._presentation_import_options = presentation_import_options
         
     
-    def SetPreImportOptions( self, exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
+    def SetPreImportOptions( self, exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ):
         
         self._exclude_deleted = exclude_deleted
-        self._preimport_hash_check_type = preimport_hash_check_type
-        self._preimport_url_check_type = preimport_url_check_type
         self._allow_decompression_bombs = allow_decompression_bombs
         self._min_size = min_size
         self._max_size = max_size
@@ -683,4 +689,4 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS ] = FileImportOptions
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY ] = FileImportOptionsLegacy

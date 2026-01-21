@@ -242,7 +242,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS ] = FilenameTaggingOptions    
 
-class TagImportOptions( HydrusSerialisable.SerialisableBase ):
+class TagImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'Tag Import Options'
@@ -673,7 +673,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptions
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS ] = TagImportOptionsLegacy
 
 def NewInboxArchiveMatch( new_files, inbox_files, archive_files, status, inbox ):
     

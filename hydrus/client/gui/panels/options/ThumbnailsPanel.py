@@ -9,6 +9,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIPathWidgets
 
 class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
@@ -72,7 +73,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         thumbnail_misc_box = ClientGUICommon.StaticBox( self, 'media background' )
         
-        self._media_background_bmp_path = QP.FilePickerCtrl( thumbnail_misc_box )
+        self._media_background_bmp_path = ClientGUIPathWidgets.FilePickerCtrl( thumbnail_misc_box )
         
         #
         

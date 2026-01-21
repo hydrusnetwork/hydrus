@@ -14,7 +14,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchFileSearchContext
@@ -789,7 +789,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', filename ) )
                 
-                file_import_options = FileImportOptions.FileImportOptions()
+                file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
                 file_import_options.SetIsDefault( True )
                 
                 file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1103,7 +1103,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1204,7 +1204,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1306,7 +1306,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1410,7 +1410,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1513,7 +1513,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', 'muh_jpg.jpg' ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -2634,7 +2634,7 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 # doing this again tests a very simple add_file
                 
-                file_import_options = FileImportOptions.FileImportOptions()
+                file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
                 file_import_options.SetIsDefault( True )
                 
                 for filename in ( 'muh_jpg.jpg', 'muh_png.png', 'muh_apng.png' ):

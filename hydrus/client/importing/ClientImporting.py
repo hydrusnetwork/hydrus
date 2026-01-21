@@ -9,7 +9,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFileSeeds
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.parsing import ClientParsingResults
 
@@ -37,7 +37,7 @@ DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME = 0.1
 
 REPEATING_JOB_TYPICAL_PERIOD = 30.0
 
-def ConvertParsedPostsToFileSeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], source_url: str, file_import_options: FileImportOptions.FileImportOptions ):
+def ConvertParsedPostsToFileSeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], source_url: str, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
     
     file_seeds = []
     
@@ -136,7 +136,7 @@ def THREADDownloadURL( job_status, url, url_string ):
     
     #
     
-    file_import_options = FileImportOptions.FileImportOptions()
+    file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
     file_import_options.SetIsDefault( True )
     
     def network_job_factory( *args, **kwargs ):
@@ -161,7 +161,7 @@ def THREADDownloadURL( job_status, url, url_string ):
     
     try:
         
-        file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
+        file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
         
         status = file_seed.status
         
@@ -206,7 +206,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
     presentation_hashes = []
     presentation_hashes_fast = set()
     
-    file_import_options = FileImportOptions.FileImportOptions()
+    file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
     file_import_options.SetIsDefault( True )
     
     def network_job_factory( *args, **kwargs ):
@@ -241,7 +241,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
         
         try:
             
-            file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
+            file_seed.DownloadAndImportRawFile( url, file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, network_job_factory, network_job_presentation_context_factory, status_hook )
             
             status = file_seed.status
             

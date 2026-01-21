@@ -13,6 +13,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -561,7 +562,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the destination location for the Archive. Existing Archives are also ok, and will be appended to.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, default_filename = 'archive.db', fileMode = QW.QFileDialog.FileMode.AnyFile ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptSave, default_filename = 'archive.db', fileMode = QW.QFileDialog.FileMode.AnyFile ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -647,7 +648,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         message = 'Select the Archive to pull data from.'
         
-        with QP.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, message = message, acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

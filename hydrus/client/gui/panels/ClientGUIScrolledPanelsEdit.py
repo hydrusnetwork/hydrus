@@ -32,7 +32,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import NoteImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -49,9 +49,9 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         url_classes,
         parsers,
         url_class_keys_to_parser_keys: dict[ bytes, bytes ],
-        file_post_default_tag_import_options: TagImportOptions.TagImportOptions,
-        watchable_default_tag_import_options: TagImportOptions.TagImportOptions,
-        url_class_keys_to_tag_import_options: dict[ bytes, TagImportOptions.TagImportOptions ],
+        file_post_default_tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy,
+        watchable_default_tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy,
+        url_class_keys_to_tag_import_options: dict[ bytes, TagImportOptionsLegacy.TagImportOptionsLegacy ],
         file_post_default_note_import_options: NoteImportOptions.NoteImportOptions,
         watchable_default_note_import_options: NoteImportOptions.NoteImportOptions,
         url_class_keys_to_note_import_options: dict[ bytes, NoteImportOptions.NoteImportOptions ]
@@ -455,7 +455,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             unknown_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if isinstance( unknown_import_options, TagImportOptions.TagImportOptions ):
+            if isinstance( unknown_import_options, TagImportOptionsLegacy.TagImportOptionsLegacy ):
                 
                 insert_dict = self._url_class_keys_to_tag_import_options
                 

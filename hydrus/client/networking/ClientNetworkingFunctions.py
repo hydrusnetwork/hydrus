@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.networking import ClientNetworkingDomainTLDExtract
 
 percent_encoding_re = re.compile( r'%[0-9A-Fa-f]{2}' )
 double_hex_re = re.compile( r'[0-9A-Fa-f]{2}' )
@@ -105,9 +106,17 @@ def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
         domain = RemoveWWWFromDomain( domain )
         
     
+    second_level_domain = ConvertDomainIntoSecondLevelDomain( domain )
+    
+    # we want the second level domain, but no smaller
     while domain.count( '.' ) > 0:
         
         domains.append( domain )
+        
+        if domain == second_level_domain:
+            
+            break
+            
         
         domain = ConvertDomainIntoNextLevelDomain( domain )
         
@@ -117,10 +126,17 @@ def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
 
 def ConvertDomainIntoNextLevelDomain( domain ):
     
+    # do not 'fix' this to error at anything above the second level domain
+    
     return '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
     
 
 def ConvertDomainIntoSecondLevelDomain( domain ):
+    
+    if ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK:
+        
+        return ClientNetworkingDomainTLDExtract.ConvertDomainIntoSecondLevelDomain( domain )
+        
     
     domains = ConvertDomainIntoAllApplicableDomains( domain )
     
@@ -150,6 +166,18 @@ def ConvertDomainIntoSortable( domain: str ):
     # ( mysite.com, tuple() )
     # ( mysite.com, ( 'artistname', ) )
     return ( second_level_domain, subdomains_in_power_order )
+    
+
+def ConvertDomainIntoTopLevelDomain( domain ):
+    
+    if ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK:
+        
+        return ClientNetworkingDomainTLDExtract.ConvertDomainIntoTopLevelDomain( domain )
+        
+    
+    second_level_domain = ConvertDomainIntoSecondLevelDomain( domain )
+    
+    return ConvertDomainIntoNextLevelDomain( second_level_domain )
     
 
 def ConvertHTTPSToHTTP( url ):
@@ -618,7 +646,9 @@ OH_NO_NO_NETLOC_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : '_' for char in O
 
 def RemoveWWWFromDomain( domain ):
     
-    if domain.count( '.' ) > 1 and domain.startswith( 'www' ):
+    second_level_domain = ConvertDomainIntoSecondLevelDomain( domain )
+    
+    if domain != second_level_domain and domain.count( '.' ) > 1 and domain.startswith( 'www' ):
         
         domain = ConvertDomainIntoNextLevelDomain( domain )
         

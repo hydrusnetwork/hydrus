@@ -25,7 +25,7 @@ from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientNumberTest
@@ -94,7 +94,7 @@ class TestClientDB( unittest.TestCase ):
     
     def test_autocomplete( self ):
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
@@ -364,7 +364,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -803,7 +803,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -860,7 +860,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -969,7 +969,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1102,7 +1102,7 @@ class TestClientDB( unittest.TestCase ):
         
         service_keys_to_tags = ClientTags.ServiceKeysToTags( { HydrusData.GenerateKey() : [ 'some', 'tags' ] } )
         
-        page_manager = ClientGUIPageManager.CreatePageManagerImportHDD( [ 'some', 'paths' ], FileImportOptions.FileImportOptions(), [], { 'paths' : service_keys_to_tags }, True )
+        page_manager = ClientGUIPageManager.CreatePageManagerImportHDD( [ 'some', 'paths' ], FileImportOptionsLegacy.FileImportOptionsLegacy(), [], { 'paths' : service_keys_to_tags }, True )
         
         page_manager.GetVariable( 'hdd_import' ).PausePlay() # to stop trying to import 'some' 'paths'
         
@@ -1292,7 +1292,7 @@ class TestClientDB( unittest.TestCase ):
         test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3', 616956, HC.ANIMATION_APNG, 500, 500, { 3133, 1880, 1125, 1800 }, { 27, 47 }, False, None ) )
         test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2', 15660, HC.ANIMATION_GIF, 329, 302, { 600 }, { 5 }, False, None ) )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         for ( filename, hex_hash, size, mime, width, height, durations, possible_num_frames, has_audio, num_words ) in test_files:
@@ -1449,7 +1449,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1518,7 +1518,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1571,7 +1571,7 @@ class TestClientDB( unittest.TestCase ):
         
         path = HydrusStaticDir.GetStaticPath( 'hydrus.png' )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
@@ -1640,7 +1640,7 @@ class TestClientDB( unittest.TestCase ):
         test_files.append( 'muh_swf.swf' )
         test_files.append( 'muh_mp4.mp4' )
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         for filename in test_files:
@@ -1880,7 +1880,7 @@ class TestClientDB( unittest.TestCase ):
             '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' : 'muh_apng.png'
         }
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         file_import_options.SetIsDefault( True )
         
         for ( hash, filename ) in test_files.items():

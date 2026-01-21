@@ -91,8 +91,22 @@ class FilesStorageBaseLocation( object ):
         path = HydrusPaths.ConvertPortablePathToAbsPath( path )
         portable_path = HydrusPaths.ConvertAbsPathToPortablePath( path )
         
+        try:
+            
+            real_path = HydrusPaths.ConvertAbsPathToRealPath( path )
+            
+        except Exception as e:
+            
+            HydrusData.Print( f'While trying to realise your file location storage path {path} to determine symlinks and such, the following error occured. Please forward to hydev.' )
+            
+            HydrusData.PrintException( e, do_wait = False )
+            
+            real_path = 'Could not determine real path--check log!'
+            
+        
         self.path = path
         self.portable_path = portable_path
+        self.real_path = real_path
         self.ideal_weight = ideal_weight
         self.max_num_bytes = max_num_bytes
         
@@ -114,13 +128,20 @@ class FilesStorageBaseLocation( object ):
     
     def __repr__( self ):
         
+        pretty_path = self.path
+        
+        if self.real_path != self.path:
+            
+            pretty_path = f'{pretty_path} (Real path: {self.real_path})'
+            
+        
         if self.max_num_bytes is None:
             
-            return f'{self.path} ({self.ideal_weight}, unlimited)'
+            return f'{pretty_path} ({self.ideal_weight}, unlimited)'
             
         else:
             
-            return f'{self.path} ({self.ideal_weight}, {HydrusData.ToHumanBytes( self.max_num_bytes )})'
+            return f'{pretty_path} ({self.ideal_weight}, {HydrusData.ToHumanBytes( self.max_num_bytes )})'
             
         
     

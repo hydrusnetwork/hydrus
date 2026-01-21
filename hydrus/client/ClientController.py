@@ -37,6 +37,7 @@ from hydrus.client.db import ClientDB
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.files import ClientFilesManager
 from hydrus.client.gui import ClientGUICallAfter
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
@@ -1879,7 +1880,7 @@ class Controller( HydrusController.HydrusController ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        with QP.DirDialog( self.gui, 'Select backup location.' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self.gui, 'Select backup location.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

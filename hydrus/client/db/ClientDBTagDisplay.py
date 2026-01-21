@@ -59,7 +59,9 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return chained_tag_ids
         
     
-    def GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, inclusive, job_status = None ):
+    def GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, job_status = None ):
+        
+        inclusive = True
         
         tag_ids = set( tag_ids_to_full_counts.keys() )
         
@@ -369,7 +371,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
         
     
-    def GetMediaPredicates( self, tag_context: ClientSearchTagContext.TagContext, tags_to_counts, inclusive, job_status = None ):
+    def GetMediaPredicates( self, tag_context: ClientSearchTagContext.TagContext, tags_to_counts, job_status = None ):
         
         if HG.autocomplete_delay_mode:
             
@@ -429,7 +431,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             return []
             
         
-        predicates = self.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_id, tag_ids_to_full_counts, inclusive, job_status = job_status )
+        predicates = self.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_id, tag_ids_to_full_counts, job_status = job_status )
         
         return predicates
         

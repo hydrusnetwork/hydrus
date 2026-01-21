@@ -105,6 +105,21 @@ def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, acti
     job = CG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no fire', qt_fire_button )
     
 
+def GetExistingDirectory( parent: QW.QWidget, message: str, starting_dir_path: str ):
+    
+    options = QW.QFileDialog.Option.ShowDirsOnly | QW.QFileDialog.Option.DontResolveSymlinks
+    
+    if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+        
+        # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
+        options |= QW.QFileDialog.Option.DontUseNativeDialog
+        
+    
+    path = QW.QFileDialog.getExistingDirectory( parent, message, starting_dir_path, options = options )
+    
+    return path
+    
+
 # TODO: check_for_cancelled aiiiiieeeeeeeeee
 def GetYesNo( win: QW.QWidget, message: str, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     

@@ -3675,6 +3675,90 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         expected_result = {
+            'autocomplete_text' : {
+                'search_text' : 'gre',
+                'inclusive' : True,
+            },
+            'tags' : [
+                {
+                    'value' : 'green',
+                    'count' : 2
+                }
+            ]
+        }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
+        
+        # doing an exclusive search
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'green', count = ClientSearchPredicate.PredicateCount( 2, 0, None, None ) ),
+            ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'green car', count = ClientSearchPredicate.PredicateCount( 5, 0, None, None ) )
+        ]
+        
+        TG.test_controller.SetRead( 'autocomplete_predicates', predicates )
+        
+        path = '/add_tags/search_tags?search={}'.format( '-gre' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'autocomplete_text' : {
+                'search_text' : 'gre',
+                'inclusive' : False,
+            },
+            'tags' : [
+                {
+                    'value' : 'green',
+                    'count' : 2
+                }
+            ]
+        }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
+        
+        # doing an exclusive search
+        
+        predicates = [
+            ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'green', count = ClientSearchPredicate.PredicateCount( 2, 0, None, None ) ),
+            ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, 'green car', count = ClientSearchPredicate.PredicateCount( 5, 0, None, None ) )
+        ]
+        
+        TG.test_controller.SetRead( 'autocomplete_predicates', predicates )
+        
+        path = '/add_tags/search_tags?search={}'.format( 'gr*n' )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = {
+            'autocomplete_text' : {
+                'search_text' : 'gr*n',
+                'inclusive' : True,
+            },
             'tags' : [
                 {
                     'value' : 'green',
@@ -3712,6 +3796,10 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         expected_result = {
+            'autocomplete_text' : {
+                'search_text' : '',
+                'inclusive' : True,
+            },
             'tags' : []
         }
         
@@ -3741,6 +3829,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # note this also tests sort
         expected_result = {
+            'autocomplete_text' : {
+                'search_text' : 'gre',
+                'inclusive' : True,
+            },
             'tags' : [
                 {
                     'value' : 'green car',
@@ -3779,6 +3871,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # note this also tests sort
         expected_result = {
+            'autocomplete_text' : {
+                'search_text' : 'gre',
+                'inclusive' : True,
+            },
             'tags' : [
                 {
                     'value' : 'green car',
@@ -3818,6 +3914,10 @@ class TestClientAPI( unittest.TestCase ):
         
         # note this also tests sort
         expected_result = {
+            'autocomplete_text' : {
+                'search_text' : '*',
+                'inclusive' : True,
+            },
             'tags' : []
         }
         

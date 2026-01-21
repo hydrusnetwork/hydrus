@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.files import ClientFilesPhysical
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import QtPorting as QP
@@ -75,7 +76,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _AddLocation( self ):
         
-        with QP.DirDialog( self, 'Select the potential correct location.' ) as dlg:
+        with ClientGUIDialogsFiles.DirDialog( self, 'Select the potential correct location.' ) as dlg:
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -223,7 +224,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if len( subfolders ) > 0:
             
-            with QP.DirDialog( self, 'Select correct location.' ) as dlg:
+            with ClientGUIDialogsFiles.DirDialog( self, 'Select correct location.' ) as dlg:
                 
                 if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     

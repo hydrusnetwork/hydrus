@@ -15,9 +15,9 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import ClientImportOptions
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
@@ -44,10 +44,10 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         
-        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         self._file_import_options.SetIsDefault( True )
         
-        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         self._note_import_options = NoteImportOptions.NoteImportOptions()
         self._note_import_options.SetIsDefault( True )
@@ -197,16 +197,16 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
                 
-                file_import_options = FileImportOptions.FileImportOptions()
+                file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
                 file_import_options.SetIsDefault( True )
                 
-                tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+                tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
                 
             except:
                 
                 checker_options = ClientImportOptions.CheckerOptions()
-                file_import_options = FileImportOptions.FileImportOptions()
-                tag_import_options = TagImportOptions.TagImportOptions()
+                file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
+                tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
                 
             
             serialisable_checker_options = checker_options.GetSerialisableTuple()
@@ -351,7 +351,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetFileImportOptions( self ) -> FileImportOptions.FileImportOptions:
+    def GetFileImportOptions( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         with self._lock:
             
@@ -420,7 +420,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
+    def GetTagImportOptions( self ) -> TagImportOptionsLegacy.TagImportOptionsLegacy:
         
         with self._lock:
             
@@ -720,10 +720,10 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         
-        self._file_import_options = FileImportOptions.FileImportOptions()
+        self._file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         self._file_import_options.SetIsDefault( True )
         
-        self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
+        self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
         self._note_import_options = NoteImportOptions.NoteImportOptions()
         self._note_import_options.SetIsDefault( True )
@@ -1174,11 +1174,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
+        did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
         
         with self._lock:
             
-            real_presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            real_presentation_import_options = FileImportOptionsLegacy.GetRealPresentationImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
             
             should_present = self._publish_to_page and file_seed.ShouldPresent( real_presentation_import_options )
             
@@ -1427,7 +1427,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         if presentation_import_options is None:
             
-            presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( fio, FileImportOptions.IMPORT_TYPE_LOUD )
+            presentation_import_options = FileImportOptionsLegacy.GetRealPresentationImportOptions( fio, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
             
         
         return fsc.GetPresentedHashes( presentation_import_options )
@@ -1723,7 +1723,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def SetFileImportOptions( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         with self._lock:
             
@@ -1749,7 +1749,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         with self._lock:
             
@@ -1841,7 +1841,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                real_file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+                real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
                 ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
                 

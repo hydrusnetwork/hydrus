@@ -14,10 +14,11 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import ClientImportOptions
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
@@ -215,11 +216,17 @@ class TestFileImportOptions( unittest.TestCase ):
     
     def test_file_import_options( self ):
         
-        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
+        
+        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+        
+        prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
+        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
+        
+        file_import_options.SetPrefetchImportOptions( prefetch_import_options )
         
         exclude_deleted = False
-        preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
-        preimport_url_check_type = FileImportOptions.DO_CHECK
         allow_decompression_bombs = False
         min_size = None
         max_size = None
@@ -227,7 +234,7 @@ class TestFileImportOptions( unittest.TestCase ):
         min_resolution = None
         max_resolution = None
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         automatic_archive = False
         associate_primary_urls = False
@@ -250,7 +257,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         exclude_deleted = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertFalse( file_import_options.AllowsDecompressionBombs() )
@@ -260,7 +267,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         allow_decompression_bombs = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         self.assertTrue( file_import_options.ExcludesDeleted() )
         self.assertTrue( file_import_options.AllowsDecompressionBombs() )
@@ -284,7 +291,7 @@ class TestFileImportOptions( unittest.TestCase ):
         
         min_size = 4096
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
@@ -298,7 +305,7 @@ class TestFileImportOptions( unittest.TestCase ):
         min_size = None
         max_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         
@@ -312,7 +319,7 @@ class TestFileImportOptions( unittest.TestCase ):
         max_size = None
         max_gif_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
@@ -329,7 +336,7 @@ class TestFileImportOptions( unittest.TestCase ):
         max_gif_size = None
         min_resolution = ( 200, 100 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
@@ -350,7 +357,7 @@ class TestFileImportOptions( unittest.TestCase ):
         min_resolution = None
         max_resolution = ( 3000, 4000 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
         
         file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
@@ -891,7 +898,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        default_tag_import_options = TagImportOptions.TagImportOptions()
+        default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
         
         self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
         self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
@@ -908,14 +915,14 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        tag_import_options = TagImportOptions.TagImportOptions( fetch_tags_even_if_url_recognised_and_file_already_in_db = True )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_url_recognised_and_file_already_in_db = True )
         
         self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), True )
         self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
         
         #
         
-        tag_import_options = TagImportOptions.TagImportOptions( fetch_tags_even_if_hash_recognised_and_file_already_in_db = True )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_hash_recognised_and_file_already_in_db = True )
         
         self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
         self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), True )
@@ -929,9 +936,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_blacklist.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         with self.assertRaises( HydrusExceptions.VetoException ):
             
@@ -952,9 +959,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         tag_whitelist = [ 'bodysuit' ]
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         with self.assertRaises( HydrusExceptions.VetoException ):
             
@@ -978,9 +985,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
         
@@ -1001,9 +1008,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         get_tags_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
         
@@ -1032,10 +1039,10 @@ class TestTagImportOptions( unittest.TestCase ):
         
         service_keys_to_service_tag_import_options = {}
         
-        service_keys_to_service_tag_import_options[ example_service_key_1 ] = TagImportOptions.ServiceTagImportOptions( get_tags = True )
-        service_keys_to_service_tag_import_options[ example_service_key_2 ] = TagImportOptions.ServiceTagImportOptions( get_tags = False )
+        service_keys_to_service_tag_import_options[ example_service_key_1 ] = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True )
+        service_keys_to_service_tag_import_options[ example_service_key_2 ] = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = False )
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1060,9 +1067,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1079,9 +1086,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1107,9 +1114,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = some_tags ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = some_tags ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1126,9 +1133,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True, additional_tags = some_tags ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True, additional_tags = some_tags ) }
         
-        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1156,7 +1163,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        default_service_tag_import_options = TagImportOptions.ServiceTagImportOptions()
+        default_service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions()
         
         self.assertEqual( default_service_tag_import_options._get_tags, False )
         self.assertEqual( default_service_tag_import_options._additional_tags, [] )
@@ -1178,7 +1185,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
         
@@ -1188,7 +1195,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         only_namespaced.SetRule( '', HC.FILTER_BLACKLIST )
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran', 'series:metroid' } )
         
@@ -1200,7 +1207,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         only_samus.SetRule( ':', HC.FILTER_BLACKLIST )
         only_samus.SetRule( 'character:samus aran', HC.FILTER_WHITELIST )
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1215,7 +1222,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags.union( [ 'wew' ] ) )
         
@@ -1230,19 +1237,19 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1257,19 +1264,19 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1285,7 +1292,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), some_tags )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
@@ -1293,7 +1300,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), some_tags )
@@ -1301,7 +1308,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
@@ -1321,7 +1328,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), existing_tags )
         
@@ -1336,7 +1343,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
+        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         

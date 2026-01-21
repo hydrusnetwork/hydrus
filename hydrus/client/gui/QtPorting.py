@@ -6,7 +6,6 @@
 # so, if I just got hit by a bus and you are wondering what the hell is going on here, that's what's going on here
 
 import collections.abc
-import os
 import typing
 
 from qtpy import QtCore as QC
@@ -151,185 +150,6 @@ def SplitterVisibleCount( splitter ):
     
     return count
     
-
-class DirPickerCtrl( QW.QWidget ):
-
-    dirPickerChanged = QC.Signal()
-    
-    def __init__( self, parent ):
-        
-        super().__init__( parent )
-        
-        layout = HBoxLayout( spacing = 2 )
-        
-        self._path_edit = QW.QLineEdit( self )
-        
-        self._button = QW.QPushButton( 'browse', self )
-        
-        self._button.clicked.connect( self._Browse )
-        
-        self._path_edit.textEdited.connect( self._TextEdited )
-        
-        layout.addWidget( self._path_edit )
-        layout.addWidget( self._button )
-        
-        self.setLayout( layout )
-        
-    
-    def SetPath( self, path ):
-        
-        self._path_edit.setText( path )
-        
-    
-    def GetPath( self ):
-        
-        return self._path_edit.text()
-        
-    
-    def _Browse( self ):
-        
-        existing_path = self._path_edit.text()
-        
-        kwargs = {}
-        
-        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
-            
-            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
-            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
-            
-        
-        path = QW.QFileDialog.getExistingDirectory( self, '', existing_path, **kwargs )
-        
-        if path == '':
-            
-            return
-            
-        
-        path = os.path.normpath( path )
-        
-        self._path_edit.setText( path )
-        
-        if os.path.exists( path ):
-            
-            self.dirPickerChanged.emit()
-            
-        
-    
-    def _TextEdited( self, text ):
-        
-        if os.path.exists( text ):
-            
-            self.dirPickerChanged.emit()
-            
-        
-
-class FilePickerCtrl( QW.QWidget ):
-    
-    filePickerChanged = QC.Signal()
-
-    def __init__( self, parent = None, wildcard = None, starting_directory = None ):
-        
-        super().__init__( parent )
-
-        layout = HBoxLayout( spacing = 2 )
-
-        self._path_edit = QW.QLineEdit( self )
-
-        self._button = QW.QPushButton( 'browse', self )
-
-        self._button.clicked.connect( self._Browse )
-
-        self._path_edit.textEdited.connect( self._TextEdited )
-
-        layout.addWidget( self._path_edit )
-        layout.addWidget( self._button )
-
-        self.setLayout( layout )
-        
-        self._save_mode = False
-        
-        self._wildcard = wildcard
-        
-        self._starting_directory = starting_directory
-        
-
-    def SetPath( self, path ):
-        
-        self._path_edit.setText( path )
-        
-
-    def GetPath( self ):
-        
-        return self._path_edit.text()
-        
-    
-    def SetSaveMode( self, save_mode ):
-        
-        self._save_mode = save_mode
-        
-
-    def _Browse( self ):
-        
-        existing_path = self._path_edit.text()
-        
-        if existing_path == '' and self._starting_directory is not None:
-            
-            existing_path = self._starting_directory
-            
-        
-        kwargs = {}
-        
-        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
-            
-            # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
-            kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
-            
-        
-        if self._save_mode:
-            
-            if self._wildcard:
-                
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
-                
-            else:
-                
-                path = QW.QFileDialog.getSaveFileName( self, '', existing_path, **kwargs )[0]
-                
-            
-        else:
-            
-            if self._wildcard:
-                
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, filter = self._wildcard, selectedFilter = self._wildcard, **kwargs )[0]
-                
-            else:
-                
-                path = QW.QFileDialog.getOpenFileName( self, '', existing_path, **kwargs )[0]
-                
-            
-        
-        if path == '':
-            
-            return
-            
-        
-        path = os.path.normpath( path )
-        
-        self._path_edit.setText( path )
-        
-        if self._save_mode or os.path.exists( path ):
-            
-            self.filePickerChanged.emit()
-            
-        
-
-    def _TextEdited( self, text ):
-        
-        if self._save_mode or os.path.exists( text ):
-            
-            self.filePickerChanged.emit()
-            
-        
 
 class TabBar( QW.QTabBar ):
     
@@ -1400,6 +1220,7 @@ def SetInitialSize( widget, size ):
         widget.SetInitialSize( size )
         
         return
+        
     
     if isinstance( size, tuple ):
         
@@ -1421,7 +1242,7 @@ def SetBackgroundColour( widget, colour ):
         object_name = str( id( widget ) )
 
         widget.setObjectName( object_name )
-    
+        
     if isinstance( colour, QG.QColor ):
         
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, colour.name()) )
@@ -1433,7 +1254,7 @@ def SetBackgroundColour( widget, colour ):
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, colour.name() ) )
         
     else:
-
+        
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
         
     
@@ -1768,133 +1589,6 @@ class PasswordEntryDialog( Dialog ):
     def GetValue( self ):
         
         return self._password.text()
-        
-    
-
-class DirDialog( QW.QFileDialog ):
-    
-    def __init__( self, parent = None, message = None ):
-        
-        super().__init__( parent )
-        
-        if message is not None:
-            
-            self.setWindowTitle( message )
-            
-        
-        self.setAcceptMode( QW.QFileDialog.AcceptMode.AcceptOpen )
-        
-        self.setFileMode( QW.QFileDialog.FileMode.Directory )
-        
-        self.setOption( QW.QFileDialog.Option.ShowDirsOnly, True )
-        
-        self.setOption( QW.QFileDialog.Option.ReadOnly, False )
-        
-        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
-            
-            self.setOption( QW.QFileDialog.Option.DontUseNativeDialog, True )
-            
-        
-    
-    def __enter__( self ):
-        
-        return self
-        
-    
-    def __exit__( self, exc_type, exc_val, exc_tb ):
-        
-        self.deleteLater()
-        
-    
-    def _GetSelectedFiles( self ):
-        
-        return [ os.path.normpath( path ) for path in self.selectedFiles() ]
-        
-    
-    def GetPath(self):
-        
-        sel = self._GetSelectedFiles()
-        
-        if len( sel ) > 0:
-            
-            return sel[0]
-            
-        
-        return None
-        
-    
-
-class FileDialog( QW.QFileDialog ):
-    
-    def __init__( self, parent = None, message = None, acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen, fileMode = QW.QFileDialog.FileMode.ExistingFile, default_filename = None, default_directory = None, wildcard = None, defaultSuffix = None ):
-        
-        super().__init__( parent )
-        
-        if message is not None:
-            
-            self.setWindowTitle( message )
-            
-        
-        self.setAcceptMode( acceptMode )
-        
-        self.setFileMode( fileMode )
-        
-        if default_directory is not None:
-            
-            self.setDirectory( default_directory )
-            
-        
-        if defaultSuffix is not None:
-            
-            self.setDefaultSuffix( defaultSuffix )
-            
-        
-        if default_filename is not None:
-            
-            self.selectFile( default_filename )
-            
-        
-        if wildcard:
-            
-            self.setNameFilters( [ wildcard, 'Any files (*)' ] )
-            
-        
-        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
-            
-            self.setOption( QW.QFileDialog.Option.DontUseNativeDialog, True )
-            
-        
-    
-    def __enter__( self ):
-        
-        return self
-        
-
-    def __exit__( self, exc_type, exc_val, exc_tb ):
-        
-        self.deleteLater()
-        
-
-    def _GetSelectedFiles( self ):
-        
-        return [ os.path.normpath( path ) for path in self.selectedFiles() ]
-        
-    
-    def GetPath( self ):
-        
-        sel = self._GetSelectedFiles()
-
-        if len( sel ) > 0:
-            
-            return sel[ 0 ]
-            
-
-        return None
-        
-    
-    def GetPaths( self ):
-        
-        return self._GetSelectedFiles()
         
     
 

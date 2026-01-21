@@ -10,7 +10,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import ClientImportOptions
-from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
@@ -101,7 +101,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._file_seed_cache_status = ClientImportFileSeeds.FileSeedCacheStatus()
         self._file_seed_cache_compaction_number = 250
         self._gallery_seed_log_compaction_number = 100
-        self._tag_import_options = TagImportOptions.TagImportOptions()
+        self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
         self._raw_file_velocity = ( 0, 1 )
         self._pretty_file_velocity = 'unknown'
         self._example_file_seed = None
@@ -828,7 +828,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         self._query_text = query_text
         
     
-    def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+    def SetTagImportOptions( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
         self._tag_import_options = tag_import_options
         

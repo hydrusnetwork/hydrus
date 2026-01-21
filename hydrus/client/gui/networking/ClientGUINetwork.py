@@ -20,6 +20,7 @@ from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICharts
+from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -1575,7 +1576,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     # this method is thanks to a user's contribution!
     def _ImportCookiesTXT( self ):
         
-        with QP.FileDialog( self, 'select cookies.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as f_dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, 'select cookies.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as f_dlg:
             
             if f_dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
@@ -1962,7 +1963,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     # these methods are thanks to user's contribution!
     def _ImportCookiesTXT( self ):
         
-        with QP.FileDialog( self, 'select cookies.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as f_dlg:
+        with ClientGUIDialogsFiles.FileDialog( self, 'select cookies.txt', acceptMode = QW.QFileDialog.AcceptMode.AcceptOpen ) as f_dlg:
             
             if f_dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 

@@ -55,6 +55,11 @@ def ResultsFetch(
             ]
         ]
         
+        if under_construction_or_predicate is not None:
+            
+            ClientGUIACDropdown.PutAtTopOfMatches( results, under_construction_or_predicate )
+            
+        
     else:
         
         # TODO: This is mostly a botched copy of ReadFetch, so obviously this could get merged a little, somewhere, in a nice way
@@ -65,6 +70,11 @@ def ResultsFetch(
             
             results = [ predicate for predicate in results if predicate.CanTestMediaResult() ]
             
+        if under_construction_or_predicate is not None:
+            
+            ClientGUIACDropdown.PutAtTopOfMatches( results, under_construction_or_predicate )
+            
+        
         else:
             
             # user has typed a tag-like thing
@@ -101,7 +111,7 @@ def ResultsFetch(
                     
                 else:
                     
-                    exact_match_predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status )
+                    exact_match_predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, job_status = job_status )
                     
                     small_exact_match_search = ClientGUIACDropdown.ShouldDoExactSearch( parsed_autocomplete_text )
                     
@@ -133,7 +143,7 @@ def ResultsFetch(
                         
                         search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                         
-                        predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                        predicates = CG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                         
                         if job_status.IsCancelled():
                             
@@ -160,14 +170,6 @@ def ResultsFetch(
                 
                 matches = ClientSearchPredicate.SortPredicates( matches )
                 
-                if not parsed_autocomplete_text.inclusive:
-                    
-                    for match in matches:
-                        
-                        match.SetInclusive( False )
-                        
-                    
-                
             
             allow_auto_wildcard_conversion = True
             
@@ -184,14 +186,11 @@ def ResultsFetch(
                 return
                 
             
-            CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
+            results = matches
             
         
     
-    if under_construction_or_predicate is not None:
-        
-        ClientGUIACDropdown.PutAtTopOfMatches( results, under_construction_or_predicate )
-        
+    ClientSearchPredicate.SetPredicatesInclusivity( results, parsed_autocomplete_text.inclusive )
     
     CG.client_controller.CallAfterQtSafe( win, results_callable, job_status, parsed_autocomplete_text, results_cache, results )
     

@@ -13,7 +13,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.files import ClientFiles
 from hydrus.client.files.images import ClientImagePerceptualHashes
-from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.importing.options import FileImportOptionsLegacy
 
 class FileImportStatus( object ):
     
@@ -40,7 +40,7 @@ class FileImportStatus( object ):
         return FileImportStatus( self.status, self.hash, mime = self.mime, note = self.note )
         
     
-    def ShouldImport( self, file_import_options: FileImportOptions.FileImportOptions ):
+    def ShouldImport( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy ):
         
         if self.status == CC.STATUS_UNKNOWN:
             
@@ -104,7 +104,7 @@ def CheckFileImportStatus( file_import_status: FileImportStatus ) -> FileImportS
     
 class FileImportJob( object ):
     
-    def __init__( self, temp_path: str, file_import_options: FileImportOptions.FileImportOptions, human_file_description = None ):
+    def __init__( self, temp_path: str, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, human_file_description = None ):
         
         if HG.file_import_report_mode:
             
@@ -113,7 +113,7 @@ class FileImportJob( object ):
         
         if file_import_options.IsDefault():
             
-            file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
+            file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
             
         
         self._temp_path = temp_path
