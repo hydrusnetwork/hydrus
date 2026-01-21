@@ -35,6 +35,45 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_656"><a href="#version_656">version 656</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>when you edit an ongoing tag autocomplete input to have or not have a leading hyphen, the results should now switch more reliably between `skirt` and `-skirt`. the logic was patchy here, previously, updating itself on certain unnamespaced text but not namespaced, and I believe in some cases in-construction OR predicates could be negated, but it should now, on all updates, work on all the correct predicates</li>
+                        <li>all file and directory pickers across the program now no longer realise any symlinks you select. I never knew this was default behaviour, but now, if you tell 'move media files...' or similar to use a symlink, it will result in that dir you select, not the realised endpoint</li>
+                        <li>if a file storage location involves a symlink, the 'move media files' dialog and related log entries will now say `/some/path (Real path: /other/path)`. if there is a problem determining the path, it will say `/some/path (Real path: Could not determine real path--check log!)`</li>
+                        <li>the example urls list in the 'edit page parser' dialog now has copy/paste buttons for quicker in and out when you just need to grab some urls to test with etc.. . I will brush up this list object more in future and do duplicate removal and right-click menus and stuff</li>
+                        <li>when hydrus does a free space check on your temp dir before a big db job, it now recognises the `SQLITE_TMPDIR` environment variable, which overrides and tells SQLite to use a different path, and it will check and talk about this guy instead. if SQLite is indeed redirected with `SQLITE_TMPDIR`, this is now stated in `help-&gt;about`</li>
+                        <li>if duplicates auto-resolution fails to generate visual data for a file, it now prints a message to the log about the bad file hash, considers the file pair not duplicate, and no longer halts the whole system (issue #1950)</li>
+                        <li><h3>import options overhaul</h3></li>
+                        <li>I have planned out the overhaul to import options. we will migrate to a system that is similar to the current url-type-based  tag/note import options customisation but for all ways of importing and all import options types. the edit panels will get a strong usability and clarity pass, all gathered in one panel, with favourites/templates for quick load of preferred options, and the import options will be split into more granular types so you can, say, easily set up a specific tag blacklist while keeping default tag parsing rules. the current expected default categories will be global, local import, gallery, subscription, watcher, specific url classes, and the new import options will be: prefetch logic, file filtering, tag filtering, locations, tags, notes, presentation. should be easier to add a 'ratings options' to this sort of thing, too, in future</li>
+                        <li>I did a load of boring behind the scenes cleanup this week to move this forward. nothing works different, but the shape of things is altering--</li>
+                        <li>I wrote a new import options container object that will dynamically hold a swiss-cheese template of various options for a particular layer of the options context, and a manager to hold the defaults and serve the appropriate specific import options based on who is asking</li>
+                        <li>the 'file import options' across the program is converted to 'file import options (legacy)'</li>
+                        <li>same deal for 'tag import options'</li>
+                        <li>wrote a 'prefetch import options'</li>
+                        <li>the hash-check, url-check, and url-neighbour logic is migrated inside a file import options to this new prefetch import options, and all importers and options now interact with the prefetch import options, care-of the file import options. same thing will happen in future for the file filter stuff ('don't allow x filetype' etc...) and the locations stuff ('put it here and archive it'); and on the tag side for blacklist vs tag destination options; before I migrate all those newly decoupled lego blocks up one level to the new container class with, fingers crossed, minimum fuss</li>
+                        <li>the edit file import options now breaks the prefetch logic out to a new UI box. these options are no longer hidden behind advanced mode, but for this transition period I will now start the box collapsed and have a scary warning label</li>
+                        <li>now I have thought about this and planned it, I feel fairly good. I think I am 20% done and believe I can keep chipping away like this for a smooth migration, no gigantic changes at any stage</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `/add_tags/search_tags` Client API request now delivers a very simple `autocomplete_text` Object that says what actual text the user entered and whether it was inclusive (i.e. started with a hyphen or not). I considered adding some other A/C logic like 'is explicit wildcard' and 'what automatic autocomplete wildcars are being added' to this structure, but that stuff is a little messy so I'll KISS for now</li>
+                        <li>the unit tests now check this</li>
+                        <li>Client API version is now 86</li>
+                        <li><h3>other boring cleanup</h3></li>
+                        <li>moved file and directory picker buttons out of `QtPorting` and harmonised the 'quick, select an existing dir' routine to `DialogsQuick`</li>
+                        <li>moved the richer file and directory dialogs out of `QtPorting`</li>
+                        <li><h3>new domain logic prep</h3></li>
+                        <li>if the client has access to the library `tldextract`, it now defers to this for generating the 'second level domain' of an URL (or, more strictly, detecting the 'public suffix domain'). this is the `blah.com` style of domain, with no subdomains. at the moment, hydrus naively collapses a `blah.co.uk` to the unhelpful `co.uk` for various domain-management purposes (you may see this under _review session cookies_), which doesn't cause any errors but is ugly and does cause bloated sessions that collect all cookies under this TLD into one bucket and forces everything under the domain to share bandwidth tokens on this false second-level umbrella. this new library navigates this and produces the `blah.co.uk` result as desired</li>
+                        <li>`help-&gt;about` now lists `tldextract` under the 'optional libraries' section</li>
+                        <li>this code does nothing yet for almost all users. in the near future I will roll the library into the requirements for source users and the future build so we can test for issues. I have written a failsafe to try to not break any logins (anyone who has login cookies in a 'co.uk' style session entry will keep using that bucket after the planned transition), but we'll see if anything else pops up</li>
+                        <li><h3>future build committed</h3></li>
+                        <li>This release commits the changes tested with the recent future build. The test went well, and there are no special instructions for the update. Source users are encouraged to rebuild their venvs this week. Update as normal, and you will get--</li>
+                        <li>- `requests` (networking library) `2.32.4` to `2.32.5`</li>
+                        <li>- `mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`</li>
+                        <li>- `PySide6` (Qt) normal `6.8.3` to `6.9.3`</li>
+                        <li>- `PySide6` (Qt) test, for source users, `6.9.3` to `6.10.1`</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_655"><a href="#version_655">version 655</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
