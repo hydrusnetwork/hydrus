@@ -29,7 +29,7 @@ dependencies = [
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
     "numpy<=2.3.1",
-    "requests==2.32.4",
+    "requests==2.32.5",
     # requirements_macos.txt
     "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
     "pyobjc-framework-cocoa>=10.1 ; sys_platform == 'darwin'",
@@ -65,7 +65,7 @@ conflicts = [
 
 [dependency-groups]
 mpv-new = [
-    "mpv==1.0.7",
+    "mpv==1.0.8",
 ]
 mpv-test = [
     "mpv==1.0.8",
@@ -84,7 +84,7 @@ other-future = [
 other-normal = [
 ]
 qt6-new = [
-    "pyside6==6.8.3",
+    "pyside6==6.9.3",
     "qtpy==2.4.3",
 ]
 qt6-new-pyqt6 = [
@@ -97,6 +97,6 @@ qt6-older = [
     "qtpy==2.3.1",
 ]
 qt6-test = [
-    "pyside6==6.9.3",
+    "pyside6==6.10.1",
     "qtpy==2.4.3",
 ]
