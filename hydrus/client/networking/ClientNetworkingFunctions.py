@@ -131,11 +131,28 @@ def ConvertDomainIntoNextLevelDomain( domain ):
     return '.'.join( domain.split( '.' )[1:] ) # i.e. strip off the leftmost subdomain maps.google.com -> google.com
     
 
+TLDEXTRACT_ERROR_SHOWN = False
+
 def ConvertDomainIntoSecondLevelDomain( domain ):
     
     if ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK:
         
-        return ClientNetworkingDomainTLDExtract.ConvertDomainIntoSecondLevelDomain( domain )
+        try:
+            
+            return ClientNetworkingDomainTLDExtract.ConvertDomainIntoSecondLevelDomain( domain )
+            
+        except Exception as e:
+            
+            global TLDEXTRACT_ERROR_SHOWN
+            
+            if not TLDEXTRACT_ERROR_SHOWN:
+                
+                TLDEXTRACT_ERROR_SHOWN = True
+                
+                HydrusData.Print( 'Hey, some domain stuff went wrong. Hydev would be interested in seeing this:' )
+                HydrusData.PrintException( e, do_wait = False )
+                
+            
         
     
     # produces the 'co.uk' "second level domain" issue
@@ -171,7 +188,22 @@ def ConvertDomainIntoTopLevelDomain( domain ):
     
     if ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK:
         
-        return ClientNetworkingDomainTLDExtract.ConvertDomainIntoTopLevelDomain( domain )
+        try:
+            
+            return ClientNetworkingDomainTLDExtract.ConvertDomainIntoTopLevelDomain( domain )
+            
+        except Exception as e:
+            
+            global TLDEXTRACT_ERROR_SHOWN
+            
+            if not TLDEXTRACT_ERROR_SHOWN:
+                
+                TLDEXTRACT_ERROR_SHOWN = True
+                
+                HydrusData.Print( 'Hey, some domain stuff went wrong. Hydev would be interested in seeing this:' )
+                HydrusData.PrintException( e, do_wait = False )
+                
+            
         
     
     second_level_domain = ConvertDomainIntoSecondLevelDomain( domain )

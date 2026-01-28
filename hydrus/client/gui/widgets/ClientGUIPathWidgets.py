@@ -4,6 +4,8 @@ import os
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusExceptions
+
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import QtPorting as QP
@@ -46,9 +48,11 @@ class DirPickerCtrl( QW.QWidget ):
         
         existing_path = self._path_edit.text()
         
-        path = ClientGUIDialogsQuick.GetExistingDirectory( self, 'Select directory', existing_path )
-        
-        if path == '':
+        try:
+            
+            path = ClientGUIDialogsQuick.PickDirectory( self, 'Select directory', existing_path )
+            
+        except HydrusExceptions.CancelledException:
             
             return
             

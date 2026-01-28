@@ -237,20 +237,70 @@ When it does this, it gives you this structure, typically under a `services` key
     "name" : "example local rating like service",
     "type" : 7,
     "type_pretty" : "local like/dislike rating service",
-    "star_shape" : "svg"
+    "star_shape" : "svg",
+    "show_in_thumbnail" : true,
+    "show_in_thumbnail_even_when_null" : true,
+    "colours": {
+        "dislike": {
+            "brush": "#FFFFFF",
+            "pen": "#000000"
+        },
+        "like": {
+            "brush": "#50C878",
+            "pen": "#000000"
+        },
+        "mixed": {
+            "brush": "#5F5F5F",
+            "pen": "#000000"
+        },
+        "null": {
+            "brush": "#BFBFBF",
+            "pen": "#000000"
+        }
   },
   "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : {
     "name" : "example local rating numerical service",
     "type" : 6,
     "type_pretty" : "local numerical rating service",
     "star_shape" : "fat star",
+    "allows_zero" : false,
     "min_stars" : 1,
-    "max_stars" : 5
+    "max_stars" : 5,
+    "show_in_thumbnail" : true,
+    "show_in_thumbnail_even_when_null" : false,
+    "colours": {
+        "dislike": {
+            "brush": "#FFFFFF",
+            "pen": "#000000"
+        },
+        "like": {
+            "brush": "#50C878",
+            "pen": "#000000"
+        },
+        "mixed": {
+            "brush": "#5F5F5F",
+            "pen": "#000000"
+        },
+        "null": {
+            "brush": "#BFBFBF",
+            "pen": "#000000"
+        }
   },
   "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : {
     "name" : "example local rating inc/dec service",
     "type" : 22,
-    "type_pretty" : "local inc/dec rating service"
+    "type_pretty" : "local inc/dec rating service",
+    "show_in_thumbnail" : false,
+    "show_in_thumbnail_even_when_null" : false,
+    "colours": {
+        "like": {
+            "brush": "#50C878",
+            "pen": "#000000"
+        },
+        "mixed": {
+            "brush": "#5F5F5F",
+            "pen": "#000000"
+        }
   },
   "7472617368" : {
     "name" : "trash",
@@ -296,10 +346,12 @@ You won't see all of these, but the service `type` enum is:
 
 `type_pretty` is something you can show users. Hydrus uses the same labels in _manage services_ and so on.
 
-Rating services now have some extra data:
+Rating services have some extra data:
 
-- like/dislike and numerical services have `star_shape`, which is one of `circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon` -or- `svg`, which means a custom user svg that cannot currently be fetched over the Client API.
-- numerical services have `min_stars` (0 or 1) and `max_stars` (1 to 20)
+- They all have some `colours` for differing rating states, the same as you'd see in `manage services`. Pen and brush are the line and the fill of the rating star shape, respectively. `like` generally means set/left-click, `dislike` means off/right-click, `null` means not set, and `mixed` is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.
+- They all have `show_in_thumbnail` and `show_in_thumbnail_even_if_null`, which you can obey in your display context if convenient.
+- Like/dislike and numerical services have `star_shape`, which is one of `circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon` -or- `svg`, which means a custom user svg that can be fetched with [/get\_service\_rating\_svg](#get_service_rating_svg).
+- Numerical services have `min_stars` (0 or 1) and `max_stars` (1 to 20). `allows_zero` lines up with `min_stars` and is for your convenience.
 
 If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a 4/5, select from a dropdown list, do whatever you like!
 

@@ -46,7 +46,7 @@ def ConvertTagToSearchable( tag ):
 
 class TagContext( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_tag_context
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT
     SERIALISABLE_NAME = 'Tag Search Context'
     SERIALISABLE_VERSION = 2
     
@@ -143,4 +143,4 @@ class TagContext( HydrusSerialisable.SerialisableBase ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_tag_context ] = TagContext
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT ] = TagContext

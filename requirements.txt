@@ -21,12 +21,12 @@ service-identity>=18.1.0
 show-in-file-manager>=1.1.5
 twisted[tls,http2]>=20.3.0
 
-numpy<=2.3.1
-
 dateparser==1.2.1
 requests==2.32.5
 
 opencv-python-headless==4.11.0.86
+numpy<=2.3.1
+
 mpv==1.0.8
 
 QtPy==2.4.3

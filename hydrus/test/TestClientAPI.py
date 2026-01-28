@@ -122,20 +122,73 @@ def GetExampleServicesDict():
             'name' : 'example local rating like service',
             'type' : 7,
             'type_pretty' : 'local like/dislike rating service',
-            'star_shape' : 'svg'
+            'star_shape' : 'svg',
+            'show_in_thumbnail' : False,
+            'show_in_thumbnail_even_when_null' : False,
+            'colours': {
+                'dislike': {
+                    'brush': '#C85078',
+                    'pen': '#000000'
+                },
+                'like': {
+                    'brush': '#50C878',
+                    'pen': '#000000'
+                },
+                'mixed': {
+                    'brush': '#5F5F5F',
+                    'pen': '#000000'
+                },
+                'null': {
+                    'brush': '#BFBFBF',
+                    'pen': '#000000'
+                }
+            },
         },
         TG.test_controller.example_numerical_rating_service_key.hex() : {
             'name' : 'example local rating numerical service',
             'type' : 6,
             'type_pretty' : 'local numerical rating service',
+            'allows_zero' : True,
             'min_stars' : 0,
             'max_stars' : 5,
-            'star_shape' : 'circle'
+            'star_shape' : 'circle',
+            'show_in_thumbnail' : False,
+            'show_in_thumbnail_even_when_null' : False,
+            'colours': {
+                'dislike': {
+                    'brush': '#FFFFFF',
+                    'pen': '#000000'
+                },
+                'like': {
+                    'brush': '#50C878',
+                    'pen': '#000000'
+                },
+                'mixed': {
+                    'brush': '#5F5F5F',
+                    'pen': '#000000'
+                },
+                'null': {
+                    'brush': '#BFBFBF',
+                    'pen': '#000000'
+                }
+            },
         },
         TG.test_controller.example_incdec_rating_service_key.hex() : {
             'name' : 'example local rating inc/dec service',
             'type' : 22,
-            'type_pretty' : 'local inc/dec rating service'
+            'type_pretty' : 'local inc/dec rating service',
+            'show_in_thumbnail' : False,
+            'show_in_thumbnail_even_when_null' : False,
+            'colours': {
+                'like': {
+                    'brush': '#50C878',
+                    'pen': '#000000'
+                },
+                'mixed': {
+                    'brush': '#5F5F5F',
+                    'pen': '#000000'
+                },
+            },
         },
         '7472617368' : {
             'name' : 'trash',

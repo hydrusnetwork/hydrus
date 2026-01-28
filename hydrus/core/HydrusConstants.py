@@ -79,7 +79,6 @@ elif RUNNING_FROM_MACOS_APP:
 
 BIN_DIR = os.path.join( BASE_DIR, 'bin' )
 HELP_DIR = os.path.join( BASE_DIR, 'help' )
-INCLUDE_DIR = os.path.join( BASE_DIR, 'include' )
 
 DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
 
@@ -112,8 +111,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 656
-CLIENT_API_VERSION = 86
+SOFTWARE_VERSION = 657
+CLIENT_API_VERSION = 87
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 

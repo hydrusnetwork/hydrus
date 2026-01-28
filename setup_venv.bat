@@ -87,30 +87,41 @@ IF EXIST "%venv_location%\" (
 
 :questions
 
+set dev_mode=false
+
 ECHO --------
-ECHO Users on older Windows need the advanced install.
-ECHO:
 ECHO Your Python version is:
 %python_bin% --version
+ECHO:
+ECHO Users on older Windows or the newer Python 3.14 need the advanced install.
 ECHO:
 SET /P install_type="Do you want the (s)imple or (a)dvanced install? "
 
 IF "%install_type%" == "s" goto :create
 IF "%install_type%" == "a" goto :question_qt
-IF "%install_type%" == "d" goto :create
+IF "%install_type%" == "d" goto :dev_mode
 goto :parse_fail
+
+:dev_mode
+
+ECHO --------
+ECHO DEV MODE ON
+
+set dev_mode=true
+set install_type=a
 
 :question_qt
 
 ECHO --------
-ECHO We are now going to choose which versions of some larger libraries we are going to use. If something doesn't install, or hydrus won't boot, just run this script again and it will delete everything and start over.
+ECHO We are now going to choose which versions of some larger libraries we are going to use. If something doesn't install, or hydrus won't boot, just run this script again and it will delete everything and start over so you can try different answers.
 ECHO:
 
 ECHO Qt - User Interface
 ECHO:
 ECHO Most people want "n".
+ECHO Python 3.14 should try "t".
 ECHO If you cannot boot with the normal Qt, try "o" or "w".
-SET /P qt="Do you want the (o)lder Qt, (n)ew Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
+SET /P qt="Do you want the (o)lder Qt, (n)ormal Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
 
 IF "%qt%" == "o" goto :question_qt_advanced_done
 IF "%qt%" == "n" goto :question_qt_advanced_done
@@ -127,6 +138,7 @@ ECHO - For Python 3.10, your earliest available version is 6.2.0
 ECHO - For Python 3.11, your earliest available version is 6.4.0.1
 ECHO - For Python 3.12, your earliest available version is 6.6.0
 ECHO - For Python 3.13, your earliest available version is 6.8.0.2
+ECHO - For Python 3.14, your earliest available version is 6.10.1
 SET /P qt_custom_pyside6="Version: "
 SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.3'; if older try '2.3.1'): "
 
@@ -141,8 +153,8 @@ ECHO mpv - audio and video playback
 ECHO:
 ECHO We need to tell hydrus how to talk to your mpv dll.
 ECHO Most people want "n".
-ECHO If it doesn't work, fall back to "o".
-SET /P mpv="Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
+ECHO If you have an older system and "n" doesn't work, fall back to "o".
+SET /P mpv="Do you want (o)ld mpv, (n)ormal mpv, or (t)est mpv? "
 
 IF "%mpv%" == "o" goto :question_mpv_done
 IF "%mpv%" == "n" goto :question_mpv_done
@@ -156,8 +168,8 @@ ECHO --------
 ECHO OpenCV - Images
 ECHO:
 ECHO Most people want "n".
-ECHO Python ^>=3.11 might need "t".
-SET /P opencv="Do you want (n)ew OpenCV or (t)est OpenCV? "
+ECHO Python 3.13+ should try "t".
+SET /P opencv="Do you want (n)ormal OpenCV or (t)est OpenCV? "
 
 IF "%opencv%" == "o" goto :question_opencv_done
 IF "%opencv%" == "n" goto :question_opencv_done
@@ -171,15 +183,15 @@ goto :parse_fail
 set future=n
 
 REM comment this guy out if no special stuff going on
-REM ECHO --------
-REM ECHO Future Libraries
-REM ECHO:
-REM ECHO There is a test for a new AVIF library. Want to try it?
-REM SET /P future="(y)es/(n)o? "
-REM
-REM IF "%future%" == "y" goto :question_future_done
-REM IF "%future%" == "n" goto :question_future_done
-REM goto :parse_fail
+ECHO --------
+ECHO Future Libraries
+ECHO:
+ECHO There is a test for a new domain parsing library. Want to try it?
+SET /P future="(y)es/(n)o? "
+
+IF "%future%" == "y" goto :question_future_done
+IF "%future%" == "n" goto :question_future_done
+goto :parse_fail
 
 :question_future_done
 
@@ -209,21 +221,6 @@ python -m pip install --upgrade wheel
 IF "%install_type%" == "s" (
 
     python -m pip install -r requirements.txt
-
-)
-
-IF "%install_type%" == "d" (
-
-    python -m pip install -r static\requirements\advanced\requirements_core.txt
-    python -m pip install -r static\requirements\advanced\requirements_windows.txt
-
-    python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
-    python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
-    python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
-    python -m pip install -r static\requirements\advanced\requirements_other_future.txt
-    python -m pip install -r static\requirements\hydev\requirements_dev.txt
-    python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
-    python -m pip install -r static\requirements\advanced\requirements_qt6_new_pyqt6.txt
 
 )
 
@@ -275,6 +272,14 @@ IF "%install_type%" == "a" (
     IF "%future%" == "n" python -m pip install -r static\requirements\advanced\requirements_other_normal.txt
     IF "%future%" == "y" python -m pip install -r static\requirements\advanced\requirements_other_future.txt
 
+
+)
+
+IF "%dev_mode%" == "true" (
+
+    python -m pip install -r static\requirements\hydev\requirements_dev.txt
+    python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
+    python -m pip install -r static\requirements\advanced\requirements_qt6_new_pyqt6.txt
 
 )
 

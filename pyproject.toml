@@ -1,6 +1,6 @@
 [project]
 name = "hydrus"
-version = "v656"
+version = "v657"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -28,7 +28,6 @@ dependencies = [
     "service-identity>=18.1.0",
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
-    "numpy<=2.3.1",
     "requests==2.32.5",
     # requirements_macos.txt
     "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
@@ -72,14 +71,18 @@ mpv-test = [
 ]
 opencv-new = [
     "opencv-python-headless==4.11.0.86",
+    "numpy<=2.3.1",
 ]
 opencv-old = [
     "opencv-python-headless==4.8.1.78",
+    "numpy<=2.3.1",
 ]
 opencv-test = [
-    "opencv-python-headless==4.12.0.88",
+    "opencv-python-headless==4.13.0.90",
+    "numpy==2.4.1",
 ]
 other-future = [
+    "tldextract==5.3.1",
 ]
 other-normal = [
 ]

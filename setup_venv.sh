@@ -50,10 +50,10 @@ if [ -d "venv" ]; then
 fi
 
 echo "--------"
-echo "Users on older OSes need the advanced install."
-echo
 echo "Your Python version is:"
 $py_command --version
+echo
+echo "Users on older OSes or Python 3.14 need the advanced install."
 echo
 echo "Do you want the (s)imple or (a)dvanced install? "
 
@@ -67,8 +67,9 @@ elif [ "$install_type" = "a" ]; then
     echo
     echo "Qt - User Interface"
     echo "Most people want \"n\"."
+    echo "Python 3.14 should try \"t\"."
     echo "If you cannot boot with the normal Qt, try \"o\" or \"w\"."
-    echo "Do you want the (o)lder Qt, (n)ew Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
+    echo "Do you want the (o)lder Qt, (n)ormal Qt, (t)est Qt, (q) for PyQt6, or (w)rite your own? "
     read -r qt
     if [ "$qt" = "o" ]; then
         :
@@ -92,6 +93,7 @@ elif [ "$install_type" = "a" ]; then
         echo "- For Python 3.11, your earliest available version is 6.4.0.1"
         echo "- For Python 3.12, your earliest available version is 6.6.0"
         echo "- For Python 3.13, your earliest available version is 6.8.0.2"
+        echo "- For Python 3.14, your earliest available version is 6.10.1"
         echo "Version: "
         read -r qt_custom_pyside6
         echo "Enter the exact qtpy version you want (probably '2.4.3'; if older try '2.3.1'): "
@@ -104,7 +106,7 @@ elif [ "$install_type" = "a" ]; then
     echo "We need to tell hydrus how to talk to your existing mpv install."
     echo "Most people want \"n\"."
     echo "If it doesn't work, fall back to \"o\"."
-    echo "Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
+    echo "Do you want (o)ld mpv, (n)ormal mpv, or (t)est mpv? "
     read -r mpv
     if [ "$mpv" = "o" ]; then
         :
@@ -122,8 +124,8 @@ elif [ "$install_type" = "a" ]; then
     echo "OpenCV - Images"
     echo
     echo "Most people want \"n\"."
-    echo "Python >=3.11 might need \"t\"."
-    echo "Do you want (n)ew OpenCV or (t)est OpenCV? "
+    echo "Python 3.11+ should try \"t\"."
+    echo "Do you want (n)ormal OpenCV or (t)est OpenCV? "
     read -r opencv
     if [ "$opencv" = "o" ]; then
         :
@@ -140,21 +142,21 @@ elif [ "$install_type" = "a" ]; then
     future=n
 
     # comment this guy out if no special stuff going on
-    #echo "--------"
-    #echo "Future Libraries"
-    #echo
-    #echo "There is a test for a new AVIF library. Want to try it?"
-    #echo "(y)es/(n)o? "
-    #read -r future
-    #if [ "$future" = "y" ]; then
-    #    :
-    #elif [ "$future" = "n" ]; then
-    #    :
-    #else
-    #    echo "Sorry, did not understand that input!"
-    #    popd || exit 1
-    #    exit 1
-    #fi
+    echo "--------"
+    echo "Future Libraries"
+    echo
+    echo "There is a test for a new AVIF library. Want to try it?"
+    echo "(y)es/(n)o? "
+    read -r future
+    if [ "$future" = "y" ]; then
+        :
+    elif [ "$future" = "n" ]; then
+        :
+    else
+        echo "Sorry, did not understand that input!"
+        popd || exit 1
+        exit 1
+    fi
 else
     echo "Sorry, did not understand that input!"
     popd || exit 1

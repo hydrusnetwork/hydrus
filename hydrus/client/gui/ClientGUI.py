@@ -59,8 +59,8 @@ from hydrus.client.gui import QLocator
 from hydrus.client.gui import ClientGUILocatorSearchProviders
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
-from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.media import ClientGUIMediaControls
@@ -1085,15 +1085,16 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == 'move':
             
-            with ClientGUIDialogsFiles.DirDialog( self, 'Select location.' ) as dlg_3:
+            try:
                 
-                if dlg_3.exec() == QW.QDialog.DialogCode.Accepted:
-                    
-                    path = dlg_3.GetPath()
-                    
-                    self._controller.CallToThread( client_files_manager.ClearOrphans, path )
-                    
+                path = ClientGUIDialogsQuick.PickDirectory( self, 'Select location.' )
                 
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            self._controller.CallToThread( client_files_manager.ClearOrphans, path )
             
         elif result == 'delete':
             
@@ -2258,15 +2259,16 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
-        with ClientGUIDialogsFiles.DirDialog( self, 'Select location.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                path = dlg.GetPath()
-                
-                self._controller.CallToThread( do_it, path )
-                
+            path = ClientGUIDialogsQuick.PickDirectory( self, 'Select location.' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._controller.CallToThread( do_it, path )
         
     
     def _ImportURL(
@@ -6707,9 +6709,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         from hydrus.client.files.images import ClientVisualDataTuningSuite
         
-        test_dir = ClientGUIDialogsQuick.GetExistingDirectory( self, 'select dir', '' )
-        
-        if test_dir == '':
+        try:
+            
+            test_dir = ClientGUIDialogsQuick.PickDirectory( self, 'select dir' )
+            
+        except HydrusExceptions.CancelledException:
             
             return
             
@@ -6732,9 +6736,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         from hydrus.client.files.images import ClientVisualDataTuningSuite
         
-        test_dir = ClientGUIDialogsQuick.GetExistingDirectory( self, 'select dir', '' )
-        
-        if test_dir == '':
+        try:
+            
+            test_dir = ClientGUIDialogsQuick.PickDirectory( self, 'select dir' )
+            
+        except HydrusExceptions.CancelledException:
             
             return
             
@@ -6923,80 +6929,76 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         ClientGUIDialogsMessage.ShowInformation( self, backup_intro )
         
-        with ClientGUIDialogsFiles.DirDialog( self, 'Select backup location.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            path = ClientGUIDialogsQuick.PickDirectory( self, 'Select backup location.' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if path == self._controller.GetDBDir():
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
+            
+            return
+            
+        
+        if path == existing_backup_path:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'The path you chose is your current saved backup path. No changes have been made.' )
+            
+            return
+            
+        
+        if os.path.exists( path ):
+            
+            filenames = os.listdir( path )
+            
+            num_files = len( filenames )
+            
+            if num_files == 0:
                 
-                path = dlg.GetPath()
+                extra_info = 'It looks currently empty, which is great--there is no danger of anything being overwritten.'
                 
-                if path == '':
-                    
-                    return
-                    
+            elif 'client.db' in filenames:
                 
-                if path == self._controller.GetDBDir():
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
-                    
-                    return
-                    
+                extra_info = 'It looks like a client database already exists in the location--be certain that it is ok to overwrite it.'
                 
-                if path == existing_backup_path:
-                    
-                    ClientGUIDialogsMessage.ShowInformation( self, 'The path you chose is your current saved backup path. No changes have been made.' )
-                    
-                    return
-                    
+            else:
                 
-                if os.path.exists( path ):
-                    
-                    filenames = os.listdir( path )
-                    
-                    num_files = len( filenames )
-                    
-                    if num_files == 0:
-                        
-                        extra_info = 'It looks currently empty, which is great--there is no danger of anything being overwritten.'
-                        
-                    elif 'client.db' in filenames:
-                        
-                        extra_info = 'It looks like a client database already exists in the location--be certain that it is ok to overwrite it.'
-                        
-                    else:
-                        
-                        extra_info = 'It seems to have some files already in it--be careful and make sure you chose the correct location.'
-                        
-                    
-                else:
-                    
-                    extra_info = 'The path does not exist yet--it will be created when you make your first backup.'
-                    
+                extra_info = 'It seems to have some files already in it--be careful and make sure you chose the correct location.'
                 
-                text = 'You chose "' + path + '". Here is what I understand about it:'
-                text += '\n' * 2
-                text += extra_info
-                text += '\n' * 2
-                text += 'Are you sure this is the correct directory?'
+            
+        else:
+            
+            extra_info = 'The path does not exist yet--it will be created when you make your first backup.'
+            
+        
+        text = 'You chose "' + path + '". Here is what I understand about it:'
+        text += '\n' * 2
+        text += extra_info
+        text += '\n' * 2
+        text += 'Are you sure this is the correct directory?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._new_options.SetNoneableString( 'backup_path', path )
+            self._new_options.SetNoneableInteger( 'last_backup_time', None )
+            
+            text = 'Would you like to create your backup now?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result == QW.QDialog.DialogCode.Accepted:
                 
-                result = ClientGUIDialogsQuick.GetYesNo( self, text )
+                self._BackupDatabase()
                 
-                if result == QW.QDialog.DialogCode.Accepted:
-                    
-                    self._new_options.SetNoneableString( 'backup_path', path )
-                    self._new_options.SetNoneableInteger( 'last_backup_time', None )
-                    
-                    text = 'Would you like to create your backup now?'
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, text )
-                    
-                    if result == QW.QDialog.DialogCode.Accepted:
-                        
-                        self._BackupDatabase()
-                        
-                    
-                    self._menu_updater_database.update()
-                    
-                
+            
+            self._menu_updater_database.update()
             
         
     
@@ -8656,7 +8658,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._persistent_mpv_widgets.append( mpv_widget )
         
     
-    def _UnloadAndPurgeQtMediaplayer( self, qt_media_player: ClientGUICanvasMedia.QtMediaPlayer ):
+    def _UnloadAndPurgeQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget | ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView):
         
         if qt_media_player.IsCompletelyUnloaded():
             
@@ -8666,18 +8668,18 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             qt_media_player.TryToUnload()
             
-            self._controller.CallLaterQtSafe( self, 5.0, 'purge QMediaPlayer', self._UnloadAndPurgeQtMediaplayer, qt_media_player )
+            self._controller.CallLaterQtSafe( self, 5.0, 'purge QMediaPlayer', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
             
         
     
-    def ReleaseQtMediaPlayer( self, qt_media_player: ClientGUICanvasMedia.QtMediaPlayer ):
+    def ReleaseQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget | ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ):
         
         if qt_media_player.parentWidget() != self:
             
             qt_media_player.setParent( self )
             
         
-        self._controller.CallLaterQtSafe( self, 5.0, 'start QMediaPlayer purge', self._UnloadAndPurgeQtMediaplayer, qt_media_player )
+        self._controller.CallLaterQtSafe( self, 5.0, 'start QMediaPlayer purge', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
         
     
     def REPEATINGBandwidth( self ):

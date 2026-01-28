@@ -302,33 +302,79 @@ def GetServicesDict():
             'type_pretty' : HC.service_string_lookup[ service.GetServiceType() ]
         }
         
-        if service.GetServiceType() in HC.STAR_RATINGS_SERVICES:
-            
-            service = typing.cast( ClientServices.ServiceLocalRatingStars, service )
-            
-            star_type = service.GetStarType()
-            
-            if star_type.HasShape():
-                
-                shape_label = ClientRatings.shape_to_str_lookup_dict[ star_type.GetShape() ]
-                
-            else:
-                
-                shape_label = 'svg'
-                
-            
-            service_dict[ 'star_shape' ] =  shape_label
-            
+        rating_colour_jobs = []
         
-        if service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL:
+        if service.GetServiceType() in HC.RATINGS_SERVICES:
             
-            service = typing.cast( ClientServices.ServiceLocalRatingNumerical, service )
+            service = typing.cast( ClientServices.ServiceLocalRating, service )
             
-            allows_zero = service.AllowZero()
-            num_stars = service.GetNumStars()
+            service_dict[ 'show_in_thumbnail' ] = service.GetShowInThumbnail()
+            service_dict[ 'show_in_thumbnail_even_when_null' ] = service.GetShowInThumbnailEvenWhenNull()
             
-            service_dict[ 'min_stars' ] = 0 if allows_zero else 1
-            service_dict[ 'max_stars' ] = num_stars
+            if service.GetServiceType() in HC.STAR_RATINGS_SERVICES:
+                
+                service = typing.cast( ClientServices.ServiceLocalRatingStars, service )
+                
+                star_type = service.GetStarType()
+                
+                if star_type.HasShape():
+                    
+                    shape_label = ClientRatings.shape_to_str_lookup_dict[ star_type.GetShape() ]
+                    
+                else:
+                    
+                    shape_label = 'svg'
+                    
+                
+                service_dict[ 'star_shape' ] =  shape_label
+                
+                rating_colour_jobs = [
+                    ( 'like', ClientRatings.LIKE ),
+                    ( 'dislike', ClientRatings.DISLIKE ),
+                    ( 'null', ClientRatings.NULL ),
+                    ( 'mixed', ClientRatings.MIXED ),
+                ]
+                
+            
+            if service.GetServiceType() == HC.LOCAL_RATING_INCDEC:
+                
+                rating_colour_jobs = [
+                    ( 'like', ClientRatings.LIKE ),
+                    ( 'mixed', ClientRatings.MIXED ),
+                ]
+                
+            
+            if len( rating_colour_jobs ) > 0:
+                
+                colours_dict = {}
+                
+                for ( json_name, rating_state ) in rating_colour_jobs:
+                    
+                    ( pen_rgb, brush_rgb ) = service.GetColour( rating_state )
+                    
+                    pen_hex_value = '#' + bytes( pen_rgb ).hex().upper()
+                    brush_hex_value = '#' + bytes( brush_rgb ).hex().upper()
+                    
+                    colours_dict[ json_name ] = {
+                        'pen' : pen_hex_value,
+                        'brush' : brush_hex_value,
+                    }
+                    
+                
+                service_dict[ 'colours' ] = colours_dict
+                
+            
+            if service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL:
+                
+                service = typing.cast( ClientServices.ServiceLocalRatingNumerical, service )
+                
+                allows_zero = service.AllowZero()
+                num_stars = service.GetNumStars()
+                
+                service_dict[ 'allows_zero' ] = allows_zero
+                service_dict[ 'min_stars' ] = 0 if allows_zero else 1
+                service_dict[ 'max_stars' ] = num_stars
+                
             
         
         services_dict[ service.GetServiceKey().hex() ] = service_dict

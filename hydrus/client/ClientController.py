@@ -37,7 +37,6 @@ from hydrus.client.db import ClientDB
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.files import ClientFilesManager
 from hydrus.client.gui import ClientGUICallAfter
-from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
@@ -1880,30 +1879,31 @@ class Controller( HydrusController.HydrusController ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        with ClientGUIDialogsFiles.DirDialog( self.gui, 'Select backup location.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                path = dlg.GetPath()
-                
-                text = 'Are you sure you want to restore a backup from "{}"?'.format( path )
-                text += '\n' * 2
-                text += 'Everything in your current database will be deleted!'
-                text += '\n' * 2
-                text += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self.gui, text )
-                
-                if result == QW.QDialog.DialogCode.Accepted:
-                    
-                    self._restore_backup_path = path
-                    self._doing_fast_exit = False
-                    HG.do_idle_shutdown_work = False
-                    HG.restart = True
-                    
-                    self.Exit()
-                    
-                
+            path = ClientGUIDialogsQuick.PickDirectory( self.gui, 'Select backup location.' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        text = 'Are you sure you want to restore a backup from "{}"?'.format( path )
+        text += '\n' * 2
+        text += 'Everything in your current database will be deleted!'
+        text += '\n' * 2
+        text += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self.gui, text )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._restore_backup_path = path
+            self._doing_fast_exit = False
+            HG.do_idle_shutdown_work = False
+            HG.restart = True
+            
+            self.Exit()
             
         
     

@@ -24,6 +24,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingDomainSettings
 
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
@@ -1619,7 +1620,7 @@ class NetworkJob( object ):
                     
                     if self._CanReattemptRequest():
                         
-                        self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                        self.engine.domain_manager.ReportDomainEvent( self._url, ClientNetworkingDomainSettings.DOMAIN_EVENT_SERVERSIDE_BANDWIDTH )
                         
                     else:
                         
@@ -1677,7 +1678,7 @@ class NetworkJob( object ):
                     
                     if self._CanReattemptConnection():
                         
-                        self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                        self.engine.domain_manager.ReportDomainEvent( self._url, ClientNetworkingDomainSettings.DOMAIN_EVENT_NETWORK_INFRASTRUCTURE )
                         
                     else:
                         
@@ -1708,7 +1709,7 @@ class NetworkJob( object ):
                         
                         if self._CanReattemptConnection():
                             
-                            self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                            self.engine.domain_manager.ReportDomainEvent( self._url, ClientNetworkingDomainSettings.DOMAIN_EVENT_NETWORK_INFRASTRUCTURE )
                             
                         else:
                             
@@ -1753,7 +1754,7 @@ class NetworkJob( object ):
                 
                 if isinstance( e, HydrusExceptions.NetworkInfrastructureException ):
                     
-                    self.engine.domain_manager.ReportNetworkInfrastructureError( self._url )
+                    self.engine.domain_manager.ReportDomainEvent( self._url, ClientNetworkingDomainSettings.DOMAIN_EVENT_NETWORK_INFRASTRUCTURE )
                     
                 
                 self._status_text = 'Error: ' + str( e )

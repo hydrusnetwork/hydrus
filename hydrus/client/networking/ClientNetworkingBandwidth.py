@@ -52,6 +52,7 @@ class NetworkBandwidthManagerTrackerContainer( HydrusSerialisable.SerialisableBa
         self.bandwidth_tracker = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_tracker )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER_TRACKER_CONTAINER ] = NetworkBandwidthManagerTrackerContainer
 
 class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):

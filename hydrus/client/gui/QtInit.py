@@ -288,3 +288,12 @@ def MonkeyPatchMissingMethods():
         QW.QFileDialog.getSaveFileName = MonkeyPatchGetSaveFileName( QW.QFileDialog.getSaveFileName )
         
     
+
+def SetupLogging():
+    
+    # do this before QApplication, it tells QMediaPlayer to not spam the log with ffmpeg info on every media load
+    # I'd prefer to keep critical logging, but this thing seems to be more C++ and less python, and the wildcard shuts it off where specific enumerations don't seem to. maybe worth a revisit
+    
+    QC.QLoggingCategory.setFilterRules( 'qt.multimedia.ffmpeg.*=false' )
+    QC.QLoggingCategory.setFilterRules( 'qt.multimedia.*=false' )
+    

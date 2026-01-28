@@ -406,7 +406,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         key = 'Authorization'
         value = 'Basic dXNlcm5hbWU6cGFzc3dvcmQ='
         approved = ClientNetworkingDomain.VALID_APPROVED
-        reason = 'EXAMPLE REASON: HTTP header login--needed for access.'
+        reason = ''
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit header' ) as dlg:
             
@@ -433,7 +433,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_key_value = key + ': ' + value
         
-        pretty_approved = ClientNetworkingDomain.valid_str_lookup[ approved ]
+        pretty_approved = ClientNetworkingDomain.valid_desc_lookup[ approved ]
         
         pretty_reason = reason
         
@@ -448,7 +448,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_network_context = network_context.ToString()
         
-        pretty_approved = ClientNetworkingDomain.valid_str_lookup[ approved ]
+        pretty_approved = ClientNetworkingDomain.valid_desc_lookup[ approved ]
         
         sort_tuple = ( pretty_network_context, ( key, value ), pretty_approved, reason )
         
@@ -530,10 +530,12 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for a in ( ClientNetworkingDomain.VALID_APPROVED, ClientNetworkingDomain.VALID_DENIED, ClientNetworkingDomain.VALID_UNKNOWN ):
                 
-                self._approved.addItem( ClientNetworkingDomain.valid_str_lookup[ a], a )
+                self._approved.addItem( ClientNetworkingDomain.valid_desc_lookup[ a ], a )
                 
             
             self._reason = QW.QLineEdit( self )
+            
+            self._reason.setPlaceholderText( 'Login header--needed for access.' )
             
             width = ClientGUIFunctions.ConvertTextToPixelWidth( self._reason, 60 )
             self._reason.setMinimumWidth( width )
@@ -552,13 +554,17 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
             vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( vbox, self._network_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._key, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._value, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._approved, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._reason, CC.FLAGS_EXPAND_PERPENDICULAR )
+            rows = []
             
-            self.widget().setLayout( vbox )
+            rows.append( ( 'network context', self._network_context ) )
+            rows.append( ( 'header key', self._key ) )
+            rows.append( ( 'header value', self._value ) )
+            rows.append( ( 'current state', self._approved ) )
+            rows.append( ( 'description (optional)', self._reason ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            self.widget().setLayout( gridbox )
             
         
         def GetValue( self ):

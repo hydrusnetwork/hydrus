@@ -22,7 +22,6 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.importing import ClientGUIImportOptions
@@ -1857,15 +1856,6 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 continue
                 
             
-            simple_mode = not advanced_mode
-            not_source = not HC.RUNNING_FROM_SOURCE
-            not_qt_6 = not QtInit.WE_ARE_QT6
-            
-            if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER and ( simple_mode or not_source or not_qt_6 ):
-                
-                continue
-                
-            
             s = CC.media_viewer_action_string_lookup[ action ]
             
             if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and self._mime in [ HC.GENERAL_VIDEO ] + list( HC.VIDEO ):
@@ -1961,7 +1951,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'preview starts paused: ', self._preview_start_paused ) )
         rows.append( ( 'preview starts covered with an embed button: ', self._preview_start_with_embed ) )
         
-        if set( possible_show_actions ).isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER } ):
+        if set( possible_show_actions ).isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW } ):
             
             self._media_scale_up.hide()
             self._media_scale_down.hide()

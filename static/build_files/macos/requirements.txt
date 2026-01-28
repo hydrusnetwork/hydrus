@@ -22,10 +22,11 @@ show-in-file-manager>=1.1.5
 twisted[tls,http2]>=20.3.0
 
 opencv-python-headless==4.10.0.84
+numpy==2.2.6
+
 mpv==1.0.7
 
 dateparser==1.2.1
-numpy==2.2.6
 requests==2.32.4
 
 QtPy==2.4.1

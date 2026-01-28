@@ -187,7 +187,8 @@ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON = 4
 MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY = 5
 MEDIA_VIEWER_ACTION_DO_NOT_SHOW = 6
 MEDIA_VIEWER_ACTION_SHOW_WITH_MPV = 7
-MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER = 8
+MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET = 8
+MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW = 9
 
 media_viewer_action_string_lookup = {
     MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE : 'show with native hydrus viewer',
@@ -198,7 +199,8 @@ media_viewer_action_string_lookup = {
     MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY : 'do not show in the media viewer. on thumbnail activation, open externally',
     MEDIA_VIEWER_ACTION_DO_NOT_SHOW : 'do not show at all',
     MEDIA_VIEWER_ACTION_SHOW_WITH_MPV : 'show using mpv',
-    MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER : 'show using Qt Media Player (EXPERIMENTAL, buggy, crashy!)'
+    MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET : 'show using Qt Media Player Test 1 - Video Widget (EXPERIMENTAL, buggy, crashy, always on top render!)',
+    MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW : 'show using Qt Media Player Test 2 - Graphics View (EXPERIMENTAL, mite b cool?)',
 }
 
 unsupported_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
@@ -206,8 +208,8 @@ static_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_me
 animated_webp_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
 animated_jxl_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
 ugoira_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
-animated_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + static_media_actions
-audio_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + unsupported_media_actions
+animated_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ] + static_media_actions
+audio_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ] + unsupported_media_actions
 
 # actions, can_start_paused, can_start_with_embed
 static_full_support = ( static_media_actions, False, True )

@@ -30,6 +30,12 @@ valid_str_lookup = {
     VALID_UNKNOWN : 'pending'
 }
 
+valid_desc_lookup = {
+    VALID_DENIED : 'denied - will not use it',
+    VALID_APPROVED : 'approved - will use it',
+    VALID_UNKNOWN : 'pending - will ask the user on next use'
+}
+
 valid_enum_lookup = { value : key for ( key, value ) in valid_str_lookup.items() }
 
 class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
@@ -56,7 +62,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._url_domain_masks_to_url_classes = collections.defaultdict( list )
         
-        self._second_level_domains_to_network_infrastructure_errors = collections.defaultdict( list )
+        # TODO: Replace this with DomainStatus and do Cleanse/IsStub clearing on load
+        # one question is whether to store by domains or networkcontexts. consider this, but perhaps not a big deal for now
+        self._domains_to_network_infrastructure_errors = collections.defaultdict( list )
         
         from hydrus.client.importing.options import TagImportOptionsLegacy
         
@@ -1123,7 +1131,9 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( url )
+                domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+                
+                domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
                 
             except:
                 
@@ -1133,30 +1143,33 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             # this will become flexible and customisable when I have domain profiles/status/ui
             # also should extend it to 'global', so if multiple domains are having trouble, we maybe assume the whole connection is down? it would really be nicer to have a better sockets-level check there
             
-            if domain in self._second_level_domains_to_network_infrastructure_errors:
+            for domain in domains:
                 
-                number_of_errors = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
-                
-                if number_of_errors == 0:
+                if domain in self._domains_to_network_infrastructure_errors:
                     
-                    return True
+                    number_of_errors = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
                     
-                
-                error_time_delta = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
-                
-                network_infrastructure_errors = self._second_level_domains_to_network_infrastructure_errors[ domain ]
-                
-                network_infrastructure_errors = [ timestamp for timestamp in network_infrastructure_errors if not HydrusTime.TimeHasPassed( timestamp + error_time_delta ) ]
-                
-                self._second_level_domains_to_network_infrastructure_errors[ domain ] = network_infrastructure_errors
-                
-                if len( network_infrastructure_errors ) >= number_of_errors:
+                    if number_of_errors == 0:
+                        
+                        return True
+                        
                     
-                    return False
+                    error_time_delta = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
                     
-                elif len( network_infrastructure_errors ) == 0:
+                    network_infrastructure_errors = self._domains_to_network_infrastructure_errors[ domain ]
                     
-                    del self._second_level_domains_to_network_infrastructure_errors[ domain ]
+                    network_infrastructure_errors = [ timestamp for timestamp in network_infrastructure_errors if not HydrusTime.TimeHasPassed( timestamp + error_time_delta ) ]
+                    
+                    self._domains_to_network_infrastructure_errors[ domain ] = network_infrastructure_errors
+                    
+                    if len( network_infrastructure_errors ) >= number_of_errors:
+                        
+                        return False
+                        
+                    elif len( network_infrastructure_errors ) == 0:
+                        
+                        del self._domains_to_network_infrastructure_errors[ domain ]
+                        
                     
                 
             
@@ -1834,20 +1847,27 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def ReportNetworkInfrastructureError( self, url ):
+    def ReportDomainEvent( self, url: str, domain_event_type: int ):
         
         with self._lock:
+            
+            # TODO: This guy will tell domain status objects about this and we'll handle the event_type
             
             try:
                 
                 domain = ClientNetworkingFunctions.ConvertURLIntoDomain( url )
+                
+                domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
                 
             except:
                 
                 return
                 
             
-            self._second_level_domains_to_network_infrastructure_errors[ domain ].append( HydrusTime.GetNow() )
+            for domain in domains:
+                
+                self._domains_to_network_infrastructure_errors[ domain ].append( HydrusTime.GetNow() )
+                
             
         
     
@@ -1859,14 +1879,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 domain = ClientNetworkingFunctions.ConvertURLIntoSecondLevelDomain( url )
                 
+                domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
+                
             except:
                 
                 return
                 
             
-            if domain in self._second_level_domains_to_network_infrastructure_errors:
+            for domain in domains:
                 
-                del self._second_level_domains_to_network_infrastructure_errors[ domain ]
+                if domain in self._domains_to_network_infrastructure_errors:
+                    
+                    del self._domains_to_network_infrastructure_errors[ domain ]
+                    
                 
             
         

@@ -137,6 +137,8 @@ try:
         QtInit.DoWinDarkMode()
         
     
+    QtInit.SetupLogging()
+    
     try:
         
         from twisted.internet import reactor

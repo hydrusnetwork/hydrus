@@ -684,15 +684,16 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
     
     def AddFolder( self ):
         
-        with ClientGUIDialogsFiles.DirDialog( self, 'Select a folder to add.' ) as dlg:
+        try:
             
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                path = dlg.GetPath()
-                
-                self._AddPathsToList( ( path, ) )
-                
+            path = ClientGUIDialogsQuick.PickDirectory( self, 'Select a folder to add.' )
             
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._AddPathsToList( ( path, ) )
         
     
     def AddPaths( self ):

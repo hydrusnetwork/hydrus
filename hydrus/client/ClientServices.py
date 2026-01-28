@@ -669,6 +669,7 @@ class ServiceLocalRating( Service ):
         dictionary[ 'colours' ] = list(self._colours.items())
         dictionary[ 'show_in_thumbnail' ] = self._show_in_thumbnail
         dictionary[ 'show_in_thumbnail_even_when_null' ] = self._show_in_thumbnail_even_when_null        
+        
         return dictionary
         
     
@@ -688,6 +689,7 @@ class ServiceLocalRating( Service ):
             return self._colours[ rating_state ]
             
         
+    
     def GetColours( self ):
         
         with self._lock:
@@ -932,6 +934,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
             return self._custom_pad
             
         
+    
     def GetOneStarValue( self ):
         
         num_choices = self._num_stars
@@ -945,6 +948,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
         
         return one_star_value
         
+    
     def GetShowFractionBesideStars( self ):
         
         with self._lock:
