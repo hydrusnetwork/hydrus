@@ -5482,20 +5482,70 @@ Accept: application/json
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating like service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local like/dislike rating service&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;svg&quot;</span>
+<span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;svg&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail_even_when_null&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;colours&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;dislike&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#FFFFFF&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;like&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#50C878&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;mixed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#5F5F5F&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;null&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#BFBFBF&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating numerical service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local numerical rating service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fat star&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;allows_zero&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;min_stars&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;max_stars&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="w">    </span><span class="nt">&quot;max_stars&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail_even_when_null&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;colours&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;dislike&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#FFFFFF&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;like&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#50C878&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;mixed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#5F5F5F&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;null&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#BFBFBF&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating inc/dec service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">22</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local inc/dec rating service&quot;</span>
+<span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local inc/dec rating service&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;show_in_thumbnail_even_when_null&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;colours&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;like&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#50C878&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="nt">&quot;mixed&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;brush&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#5F5F5F&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pen&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;#000000&quot;</span>
+<span class="w">        </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
 <span class="w">  </span><span class="nt">&quot;7472617368&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;trash&quot;</span><span class="p">,</span>
@@ -5536,10 +5586,12 @@ Accept: application/json
 <li>99 - server administration</li>
 </ul>
 <p><code>type_pretty</code> is something you can show users. Hydrus uses the same labels in <em>manage services</em> and so on.</p>
-<p>Rating services now have some extra data:</p>
+<p>Rating services have some extra data:</p>
 <ul>
-<li>like/dislike and numerical services have <code>star_shape</code>, which is one of <code>circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon</code> -or- <code>svg</code>, which means a custom user svg that cannot currently be fetched over the Client API.</li>
-<li>numerical services have <code>min_stars</code> (0 or 1) and <code>max_stars</code> (1 to 20)</li>
+<li>They all have some <code>colours</code> for differing rating states, the same as you'd see in <code>manage services</code>. Pen and brush are the line and the fill of the rating star shape, respectively. <code>like</code> generally means set/left-click, <code>dislike</code> means off/right-click, <code>null</code> means not set, and <code>mixed</code> is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.</li>
+<li>They all have <code>show_in_thumbnail</code> and <code>show_in_thumbnail_even_if_null</code>, which you can obey in your display context if convenient.</li>
+<li>Like/dislike and numerical services have <code>star_shape</code>, which is one of <code>circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon</code> -or- <code>svg</code>, which means a custom user svg that can be fetched with <a href="#get_service_rating_svg">/get_service_rating_svg</a>.</li>
+<li>Numerical services have <code>min_stars</code> (0 or 1) and <code>max_stars</code> (1 to 20). <code>allows_zero</code> lines up with <code>min_stars</code> and is for your convenience.</li>
 </ul>
 <p>If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a &#8536;, select from a dropdown list, do whatever you like!</p>
 <p>If you want to know the services in a client, hit up <a href="#get_services">/get_services</a>, which simply gives the above. The same structure has recently been added to <a href="#get_files_file_metadata">/get_files/file_metadata</a> for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.</p>
@@ -9438,7 +9490,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 21, 2026 21:35:39 UTC">January 21, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 28, 2026 22:04:47 UTC">January 28, 2026</span>
   </span>
 
     
