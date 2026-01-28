@@ -44,15 +44,9 @@ jobs:
       -
         name: Build Hydrus
         run: |
-          move hydrus\static\build_files\windows\sqlite3.dll hydrus\
-          move hydrus\static\build_files\windows\sqlite3.exe hydrus\db
-          move hydrus\static\build_files\windows\file_version_info_maker.py file_version_info_maker.py
-          python file_version_info_maker.py ${{ github.ref_name }}
-          move hydrus\static\build_files\windows\hydrus_client.spec hydrus_client.spec
-          move hydrus\static\build_files\windows\hydrus_server.spec hydrus_server.spec
-          pyinstaller hydrus_server.spec
-          pyinstaller hydrus_client.spec
-          move dist\hydrus_client "dist\Hydrus Network"
+          python hydrus\static\build_files\windows\file_version_info_maker.py ${{ github.ref_name }}
+          move hydrus\static\build_files\windows\hydrus.spec hydrus.spec
+          pyinstaller hydrus.spec
       -
         # yo pretty sure we'll need to install this manually once we are on windows server 2022
         # https://github.com/actions/virtual-environments/issues/4856
