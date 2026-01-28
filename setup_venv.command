@@ -143,7 +143,7 @@ elif [ "$install_type" = "a" ]; then
     echo "--------"
     echo "Future Libraries"
     echo
-    echo "There is a test for a new AVIF library. Want to try it?"
+    echo "There is a test for a new domain parsing library. Want to try it?"
     echo "(y)es/(n)o? "
     read -r future
     if [ "$future" = "y" ]; then
