@@ -37,11 +37,6 @@ jobs:
           cp hydrus/static/build_files/linux/hydrus.spec hydrus.spec
           pyinstaller hydrus.spec
       -
-        name: Remove Chonk
-        run: |
-            find dist/hydrus_client/ -type f -name "*.pyc" -delete
-            while read line; do find dist/hydrus_client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
-      -
         name: Remove Surplus File
         run: |
           rm -f dist/hydrus_client/libxkbcommon.so*
