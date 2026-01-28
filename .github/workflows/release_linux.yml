@@ -34,10 +34,8 @@ jobs:
       -
         name: Build Hydrus
         run: |
-          cp hydrus/static/build_files/linux/hydrus_client.spec hydrus_client.spec
-          cp hydrus/static/build_files/linux/hydrus_server.spec hydrus_server.spec
-          pyinstaller hydrus_server.spec
-          pyinstaller hydrus_client.spec
+          cp hydrus/static/build_files/linux/hydrus.spec hydrus.spec
+          pyinstaller hydrus.spec
       -
         name: Remove Chonk
         run: |
