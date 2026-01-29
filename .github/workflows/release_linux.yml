@@ -43,7 +43,6 @@ jobs:
       -
         name: Set Permissions
         run: |
-            sudo chown --recursive 1000:1000 dist/hydrus_client
             sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
       -
         name: Compress Client
