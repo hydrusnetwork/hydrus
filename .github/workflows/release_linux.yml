@@ -43,7 +43,7 @@ jobs:
       -
         name: Set Permissions
         run: |
-            sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
+            sudo find dist -type d -exec chmod 0755 {} \;
       -
         name: Compress Client
         run: |
