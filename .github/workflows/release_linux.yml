@@ -45,7 +45,7 @@ jobs:
       -
         name: Remove Surplus File
         run: |
-          rm -f dist/hydrus_client/libxkbcommon.so*
+          rm -f "dist/Hydrus Network/"libxkbcommon.so*
       -
         name: Set Permissions
         run: |
