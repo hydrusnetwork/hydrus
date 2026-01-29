@@ -14,6 +14,12 @@ jobs:
         with:
           path: hydrus
       -
+        name: Extract Version Metadata
+        id: meta
+        run: |
+          $vs = "${{ github.ref_name }}".Substring(1)
+          echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      -
         name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -48,30 +54,15 @@ jobs:
           move hydrus\static\build_files\windows\hydrus.spec hydrus.spec
           pyinstaller hydrus.spec
       -
-        # yo pretty sure we'll need to install this manually once we are on windows server 2022
-        # https://github.com/actions/virtual-environments/issues/4856
         name: InnoSetup
         run: |
           move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
-          ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }}
+          ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }} /DVersionShort=${{ env.version_short }}
       -
         name: Compress Client
         run: |
-          cd .\dist
-          7z.exe a -tzip -mm=Deflate -mx=5 Windows-Extract.zip 'Hydrus Network'
-          cd ..
+          7z.exe a -tzip -mm=Deflate -mx=5 Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip .\dist\*
       -
-        name: Extract Version Metadata
-        id: meta
-        run: |
-          $vs = "${{ github.ref_name }}".Substring(1)
-          echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-      -
-        name: Rename Files
-        run: |
-          move dist\HydrusInstaller.exe Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          move dist\Windows-Extract.zip Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-      - 
         name: Upload Files
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
