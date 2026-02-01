@@ -1,5 +1,0 @@
-pyoxidizer
-
-pyobjc-core>=10.1
-pyobjc-framework-Cocoa>=10.1
-pyobjc-framework-Quartz>=10.1
