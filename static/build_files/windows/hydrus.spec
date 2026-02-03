@@ -28,7 +28,9 @@ client_a = Analysis(['hydrus\\hydrus_client.pyw'],
 
 server_a = Analysis(['hydrus\\hydrus_server.py'],
              pathex=['.'],
-             binaries=[],
+             binaries=[
+               ('hydrus\\static\\build_files\\windows\\sqlite3.dll', '.')
+             ],
              datas=[],
              hiddenimports=[],
              excludes=[],
@@ -68,11 +70,11 @@ server_exe = EXE(server_pyz,
                  version='server_file_version_info.txt',
                  icon='hydrus\\static\\hydrus.ico' )
 
-coll = COLLECT(client_exe,
-               server_exe,
+coll = COLLECT(server_exe,
                server_a.binaries,
                server_a.zipfiles,
                server_a.datas,
+               client_exe,
                client_a.binaries,
                client_a.zipfiles,
                client_a.datas,
