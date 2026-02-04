@@ -130,7 +130,7 @@ def DoFileExportDragDrop( drag_object: QG.QDrag, page_key, media, alt_down ):
                 raise Exception()
                 
             
-        except:
+        except Exception as e:
             
             filename_terms = fallback_filename_terms
             
@@ -148,7 +148,7 @@ def DoFileExportDragDrop( drag_object: QG.QDrag, page_key, media, alt_down ):
                     raise Exception()
                     
                 
-            except:
+            except Exception as e:
                 
                 filename = ClientExportingFiles.GenerateExportFilename( this_dnd_temp_dir, m, fallback_filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
                 

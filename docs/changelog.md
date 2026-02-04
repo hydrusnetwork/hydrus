@@ -7,6 +7,57 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 658](https://github.com/hydrusnetwork/hydrus/releases/tag/v658)
+
+### misc
+
+* fixed an exclusive-to-inclusive system predicate parsing regression, for instance the input `system:filetype is not x` was parsing as `system:filetype is x`, which was because of a logical hole in a recent rewrite
+* added 'Active Search Predicates list height' to `options->file search`. this is the list _above_ the tag autocomplete input on normal search boxes. defaults to 6 (was previously 8 due to weirdness)
+* tag lists no longer default to min height 8 rows but 1. let me know if anything sizes crazy now
+* fixed the `help->about` db transaction period, which was typoed and calculating off the wrong number
+* the 'don't use important accounts with hydrus' warning is clarified and unified in the downloader help, login dialog, and now session cookies dialog
+* the media viewer right-click menu now has a 'player' sub-menu at the end that says what player (mpv, QtMediaPlayer, Hydrus Native stuff) is currently in view. might be worth tucking this into a deeper advanced/maintenance/debug menu somewhere in a future reshuffle, but for now it is there
+
+### QtMediaPlayer (and an mpv thing)
+
+* fixed a 'C++ object already deleted' instability error with the new GraphicsView QtMediaPlayer. I had this a couple of times in devving but needed to tighten up how some mouse event hacks were owned and destroyed
+* fixed an UI hang that could sometimes occur in PySide6 when opening a new media viewer when the preview viewer already has a QtMediaPlayer loaded
+* added `TEST: Use the same mpv player through media transitions` and `TEST: Use the same QtMediaPlayer through media transitions` options to `options->media playback`. previously, I would always create or swap to a different player when navigating from video to video, because re-using the same guy was super flickery or crash city. things are better now and I'm open to testing it more
+* added `TEST: Use OpenGL Window in QtMediaPlayer` to `options->media playback`. maybe it improves performance for big vids? I noticed it can cause some initial window-level flickering in Windows, but it is worth trying in different situations
+
+### boring QtMediaPlayer cleanup
+
+* the new GraphicsView test now loops natively and tracks 'num plays' through some fudgy maths (previously it hooked into the video 'end; stop' statechange and manually did 'seek 0; play'). I've had some reports about the program hanging on video end-loop, so let's see if this helps that
+* made the mouse-move event hack a little safer
+* rewrote some media destruction signals and moved QtMediaPlayer destruction responsibility from the GUI to the MediaContainer itself. there's no more weird reparenting
+* QtMediaPlayers are now cleaned up more aggressively. generally a 500ms timer instead of 5s
+
+### boring cleanup
+
+* broke `options->media playback` into sections and fixed some layout issues
+* fixed a bit of foolishness that was causing the `hydrus_test_boot.py` unit test script to always exit( 1 ) even when everything was OK
+* relatedly, replaced all lazy `except:` handling with `except Exception as e:`
+* if the duplicates filter fails to generate a visual duplicate comparison, the error now only makes one popup per program boot. it still spams some basic 'hash x failed' stuff to log so we can debug the issue
+* cleaned up a little 'menu last click' global out of HG
+* added a 'Run the launch script, not the .py' note to the 'running from source' help
+
+### boring import options overhaul
+
+* broke the 'file filtering import options' (stuff like allowed filetypes and min/max filesize) out of 'file import options (legacy)' just like I did presentation and prefetch import options the other week. the legacy object now holds a 'file filtering import options' sub-object in prep for the conversion to the new options structure
+* did the same for the 'location import options' (stuff like where to put the file and auto-archive/url options)
+* wrote an edit panel for 'file filtering import options'
+* did the same for 'location import options'
+* fixed the red warning text about an invalid, empty import destination context to now appear properly and instantly on dialog load, if it boots with an invalid destination context
+* 'associate primary/source urls' checkboxes are no longer hidden behind advanced mode
+* the prefetch import options are now in their own edit panel
+* the presentation and notes import options panels are now QWidgets not ScrollingEditPanels, which will fix some jank layout we've seen here
+* fixed some layout expanding issues in the file import options panel
+* network job and file import statuses now work with a file filtering import options object for their filtering decisions, not a file import options
+* importers now consult a location import options for pre-work destination validity checks
+* updated the unit tests for the new 'file filtering import options' object
+* updated the unit tests for the 'location import options' object
+* wrote some very basic prefitch import options unit tests
+
 ## [Version 657](https://github.com/hydrusnetwork/hydrus/releases/tag/v657)
 
 ### misc
@@ -424,45 +475,3 @@ title: Changelog
 * all image prefetch code is now done in the same location
 * shufled some subprocess stuff around to a new HydrusSubprocessing file
 * refactored my process, subprocess, and threading code to a new 'processes' module
-
-## [Version 648](https://github.com/hydrusnetwork/hydrus/releases/tag/v648)
-
-### misc
-
-* I have disabled animated jxl parsing. some/many jxls are causing ffmpeg to go into an infinite loop when I ask it to see if the file is animated. I will harden the ffmpeg calling system and fix this for next week
-* the 'update selected with current options' buttons that appear in the gallery and watcher download pages now pop in below the import options rather than squashing in beside. before, just clicking the 'file limit' checkbox with some of the list selected would often cause the sidebar width to overflow and make a horizontal scrollbar etc..
-* system:duration now allows 'equal' and 'not equal'
-* system:framerate no longer allows 'less/greater than or equal to' in its edit panel, and there is a label mentioning how fuzzy framerate is. the hardcoded quick-select framerate system preds in the 'system:duration' panel are now +/-1. I used to have a hack in the db search code to handle the fuzziness, but that was removed when I moved to the new number test system. I have not yet decided, but I may change all framerate calculations to be to the nearest integer, since that's pretty much what we display in UI
-* fixed an error-raising typo when the database is trying to do a large db job based on a tag filter that has a namespace blacklisted. an example of this would be a `tags->migrate tags` for 'all tags except title: tags'
-* if a user loads up a thumbnail grid that wants to have a virtual height greater than the Qt max (~16.7 million pixels, 2^24-1), I now pop up a one-time warning about it. these pages 'work' for ctrl+a type stuff, but you can't scroll below the magic line, and I suspect they are unstable
-* fixed an instabality bug in the regular file right-click menu, when non-sha2356 hashes are async-populated in the menu after a db fetch (issue #1908)
-
-### duplicates auto-resolution
-
-* 'test A or B' comparators now support the spectrum of normal tag predicates: tags, namespace:anything, and wildcards. all their negated versions are also supported (-creator:anything, etc..). the search domain here is fixed at 'combined local file domains'/'all known tags'
-* 'test A or B' comparators now support 'system:number of tags'. it works on 'all known tags'
-* 'test A or B' comparators now support 'system:duration', 'system:framerate', and 'system:num frames', all under the 'system:duration' stub in the edit panel
-* 'test A or B' comparators now support 'has audio', 'has forced filetype', and 'has transparency', and 'has duration', and all the 'has/has no' guys are now collapsed to the regular 'system:file properties' like in a normal search
-* 'system:known url' and 'system:num urls' are collapsed in the edit panel down to 'system:urls'
-* 'test A against B' comparators now support 'system:framerate'. a note in the edit panel reminds that these numbers are blurry, so you need padding
-* the various 'test A against B' tests that are non-time based now accept a null value for a property and treat it as zero for comparisons. for instance, an image with null duration will now have less duration than a video with duration 3s. previously, if either file had a null value for the system pred in question, the comparator would fail, which is not how the rest of the search tech works in the program
-
-### boring stuff
-
-* fixed an instability bug in the new async defaulterrback handling when the main window has died
-* if the user is running from source, the 'ffmpeg failed to render' exception now recommends that users try updating ffmpeg before doing anything else
-* I cleaned up some autocomplete dropdown behind the scenes stuff. these guys have been rewritten and reworked so many times, they aren't beautiful
-* all framerate calculations on media results now happen in one central location
-
-### boring duplicates auto-resolution stuff
-
-* the duplicates manager is now stricter about the order it clears work. it now clears the search work and then immediately the resolution work for each rule in clever-alphabetical turn. no more interleaved work
-* the duplicates manager can now pack more search work into each work slot, and it reports the 'searching' state for a rule more reliably
-* my mainloop daemons now have two sleep modes and differentiated wake signals to ensure they take forced breaks more reliably. I'm hoping to finally quash the problem of some workers (like duplicates auto-resolution) waking up too early and thus working far too hard when there are lots of other things (e.g. import queues) telling them there are various updates
-* similarly, the potential pair discovery manager now uses this nicer wake system and will not hammer potential discovery work while file imports are going on. it previously had a system that said 'if caught up, ok to hammer'. now it keeps pace with its maintenance work time preferences, waking immediately if idle but otherwise smoothing out a rush of new work over a few seconds rather than going bananas
-* duplicate auto-resolution rules now render themselves to a nice string with name and id when in various debugging modes
-* when you open a one-file comparator edit dialog, the focus now starts on the tag text input box
-* added unit tests for the normal tag metadata conditional file tests
-* added unit tests for the num_tags metadata conditional file tests
-* added unit tests for duration, framerate, num_frames metadata conditional file tests
-* added unit tests for framerate media result value extraction

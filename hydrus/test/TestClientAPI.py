@@ -53,7 +53,7 @@ try:
     import cbor2
     import base64
     CBOR_AVAILABLE = True
-except:
+except Exception as e:
     pass
 
 def wash_example_json_response( obj ):

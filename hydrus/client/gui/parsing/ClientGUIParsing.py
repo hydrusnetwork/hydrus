@@ -416,7 +416,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     parsers_to_include.add( parser )
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -1544,7 +1544,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     stuff_read = network_job.GetContentText()
                     
-                except:
+                except Exception as e:
                     
                     stuff_read = 'no response'
                     

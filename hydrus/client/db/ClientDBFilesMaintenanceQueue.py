@@ -63,7 +63,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
                 # if this happens during boot db update, this doesn't exist lol
                 CG.client_controller.files_maintenance_manager.Wake()
                 
-            except:
+            except Exception as e:
                 
                 pass
                 

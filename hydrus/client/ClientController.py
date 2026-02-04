@@ -711,7 +711,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._splash = ClientGUISplash.FrameSplash( self, title, self.frame_splash_status )
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( 'There was an error trying to start the splash screen!' )
             
@@ -984,7 +984,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 pass
                 
-            except:
+            except Exception as e:
                 
                 self._ReportShutdownException()
                 
@@ -1929,7 +1929,7 @@ class Controller( HydrusController.HydrusController ):
                 # noinspection PyUnresolvedReferences
                 ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID( 'hydrus network client' )
                 
-            except:
+            except Exception as e:
                 
                 pass
                 
@@ -2174,7 +2174,7 @@ class Controller( HydrusController.HydrusController ):
                                 ipv4_port = reactor.listenTCP( port, http_factory, interface = ipv4_interface )
                                 
                             
-                        except:
+                        except Exception as e:
                             
                             if ipv6_port is None:
                                 
@@ -2323,7 +2323,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.frame_splash_status.SetSubtext( '' )
                     
-                except:
+                except Exception as e:
                     
                     self._ReportShutdownException()
                     
@@ -2337,7 +2337,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 self.SetRunningTwistedServices( [] )
                 
-            except:
+            except Exception as e:
                 
                 pass # sometimes this throws a wobbler, screw it
                 

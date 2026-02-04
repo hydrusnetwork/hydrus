@@ -16,7 +16,7 @@ def QtLoadSVGRenderer( path: str ):
         
         renderer.load( path )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load SVG file.' )
         
@@ -60,7 +60,7 @@ def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: tuple[int, 
             
             return thumbnail_numpy_image
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.NoThumbnailFileException()
             

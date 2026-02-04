@@ -49,7 +49,7 @@ def ConvertURLClassesIntoAPIPairs( url_classes ):
             
             api_url = url_class.GetAPIURL( example_url )
             
-        except:
+        except Exception as e:
             
             continue
             
@@ -160,7 +160,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
                 
                 return result[0]
                 
-            except:
+            except Exception as e:
                 
                 return self._default_value
                 
@@ -278,7 +278,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
             
             return ( self._raw_domains, self._domain_regexes, self.match_subdomains ).__hash__()
             
-        except:
+        except Exception as e:
             
             last_ditch = repr( ( self._raw_domains, self._domain_regexes, self.match_subdomains ) )
             
@@ -319,7 +319,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
             
             self._re_clip_patterns = [ re.compile( domain_regex + '$' ) for domain_regex in all_domain_regexes ]
             
-        except:
+        except Exception as e:
             
             self._re_match_patterns = []
             self._re_clip_patterns = []
@@ -348,7 +348,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
                 
                 self.keep_matched_subdomains = bool( self.keep_matched_subdomains )
                 
-            except:
+            except Exception as e:
                 
                 self.keep_matched_subdomains = False
                 
@@ -1444,7 +1444,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 page_index = int( page_index )
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.URLClassException( 'Could not generate next gallery page--index component was not an integer!' )
                 
@@ -1470,7 +1470,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 page_index = int( page_index )
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.URLClassException( 'Could not generate next gallery page--index component was not an integer!' )
                 
@@ -1590,7 +1590,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             len_example_url = len( self.Normalise( self._example_url, for_server = True ) )
             
-        except:
+        except Exception as e:
             
             len_example_url = len( self._example_url )
             

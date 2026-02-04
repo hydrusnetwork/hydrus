@@ -190,7 +190,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', example_url )
             example_network_contexts = example_nj.GetNetworkContexts()
             
-        except:
+        except Exception as e:
             
             return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
             
@@ -268,7 +268,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
             self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed )
             
-        except:
+        except Exception as e:
             
             self._example_file_seed = None
             
@@ -277,7 +277,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
             self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed )
             
-        except:
+        except Exception as e:
             
             self._example_gallery_seed = None
             
@@ -605,7 +605,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
                 
                 file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( bandwidth_manager, subscription_name )
                 
-            except:
+            except Exception as e:
                 
                 # this is tricky, but if there is a borked url in here causing trouble, we should let it run and error out immediately tbh
                 

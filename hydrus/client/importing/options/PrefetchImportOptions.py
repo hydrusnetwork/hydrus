@@ -17,6 +17,8 @@ class PrefetchImportOptions( HydrusSerialisable.SerialisableBase ):
         self._preimport_hash_check_type = DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
         self._preimport_url_check_type = DO_CHECK
         self._preimport_url_check_looks_for_neighbour_spam = True
+        #self._fetch_metadata_even_if_url_recognised_and_file_already_in_db = False
+        #self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db = False
         
     
     def __eq__( self, other ):

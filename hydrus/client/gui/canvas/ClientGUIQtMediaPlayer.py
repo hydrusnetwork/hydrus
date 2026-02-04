@@ -1,3 +1,5 @@
+import typing
+
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -7,7 +9,7 @@ try:
     from qtpy import QtMultimediaWidgets as QMW
     from qtpy import QtMultimedia as QM
     
-except:
+except Exception as e:
     
     pass
     
@@ -330,13 +332,18 @@ class QtMediaPlayerVideoWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget
         
     
 
+if typing.TYPE_CHECKING:
+    
+    from hydrus.client.gui.canvas import ClientGUICanvas
+    
+
 class GraphicsViewViewportMouseMoveCatcher( QC.QObject ):
     
-    def __init__( self, parent: QW.QWidget, destination: QW.QWidget ):
+    def __init__( self, parent: "ClientGUICanvas.Canvas" ):
         
         super().__init__( parent )
         
-        self._destination = destination
+        self._parent = parent
         
     
     def eventFilter( self, watched, event ):
@@ -345,9 +352,13 @@ class GraphicsViewViewportMouseMoveCatcher( QC.QObject ):
             
             if event.type() == QC.QEvent.Type.MouseMove:
                 
-                self._destination.mouseMoveEvent( event )
+                event = typing.cast( QG.QMouseEvent, event )
                 
-                return True
+                left_down = bool( event.buttons() & QC.Qt.MouseButton.LeftButton )
+                
+                self._parent.HandleMouseMoveWithoutEvent( left_down )
+                
+                return False
                 
             
         except Exception as e:
@@ -380,6 +391,11 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
         self._my_graphics_view = QW.QGraphicsView( self )
         
+        if CG.client_controller.new_options.GetBoolean( 'qt_media_player_opengl_test' ):
+            
+            self._my_graphics_view.setViewport( QW.QOpenGLWidget( self._my_graphics_view ) )
+            
+        
         self._my_graphics_view.setScene( QW.QGraphicsScene( self._my_graphics_view ) )
         self._my_graphics_view.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
         self._my_graphics_view.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
@@ -401,7 +417,7 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
         self._media_player = QM.QMediaPlayer( self )
         
-        self._media_player.mediaStatusChanged.connect( self._MediaStatusChanged )
+        self._media_player.setLoops( QM.QMediaPlayer.Loops.Infinite )
         
         self._we_are_initialised = True
         
@@ -416,6 +432,7 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
         self._media = None
         
+        self._near_endpoint = False
         self._playthrough_count = 0
         
         if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
@@ -429,32 +446,10 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
         self._my_audio_placeholder.setMouseTracking( True )
         
-        # ok this whole thing is pretty grunky, but it appears to work.
-        # makes the mouse hide/show and maybe the media dragging around tech work
-        # GraphicsView doesn't propagate mousemove events like normal it seems
-        self._mouse_move_catcher = GraphicsViewViewportMouseMoveCatcher( self, canvas )
-        self._my_graphics_view.viewport().setMouseTracking( True )
-        self._my_graphics_view.viewport().installEventFilter( self._mouse_move_catcher )
-        
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ shortcut_set ], catch_mouse = True )
         
         CG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
-        
-    
-    def _MediaStatusChanged( self, status ):
-        
-        if status == QM.QMediaPlayer.MediaStatus.EndOfMedia:
-            
-            self._playthrough_count += 1
-            
-            self._media_player.setPosition( 0 )
-            
-            if not self._stop_for_slideshow:
-                
-                self._media_player.play()
-                
-            
         
     
     def _RefitVideo( self ):
@@ -499,21 +494,9 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
             
             self._media = None
             
-            # ok in my experience setting media_player.setSource to anything after a first load is pretty buggy!
-            # it can just straight up hang forever. either to a null QUrl or another file
-            # it seems to be it doesn't like unloading some files
-            # so, let's spawn a new one every time
-            # EDIT: ok going from one vid to another can cause crashes, so we are moving to a system where each QtMediaPlayer just gets one use. we'll make a new one every time
+            # it used to be really buggy to go media_player.setSource after a first load, but in Qt >=6.9 things seem fine
             
             self._media_player.stop()
-            
-            #self._media_player.setParent( None )
-            
-            #CG.client_controller.CallAfterQtSafe( self, self._media_player.deleteLater )
-            
-            #self._media_player = QM.QMediaPlayer( self )
-            
-            #self._media_player.mediaStatusChanged.connect( self._MediaStatusChanged )
             
         
     
@@ -539,7 +522,19 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
                 
             else:
                 
-                current_frame_index = int( round( ( current_timestamp_ms / self._media.GetDurationMS() ) * num_frames ) )
+                position_float = current_timestamp_ms / self._media.GetDurationMS()
+                
+                if not self._near_endpoint and position_float > 0.8: # bit of padding
+                    
+                    self._near_endpoint = True
+                    
+                elif self._near_endpoint and position_float < 0.2:
+                    
+                    self._near_endpoint = False
+                    self._playthrough_count += 1
+                    
+                
+                current_frame_index = int( round( position_float * num_frames ) )
                 
                 current_frame_index = min( current_frame_index, num_frames - 1 )
                 
@@ -555,6 +550,12 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
     def HasPlayedOnceThrough( self ):
         
         return self._playthrough_count > 0
+        
+    
+    def InstallMouseMoveCatcher( self, event_filter: QC.QObject ):
+        
+        self._my_graphics_view.viewport().setMouseTracking( True )
+        self._my_graphics_view.viewport().installEventFilter( event_filter )
         
     
     def IsCompletelyUnloaded( self ):
@@ -724,14 +725,6 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
     
     def TryToUnload( self ):
-        
-        # imperfect but a little better
-        if self._mouse_move_catcher is not None:
-            
-            self._my_graphics_view.removeEventFilter( self._mouse_move_catcher )
-            
-            self._mouse_move_catcher = None
-            
         
         # this call is crashtastic, so don't inject it while the player is buffering or whatever
         if self._media_player.mediaStatus() in ( QM.QMediaPlayer.MediaStatus.LoadedMedia, QM.QMediaPlayer.MediaStatus.EndOfMedia, QM.QMediaPlayer.MediaStatus.InvalidMedia ):

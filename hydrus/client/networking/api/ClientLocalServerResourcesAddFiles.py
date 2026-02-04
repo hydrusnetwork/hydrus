@@ -73,7 +73,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         if custom_location_context is not None:
             
-            file_import_options.SetDestinationLocationContext( custom_location_context )
+            file_import_options.GetLocationImportOptions().SetDestinationLocationContext( custom_location_context )
             
         
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'API POSTed File' )

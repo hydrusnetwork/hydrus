@@ -258,15 +258,22 @@ There are three special external libraries. You just have to get them and put th
 
 The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual (e.g. very old/new python), try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
 
-If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should _just work_ on most normal computers, but let me know if you have any trouble.
+This setup creates a copy of your system python in a folder called 'venv'. Is it completely non-destructive and undoable. If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. You can also just delete that folder to 'uninstall' the venv.
+
+The setup should _just work_ on most normal computers, but very old or new systems or unusual architectures may run into trouble. Let me know if you have any problems.
 
 Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to update to the current help.
 
 #### Running it
 
+!!! note "Run the launch script, not the .py"
+    Do not run `hydrus_client.py`, because you will get errors about missing libraries (probably `yaml`/`qtpy`). You will be running `hydrus_client.bat/.sh/.command` instead.
+    
+    We have just set up a "venv", which is not the same as your system python, and so in order to run `hydrus_client.py`, we need to "activate" the venv first to load all the libraries we just installed with the `setup_venv` script. Feel free to check the contents of the launch scripts--they are very simple--to see how it works.
+
 === "Windows"
 
-    Run 'hydrus_client.bat' to start the client.
+    Run `hydrus_client.bat` to start the client.
 
 === "Linux"
 
@@ -304,12 +311,12 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in `install_dir/static/requirements/advanced` for more info, and you can also work off this list: [PySide6](https://pypi.org/project/PySide6/#history)
         
     
-    Run 'hydrus_client.sh' to start the client. Don't forget to `chmod +x hydrus_client.sh` if you need it.
+    Run `hydrus_client.sh` to start the client. Don't forget to `chmod +x hydrus_client.sh` if you need it.
     
 
 === "macOS"
 
-    Run 'hydrus_client.command' to start the client. Don't forget to `chmod +x hydrus_client.command` and `sudo xattr -rd com.apple.quarantine hydrus_client.command` if you need it.
+    Run `hydrus_client.command` to start the client. Don't forget to `chmod +x hydrus_client.command` and `sudo xattr -rd com.apple.quarantine hydrus_client.command` if you need it.
 
 The first start will take a little longer (it has to compile all the code into something your computer understands). Once up, it will operate just like a normal build with the same folder structure and so on.
 

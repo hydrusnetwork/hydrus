@@ -24,6 +24,10 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         location_context = self._new_options.GetDefaultLocalLocationContext()
         
+        self._active_search_predicates_height_num_chars = ClientGUICommon.BetterSpinBox( self._read_autocomplete_panel, min = 1, max = 128 )
+        tt = 'This is the list _above_ the tag autocomplete input on normal file search pages, where the currently active search predicates are listed. If you use regularly many predicates, boost this!'
+        self._active_search_predicates_height_num_chars.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         self._default_local_location_context = ClientGUILocation.LocationSearchContextButton( self._read_autocomplete_panel, location_context )
         self._default_local_location_context.setToolTip( ClientGUIFunctions.WrapToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' ) )
         
@@ -40,6 +44,8 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._autocomplete_float_main_gui.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._read_autocomplete_panel, min = 1, max = 128 )
+        tt = 'This is the dropdown list _below_ the tag autocomplete input that shows the search results on what you type.'
+        self._ac_read_list_height_num_chars.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._show_system_everything = QW.QCheckBox( self._read_autocomplete_panel )
         tt = 'After users get some experience with the program and a larger collection, they tend to have less use for system:everything.'
@@ -73,6 +79,7 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._autocomplete_float_main_gui.setChecked( self._new_options.GetBoolean( 'autocomplete_float_main_gui' ) )
         
+        self._active_search_predicates_height_num_chars.setValue( self._new_options.GetInteger( 'active_search_predicates_height_num_chars' ) )
         self._ac_read_list_height_num_chars.setValue( self._new_options.GetInteger( 'ac_read_list_height_num_chars' ) )
         
         self._show_system_everything.setChecked( self._new_options.GetBoolean( 'show_system_everything' ) )
@@ -91,12 +98,13 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Default/Fallback local file search location: ', self._default_local_location_context ) )
-        rows.append( ( 'Default tag service in search pages: ', self._default_tag_service_search_page ) )
-        rows.append( ( 'Autocomplete dropdown floats over file search pages: ', self._autocomplete_float_main_gui ) )
-        rows.append( ( 'Autocomplete list height: ', self._ac_read_list_height_num_chars ) )
-        rows.append( ( 'Start new search pages in \'searching immediately\': ', self._default_search_synchronised ) )
-        rows.append( ( 'Show system:everything: ', self._show_system_everything ) )
+        rows.append( ( 'Active Search Predicates list height:', self._active_search_predicates_height_num_chars ) )
+        rows.append( ( 'Default/Fallback local file search location:', self._default_local_location_context ) )
+        rows.append( ( 'Default tag service in search pages:', self._default_tag_service_search_page ) )
+        rows.append( ( 'Autocomplete dropdown floats over file search pages:', self._autocomplete_float_main_gui ) )
+        rows.append( ( 'Autocomplete list height:', self._ac_read_list_height_num_chars ) )
+        rows.append( ( 'Start new search pages in \'searching immediately\':', self._default_search_synchronised ) )
+        rows.append( ( 'Show system:everything:', self._show_system_everything ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._read_autocomplete_panel, rows )
         
@@ -125,6 +133,8 @@ class FileSearchPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
     
     def UpdateOptions( self ):
+        
+        self._new_options.SetInteger( 'active_search_predicates_height_num_chars', self._active_search_predicates_height_num_chars.value() )
         
         self._new_options.SetKey( 'default_tag_service_search_page', self._default_tag_service_search_page.GetValue() )
         

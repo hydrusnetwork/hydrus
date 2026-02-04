@@ -10,7 +10,7 @@ try:
     
     CBOR_AVAILABLE = True
     
-except:
+except Exception as e:
     
     pass
     
@@ -203,7 +203,7 @@ def CheckFileService( file_service_key: bytes ):
         
         service = CG.client_controller.services_manager.GetService( file_service_key )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.BadRequestException( 'Could not find the file service "{}"!'.format( file_service_key.hex() ) )
         
@@ -222,7 +222,7 @@ def CheckTagService( tag_service_key: bytes ):
         
         service = CG.client_controller.services_manager.GetService( tag_service_key )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.BadRequestException( 'Could not find the tag service "{}"!'.format( tag_service_key.hex() ) )
         
@@ -261,7 +261,7 @@ def CheckUploadableService( service_key: bytes ):
         
         service = CG.client_controller.services_manager.GetService( service_key )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_key.hex() ) )
         
@@ -494,7 +494,7 @@ def ParseClientAPIPOSTByteArgs( args ):
                     parsed_request_args[ var_name ] = v
                     
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a hex string, but it failed.'.format( var_name ) )
                 
@@ -530,7 +530,7 @@ def ParseClientAPIPOSTByteArgs( args ):
                     parsed_request_args[ var_name ] = v_list
                     
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a list of hex strings, but it failed.'.format( var_name ) )
                 
@@ -576,7 +576,7 @@ def ParseClientAPIPOSTByteArgs( args ):
                     parsed_request_args[ var_name ] = bytes_dict
                     
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.BadRequestException( 'I was expecting to parse \'{}\' as a dictionary of hex strings to other data, but it failed.'.format( var_name ) )
                 
@@ -615,7 +615,7 @@ def ParseClientAPIPOSTArgs( request ):
             
             request_content_type_mime = HC.mime_enum_lookup[ content_type ]
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.BadRequestException( 'Did not recognise Content-Type header!' )
             

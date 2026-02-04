@@ -787,7 +787,7 @@ class Controller( object ):
                 return self._param_read_responses[ ( name, args ) ]
                 
             
-        except:
+        except Exception as e:
             
             pass
             

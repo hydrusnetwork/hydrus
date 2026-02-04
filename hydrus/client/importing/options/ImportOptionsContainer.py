@@ -95,6 +95,8 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     
     def GetDerivedImportOptionsFromContainer( self, import_options_container: "ImportOptionsContainer", import_options_type: int, import_options_caller_type: int, url_class_key = None ):
         
+        # TODO: Yeah rewrite this guy to a 'convert my swiss cheese slice and import options caller type to a solid base and I'll never talk to you again this file import'
+        
         with self._lock:
             
             possible_import_options = import_options_container.GetImportOptions( import_options_type )
@@ -214,6 +216,11 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER ] = ImportOptionsManager
+
+# TODO: Ok splitting this guy into Swiss Cheese vs Solid. come up with better names.
+# he is so simple though, I could just have a bool that changes his None-return to an exception etc.., and alter any edit panel based on that bool
+# I do need names for this transition though
+# ditch the 'getderivedimportoptionsfromcontainer' stuff in the manager above. collapse a swiss cheese template and importer context to a frozen solid base early in the pipeline, and pass that around thereafter for that file import
 
 class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     

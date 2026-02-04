@@ -54,8 +54,14 @@ def CatchExceptionClient( etype, value, tb ):
         
         job_status = ClientThreading.JobStatus()
         
-        try: job_status.SetStatusTitle( str( etype.__name__ ) )
-        except: job_status.SetStatusTitle( str( etype ) )
+        try:
+            
+            job_status.SetStatusTitle( str( etype.__name__ ) )
+            
+        except Exception as e:
+            
+            job_status.SetStatusTitle( str( etype ) )
+            
         
         job_status.SetStatusText( first_line )
         job_status.SetTraceback( trace )
@@ -68,7 +74,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         CG.client_controller.pub( 'message', job_status )
         
-    except:
+    except Exception as e:
         
         text = 'Encountered an error I could not parse:'
         
@@ -76,8 +82,14 @@ def CatchExceptionClient( etype, value, tb ):
         
         text += str( ( etype, value, tb ) )
         
-        try: text += traceback.format_exc()
-        except: pass
+        try:
+            
+            text += traceback.format_exc()
+            
+        except Exception as e:
+            
+            pass
+            
         
         HydrusData.ShowText( text )
         
@@ -145,7 +157,7 @@ def ResolutionToPrettyString( resolution ):
             
             resolution = tuple( resolution )
             
-        except:
+        except Exception as e:
             
             return 'broken resolution'
             
@@ -205,8 +217,14 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
     job_status = ClientThreading.JobStatus()
     
-    try: job_status.SetStatusTitle( str( etype.__name__ ) )
-    except: job_status.SetStatusTitle( str( etype ) )
+    try:
+        
+        job_status.SetStatusTitle( str( etype.__name__ ) )
+        
+    except Exception as e:
+        
+        job_status.SetStatusTitle( str( etype ) )
+        
     
     job_status.SetStatusText( first_line )
     

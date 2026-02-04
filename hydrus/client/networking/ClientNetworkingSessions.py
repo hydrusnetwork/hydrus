@@ -19,7 +19,7 @@ try:
     
     SOCKS_PROXY_OK = True
     
-except:
+except Exception as e:
     
     SOCKS_PROXY_OK = False
     
@@ -84,7 +84,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             
             self.session.cookies = cookies
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( "Could not load and set cookies for session {}".format( self.network_context ) )
             
@@ -102,7 +102,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                 
                 session = pickle.loads( bytes.fromhex( pickled_session_hex ) )
                 
-            except:
+            except Exception as e:
                 
                 session = requests.Session()
                 

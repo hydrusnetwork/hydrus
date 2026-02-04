@@ -5,7 +5,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
-from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import LocationImportOptions
 
 def CheckImporterCanDoFileWorkBecausePaused( paused: bool, file_seed_cache: ClientImportFileSeeds.FileSeedCache, page_key: bytes ):
     
@@ -37,11 +37,11 @@ def CheckImporterCanDoFileWorkBecausePaused( paused: bool, file_seed_cache: Clie
         
     
 
-def CheckImporterCanDoFileWorkBecausePausifyingProblem( file_import_options: FileImportOptionsLegacy ):
+def CheckImporterCanDoFileWorkBecausePausifyingProblem( location_import_options: LocationImportOptions.LocationImportOptions ):
     
     try:
         
-        file_import_options.CheckReadyToImport()
+        location_import_options.CheckReadyToImport()
         
     except Exception as e:
         

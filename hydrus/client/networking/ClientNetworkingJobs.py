@@ -26,6 +26,8 @@ from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingDomainSettings
 
+from hydrus.client.importing.options import FileFilteringImportOptions
+
 def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_service = False ):
     
     ( error_text, encoding ) = HydrusText.NonFailingUnicodeDecode( data, 'utf-8' )
@@ -227,7 +229,7 @@ class NetworkJob( object ):
         self._num_bytes_expected_in_this_range_chunk = None
         self._number_of_concurrent_empty_chunks = 0
         
-        self._file_import_options = None
+        self._file_filtering_import_options = None
         
         self._network_contexts = self._GenerateNetworkContexts()
         
@@ -293,7 +295,7 @@ class NetworkJob( object ):
                         we_did_it = True
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -319,7 +321,7 @@ class NetworkJob( object ):
                         we_did_it = True
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -474,11 +476,11 @@ class NetworkJob( object ):
                 
                 if self._num_bytes_to_read is not None:
                     
-                    if self._file_import_options is not None:
+                    if self._file_filtering_import_options is not None:
                         
                         is_complete_file_size = True
                         
-                        self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_to_read, is_complete_file_size )
+                        self._file_filtering_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_to_read, is_complete_file_size )
                         
                     
                 
@@ -526,12 +528,12 @@ class NetworkJob( object ):
                                 
                                 self._num_bytes_expected_in_this_range_chunk = ( byte_end - byte_start ) + 1
                                 
-                            except:
+                            except Exception as e:
                                 
                                 pass
                                 
                             
-                        except:
+                        except Exception as e:
                             
                             pass
                             
@@ -547,7 +549,7 @@ class NetworkJob( object ):
                                 
                                 self._num_bytes_to_read = num_bytes
                                 
-                            except:
+                            except Exception as e:
                                 
                                 pass
                                 
@@ -618,11 +620,11 @@ class NetworkJob( object ):
                         
                     
                 
-                if self._file_import_options is not None:
+                if self._file_filtering_import_options is not None:
                     
                     is_complete_file_size = False
                     
-                    self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
+                    self._file_filtering_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
                     
                 
             
@@ -676,11 +678,11 @@ class NetworkJob( object ):
         
         if not we_know_there_is_more_to_download:
             
-            if self._file_import_options is not None:
+            if self._file_filtering_import_options is not None:
                 
                 is_complete_file_size = True
                 
-                self._file_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
+                self._file_filtering_import_options.CheckNetworkDownload( self._response_mime, self._num_bytes_read, is_complete_file_size )
                 
             
         
@@ -772,7 +774,7 @@ class NetworkJob( object ):
                         # it prob has some weird unicode characters in it, so let's encode
                         referral_url = ClientNetworkingFunctions.EnsureURLIsEncoded( referral_url )
                         
-                    except:
+                    except Exception as e:
                         
                         # ok this situation is crazy, so let's fall back to what I read in StackExchange an eon ago
                         # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
@@ -1405,11 +1407,11 @@ class NetworkJob( object ):
             
         
     
-    def SetFileImportOptions( self, file_import_options ):
+    def SetFileFilteringImportOptions( self, file_filtering_import_options: FileFilteringImportOptions.FileFilteringImportOptions ):
         
         with self._lock:
             
-            self._file_import_options = file_import_options
+            self._file_filtering_import_options = file_filtering_import_options
             
         
     
@@ -1600,7 +1602,7 @@ class NetworkJob( object ):
                                 
                                 num_seconds_to_wait = int( retry_after )
                                 
-                            except:
+                            except Exception as e:
                                 
                                 try:
                                     
@@ -1608,7 +1610,7 @@ class NetworkJob( object ):
                                     
                                     num_seconds_to_wait = min( max( 60, timestamp - HydrusTime.GetNow() ), 86400 )
                                     
-                                except:
+                                except Exception as e:
                                     
                                     HydrusData.Print( f'Was given an unparsable Retry-After of {retry_after}!' )
                                     

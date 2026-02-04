@@ -520,7 +520,7 @@ class PairComparatorRelativeVisualDuplicates( PairComparator ):
                 visual_data_a = ClientDuplicatesComparisonStatements.GetVisualData( media_result_a )
                 visual_data_b = ClientDuplicatesComparisonStatements.GetVisualData( media_result_b )
                 
-            except:
+            except Exception as e:
                 
                 return False
                 
@@ -534,7 +534,7 @@ class PairComparatorRelativeVisualDuplicates( PairComparator ):
                     visual_data_tiled_a = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_a )
                     visual_data_tiled_b = ClientDuplicatesComparisonStatements.GetVisualDataTiled( media_result_b )
                     
-                except:
+                except Exception as e:
                     
                     return False
                     

@@ -154,7 +154,7 @@ def ShowAboutWindow( win: QW.QWidget ):
             qt_string += f' ({actual_platform_name})'
             
         
-    except:
+    except Exception as e:
         
         qt_string += f' (unknown platform)'
         
@@ -198,7 +198,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     library_version_lines.append( 'db cache size per file: {}MB'.format( HG.db_cache_size ) )
     library_version_lines.append( 'db journal mode: {}'.format( HG.db_journal_mode ) )
     library_version_lines.append( 'db synchronous mode: {}'.format( HG.db_synchronous ) )
-    library_version_lines.append( 'db transaction commit period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
+    library_version_lines.append( 'db transaction commit period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HG.db_transaction_commit_period ) ) )
     library_version_lines.append( 'db using memory for temp?: {}'.format( HG.no_db_temp_files ) )
     
     description_versions = 'This is the media management application of the hydrus software suite.' + '\n' * 2 + '\n'.join( library_version_lines )
@@ -238,7 +238,7 @@ def ShowAboutWindow( win: QW.QWidget ):
         import cbor2
         CBOR_AVAILABLE = True
         
-    except:
+    except Exception as e:
         
         pass
         

@@ -50,7 +50,7 @@ def ZipLooksLikeProcreate( path ) -> bool:
         
         return class_name == 'SilicaDocument'
         
-    except:
+    except Exception as e:
         
         return False
         
@@ -88,7 +88,7 @@ def GetProcreateResolution( path ):
             height = size[1]
             
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.NoResolutionFileException()
         

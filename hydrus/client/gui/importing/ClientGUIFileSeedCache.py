@@ -426,7 +426,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_file_seed_index = HydrusNumbers.ToHumanInt( file_seed_index )
             
-        except:
+        except Exception as e:
             
             pretty_file_seed_index = '--'
             
@@ -471,7 +471,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             file_seed_index = self._file_seed_cache.GetFileSeedIndex( file_seed )
             
-        except:
+        except Exception as e:
             
             file_seed_index = -1
             

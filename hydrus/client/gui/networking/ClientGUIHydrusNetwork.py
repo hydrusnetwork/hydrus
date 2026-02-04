@@ -74,7 +74,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 choice_control.SetValue( selection_row )
                 
-            except:
+            except Exception as e:
                 
                 choice_control.SetValue( ( content_type, None ) )
                 

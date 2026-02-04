@@ -93,7 +93,7 @@ def CleanRunningFile( db_path, instance ):
         
         os.remove( path )
         
-    except:
+    except Exception as e:
         
         pass
         
@@ -289,7 +289,7 @@ def Print( text ):
         
         print( str( text ) )
         
-    except:
+    except Exception as e:
         
         print( repr( text ) )
         
@@ -465,7 +465,7 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
             d = d.quantize( 0 )
             
         
-    except:
+    except Exception as e:
         
         # blarg
         pass

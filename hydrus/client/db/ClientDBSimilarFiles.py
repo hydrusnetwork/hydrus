@@ -773,7 +773,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 self._RegenerateBranch( fake_job_status, biggest_perceptual_hash_id )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.ShowText( 'It looks like similar files maintenance had trouble regenerating a branch of the search tree! You should try _database->regenerate->similar files search tree_, and if that still produces errors, let hydev know.' )
                 
@@ -884,7 +884,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     
                     HydrusData.Print( '\n'.join( ( hash.hex() for hash in hash_ids_to_hashes.values() ) ) )
                     
-                except:
+                except Exception as e:
                     
                     HydrusData.Print( 'Could not print affected hashes (might be your regular hashes are busted too)' )
                     

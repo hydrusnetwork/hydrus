@@ -206,6 +206,9 @@ Again: the real problem with downloading is not finding new things, it is keepin
 
 ## Logins
 
+!!! warning
+    Never use important accounts with hydrus. Hydrus does not store credentials securely. Also, if you accidentally download too much at once, or a site suddenly changes their policies, a linked account can get banned. If you link an account to hydrus, always use a throwaway account you don't care much about.
+
 **This system often breaks and is sometimes a hassle deal with! If you need to log in to anything more clever than a booru, use Hydrus Companion or similar to copy your cookies across!**
 
 The client supports a very basic and ugly login system. It can handle simple sites and is as [completely user-customisable as the downloader system](downloader_login.md). The client starts with multiple login scripts by default, which you can review under _network->logins->manage logins_:
@@ -213,9 +216,6 @@ The client supports a very basic and ugly login system. It can handle simple sit
 ![](images/manage_logins.png)
 
 Many sites grant all their content without you having to log in at all, but others require it for NSFW or special content, or you may wish to take advantage of site-side user preferences like personal blacklists. If you wish, you can give hydrus some login details here, and it will try to login--just as a browser would--before it downloads anything from that domain.
-
-!!! warning
-    As a general rule, I do not recommend you use important accounts with hydrus. Use a throwaway account you don't care much about.
 
 To start using a login script, select the domain and click 'edit credentials'. You'll put in your username/password, and then 'activate' the login for the domain, and that should be it! The next time you try to get something from that site, the first request will wait (usually about ten seconds) while a login popup performs the login. Most logins last for about thirty days (and many refresh that 30-day timer every time you make a new request), so once you are set up, you usually never notice it again, especially if you have a subscription on the domain.
 

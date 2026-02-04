@@ -66,7 +66,7 @@ def parse(input):
             
             buffer = lzma.decompress( five + unknown_uncompressed_size_8byte + the_rest )
             
-        except:
+        except Exception as e:
             
             raise Exception( 'This flash file is too weird, could not parse it!' )
             

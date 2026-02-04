@@ -871,7 +871,7 @@ class BetterRadioBox( QW.QFrame ):
             
             self.SetValue( data )
             
-        except:
+        except Exception as e:
             
             pass
             

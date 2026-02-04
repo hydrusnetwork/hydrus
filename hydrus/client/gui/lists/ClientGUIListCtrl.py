@@ -440,7 +440,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
             existing_sort_logical_index = CGLC.column_list_column_type_logical_position_lookup[ self._column_list_type ][ self._sort_column_type ]
             
-        except:
+        except Exception as e:
             
             existing_sort_logical_index = 0
             

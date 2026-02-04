@@ -13,7 +13,9 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
@@ -341,6 +343,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'archive_delete_commit_panel_delays_multiple_delete_choices' : True,
             'always_start_media_viewers_always_on_top' : False,
             'always_start_media_viewers_frameless' : False,
+            'qt_media_player_opengl_test' : False,
+            'persist_media_window_qt_media_player' : True,
+            'persist_media_window_mpv' : False,
         }
         
         #
@@ -516,8 +521,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'animated_scanbar_nub_width' : 10,
             'domain_network_infrastructure_error_number' : 3,
             'domain_network_infrastructure_error_time_delta' : 600,
-            'ac_read_list_height_num_chars' : 21,
+            'ac_read_list_height_num_chars' : 22,
             'ac_write_list_height_num_chars' : 11,
+            'active_search_predicates_height_num_chars' : 6,
             'system_busy_cpu_percent' : 50,
             'human_bytes_sig_figs' : 3,
             'ms_to_wait_between_physical_file_deletes' : 600,
@@ -801,17 +807,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
         prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
         
-        exclude_deleted = True
-        allow_decompression_bombs = True
-        min_size = None
-        max_size = None
-        max_gif_size = None
-        min_resolution = None
-        max_resolution = None
+        file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
         
-        automatic_archive = False
-        associate_primary_urls = True
-        associate_source_urls = True
+        file_filtering_import_options.SetAllowsDecompressionBombs( True )
+        file_filtering_import_options.SetExcludesDeleted( True )
         
         from hydrus.client.importing.options import PresentationImportOptions
         
@@ -819,22 +818,27 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
         
+        location_import_options = LocationImportOptions.LocationImportOptions()
+        
+        location_import_options.SetAutomaticallyArchives( False )
+        location_import_options.SetShouldAssociatePrimaryURLs( True )
+        location_import_options.SetShouldAssociateSourceURLs( True )
+        location_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
+        
         quiet_file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         
         quiet_file_import_options.SetPrefetchImportOptions( prefetch_import_options )
-        quiet_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
+        quiet_file_import_options.SetFileFilteringImportOptions( file_filtering_import_options )
+        quiet_file_import_options.SetLocationImportOptions( location_import_options )
         quiet_file_import_options.SetPresentationImportOptions( presentation_import_options )
-        quiet_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         
         self._dictionary[ 'default_file_import_options' ][ 'quiet' ] = quiet_file_import_options
         
         loud_file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
         
         loud_file_import_options.SetPrefetchImportOptions( prefetch_import_options )
-        loud_file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        loud_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
+        loud_file_import_options.SetFileFilteringImportOptions( file_filtering_import_options )
+        loud_file_import_options.SetLocationImportOptions( location_import_options )
         
         self._dictionary[ 'default_file_import_options' ][ 'loud' ] = loud_file_import_options
         
@@ -1008,7 +1012,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                         p = a_p
                         
                     
-                except:
+                except Exception as e:
                     
                     p = a_p
                     
@@ -1290,7 +1294,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                     
                 
-            except:
+            except Exception as e:
                 
                 pass
                 

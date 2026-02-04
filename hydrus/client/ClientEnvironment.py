@@ -15,7 +15,7 @@ def SetRequestsCABundleEnv( pem_path = None ):
             
             pem_path = certifi.where()
             
-        except:
+        except Exception as e:
             
             pass
             

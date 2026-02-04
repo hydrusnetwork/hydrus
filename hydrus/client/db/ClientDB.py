@@ -3636,11 +3636,13 @@ class DB( HydrusDB.HydrusDB ):
         
         file_import_options = file_import_job.GetFileImportOptions()
         
-        destination_location_context = file_import_options.GetDestinationLocationContext()
+        location_import_options = file_import_options.GetLocationImportOptions()
+        
+        destination_location_context = location_import_options.GetDestinationLocationContext()
         
         destination_location_context.FixMissingServices( ClientLocation.ValidLocalDomainsFilter )
         
-        file_import_options.CheckReadyToImport()
+        location_import_options.CheckReadyToImport()
         
         hash = file_import_job.GetHash()
         
@@ -3741,7 +3743,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            if file_import_options.AutomaticallyArchives():
+            if file_import_options.GetLocationImportOptions().AutomaticallyArchives():
                 
                 if HG.file_import_report_mode:
                     
@@ -3797,7 +3799,7 @@ class DB( HydrusDB.HydrusDB ):
             
             HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
             
-        except:
+        except Exception as e:
             
             HydrusData.ShowText( 'Was unable to parse an incoming update!' )
             
@@ -6288,7 +6290,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     HydrusTags.CheckTagNotEmpty( cleaned_tag )
                     
-                except:
+                except Exception as e:
                     
                     cleaned_tag = 'unrecoverable invalid tag'
                     
@@ -6359,7 +6361,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 HydrusData.Print( f'Invalid tag fixing: tag_id {tag_id}: "{tag}" replaced with "{cleaned_tag}"' )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.Print( f'Invalid tag fixing: tag_id {tag_id}: Could not even print the bad tag to the log! It is now known as "{cleaned_tag}"' )
                 
@@ -6935,7 +6937,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._Execute( 'UPDATE options SET options = ?;', ( options, ) )
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( 'Failed options save dump:' )
             HydrusData.Print( options )
@@ -7502,7 +7504,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 do_it = True
                 
-            except:
+            except Exception as e:
                 
                 do_it = False
                 
@@ -7639,7 +7641,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     do_it = True
                     
-                except:
+                except Exception as e:
                     
                     do_it = False
                     
@@ -7800,7 +7802,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     user_wants_us_to_leave_it_on = new_options.GetBoolean( 'always_show_system_everything' )
                     
-                except:
+                except Exception as e:
                     
                     user_wants_us_to_leave_it_on = False
                     

@@ -593,7 +593,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                             
                             self._migration_destination_hash_type_choice.setEnabled( False )
                             
-                        except:
+                        except Exception as e:
                             
                             pass
                             

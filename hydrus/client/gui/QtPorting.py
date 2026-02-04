@@ -361,7 +361,7 @@ class TabBar( QW.QTabBar ):
                 return
                 
             
-        except:
+        except Exception as e:
             
             pass
             

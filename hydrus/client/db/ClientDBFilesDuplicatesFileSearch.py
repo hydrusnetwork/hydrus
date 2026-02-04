@@ -377,7 +377,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                     HydrusData.Print( f'Fragmentary potential duplicates search did a potentials based search, with per-row speed of: { HydrusTime.TimeDeltaToPrettyTimeDelta( time_took / num_guys ) }' )
                     
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.Print( 'Could not profile the fragmentary duplicates search!' )
                 

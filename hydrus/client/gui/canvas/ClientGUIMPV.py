@@ -52,7 +52,7 @@ def GetClientAPIVersionString():
         
         return '{}.{}'.format( major, minor )
         
-    except:
+    except Exception as e:
         
         return 'unknown'
         
@@ -727,7 +727,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self.we_are_newer_api = float( GetClientAPIVersionString() ) >= 2.0
             
-        except:
+        except Exception as e:
             
             self.we_are_newer_api = False
             
@@ -1256,7 +1256,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._mpv_mediator.Seek( time_index_s, precise = precise )
             
-        except:
+        except Exception as e:
             
             self._disallow_seek_on_this_file = True
             

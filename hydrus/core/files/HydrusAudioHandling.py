@@ -18,7 +18,7 @@ def ParseFFMPEGAudio( lines ):
             
             audio_fps = int(line[match.start()+1:match.end()])
             
-        except:
+        except Exception as e:
             
             audio_fps = 'unknown'
             
@@ -29,7 +29,7 @@ def ParseFFMPEGAudio( lines ):
             
             audio_format = match.group()
             
-        except:
+        except Exception as e:
             
             audio_format = 'unknown'
             

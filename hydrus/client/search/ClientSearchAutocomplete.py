@@ -417,7 +417,7 @@ class ParsedAutocompleteText( object ):
             
             results = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( [ self.raw_input ] )
             
-        except:
+        except Exception as e:
             
             results = []
             
@@ -443,7 +443,7 @@ class ParsedAutocompleteText( object ):
                     return True
                     
                 
-            except:
+            except Exception as e:
                 
                 return False
                 

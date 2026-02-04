@@ -14,7 +14,7 @@ class HydrusException( Exception ):
                     
                     s.append( str( arg ) )
                     
-                except:
+                except Exception as e:
                     
                     s.append( repr( arg ) )
                     

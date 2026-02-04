@@ -119,7 +119,7 @@ class FileInfoManager( object ):
                 
                 return self.num_frames / HydrusTime.SecondiseMSFloat( self.duration_ms )
                 
-            except:
+            except Exception as e:
                 
                 return None
                 

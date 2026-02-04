@@ -1439,7 +1439,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             control.setPlainText( note )
             
-        except:
+        except Exception as e:
             
             control.setPlainText( repr( note ) )
             
@@ -1561,7 +1561,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
                     
                     control.setPlainText( note )
                     
-                except:
+                except Exception as e:
                     
                     control.setPlainText( repr( note ) )
                     

@@ -58,7 +58,7 @@ def get_updated_domain_modified_timestamp_datas( destination_media_result: Clien
             
             domains.add( domain )
             
-        except:
+        except Exception as e:
             
             continue # not an url in the strict sense, let's skip since this method really wants to be dealing with nice URLs
             

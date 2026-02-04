@@ -143,7 +143,7 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._default_value.SetValue( default_value )
                 
-            except:
+            except Exception as e:
                 
                 self._default_value.SetValue( default_value )
                 
@@ -364,7 +364,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._name.setText( parameter.GetName() )
             
-        except:
+        except Exception as e:
             
             self._name.setText( parameter.GetName() )
             
@@ -387,7 +387,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._default_value.SetValue( default_value )
                 
-            except:
+            except Exception as e:
                 
                 self._default_value.SetValue( default_value )
                 
@@ -456,7 +456,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._url_domain_mask.SetExampleDomain( example_domain )
             
-        except:
+        except Exception as e:
             
             pass
             
@@ -1490,7 +1490,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = url_class.Normalise( url_class.GetExampleURL() )
             
-        except:
+        except Exception as e:
             
             example_url = 'DOES NOT MATCH OWN EXAMPLE URL!! ' + url_class.GetExampleURL()
             

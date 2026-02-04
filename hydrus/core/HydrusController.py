@@ -598,7 +598,7 @@ class HydrusController( object ):
             
             self._InitHydrusTempDir()
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( 'Failed to initialise temp folder.' )
             
