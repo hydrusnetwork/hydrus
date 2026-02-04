@@ -3377,13 +3377,19 @@
 </div>
 </div>
 <p>The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual (e.g. very old/new python), try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.</p>
-<p>If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should <em>just work</em> on most normal computers, but let me know if you have any trouble.</p>
+<p>This setup creates a copy of your system python in a folder called 'venv'. Is it completely non-destructive and undoable. If something messes up, or you want to make a different decision, just run the setup script again and it will clear out and reinstall everything. You can also just delete that folder to 'uninstall' the venv.</p>
+<p>The setup should <em>just work</em> on most normal computers, but very old or new systems or unusual architectures may run into trouble. Let me know if you have any problems.</p>
 <p>Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to update to the current help.</p>
 <h4 id="running_it_1">Running it<a class="headerlink" href="#running_it_1" title="Permanent link">&para;</a></h4>
+<div class="admonition note">
+<p class="admonition-title">Run the launch script, not the .py</p>
+<p>Do not run <code>hydrus_client.py</code>, because you will get errors about missing libraries (probably <code>yaml</code>/<code>qtpy</code>). You will be running <code>hydrus_client.bat/.sh/.command</code> instead.</p>
+<p>We have just set up a "venv", which is not the same as your system python, and so in order to run <code>hydrus_client.py</code>, we need to "activate" the venv first to load all the libraries we just installed with the <code>setup_venv</code> script. Feel free to check the contents of the launch scripts--they are very simple--to see how it works.</p>
+</div>
 <div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Windows</label><label for="__tabbed_4_2">Linux</label><label for="__tabbed_4_3">macOS</label></div>
 <div class="tabbed-content">
 <div class="tabbed-block">
-<p>Run 'hydrus_client.bat' to start the client.</p>
+<p>Run <code>hydrus_client.bat</code> to start the client.</p>
 </div>
 <div class="tabbed-block">
 <div class="admonition warning">
@@ -3412,10 +3418,10 @@
 <p>One user reports that Fedora might need <code>libxkbcommon</code> too.</p>
 <p>If you still have trouble with the default Qt6 version, try running setup_venv again and choose a different version. There are several to choose from, including (w)riting a custom version. Check the advanced requirements.txts files in <code>install_dir/static/requirements/advanced</code> for more info, and you can also work off this list: <a href="https://pypi.org/project/PySide6/#history">PySide6</a></p>
 </div>
-<p>Run 'hydrus_client.sh' to start the client. Don't forget to <code>chmod +x hydrus_client.sh</code> if you need it.</p>
+<p>Run <code>hydrus_client.sh</code> to start the client. Don't forget to <code>chmod +x hydrus_client.sh</code> if you need it.</p>
 </div>
 <div class="tabbed-block">
-<p>Run 'hydrus_client.command' to start the client. Don't forget to <code>chmod +x hydrus_client.command</code> and <code>sudo xattr -rd com.apple.quarantine hydrus_client.command</code> if you need it.</p>
+<p>Run <code>hydrus_client.command</code> to start the client. Don't forget to <code>chmod +x hydrus_client.command</code> and <code>sudo xattr -rd com.apple.quarantine hydrus_client.command</code> if you need it.</p>
 </div>
 </div>
 </div>
@@ -3623,7 +3629,7 @@ choco install -y windows-sdk-10.0
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 7, 2026 20:58:05 UTC">January 7, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 4, 2026 21:43:23 UTC">February 4, 2026</span>
   </span>
 
     
