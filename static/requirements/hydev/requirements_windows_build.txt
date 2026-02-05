@@ -1,4 +1,0 @@
-setuptools==78.1.1
-PyInstaller==6.14.1
-
-pefile

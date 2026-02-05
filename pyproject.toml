@@ -43,7 +43,6 @@ conflicts = [
     [
         { group = "mpv-new" },
         { group = "mpv-test" },
-        { group = "mpv-old" },
     ],
     [
         { group = "opencv-new" },
@@ -62,6 +61,10 @@ conflicts = [
     ]
 ]
 
+# NOTE: The dependency groups below are synchronized with [project.optional-dependencies].
+# If you change versions or add/remove packages, update BOTH sections:
+# 1. [dependency-groups] - for uv package manager support
+# 2. [project.optional-dependencies] - for pip support
 [dependency-groups]
 mpv-new = [
     "mpv==1.0.8",
@@ -103,3 +106,83 @@ qt6-test = [
     "pyside6==6.10.1",
     "qtpy==2.4.3",
 ]
+dev = [
+    # Common dev tools
+    "httmock>=1.4.0",
+    "mkdocs-material",
+    "setuptools==78.1.1",
+    "PyInstaller==6.14.1",
+    # Windows-specific build tools
+    "pefile==2024.8.26 ; sys_platform == 'win32'",
+    # macOS-specific build tools
+    "pyoxidizer==0.24.0 ; sys_platform == 'darwin'",
+    "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa>=10.1 ; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz>=10.1 ; sys_platform == 'darwin'",
+]
+
+# NOTE: These optional dependencies are synchronized with [dependency-groups] above.
+# If you change versions or add/remove packages, update BOTH sections:
+# 1. [dependency-groups] - for uv package manager support
+# 2. [project.optional-dependencies] - for pip support
+[project.optional-dependencies]
+"mpv-new" = [
+    "mpv==1.0.8",
+]
+"mpv-test" = [
+    "mpv==1.0.8",
+]
+"opencv-new" = [
+    "opencv-python-headless==4.11.0.86",
+    "numpy<=2.3.1",
+]
+"opencv-old" = [
+    "opencv-python-headless==4.8.1.78",
+    "numpy<=2.3.1",
+]
+"opencv-test" = [
+    "opencv-python-headless==4.13.0.90",
+    "numpy==2.4.1",
+]
+"other-future" = [
+    "tldextract==5.3.1",
+]
+"other-normal" = []
+"qt6-new" = [
+    "pyside6==6.9.3",
+    "qtpy==2.4.3",
+]
+"qt6-new-pyqt6" = [
+    "pyqt6",
+    "pyqt6-charts",
+    "qtpy",
+]
+"qt6-older" = [
+    "pyside6==6.3.1",
+    "qtpy==2.3.1",
+]
+"qt6-test" = [
+    "pyside6==6.10.1",
+    "qtpy==2.4.3",
+]
+"dev" = [
+    # Common dev tools
+    "httmock>=1.4.0",
+    "mkdocs-material",
+    "setuptools==78.1.1",
+    "PyInstaller==6.14.1",
+    # Windows-specific build tools
+    "pefile ; sys_platform == 'win32'",
+    # macOS-specific build tools
+    "pyoxidizer ; sys_platform == 'darwin'",
+    "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
+    "pyobjc-framework-Cocoa>=10.1 ; sys_platform == 'darwin'",
+    "pyobjc-framework-Quartz>=10.1 ; sys_platform == 'darwin'",
+]
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["hydrus*"]
