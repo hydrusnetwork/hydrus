@@ -102,7 +102,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                         content_action = int( parsed_content_action )
                         
-                    except:
+                    except Exception as e:
                         
                         raise HydrusExceptions.BadRequestException( 'Sorry, got an action, "{}", that was not an integer!'.format( parsed_content_action ) )
                         
@@ -188,7 +188,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                         tag = HydrusTags.CleanTag( tag )
                         
-                    except:
+                    except Exception as e:
                         
                         continue
                         

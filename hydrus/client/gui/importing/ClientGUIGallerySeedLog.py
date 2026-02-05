@@ -316,7 +316,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_gallery_seed_index = HydrusNumbers.ToHumanInt( gallery_seed_index )
             
-        except:
+        except Exception as e:
             
             pretty_gallery_seed_index = '--'
             
@@ -343,7 +343,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             gallery_seed_index = self._gallery_seed_log.GetGallerySeedIndex( gallery_seed )
             
-        except:
+        except Exception as e:
             
             gallery_seed_index = -1
             

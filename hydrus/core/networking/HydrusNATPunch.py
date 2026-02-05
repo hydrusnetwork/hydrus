@@ -357,7 +357,7 @@ class ServicesUPnPManager( object ):
             
             local_ip = GetLocalIP()
             
-        except:
+        except Exception as e:
             
             return # can't get local IP, we are wewlad atm, probably some complicated multiple network situation we'll have to deal with later
             
@@ -382,7 +382,7 @@ class ServicesUPnPManager( object ):
             
             return # in this case, most likely miniupnpc could not be found, so skip for now
             
-        except:
+        except Exception as e:
             
             return # This IGD probably doesn't support UPnP, so don't spam the user with errors they can't fix!
             

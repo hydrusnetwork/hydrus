@@ -553,7 +553,7 @@ def CheckLooksLikeAFullURL( text: str ):
             raise HydrusExceptions.URLClassException( 'No domain in "{text}"!' )
             
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.URLClassException( f'Could not parse "{text}" at all!' )
         
@@ -666,7 +666,7 @@ def EnsureURLIsEncoded( url: str, keep_fragment = True ) -> str:
         
         return clean_url
         
-    except:
+    except Exception as e:
         
         return url
         

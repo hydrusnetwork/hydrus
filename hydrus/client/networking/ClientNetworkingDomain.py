@@ -1135,7 +1135,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
                 
-            except:
+            except Exception as e:
                 
                 return True
                 
@@ -1859,7 +1859,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
                 
-            except:
+            except Exception as e:
                 
                 return
                 
@@ -1881,7 +1881,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
                 domains = ClientNetworkingFunctions.ConvertDomainIntoAllApplicableDomains( domain )
                 
-            except:
+            except Exception as e:
                 
                 return
                 

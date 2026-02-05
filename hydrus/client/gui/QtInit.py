@@ -158,7 +158,7 @@ except ModuleNotFoundError as e:
             'selected' if qtpy.PYQT6 else 'not selected'
         )
         
-    except:
+    except Exception as e:
         
         message += 'qtpy had problems saying which module it had selected!'
         

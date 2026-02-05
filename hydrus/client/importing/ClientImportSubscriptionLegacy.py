@@ -63,7 +63,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
             example_nj = ClientNetworkingJobs.NetworkJobSubscription( subscription_key, 'GET', url )
             example_network_contexts = example_nj.GetNetworkContexts()
             
-        except:
+        except Exception as e:
             
             return [ ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_SUBSCRIPTION, subscription_key ), ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ]
             
@@ -271,7 +271,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
                 
                 file_bandwidth_estimate = self.GetBandwidthWaitingEstimate( subscription_name )
                 
-            except:
+            except Exception as e:
                 
                 # this is tricky, but if there is a borked url in here causing trouble, we should let it run and error out immediately tbh
                 

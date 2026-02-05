@@ -306,14 +306,14 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
+        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. Also, if you accidentally download too much at once, or a site suddenly changes their policies, a linked account can get banned. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
         warning += '\n' * 2
         warning += 'This system is old and only works for simple sites. If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv now requires this! If you do set up HC for an external login, I recommend you set the respective domain(s) you are logging into to "not active" here (hit "flip active" on them), so hydrus knows it is not supposed to be taking responsibility.'
         warning += '\n' * 2
         warning += 'If you are looking for your login cookies, go to _network->data->review session cookies_.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
-        warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignHCenter | QC.Qt.AlignmentFlag.AlignVCenter )
+        warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         warning_st.setWordWrap( True )
         warning_st.setObjectName( 'HydrusWarning' )
         
@@ -1293,7 +1293,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._body.setPlainText( body )
                 
-            except:
+            except Exception as e:
                 
                 self._body.setPlainText( str( body ) )
                 

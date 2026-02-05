@@ -117,7 +117,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
             
             results = self._string_processor.ProcessStrings( texts, max_steps_allowed = step_index + 1 )
             
-        except:
+        except Exception as e:
             
             results = []
             
@@ -268,7 +268,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
                     example_text = t
                     
                 
-            except:
+            except Exception as e:
                 
                 pass
                 
@@ -385,7 +385,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 ( conversion_type, data ) = default_conversions[0]
                 
             
-        except:
+        except Exception as e:
             
             conversion_type = ClientStrings.STRING_CONVERSION_APPEND_TEXT
             data = 'extra text'
@@ -397,7 +397,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_string_at_this_point = string_converter.Convert( self._example_string.text() )
             
-        except:
+        except Exception as e:
             
             example_string_at_this_point = self._example_string.text()
             
@@ -558,7 +558,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_string_at_this_point = string_converter.Convert( self._example_string.text(), number - 1 )
             
-        except:
+        except Exception as e:
             
             example_string_at_this_point = self._example_string.text()
             
@@ -1087,7 +1087,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     self._example_conversion.setText( str( example_conversion ) )
                     
-                except:
+                except Exception as e:
                     
                     self._example_conversion.setText( repr( example_conversion ) )
                     
@@ -1901,7 +1901,7 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
                         s = '{} (regex: {})'.format( s, m.group() )
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     

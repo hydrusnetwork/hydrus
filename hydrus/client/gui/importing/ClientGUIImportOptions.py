@@ -26,12 +26,131 @@ from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
+
+class EditFileFilteringImportOptionsPanel( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget, file_filtering_import_options: FileFilteringImportOptions.FileFilteringImportOptions ):
+        
+        super().__init__( parent )
+        
+        #
+        
+        filetype_selector_panel = ClientGUICommon.StaticBox( self, 'allowed filetypes' )
+        
+        self._exclude_deleted = QW.QCheckBox( self )
+        
+        tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
+        tt += '\n' * 2
+        tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
+        
+        self._exclude_deleted.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( filetype_selector_panel, HC.ALLOWED_MIMES )
+        
+        #
+        
+        self._allow_decompression_bombs = QW.QCheckBox( self )
+        
+        tt = 'This is an old setting, it basically just rejects all jpegs and pngs with more than a 1GB bitmap, or about 250-350 Megapixels. In can be useful if you have an older computer that will die at a 16,000x22,000 png.'
+        
+        self._allow_decompression_bombs.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._min_size = ClientGUIBytes.NoneableBytesControl( self, 5 * 1024 )
+        
+        self._max_size = ClientGUIBytes.NoneableBytesControl( self, 100 * 1024 * 1024 )
+        
+        self._max_gif_size = ClientGUIBytes.NoneableBytesControl( self, 32 * 1024 * 1024 )
+        
+        tt = 'This catches most of those gif conversions of webms. These files are low quality but huge and mostly a waste of storage and bandwidth.'
+        
+        self._max_gif_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._min_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( self, ( 50, 50 ) )
+        
+        self._max_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( self, ( 8192, 8192 ) )
+        
+        tt = 'If either width or height is violated, the file will fail this test and be ignored. It does not have to be both.'
+        
+        self._min_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._max_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self.SetValue( file_filtering_import_options )
+        
+        #
+        
+        filetype_selector_panel.Add( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, filetype_selector_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
+        rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
+        rows.append( ( 'minimum filesize: ', self._min_size ) )
+        rows.append( ( 'maximum filesize: ', self._max_size ) )
+        rows.append( ( 'maximum gif filesize: ', self._max_gif_size ) )
+        rows.append( ( 'minimum resolution: ', self._min_resolution ) )
+        rows.append( ( 'maximum resolution: ', self._max_resolution ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+    
+    def GetValue( self ) -> FileFilteringImportOptions.FileFilteringImportOptions:
+        
+        file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
+        
+        file_filtering_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
+        
+        file_filtering_import_options.SetAllowsDecompressionBombs( self._allow_decompression_bombs.isChecked() )
+        file_filtering_import_options.SetExcludesDeleted( self._exclude_deleted.isChecked() )
+        file_filtering_import_options.SetMinSize( self._min_size.GetValue() )
+        file_filtering_import_options.SetMaxSize( self._max_size.GetValue() )
+        file_filtering_import_options.SetMaxGifSize( self._max_gif_size.GetValue() )
+        file_filtering_import_options.SetMinResolution( self._min_resolution.GetValue() )
+        file_filtering_import_options.SetMaxResolution( self._max_resolution.GetValue() )
+        
+        return file_filtering_import_options
+        
+    
+    def SetValue( self, file_filtering_import_options: FileFilteringImportOptions.FileFilteringImportOptions ):
+        
+        mimes = file_filtering_import_options.GetAllowedSpecificFiletypes()
+        
+        self._mimes.SetValue( mimes )
+        
+        self._allow_decompression_bombs.setChecked( file_filtering_import_options.AllowsDecompressionBombs() )
+        self._exclude_deleted.setChecked( file_filtering_import_options.ExcludesDeleted() )
+        self._min_size.SetValue( file_filtering_import_options.GetMinSize() )
+        self._max_size.SetValue( file_filtering_import_options.GetMaxSize() )
+        self._max_gif_size.SetValue( file_filtering_import_options.GetMaxGifSize() )
+        self._min_resolution.SetValue( file_filtering_import_options.GetMinResolution() )
+        self._max_resolution.SetValue( file_filtering_import_options.GetMaxResolution() )
+        
+    
 
 class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -81,88 +200,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        prefetch_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'prefetch logic', can_expand = True, start_expanded = False )
+        prefetch_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'prefetch', can_expand = True, start_expanded = False )
         
-        self._preimport_hash_check_type = ClientGUICommon.BetterChoice( prefetch_import_panel )
-        self._preimport_url_check_type = ClientGUICommon.BetterChoice( prefetch_import_panel )
-        
-        jobs = [
-            ( 'do not check', PrefetchImportOptions.DO_NOT_CHECK),
-            ( 'check', PrefetchImportOptions.DO_CHECK ),
-            ( 'check - and matches are dispositive', PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
-        ]
-        
-        for ( display_string, client_data ) in jobs:
-            
-            self._preimport_hash_check_type.addItem( display_string, client_data )
-            self._preimport_url_check_type.addItem( display_string, client_data )
-            
-        
-        tt = 'DO NOT SET THESE AS THE EXPENSIVE "DO NOT CHECK" UNLESS YOU KNOW YOU NEED THEM FOR THIS ONE JOB'
-        tt += '\n' * 2
-        tt += 'If hydrus recognises a file\'s URL or hash, it can determine that it is "already in db" or "previously deleted" and skip the download entirely, saving a huge amount of time and bandwidth. The logic behind this can get quite complicated, and it is usually best to let it work normally.'
-        tt += '\n' * 2
-        tt += 'If the checking is set to "dispositive", then if a match is found, that match will be trusted and the other match type is not consulted. Note that, for now, SHA256 hashes your client has never seen before will never count as "matches", just like an MD5 it has not seen before, so in all cases the import will defer to any set url check that says "already in db/previously deleted". (This is to deal with some cloud-storage in-transfer optimisation hash-changing. Novel SHA256 hashes are not always trustworthy.)'
-        tt += '\n' * 2
-        tt += 'If you believe your clientside parser or url mappings are completely broken, and these logical tests are producing false positive "deleted" or "already in db" results, then set one or both of these to "do not check". Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to switch off checking for a file maintenance job that is filling in missing files, as missing files are automatically detected in the logic.'
-        
-        self._preimport_hash_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        self._preimport_url_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._preimport_url_check_looks_for_neighbour_spam = QW.QCheckBox( prefetch_import_panel )
-        
-        tt = 'When a file-url mapping is found, an additional check can be performed to see if it is trustworthy.'
-        tt += '\n' * 2
-        tt += 'If the URL we are checking is recognised as a Post URL, and the file it appears to refer to has other URLs with the same domain & URL Class as what we parsed for the current job (basically the file has or would get multiple URLs on the same site), then this discovered mapping is assumed to be some parse spam and not trustworthy (leading to a "this file looks new" result in the pre-check).'
-        tt += '\n' * 2
-        tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
-        
-        self._preimport_url_check_looks_for_neighbour_spam.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._prefetch_import_options_panel = EditPrefetchImportOptionsPanel( prefetch_import_panel, file_import_options.GetPrefetchImportOptions() )
         
         #
         
-        pre_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'pre-import checks' )
+        file_filtering_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'file filtering' )
         
-        filetype_selector_panel = ClientGUICommon.StaticBox( pre_import_panel, 'allowed filetypes' )
-        
-        self._exclude_deleted = QW.QCheckBox( pre_import_panel )
-        
-        tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
-        tt += '\n' * 2
-        tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
-        
-        self._exclude_deleted.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        #
-        
-        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( pre_import_panel, HC.ALLOWED_MIMES )
-        
-        #
-        
-        self._allow_decompression_bombs = QW.QCheckBox( pre_import_panel )
-        
-        tt = 'This is an old setting, it basically just rejects all jpegs and pngs with more than a 1GB bitmap, or about 250-350 Megapixels. In can be useful if you have an older computer that will die at a 16,000x22,000 png.'
-        
-        self._allow_decompression_bombs.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._min_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 5 * 1024 )
-        
-        self._max_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 100 * 1024 * 1024 )
-        
-        self._max_gif_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 32 * 1024 * 1024 )
-        
-        tt = 'This catches most of those gif conversions of webms. These files are low quality but huge and mostly a waste of storage and bandwidth.'
-        
-        self._max_gif_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._min_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( pre_import_panel, ( 50, 50 ) )
-        
-        self._max_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( pre_import_panel, ( 8192, 8192 ) )
-        
-        tt = 'If either width or height is violated, the file will fail this test and be ignored. It does not have to be both.'
-        
-        self._min_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        self._max_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._file_filtering_import_options_panel = EditFileFilteringImportOptionsPanel( file_filtering_panel, file_import_options.GetFileFilteringImportOptions() )
         
         #
         
@@ -170,45 +216,9 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        destination_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'import destinations' )
+        locations_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'locations' )
         
-        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file domain, you can send these imports to other/multiple locations.' )
-        
-        destination_location_context = file_import_options.GetDestinationLocationContext()
-        
-        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
-        
-        self._destination_location_context = ClientGUILocation.LocationSearchContextButton( destination_panel, destination_location_context )
-        
-        self._destination_location_context.SetOnlyImportableDomainsAllowed( True )
-        
-        #
-        
-        post_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'post-import actions' )
-        
-        self._auto_archive = QW.QCheckBox( post_import_panel )
-        tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good.'
-        self._auto_archive.setToolTip( tt )
-        
-        self._do_archive_on_already_in_db_files = QW.QCheckBox( post_import_panel )
-        tt = 'Should a file that is "already in db" be retroactively archived? If you want to only do this on new files, uncheck this.'
-        self._do_archive_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._do_import_destinations_on_already_in_db_files = QW.QCheckBox( post_import_panel )
-        tt = 'Should a file that is "already in db" be force-added to the import destinations set by these options, if it is missing from any of them? This only matters for clients with multiple local file domains. It is often annoying, so only check this if you are sure you want it (usually for a one-time job).'
-        self._do_import_destinations_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._associate_primary_urls = QW.QCheckBox( post_import_panel )
-        tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
-        tt += '\n' * 2
-        tt += 'If you are doing a one-off job and do not want to associate these URLs, disable it here. Do not unset this unless you have a reason to!'
-        self._associate_primary_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._associate_source_urls = QW.QCheckBox( post_import_panel )
-        tt = 'If the parser discovers an additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
-        tt += '\n' * 2
-        tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
-        self._associate_source_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._location_import_options_panel = EditLocationImportOptionsPanel( locations_panel, file_import_options.GetLocationImportOptions(), show_downloader_options )
         
         #
         
@@ -216,7 +226,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         presentation_import_options = file_import_options.GetPresentationImportOptions()
         
-        self._presentation_import_options_edit_panel = EditPresentationImportOptions( presentation_static_box, presentation_import_options )
+        self._presentation_import_options_panel = EditPresentationImportOptions( presentation_static_box, presentation_import_options )
         
         #
         
@@ -233,87 +243,29 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        st = ClientGUICommon.BetterStaticText( prefetch_import_panel, label = 'BE CAREFUL, PREFETCH LOGIC IS ADVANCED' )
-        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
-        st.setWordWrap( True )
-        st.setObjectName( 'HydrusWarning' )
-        
-        prefetch_import_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        rows = []
-        
-        rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
-        rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
-        rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( prefetch_import_panel, rows )
-        
-        prefetch_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        prefetch_import_panel.Add( self._prefetch_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         prefetch_import_panel.setVisible( show_downloader_options )
         
         #
         
-        filetype_selector_panel.Add( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        pre_import_panel.Add( filetype_selector_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        file_filtering_panel.Add( self._file_filtering_import_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
-        rows = []
-        
-        rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
-        rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
-        rows.append( ( 'minimum filesize: ', self._min_size ) )
-        rows.append( ( 'maximum filesize: ', self._max_size ) )
-        rows.append( ( 'maximum gif filesize: ', self._max_gif_size ) )
-        rows.append( ( 'minimum resolution: ', self._min_resolution ) )
-        rows.append( ( 'maximum resolution: ', self._max_resolution ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( pre_import_panel, rows )
-        
-        pre_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        locations_panel.Add( self._location_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
-        destination_panel.Add( self._destination_location_context_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        destination_panel.Add( self._destination_location_context, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        #
-        
-        rows = []
-        
-        rows.append( ( 'auto-archive imports: ', self._auto_archive ) )
-        rows.append( ( '-- even for \'already in db\' files?: ', self._do_archive_on_already_in_db_files ) )
-        rows.append( ( 're-add \'already in db\' files to import destinations?: ', self._do_import_destinations_on_already_in_db_files ) )
-        
-        if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-            
-            rows.append( ( 'associate primary urls: ', self._associate_primary_urls ) )
-            rows.append( ( 'associate (and trust) additional source urls: ', self._associate_source_urls ) )
-            
-        else:
-            
-            self._associate_primary_urls.setVisible( False )
-            self._associate_source_urls.setVisible( False )
-            
-        
-        gridbox = ClientGUICommon.WrapInGrid( post_import_panel, rows )
-        
-        post_import_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
-        presentation_static_box.Add( self._presentation_import_options_edit_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        presentation_static_box.Add( self._presentation_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         specific_vbox = QP.VBoxLayout()
         
         QP.AddToLayout( specific_vbox, prefetch_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( specific_vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( specific_vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( specific_vbox, file_filtering_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( specific_vbox, locations_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._specific_options_panel.setLayout( specific_vbox )
@@ -325,25 +277,13 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        vbox.addStretch( 0 )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
-        
-        self._destination_location_context.locationChanged.connect( self._UpdateLocationText )
         
         self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
-        
-        self._preimport_hash_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromHash )
-        self._preimport_url_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromURL )
-        
-        self._auto_archive.clicked.connect( self._UpdateDoArchiveWidget )
-        
-        self._UpdateDispositiveFromHash()
-        self._UpdateDispositiveFromURL()
-        self._UpdateDoArchiveWidget()
         
     
     def _LoadDefaultOptions( self ):
@@ -377,54 +317,10 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._use_default_dropdown.SetValue( file_import_options.IsDefault() )
         
-        prefetch_import_options = file_import_options.GetPrefetchImportOptions()
-        
-        preimport_hash_check_type = prefetch_import_options.GetPreImportHashCheckType()
-        preimport_url_check_type = prefetch_import_options.GetPreImportURLCheckType()
-        preimport_url_check_looks_for_neighbour_spam = prefetch_import_options.PreImportURLCheckLooksForNeighbourSpam()
-        
-        ( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
-        
-        mimes = file_import_options.GetAllowedSpecificFiletypes()
-        
-        self._mimes.SetValue( mimes )
-        
-        self._exclude_deleted.setChecked( exclude_deleted )
-        self._preimport_hash_check_type.SetValue( preimport_hash_check_type )
-        self._preimport_url_check_type.SetValue( preimport_url_check_type )
-        self._preimport_url_check_looks_for_neighbour_spam.setChecked( preimport_url_check_looks_for_neighbour_spam )
-        self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
-        self._min_size.SetValue( min_size )
-        self._max_size.SetValue( max_size )
-        self._max_gif_size.SetValue( max_gif_size )
-        self._min_resolution.SetValue( min_resolution )
-        self._max_resolution.SetValue( max_resolution )
-        
-        #
-        
-        automatic_archive = file_import_options.AutomaticallyArchives()
-        associate_primary_urls = file_import_options.ShouldAssociatePrimaryURLs()
-        associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
-        
-        self._auto_archive.setChecked( automatic_archive )
-        self._do_archive_on_already_in_db_files.setChecked( file_import_options.GetDoArchiveOnAlreadyInDBFiles() )
-        self._do_import_destinations_on_already_in_db_files.setChecked( file_import_options.GetDoImportDestinationsOnAlreadyInDBFiles() )
-        self._associate_primary_urls.setChecked( associate_primary_urls )
-        self._associate_source_urls.setChecked( associate_source_urls )
-        
-        #
-        
-        destination_location_context = file_import_options.GetDestinationLocationContext()
-        
-        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
-        
-        self._destination_location_context.SetValue( destination_location_context )
-        
-        #
-        
-        presentation_import_options = file_import_options.GetPresentationImportOptions()
-        
-        self._presentation_import_options_edit_panel.SetValue( presentation_import_options )
+        self._prefetch_import_options_panel.SetValue( file_import_options.GetPrefetchImportOptions() )
+        self._file_filtering_import_options_panel.SetValue( file_import_options.GetFileFilteringImportOptions() )
+        self._location_import_options_panel.SetValue( file_import_options.GetLocationImportOptions() )
+        self._presentation_import_options_panel.SetValue( file_import_options.GetPresentationImportOptions() )
         
         #
         
@@ -458,37 +354,6 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         ClientGUIDialogsMessage.ShowInformation( self, help_message )
         
     
-    def _UpdateDispositiveFromHash( self ):
-        
-        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
-        preimport_url_check_type = self._preimport_url_check_type.GetValue()
-        
-        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
-            
-            self._preimport_url_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
-            
-        
-    
-    def _UpdateDispositiveFromURL( self ):
-        
-        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
-        preimport_url_check_type = self._preimport_url_check_type.GetValue()
-        
-        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
-            
-            self._preimport_hash_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
-            
-        
-        self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != PrefetchImportOptions.DO_NOT_CHECK )
-        
-    
-    def _UpdateDoArchiveWidget( self ):
-        
-        auto_archive = self._auto_archive.isChecked()
-        
-        self._do_archive_on_already_in_db_files.setEnabled( auto_archive )
-        
-    
     def _UpdateIsDefault( self ):
         
         is_default = self._use_default_dropdown.GetValue()
@@ -507,26 +372,6 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         self.isDefaultChanged.emit( is_default )
         
     
-    def _UpdateLocationText( self ):
-        
-        location_context = self._destination_location_context.GetValue()
-        
-        if location_context.IsEmpty():
-            
-            self._destination_location_context_st.setText( 'This will not import anywhere! Any import queue using this File Import Options will halt!' )
-            
-            self._destination_location_context_st.setObjectName( 'HydrusWarning' )
-            
-        else:
-            
-            self._destination_location_context_st.setText( 'If you have more than one local file domain, you can send these imports to other/multiple locations.' )
-            
-            self._destination_location_context_st.setObjectName( '' )
-            
-        
-        self._destination_location_context_st.style().polish( self._destination_location_context_st )
-        
-    
     def GetValue( self ) -> FileImportOptionsLegacy.FileImportOptionsLegacy:
         
         is_default = self._use_default_dropdown.GetValue()
@@ -539,36 +384,10 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             
         else:
             
-            prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
-            
-            prefetch_import_options.SetPreImportHashCheckType( self._preimport_hash_check_type.GetValue() )
-            prefetch_import_options.SetPreImportURLCheckType( self._preimport_url_check_type.GetValue() )
-            prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( self._preimport_url_check_looks_for_neighbour_spam.isChecked() )
-            
-            exclude_deleted = self._exclude_deleted.isChecked()
-            allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
-            min_size = self._min_size.GetValue()
-            max_size = self._max_size.GetValue()
-            max_gif_size = self._max_gif_size.GetValue()
-            min_resolution = self._min_resolution.GetValue()
-            max_resolution = self._max_resolution.GetValue()
-            
-            automatic_archive = self._auto_archive.isChecked()
-            associate_primary_urls = self._associate_primary_urls.isChecked()
-            associate_source_urls = self._associate_source_urls.isChecked()
-            
-            presentation_import_options = self._presentation_import_options_edit_panel.GetValue()
-            
-            destination_location_context = self._destination_location_context.GetValue()
-            
-            file_import_options.SetPrefetchImportOptions( prefetch_import_options )
-            file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-            file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
-            file_import_options.SetDestinationLocationContext( destination_location_context )
-            file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-            file_import_options.SetDoArchiveOnAlreadyInDBFiles( self._do_archive_on_already_in_db_files.isChecked() )
-            file_import_options.SetDoImportDestinationsOnAlreadyInDBFiles( self._do_import_destinations_on_already_in_db_files.isChecked() )
-            file_import_options.SetPresentationImportOptions( presentation_import_options )
+            file_import_options.SetPrefetchImportOptions( self._prefetch_import_options_panel.GetValue() )
+            file_import_options.SetFileFilteringImportOptions( self._file_filtering_import_options_panel.GetValue() )
+            file_import_options.SetLocationImportOptions( self._location_import_options_panel.GetValue() )
+            file_import_options.SetPresentationImportOptions( self._presentation_import_options_panel.GetValue() )
             
         
         return file_import_options
@@ -580,7 +399,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         
         try:
             
-            file_import_options.CheckReadyToImport()
+            file_import_options.GetLocationImportOptions().CheckReadyToImport()
             
         except Exception as e:
             
@@ -589,7 +408,139 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
         
     
 
-class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditLocationImportOptionsPanel( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget, location_import_options: LocationImportOptions.LocationImportOptions, show_downloader_options: bool ):
+        
+        super().__init__( parent )
+        
+        #
+        
+        self._destination_location_context_st = ClientGUICommon.BetterStaticText( self, label = 'THIS WILL NOT IMPORT ANYWHERE! Any import queue using this File Import Options will halt!\n\nWas the file service it was previously importing to deleted?' )
+        self._destination_location_context_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        self._destination_location_context_st.setWordWrap( True )
+        self._destination_location_context_st.setObjectName( 'HydrusWarning' )
+        self._destination_location_context_st.style().polish( self._destination_location_context_st )
+        
+        destination_location_context = location_import_options.GetDestinationLocationContext()
+        
+        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        self._destination_location_context = ClientGUILocation.LocationSearchContextButton( self, destination_location_context )
+        self._destination_location_context.SetOnlyImportableDomainsAllowed( True )
+        self._destination_location_context.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you have more than one local file domain, you can send these imports to other/multiple locations.' ) )
+        
+        #
+        
+        self._do_import_destinations_on_already_in_db_files = QW.QCheckBox( self )
+        tt = 'Should a file that is "already in db" be force-added to the import destinations set by these options, if it is missing from any of them? This only matters for clients with multiple local file domains. It is often annoying, so only check this if you are sure you want it (usually for a one-time job).'
+        self._do_import_destinations_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._auto_archive = QW.QCheckBox( self )
+        tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good.'
+        self._auto_archive.setToolTip( tt )
+        
+        self._do_archive_on_already_in_db_files = QW.QCheckBox( self )
+        tt = 'Should a file that is "already in db" be retroactively archived? If you want to only do this on new files, uncheck this.'
+        self._do_archive_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._associate_primary_urls = QW.QCheckBox( self )
+        tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
+        tt += '\n' * 2
+        tt += 'If you are doing a one-off job and do not want to associate these URLs, disable it here. Do not unset this unless you have a reason to!'
+        self._associate_primary_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._associate_source_urls = QW.QCheckBox( self )
+        tt = 'If the parser discovers an additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
+        tt += '\n' * 2
+        tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
+        self._associate_source_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self.SetValue( location_import_options )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'destination file service(s):', self._destination_location_context ) )
+        rows.append( ( '-- ensure \'already in db\' files are added to destinations?: ', self._do_import_destinations_on_already_in_db_files ) )
+        rows.append( ( 'auto-archive imports: ', self._auto_archive ) )
+        rows.append( ( '-- even for \'already in db\' files?: ', self._do_archive_on_already_in_db_files ) )
+        
+        if show_downloader_options:
+            
+            rows.append( ( 'associate primary urls: ', self._associate_primary_urls ) )
+            rows.append( ( 'associate (and trust) additional source urls: ', self._associate_source_urls ) )
+            
+        else:
+            
+            self._associate_primary_urls.setVisible( False )
+            self._associate_source_urls.setVisible( False )
+            
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._destination_location_context_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+        self._destination_location_context.locationChanged.connect( self._UpdateLocationText )
+        self._auto_archive.clicked.connect( self._UpdateDoArchiveWidget )
+        
+        self._UpdateLocationText()
+        self._UpdateDoArchiveWidget()
+        
+    
+    def _UpdateDoArchiveWidget( self ):
+        
+        auto_archive = self._auto_archive.isChecked()
+        
+        self._do_archive_on_already_in_db_files.setEnabled( auto_archive )
+        
+    
+    def _UpdateLocationText( self ):
+        
+        location_context = self._destination_location_context.GetValue()
+        
+        self._destination_location_context_st.setVisible( location_context.IsEmpty() )
+        
+    
+    def GetValue( self ) -> LocationImportOptions.LocationImportOptions:
+        
+        location_import_options = LocationImportOptions.LocationImportOptions()
+        
+        location_import_options.SetDestinationLocationContext( self._destination_location_context.GetValue() )
+        location_import_options.SetAutomaticallyArchives( self._auto_archive.isChecked() )
+        location_import_options.SetShouldAssociatePrimaryURLs( self._associate_primary_urls.isChecked() )
+        location_import_options.SetShouldAssociateSourceURLs( self._associate_source_urls.isChecked() )
+        location_import_options.SetDoAutomaticArchiveOnAlreadyInDBFiles( self._do_archive_on_already_in_db_files.isChecked() )
+        location_import_options.SetDoImportDestinationsOnAlreadyInDBFiles( self._do_import_destinations_on_already_in_db_files.isChecked() )
+        
+        return location_import_options
+        
+    
+    def SetValue( self, location_import_options: LocationImportOptions.LocationImportOptions ):
+        
+        destination_location_context = location_import_options.GetDestinationLocationContext()
+        
+        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
+        
+        self._destination_location_context.SetValue( destination_location_context )
+        
+        self._auto_archive.setChecked( location_import_options.AutomaticallyArchives() )
+        self._do_archive_on_already_in_db_files.setChecked( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles() )
+        self._do_import_destinations_on_already_in_db_files.setChecked( location_import_options.DoImportDestinationsOnAlreadyInDBFiles() )
+        self._associate_primary_urls.setChecked( location_import_options.ShouldAssociatePrimaryURLs() )
+        self._associate_source_urls.setChecked( location_import_options.ShouldAssociateSourceURLs() )
+        
+    
+
+class EditNoteImportOptionsPanel( QW.QWidget ):
     
     isDefaultChanged = QC.Signal( bool )
     
@@ -746,7 +697,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
-        self.widget().setLayout( vbox )
+        self.setLayout( vbox )
         
         self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
         
@@ -911,11 +862,138 @@ Beyond that, you can filter and rename notes. Check the tooltips for more info.'
         
     
 
-class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
+class EditPrefetchImportOptionsPanel( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
+        
+        super().__init__( parent )
+        
+        #
+        
+        self._preimport_hash_check_type = ClientGUICommon.BetterChoice( self )
+        self._preimport_url_check_type = ClientGUICommon.BetterChoice( self )
+        
+        jobs = [
+            ( 'do not check', PrefetchImportOptions.DO_NOT_CHECK),
+            ( 'check', PrefetchImportOptions.DO_CHECK ),
+            ( 'check - and matches are dispositive', PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        ]
+        
+        for ( display_string, client_data ) in jobs:
+            
+            self._preimport_hash_check_type.addItem( display_string, client_data )
+            self._preimport_url_check_type.addItem( display_string, client_data )
+            
+        
+        tt = 'DO NOT SET THESE AS THE EXPENSIVE "DO NOT CHECK" UNLESS YOU KNOW YOU NEED IT FOR THIS ONE JOB'
+        tt += '\n' * 2
+        tt += 'If hydrus recognises a file\'s URL or hash, it can determine that it is "already in db" or "previously deleted" and skip the download entirely, saving a huge amount of time and bandwidth. The logic behind this can get quite complicated, and it is usually best to let it work normally.'
+        tt += '\n' * 2
+        tt += 'If the checking is set to "dispositive", then if a match is found, that match will be trusted and the other match type is not consulted. Note that, for now, SHA256 hashes your client has never seen before will never count as "matches", just like an MD5 it has not seen before, so in all cases the import will defer to any set url check that says "already in db/previously deleted". (This is to deal with some cloud-storage in-transfer optimisation hash-changing. Novel SHA256 hashes are not always trustworthy.)'
+        tt += '\n' * 2
+        tt += 'If you believe your clientside parser or url mappings are completely broken, and these logical tests are producing false positive "deleted" or "already in db" results, then set one or both of these to "do not check". Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to switch off checking for a file maintenance job that is filling in missing files, as missing files are automatically detected in the logic.'
+        
+        self._preimport_hash_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._preimport_url_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._preimport_url_check_looks_for_neighbour_spam = QW.QCheckBox( self )
+        
+        tt = 'When a file-url mapping is found, an additional check can be performed to see if it is trustworthy.'
+        tt += '\n' * 2
+        tt += 'If the URL we are checking is recognised as a Post URL, and the file it appears to refer to has other URLs with the same domain & URL Class as what we parsed for the current job (basically the file has or would get multiple URLs on the same site), then this discovered mapping is assumed to be some parse spam and not trustworthy (leading to a "this file looks new" result in the pre-check).'
+        tt += '\n' * 2
+        tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
+        
+        self._preimport_url_check_looks_for_neighbour_spam.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self.SetValue( prefetch_import_options )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        st = ClientGUICommon.BetterStaticText( self, label = 'BE CAREFUL, PREFETCH LOGIC IS ADVANCED' )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        st.setWordWrap( True )
+        st.setObjectName( 'HydrusWarning' )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
+        rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
+        rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+        #
+        
+        self._preimport_hash_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromHash )
+        self._preimport_url_check_type.currentIndexChanged.connect( self._UpdateDispositiveFromURL )
+        
+        self._UpdateDispositiveFromHash()
+        self._UpdateDispositiveFromURL()
+        
+    
+    def _UpdateDispositiveFromHash( self ):
+        
+        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
+        preimport_url_check_type = self._preimport_url_check_type.GetValue()
+        
+        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+            
+            self._preimport_url_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
+            
+        
+    
+    def _UpdateDispositiveFromURL( self ):
+        
+        preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
+        preimport_url_check_type = self._preimport_url_check_type.GetValue()
+        
+        if preimport_hash_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE and preimport_url_check_type == PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE:
+            
+            self._preimport_hash_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
+            
+        
+        self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != PrefetchImportOptions.DO_NOT_CHECK )
+        
+    
+    def GetValue( self ) -> PrefetchImportOptions.PrefetchImportOptions:
+        
+        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+        
+        prefetch_import_options.SetPreImportHashCheckType( self._preimport_hash_check_type.GetValue() )
+        prefetch_import_options.SetPreImportURLCheckType( self._preimport_url_check_type.GetValue() )
+        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( self._preimport_url_check_looks_for_neighbour_spam.isChecked() )
+        
+        return prefetch_import_options
+        
+    
+    def SetValue( self, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
+        
+        preimport_hash_check_type = prefetch_import_options.GetPreImportHashCheckType()
+        preimport_url_check_type = prefetch_import_options.GetPreImportURLCheckType()
+        preimport_url_check_looks_for_neighbour_spam = prefetch_import_options.PreImportURLCheckLooksForNeighbourSpam()
+        
+        self._preimport_hash_check_type.SetValue( preimport_hash_check_type )
+        self._preimport_url_check_type.SetValue( preimport_url_check_type )
+        self._preimport_url_check_looks_for_neighbour_spam.setChecked( preimport_url_check_looks_for_neighbour_spam )
+        
+    
+
+class EditPresentationImportOptions( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
-        
-        # TODO: Make this guy a widget not a scrolling panel
         
         super().__init__( parent )
         
@@ -982,7 +1060,7 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
-        self.widget().setLayout( vbox )
+        self.setLayout( vbox )
         
         #
         
@@ -1005,6 +1083,8 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         previous_presentation_inbox = self._presentation_inbox.GetValue()
         
         presentation_status = self._presentation_status.GetValue()
+        
+        allowed_values = []
         
         if presentation_status == PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY:
             

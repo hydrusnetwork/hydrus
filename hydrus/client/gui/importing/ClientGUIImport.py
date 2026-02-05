@@ -1273,7 +1273,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tags = filename_tagging_options.GetTags( self._service_key, example_path_input )
             
-        except:
+        except Exception as e:
             
             tags = [ 'could not parse' ]
             

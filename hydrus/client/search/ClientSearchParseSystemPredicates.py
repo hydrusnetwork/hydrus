@@ -111,7 +111,7 @@ def file_service_pred_generator( o, v, u ):
         
         service_key = CG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_FILE_SERVICES, service_name )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
         
@@ -143,7 +143,7 @@ def rating_service_pred_generator( operator, value_and_service_name ):
         
         service = CG.client_controller.services_manager.GetService( service_key )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
         

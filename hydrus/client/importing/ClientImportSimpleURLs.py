@@ -330,7 +330,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                             
                             file_seeds.append( file_seed )
                             
-                        except:
+                        except Exception as e:
                             
                             continue
                             
@@ -735,7 +735,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                 
                 real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options.GetLocationImportOptions() )
                 
             except HydrusExceptions.VetoException:
                 
@@ -895,7 +895,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             self._file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD ).Duplicate()
             
-            self._file_import_options.SetDestinationLocationContext( destination_location_context )
+            self._file_import_options.GetLocationImportOptions().SetDestinationLocationContext( destination_location_context )
             
         
         if destination_tag_import_options is not None:
@@ -1453,7 +1453,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 
                 real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options.GetLocationImportOptions() )
                 
             except HydrusExceptions.VetoException:
                 

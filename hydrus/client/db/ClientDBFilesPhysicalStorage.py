@@ -228,8 +228,14 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             if os.path.exists( source_dir ) and len( os.listdir( source_dir ) ) == 0:
                 
-                try: HydrusPaths.RecyclePath( source_dir )
-                except: pass
+                try:
+                    
+                    HydrusPaths.RecyclePath( source_dir )
+                    
+                except Exception as e:
+                    
+                    pass
+                    
                 
             
         

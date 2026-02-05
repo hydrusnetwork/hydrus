@@ -28,7 +28,7 @@ def GetFrameDurationsMSUgoira( media: ClientMediaResult.MediaResult ):
             return durations_ms
             
         
-    except:
+    except Exception as e:
         
         pass
         
@@ -42,7 +42,7 @@ def GetFrameDurationsMSUgoira( media: ClientMediaResult.MediaResult ):
             return durations_ms
             
         
-    except:
+    except Exception as e:
         
         pass
         
@@ -85,7 +85,7 @@ def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
                 return frame_durations_ms 
                 
             
-        except:
+        except Exception as e:
             
             pass
             
@@ -102,7 +102,7 @@ def GetFrameDurationsMSFromNote( media: ClientMediaResult.MediaResult ):
                 return ugoiraJsonArray
                 
             
-        except:
+        except Exception as e:
             
             pass
             

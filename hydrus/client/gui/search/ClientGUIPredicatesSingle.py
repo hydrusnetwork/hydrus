@@ -2324,7 +2324,7 @@ class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
             
             name = service.GetName()
             
-        except:
+        except Exception as e:
             
             name = 'unknown service'
             
@@ -3307,7 +3307,7 @@ class PanelPredicateSystemTagAdvanced( PanelPredicateSystemSingle ):
             
             HydrusTags.CheckTagNotEmpty( tag )
             
-        except:
+        except Exception as e:
             
             tag = 'invalid tag'
             

@@ -741,7 +741,7 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
             
             tag = HydrusTags.CleanTag( tag )
             
-        except:
+        except Exception as e:
             
             return False
             

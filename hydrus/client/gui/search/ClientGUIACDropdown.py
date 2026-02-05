@@ -957,7 +957,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         parent.verticalScrollBar().valueChanged.connect( self.ParentWasScrolled )
                         
                     
-                except:
+                except Exception as e:
                     
                     break
                     
@@ -1035,7 +1035,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 self._HideDropdown()
                 
             
-        except:
+        except Exception as e:
             
             raise
             
@@ -1257,7 +1257,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                         
                         stuff_in_results_list = len( current_results_list ) > 0
                         
-                    except:
+                    except Exception as e:
                         
                         stuff_in_results_list = False
                         
@@ -2818,7 +2818,7 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
                         predicates.append( pat.GetImmediateFileSearchPredicate( allow_auto_wildcard_conversion = True ) )
                         
                     
-                except:
+                except Exception as e:
                     
                     continue
                     
@@ -3077,7 +3077,9 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
     
     def __init__( self, parent: AutocompleteDropdownTagsFileSearchContextORCapable, page_key, file_search_context: ClientSearchFileSearchContext.FileSearchContext, for_metadata_conditional: bool ):
         
-        super().__init__( parent, height_num_chars = 6 )
+        height_num_chars = CG.client_controller.new_options.GetInteger( 'active_search_predicates_height_num_chars' )
+        
+        super().__init__( parent, height_num_chars = height_num_chars )
         
         self._my_ac_parent = parent
         
@@ -3645,7 +3647,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
             return False
             
-        except:
+        except Exception as e:
             
             return False
             

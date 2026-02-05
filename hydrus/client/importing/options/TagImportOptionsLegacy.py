@@ -186,7 +186,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-            except:
+            except Exception as e:
                 
                 pass
                 
@@ -213,7 +213,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
-            except:
+            except Exception as e:
                 
                 pass
                 

@@ -2723,7 +2723,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 file_import_options = urls_import.GetFileImportOptions()
                 
-                if not file_import_options.IsDefault() and file_import_options.GetDestinationLocationContext() == destination_location_context:
+                if not file_import_options.IsDefault() and file_import_options.GetLocationImportOptions().GetDestinationLocationContext() == destination_location_context:
                     
                     good_url_import_pages.append( url_import_page )
                     

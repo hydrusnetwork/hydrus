@@ -1250,7 +1250,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                 
                 update_period = max( min_time, num_items / denominator )
                 
-            except:
+            except Exception as e:
                 
                 update_period = 1.0
                 
@@ -2424,7 +2424,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                 
                 update_period = max( min_time, num_items / denominator )
                 
-            except:
+            except Exception as e:
                 
                 update_period = 1.0
                 

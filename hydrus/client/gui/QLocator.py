@@ -373,10 +373,10 @@ class QCalculatorSearchProvider(QAbstractLocatorSearchProvider):
                 result = str(eval(query, {"__builtins__": {}}, self.safeEnv))
                 try:
                     int(result)
-                except:
+                except Exception as e:
                     result = str(float(result))
                 self.resultsAvailable.emit(jobID, [QLocatorSearchResult(0, self.iconPath(), self.selectedIconPath(), False, [result,"Calculator"], False, self.iconPath(), self.selectedIconPath())])
-        except:
+        except Exception as e:
             pass
 
     def title(self):

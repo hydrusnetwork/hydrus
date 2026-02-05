@@ -85,7 +85,7 @@ def ParseDate( date_string: str ) -> float:
             
             return HydrusTime.SecondiseMSFloat( HydrusTime.DateTimeToTimestampMS( dt ) )
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( f'Dateparser failed to parse: "{date_string}"' )
             
@@ -100,14 +100,14 @@ def ParseDate( date_string: str ) -> float:
                 # if you give this 'January 12, 2012 10:00 PM EST', it moans about the timezone being not understood. maybe some summertime thing? or maybe it wants +0300 kind of thing
                 dt = dateutil.parser.parse( date_string )
                 
-            except:
+            except Exception as e:
                 
                 dt = dateutil.parser.parse( date_string, ignoretz = True )
                 
             
             return HydrusTime.SecondiseMSFloat( HydrusTime.DateTimeToTimestampMS( dt ) )
             
-        except:
+        except Exception as e:
             
             HydrusData.Print( f'Dateutil failed to parse: "{date_string}"' )
             
@@ -276,7 +276,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
                     
                     service_string = CG.client_controller.services_manager.GetName( self.location )
                     
-                except:
+                except Exception as e:
                     
                     service_string = 'unknown service'
                     

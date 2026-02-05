@@ -12,7 +12,7 @@ try:
     
     PYMPLER_OK = True
     
-except:
+except Exception as e:
     
     PYMPLER_OK = False
     

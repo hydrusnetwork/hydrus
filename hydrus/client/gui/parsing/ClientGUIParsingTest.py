@@ -200,7 +200,7 @@ class TestPanel( QW.QWidget ):
                 
                 raw_bytes = raw_text.decode( 'utf-8' )
                 
-            except:
+            except Exception as e:
                 
                 raw_bytes = None
                 
@@ -267,7 +267,7 @@ class TestPanel( QW.QWidget ):
                         
                         mime = HydrusFileHandling.GetMime( temp_path )
                         
-                    except:
+                    except Exception as e:
                         
                         mime = HC.APPLICATION_UNKNOWN
                         
@@ -296,7 +296,7 @@ class TestPanel( QW.QWidget ):
                         
                         example_data_to_show = json.dumps( j, indent = 4 )
                         
-                    except:
+                    except Exception as e:
                         
                         pass
                         
@@ -452,7 +452,7 @@ class TestPanelFormula( TestPanel ):
             
             texts = formula.Parse( example_parsing_context, self._example_data_raw, self._collapse_newlines )
             
-        except:
+        except Exception as e:
             
             texts = [ '' ]
             

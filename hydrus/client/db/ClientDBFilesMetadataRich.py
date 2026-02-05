@@ -178,7 +178,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             
             results = [ self.GetHashIdStatus( hash_id, prefix = 'url recognised' ) for hash_id in hash_ids ]
             
-        except:
+        except Exception as e:
             
             return []
             

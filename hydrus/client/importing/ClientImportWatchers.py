@@ -202,7 +202,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
                 
-            except:
+            except Exception as e:
                 
                 checker_options = ClientImportOptions.CheckerOptions()
                 file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
@@ -1843,7 +1843,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options.GetLocationImportOptions() )
                 
             except HydrusExceptions.VetoException:
                 

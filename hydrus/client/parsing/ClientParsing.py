@@ -84,7 +84,7 @@ def GetHTMLTagString( tag: bs4.Tag ):
             all_strings.append( str( sub_tag ) )
             
         
-    except:
+    except Exception as e:
         
         all_strings = []
         
@@ -1429,7 +1429,7 @@ class ParseFormulaJSON( ParseFormula ):
                             
                             text = str( node )
                             
-                        except:
+                        except Exception as e:
                             
                             continue
                             
@@ -2358,7 +2358,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                             
                             unclean_url = urllib.parse.urljoin( base_url, unclean_url )
                             
-                        except:
+                        except Exception as e:
                             
                             pass # welp
                             
@@ -2380,7 +2380,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 # handling &amp; gubbins that come through JSON, although the better answer is to convert to an html parser
                 parsed_texts = [ html.unescape( parsed_text ) for parsed_text in parsed_texts ]
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.Print( f'Could not unescape parsed title text: {parsing_context}' )
                 

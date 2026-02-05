@@ -97,7 +97,7 @@ class CollectComboCtrl( QW.QComboBox ):
                 
                 text_and_data_tuples.update( namespaces )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.DebugPrint( 'Bad namespaces: {}'.format( namespaces ) )
                 
@@ -588,7 +588,7 @@ class MediaSortControl( QW.QWidget ):
             
             self.SetSort( media_sort )
             
-        except:
+        except Exception as e:
             
             default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             

@@ -179,7 +179,7 @@ def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None 
             
             pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
             
-        except:
+        except Exception as e:
             
             return False
             

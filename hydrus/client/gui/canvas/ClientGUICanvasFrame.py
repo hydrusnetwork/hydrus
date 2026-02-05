@@ -40,7 +40,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         self._was_maximised_before_fullscreen = True
         
     
-    def _NotifyCanvasReadyToDestroy( self ):
+    def _NotifyCanvasHasDestroyedAllMediaWindows( self ):
         
         if self._we_are_hidden_and_cleaning_up_before_destroy:
             
@@ -262,7 +262,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         
         self._canvas_window = canvas_window
         
-        self._canvas_window.readyToDestroy.connect( self._NotifyCanvasReadyToDestroy )
+        self._canvas_window.haveDestroyedAllMediaWindows.connect( self._NotifyCanvasHasDestroyedAllMediaWindows )
         
         self.setFocusProxy( self._canvas_window )
         

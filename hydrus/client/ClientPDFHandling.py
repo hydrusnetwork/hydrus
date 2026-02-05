@@ -39,7 +39,7 @@ def QtLoadPDF( path: str ):
         
         document.load( path )
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load PDF file.' )
         
@@ -124,7 +124,7 @@ def GetHumanReadableEmbeddedMetadata( path ) -> str:
             
             document = QtLoadPDF( path )
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.LimitedSupportFileException()
             
@@ -176,7 +176,7 @@ def GetPDFInfo( path: str ):
             
             document = QtLoadPDF( path )
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.LimitedSupportFileException()
             
@@ -185,7 +185,7 @@ def GetPDFInfo( path: str ):
             
             ( width, height ) = GetPDFResolutionFromDocument( document )
             
-        except:
+        except Exception as e:
             
             ( width, height ) = ( None, None )
             
@@ -230,7 +230,7 @@ def GetPDFModifiedTimestampMS( path ):
             
             document = QtLoadPDF( path )
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.LimitedSupportFileException()
             

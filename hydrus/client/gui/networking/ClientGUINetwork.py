@@ -1418,6 +1418,14 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. Also, if you accidentally download too much at once, or a site suddenly changes their policies, a linked account can get banned. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        warning_st.setWordWrap( True )
+        warning_st.setObjectName( 'HydrusWarning' )
+        
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._show_empty, CC.FLAGS_ON_RIGHT )
         
@@ -1502,7 +1510,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 expiry = max( expires_numbers )
                 pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
                 
-            except:
+            except Exception as e:
                 
                 pretty_expiry = 'Unusual expiry numbers'
                 
@@ -1540,7 +1548,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 expiry = max( expires_numbers )
                 
-            except:
+            except Exception as e:
                 
                 expiry = -1
                 

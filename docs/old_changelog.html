@@ -35,6 +35,50 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_658"><a href="#version_658">version 658</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an exclusive-to-inclusive system predicate parsing regression, for instance the input `system:filetype is not x` was parsing as `system:filetype is x`, which was because of a logical hole in a recent rewrite</li>
+                        <li>added 'Active Search Predicates list height' to `options-&gt;file search`. this is the list _above_ the tag autocomplete input on normal search boxes. defaults to 6 (was previously 8 due to weirdness)</li>
+                        <li>tag lists no longer default to min height 8 rows but 1. let me know if anything sizes crazy now</li>
+                        <li>fixed the `help-&gt;about` db transaction period, which was typoed and calculating off the wrong number</li>
+                        <li>the 'don't use important accounts with hydrus' warning is clarified and unified in the downloader help, login dialog, and now session cookies dialog</li>
+                        <li>the media viewer right-click menu now has a 'player' sub-menu at the end that says what player (mpv, QtMediaPlayer, Hydrus Native stuff) is currently in view. might be worth tucking this into a deeper advanced/maintenance/debug menu somewhere in a future reshuffle, but for now it is there</li>
+                        <li><h3>QtMediaPlayer (and an mpv thing)</h3></li>
+                        <li>fixed a 'C++ object already deleted' instability error with the new GraphicsView QtMediaPlayer. I had this a couple of times in devving but needed to tighten up how some mouse event hacks were owned and destroyed</li>
+                        <li>fixed an UI hang that could sometimes occur in PySide6 when opening a new media viewer when the preview viewer already has a QtMediaPlayer loaded</li>
+                        <li>added `TEST: Use the same mpv player through media transitions` and `TEST: Use the same QtMediaPlayer through media transitions` options to `options-&gt;media playback`. previously, I would always create or swap to a different player when navigating from video to video, because re-using the same guy was super flickery or crash city. things are better now and I'm open to testing it more</li>
+                        <li>added `TEST: Use OpenGL Window in QtMediaPlayer` to `options-&gt;media playback`. maybe it improves performance for big vids? I noticed it can cause some initial window-level flickering in Windows, but it is worth trying in different situations</li>
+                        <li><h3>boring QtMediaPlayer cleanup</h3></li>
+                        <li>the new GraphicsView test now loops natively and tracks 'num plays' through some fudgy maths (previously it hooked into the video 'end; stop' statechange and manually did 'seek 0; play'). I've had some reports about the program hanging on video end-loop, so let's see if this helps that</li>
+                        <li>made the mouse-move event hack a little safer</li>
+                        <li>rewrote some media destruction signals and moved QtMediaPlayer destruction responsibility from the GUI to the MediaContainer itself. there's no more weird reparenting</li>
+                        <li>QtMediaPlayers are now cleaned up more aggressively. generally a 500ms timer instead of 5s</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>broke `options-&gt;media playback` into sections and fixed some layout issues</li>
+                        <li>fixed a bit of foolishness that was causing the `hydrus_test_boot.py` unit test script to always exit( 1 ) even when everything was OK</li>
+                        <li>relatedly, replaced all lazy `except:` handling with `except Exception as e:`</li>
+                        <li>if the duplicates filter fails to generate a visual duplicate comparison, the error now only makes one popup per program boot. it still spams some basic 'hash x failed' stuff to log so we can debug the issue</li>
+                        <li>cleaned up a little 'menu last click' global out of HG</li>
+                        <li>added a 'Run the launch script, not the .py' note to the 'running from source' help</li>
+                        <li><h3>boring import options overhaul</h3></li>
+                        <li>broke the 'file filtering import options' (stuff like allowed filetypes and min/max filesize) out of 'file import options (legacy)' just like I did presentation and prefetch import options the other week. the legacy object now holds a 'file filtering import options' sub-object in prep for the conversion to the new options structure</li>
+                        <li>did the same for the 'location import options' (stuff like where to put the file and auto-archive/url options)</li>
+                        <li>wrote an edit panel for 'file filtering import options'</li>
+                        <li>did the same for 'location import options'</li>
+                        <li>fixed the red warning text about an invalid, empty import destination context to now appear properly and instantly on dialog load, if it boots with an invalid destination context</li>
+                        <li>'associate primary/source urls' checkboxes are no longer hidden behind advanced mode</li>
+                        <li>the prefetch import options are now in their own edit panel</li>
+                        <li>the presentation and notes import options panels are now QWidgets not ScrollingEditPanels, which will fix some jank layout we've seen here</li>
+                        <li>fixed some layout expanding issues in the file import options panel</li>
+                        <li>network job and file import statuses now work with a file filtering import options object for their filtering decisions, not a file import options</li>
+                        <li>importers now consult a location import options for pre-work destination validity checks</li>
+                        <li>updated the unit tests for the new 'file filtering import options' object</li>
+                        <li>updated the unit tests for the 'location import options' object</li>
+                        <li>wrote some very basic prefitch import options unit tests</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_657"><a href="#version_657">version 657</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -18194,7 +18238,7 @@
                         <li>collapsed some of the helter-skelter db code in prep for future improvements</li>
                         <li>moved daemon code to separate files</li>
                         <li>silenced server upnp errors</li>
-                        <li>all except: continue lines are banished!</li>
+                        <li>all except Exception as e: continue lines are banished!</li>
                         <li>cleaned up some miscellaneous exception code</li>
                         <li>cleaned some ugly behind the scenes a/c dropdown button code</li>
                         <li>did some general code cleanup</li>

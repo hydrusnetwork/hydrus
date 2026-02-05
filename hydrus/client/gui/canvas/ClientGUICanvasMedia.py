@@ -963,7 +963,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                 
             
-        except:
+        except Exception as e:
             
             CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
@@ -1450,15 +1450,16 @@ class MediaContainer( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
     readyForNeighbourPrefetch = QC.Signal()
-    readyToDestroy = QC.Signal()
+    haveDestroyedAllMediaWindows = QC.Signal()
     
     zoomChanged = QC.Signal( int, float )
     
-    def __init__( self, parent, canvas_type, background_colour_generator, additional_event_filter: QC.QObject ):
+    def __init__( self, parent, canvas, canvas_type, background_colour_generator, additional_event_filter: QC.QObject ):
         
         super().__init__( parent )
         
         self._canvas_type = canvas_type
+        self._canvas = canvas
         
         if HC.PLATFORM_MACOS and not HG.macos_antiflicker_test:
             
@@ -1493,6 +1494,9 @@ class MediaContainer( QW.QWidget ):
         self._current_zoom_type = self._GetDefaultZoomType()
         
         self._closing_mpv_widgets = []
+        self._closing_qt_media_players = []
+        self._close_check_timer = QC.QTimer()
+        self._close_check_timer.timeout.connect( self._CheckClosingWidgets )
         
         self._media_window = None
         
@@ -1513,6 +1517,9 @@ class MediaContainer( QW.QWidget ):
         
         self._controls_bar = QW.QWidget( self )
         self._controls_bar_show_full = True
+        
+        # we establish this guy here but the canvas owns it. not elegant but we want to ensure 'C++ already deleted' stuff works in correct order
+        self._qt_media_player_graphics_view_mouse_move_catcher = ClientGUIQtMediaPlayer.GraphicsViewViewportMouseMoveCatcher( self._canvas )
         
         # We need this to force-fill some blanks at times
         self.setAutoFillBackground( True )
@@ -1545,7 +1552,7 @@ class MediaContainer( QW.QWidget ):
         CG.client_controller.sub( self, 'Pause', 'pause_all_media' )
         
     
-    def _CheckClosingMPVWidgets( self ):
+    def _CheckClosingWidgets( self ):
         
         for mpv_widget in list( self._closing_mpv_widgets ):
             
@@ -1555,11 +1562,25 @@ class MediaContainer( QW.QWidget ):
                 
                 self._closing_mpv_widgets.remove( mpv_widget )
                 
-                if len( self._closing_mpv_widgets ) == 0:
-                    
-                    self.readyToDestroy.emit()
-                    
+            
+        
+        for qt_media_player in list( self._closing_qt_media_players ):
+            
+            qt_media_player.TryToUnload()
+            
+            if qt_media_player.IsCompletelyUnloaded():
                 
+                qt_media_player.deleteLater()
+                
+                self._closing_qt_media_players.remove( qt_media_player )
+                
+            
+        
+        if len( self._closing_mpv_widgets ) + len( self._closing_qt_media_players ) == 0:
+            
+            self.haveDestroyedAllMediaWindows.emit()
+            
+            self._close_check_timer.stop()
             
         
     
@@ -1601,7 +1622,7 @@ class MediaContainer( QW.QWidget ):
                         
                         self._closing_mpv_widgets.append( mpv_widget )
                         
-                        mpv_widget.readyForDestruction.connect( self._CheckClosingMPVWidgets )
+                        mpv_widget.readyForDestruction.connect( self._CheckClosingWidgets )
                         
                     else:
                         
@@ -1611,7 +1632,19 @@ class MediaContainer( QW.QWidget ):
                 
                 if isinstance( media_window, ( ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ) ):
                     
-                    CG.client_controller.gui.ReleaseQtMediaPlayer( media_window )
+                    qt_media_player = media_window
+                    
+                    if True:
+                        
+                        self._closing_qt_media_players.append( qt_media_player )
+                        
+                        self._close_check_timer.start( 500 )
+                        
+                    else:
+                        
+                        # TODO: Delete this when you are happy with the new media container deletion responsibility
+                        CG.client_controller.gui.ReleaseQtMediaPlayer( qt_media_player )
+                        
                     
                 
             else:
@@ -1704,29 +1737,39 @@ class MediaContainer( QW.QWidget ):
                 self._media_window.lower()
                 
             
-        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV:
+        else:
             
-            self._media_window = CG.client_controller.gui.GetMPVWidget( self )
+            # ok we are making a clever media player
             
-            self._media_window.amInitialised.connect( self._NotifyMPVInitialised )
-            
-            self._media_window.SetCanvasType( self._canvas_type )
-            
-            self._media_window.SetMedia( self._media, start_paused = self._start_paused )
-            
-            self._media_window.lower()
-            
-        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET:
-            
-            self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget( self, self._canvas_type, self._background_colour_generator )
-            
-            self._media_window.SetMedia( self._media, start_paused = self._start_paused )
-            
-            self._media_window.lower()
-            
-        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW:
-            
-            self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView( self, self._canvas_type, self.parentWidget(), self._background_colour_generator )
+            if self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV:
+                
+                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_mpv' ) or not isinstance( old_media_window, ClientGUIMPV.MPVWidget ):
+                    
+                    self._media_window = CG.client_controller.gui.GetMPVWidget( self )
+                    
+                    self._media_window.amInitialised.connect( self._NotifyMPVInitialised )
+                    
+                    self._media_window.SetCanvasType( self._canvas_type )
+                    
+                    self._media_window.SetMedia( self._media, start_paused = self._start_paused )
+                    
+                
+            elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET:
+                
+                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_qt_media_player' ) or not isinstance( old_media_window, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget ):
+                    
+                    self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget( self, self._canvas_type, self._background_colour_generator )
+                    
+                
+            elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW:
+                
+                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_qt_media_player' ) or not isinstance( old_media_window, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ):
+                    
+                    self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView( self, self._canvas_type, self.parentWidget(), self._background_colour_generator )
+                    
+                    self._media_window.InstallMouseMoveCatcher( self._qt_media_player_graphics_view_mouse_move_catcher )
+                    
+                
             
             self._media_window.SetMedia( self._media, start_paused = self._start_paused )
             
@@ -2181,6 +2224,29 @@ class MediaContainer( QW.QWidget ):
         return self._zoom_types_to_zooms[ MEDIA_VIEWER_ZOOM_TYPE_CANVAS ]
         
     
+    def GetCurrentMediaPlayerLabel( self ) -> str:
+        
+        class_to_desc_dict = {
+            StaticImage : 'Hydrus Native Static Image',
+            Animation : 'Hydrus Native Animation Player',
+            ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget : 'QtMediaPlayer (VideoPlayer)',
+            ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView : 'QtMediaPlayer (GraphicsView)',
+            ClientGUIMPV.MPVWidget : 'MPV Embed Player',
+            EmbedButton : 'Embed Button',
+            OpenExternallyPanel : 'Open Externally Panel'
+        }
+        
+        for ( class_type, desc_str ) in class_to_desc_dict.items():
+            
+            if isinstance( self._media_window, class_type ):
+                
+                return desc_str
+                
+            
+        
+        return 'Unknown Media Player - let hydev know please'
+        
+    
     def GetCurrentZoom( self ) -> float:
         
         return self._current_zoom
@@ -2365,7 +2431,7 @@ class MediaContainer( QW.QWidget ):
     
     def ReadyToDestroy( self ):
         
-        return len( self._closing_mpv_widgets ) == 0
+        return len( self._closing_mpv_widgets ) + len( self._closing_qt_media_players ) == 0
         
     
     def ReadyToSwitchMedia( self ):
@@ -3836,7 +3902,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
                 
             
-        except:
+        except Exception as e:
             
             CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             

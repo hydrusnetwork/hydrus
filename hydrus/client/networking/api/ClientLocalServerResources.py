@@ -155,7 +155,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
                     
                     key = bytes.fromhex( key_text )
                     
-                except:
+                except Exception as e:
                     
                     raise HydrusExceptions.BadRequestException( 'Problem parsing {}!'.format( name_of_key ) )
                     

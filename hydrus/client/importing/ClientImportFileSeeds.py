@@ -619,7 +619,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( file_seed_data )
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -787,7 +787,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 network_job.OverrideBandwidth( 3 )
                 
             
-            network_job.SetFileImportOptions( file_import_options )
+            network_job.SetFileFilteringImportOptions( file_import_options.GetFileFilteringImportOptions() )
             
             CG.client_controller.network_engine.AddJob( network_job )
             
@@ -1040,7 +1040,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         all_neighbour_useful_lookup_urls = list( lookup_urls )
         all_neighbour_useful_lookup_urls.extend( source_lookup_urls )
         
-        if file_import_options.ShouldAssociateSourceURLs():
+        if file_import_options.GetLocationImportOptions().ShouldAssociateSourceURLs():
             
             lookup_urls.extend( source_lookup_urls )
             
@@ -1304,7 +1304,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         else:
             
             # prefer the one that says already in db/previously deleted
-            if hash_file_import_status.ShouldImport( file_import_options ):
+            if hash_file_import_status.ShouldImport( file_import_options.GetFileFilteringImportOptions() ):
                 
                 file_import_status = url_file_import_status
                 
@@ -1316,7 +1316,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         # and make some recommendations
         
-        should_download_file = file_import_status.ShouldImport( file_import_options )
+        should_download_file = file_import_status.ShouldImport( file_import_options.GetFileFilteringImportOptions() )
         
         should_download_metadata = should_download_file # if we want the file, we need the metadata to get the file_url!
         
@@ -1568,7 +1568,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 it_was_a_real_file = True
                                 
                             
-                        except:
+                        except Exception as e:
                             
                             # something crazy happened, like FFMPEG thinking JSON was an MP4 wew, so let's bail out
                             raise HydrusExceptions.VetoException( 'The parser found nothing in the document, and while the document initially seemed to actually be an importable file, it looks like it failed to import too!' )
@@ -1600,7 +1600,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             insertion_index = my_index + 1
                             
-                        except:
+                        except Exception as e:
                             
                             insertion_index = len( file_seed_cache )
                             
@@ -1694,7 +1694,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 insertion_index = my_index + 1
                                 
-                            except:
+                            except Exception as e:
                                 
                                 insertion_index = len( file_seed_cache )
                                 
@@ -1835,7 +1835,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if file_import_options is not None:
             
-            if file_import_options.ShouldAssociatePrimaryURLs():
+            if file_import_options.GetLocationImportOptions().ShouldAssociatePrimaryURLs():
                 
                 potentially_associable_urls.update( self._primary_urls )
                 
@@ -1880,7 +1880,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            if file_import_options.ShouldAssociateSourceURLs():
+            if file_import_options.GetLocationImportOptions().ShouldAssociateSourceURLs():
                 
                 potentially_associable_urls.update( self._source_urls )
                 
@@ -1892,7 +1892,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     media_result = CG.client_controller.Read( 'media_result', hash )
                     
                 
-                extra_content_update_package = file_import_options.GetAlreadyInDBPostImportContentUpdatePackage( media_result )
+                extra_content_update_package = file_import_options.GetLocationImportOptions().GetAlreadyInDBPostImportContentUpdatePackage( media_result )
                 
                 content_update_package.AddContentUpdatePackage( extra_content_update_package )
                 
@@ -2511,7 +2511,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                     
                     num_additional_children_in_current_batch += max( 0, int( result.group() ) )
                     
-                except:
+                except Exception as e:
                     
                     add_children_until_you_hit_a_parent = True
                     
@@ -2800,7 +2800,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                         continue
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -2843,7 +2843,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
                         file_seed = file_seed.replace( magic_phrase, replacement )
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     

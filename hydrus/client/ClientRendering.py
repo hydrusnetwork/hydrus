@@ -425,7 +425,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                 qt_image.setColorSpace( self._qt_colourspace )
                 qt_image.convertToColorSpace( QG.QColorSpace.NamedColorSpace.SRgb )
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.Print( 'Failed to load the ICC Profile for {} into a Qt Colourspace!'.format( self._path ) )
                 
@@ -939,7 +939,7 @@ class RasterContainerVideo( RasterContainer ):
                 
                 ( self._frame_durations_ms, self._times_to_play_animation ) = HydrusAnimationHandling.GetWebPFrameDurationsMS( self._path )
                 
-            except:
+            except Exception as e:
                 
                 self._frame_durations_ms = []
                 self._times_to_play_animation = 0
@@ -955,7 +955,7 @@ class RasterContainerVideo( RasterContainer ):
                 
                 ( self._frame_durations_ms, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsMSPILAnimation( self._path )
                 
-            except:
+            except Exception as e:
                 
                 self._frame_durations_ms = []
                 self._times_to_play_animation = 0

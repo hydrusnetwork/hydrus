@@ -617,7 +617,7 @@ class NewDialog( QP.Dialog ):
                 
                 self.close()
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.ShowText( 'The dialog would not close on command.' )
                 
@@ -626,7 +626,7 @@ class NewDialog( QP.Dialog ):
                 
                 self.deleteLater()
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.ShowText( 'The dialog would not destroy on command.' )
                 

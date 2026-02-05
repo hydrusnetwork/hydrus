@@ -1762,7 +1762,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             
             hash = bytes.fromhex( file_hash_hex )
             
-        except:
+        except Exception as e:
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that hash!' )
             
@@ -2203,7 +2203,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                             
                             update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
                             
-                        except:
+                        except Exception as e:
                             
                             num_errors += 1
                             
@@ -5293,7 +5293,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             account_key = bytes.fromhex( account_key_hex )
             
-        except:
+        except Exception as e:
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that account id!' )
             
@@ -5842,7 +5842,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                     working_now = True
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -7751,7 +7751,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
             
-        except:
+        except Exception as e:
             
             # obsolote comment below, leaving it just in case
             #
@@ -8668,7 +8668,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             qt_media_player.TryToUnload()
             
-            self._controller.CallLaterQtSafe( self, 5.0, 'purge QMediaPlayer', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
+            self._controller.CallLaterQtSafe( self, 2.0, 'purge QMediaPlayer', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
             
         
     
@@ -8679,7 +8679,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             qt_media_player.setParent( self )
             
         
-        self._controller.CallLaterQtSafe( self, 5.0, 'start QMediaPlayer purge', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
+        self._controller.CallLaterQtSafe( self, 0.5, 'start QMediaPlayer purge', self._UnloadAndPurgeQtMediaPlayer, qt_media_player )
         
     
     def REPEATINGBandwidth( self ):

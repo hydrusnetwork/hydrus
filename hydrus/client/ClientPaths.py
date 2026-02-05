@@ -13,7 +13,7 @@ try:
     
     SHOW_IN_FILE_MANAGER_OK = True
     
-except:
+except Exception as e:
     
     SHOW_IN_FILE_MANAGER_OK = False
     

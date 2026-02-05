@@ -235,7 +235,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 hash_a = bytes.fromhex( hash_a_hex )
                 hash_b = bytes.fromhex( hash_b_hex )
                 
-            except:
+            except Exception as e:
                 
                 raise HydrusExceptions.BadRequestException( 'Sorry, did not understand one of the hashes {} or {}!'.format( hash_a_hex, hash_b_hex ) )
                 

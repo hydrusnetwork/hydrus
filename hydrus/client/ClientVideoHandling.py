@@ -96,7 +96,7 @@ class AnimationRendererPIL( object ):
                     raise HydrusExceptions.DamagedOrUnusualFileException( 'Crazy animation frame went bananas!' )
                     
                 
-            except:
+            except Exception as e:
                 
                 # this can raise OSError in some 'trancated file' circumstances
                 # trying to render beyond with PIL is rife with trouble, so we won't try
@@ -139,7 +139,7 @@ class AnimationRendererPIL( object ):
                 
                 numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas, strip_useless_alpha = False )
                 
-            except:
+            except Exception as e:
                 
                 # PIL can produce an IOError, which is an OSError(!!!), on a truncated file, lfg
                 # so let's just bail out in that case mate
@@ -164,7 +164,7 @@ class AnimationRendererPIL( object ):
             
             resized_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
             
-        except:
+        except Exception as e:
             
             self._frames_we_could_not_render.add( self._current_render_index )
             self._cannot_seek_to_or_beyond_this_index = min( self._frames_we_could_not_render )

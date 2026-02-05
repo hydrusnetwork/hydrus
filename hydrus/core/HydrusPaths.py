@@ -80,7 +80,7 @@ def ConvertAbsPathToPortablePath( abs_path, base_dir_override = None ):
             portable_path = abs_path
             
         
-    except:
+    except Exception as e:
         
         portable_path = abs_path
         
@@ -274,7 +274,7 @@ def DirectoryIsWriteable( path ):
         
         os.unlink( test_path )
         
-    except:
+    except Exception as e:
         
         return False
         
@@ -676,7 +676,7 @@ def FilterOlderModifiedFiles( paths: collections.abc.Collection[ str ], grace_pe
                 good_paths.append( path )
                 
             
-        except:
+        except Exception as e:
             
             continue
             
@@ -798,7 +798,7 @@ def GetFreeSpace( path ) -> int | None:
         
         return disk_usage.free
         
-    except:
+    except Exception as e:
         
         return None
         
@@ -999,7 +999,7 @@ def CopyTimes( source, dest ):
         
         return True
         
-    except:
+    except Exception as e:
         
         return False
         
@@ -1503,7 +1503,7 @@ def PathIsFree( path ):
             return True
             
         
-    except:
+    except Exception as e:
         
         HydrusData.Print( 'Could not open the file: ' + path )
         
@@ -1660,7 +1660,7 @@ try:
     PROCESS_UMASK = os.umask( 0o022 )
     os.umask( PROCESS_UMASK )
     
-except:
+except Exception as e:
     
     PROCESS_UMASK = 0o022
     

@@ -77,7 +77,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed.source_time = HydrusTime.SecondiseMS( file_modified_time_ms )
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -414,7 +414,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
                 
-                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options )
+                ClientImportControl.CheckImporterCanDoFileWorkBecausePausifyingProblem( real_file_import_options.GetLocationImportOptions() )
                 
             except HydrusExceptions.VetoException:
                 
@@ -1013,7 +1013,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
             
-            file_import_options.SetAllowedSpecificFiletypes( mimes )
+            file_import_options.GetFileFilteringImportOptions().SetAllowedSpecificFiletypes( mimes )
             
             serialisable_file_import_options = file_import_options.GetSerialisableTuple()
             
@@ -1187,7 +1187,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_QUIET )
             
-            real_file_import_options.CheckReadyToImport()
+            real_file_import_options.GetLocationImportOptions().CheckReadyToImport()
             
             pubbed_job_status = False
             
@@ -1335,9 +1335,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not file_import_options.IsDefault() and not self._file_import_options.IsDefault():
             
-            mimes = set( file_import_options.GetAllowedSpecificFiletypes() )
+            file_filtering_import_options = file_import_options.GetFileFilteringImportOptions()
             
-            if mimes != set( self._file_import_options.GetAllowedSpecificFiletypes() ):
+            mimes = set( file_filtering_import_options.GetAllowedSpecificFiletypes() )
+            
+            if mimes != set( self._file_import_options.GetFileFilteringImportOptions().GetAllowedSpecificFiletypes() ):
                 
                 self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_VETOED, ) )
                 

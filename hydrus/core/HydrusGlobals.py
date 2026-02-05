@@ -94,8 +94,6 @@ restart = False
 twisted_is_broke = False
 twisted_is_broke_exception = None
 
-last_mouse_click_button = None
-
 dirty_object_lock = threading.Lock()
 client_busy = threading.Lock()
 server_busy = threading.Lock()

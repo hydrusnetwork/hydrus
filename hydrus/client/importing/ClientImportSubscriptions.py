@@ -1726,7 +1726,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 real_file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_QUIET )
                 
-                real_file_import_options.CheckReadyToImport()
+                real_file_import_options.GetLocationImportOptions().CheckReadyToImport()
                 
                 self._WorkOnQueriesFiles( job_status )
                 

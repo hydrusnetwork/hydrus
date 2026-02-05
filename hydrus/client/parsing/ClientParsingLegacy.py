@@ -317,7 +317,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 return other_hash
                 
-            except:
+            except Exception as e:
                 
                 raise Exception( 'I do not know that file\'s ' + hash_type + ' hash, so I cannot look it up!' )
                 

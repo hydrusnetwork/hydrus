@@ -27,7 +27,7 @@ def ExtractDBPNGToPath( path, temp_path ):
             db.close()
             
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.NoThumbnailFileException()
         
@@ -74,7 +74,7 @@ def GetClipProperties( path ):
                         duration_ms = duration_s * 1000
                         
                     
-                except:
+                except Exception as e:
                     
                     pass
                     
@@ -165,7 +165,7 @@ def GetSQLiteDB( path, sqlite_temp_path ):
         
         c = db.cursor()
         
-    except:
+    except Exception as e:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'This clip file seemed to have an invalid internal SQLite file!' )
         

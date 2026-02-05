@@ -149,7 +149,7 @@ class StringConverter( StringProcessingStep ):
                 self.conversions.append( ( conversion_type, data ) )
                 
             
-        except:
+        except Exception as e:
             
             pass
             
@@ -184,7 +184,7 @@ class StringConverter( StringProcessingStep ):
                     new_conversions.append( ( conversion_type, data ) )
                     
                 
-            except:
+            except Exception as e:
                 
                 pass
                 
@@ -407,7 +407,7 @@ class StringConverter( StringProcessingStep ):
                         
                         timestamp = int( s )
                         
-                    except:
+                    except Exception as e:
                         
                         raise Exception( '"{}" was not an integer!'.format( s ) )
                         
@@ -1378,7 +1378,7 @@ class StringSplitter( StringProcessingStep ):
             
             separator = self._separator.encode( 'latin-1', 'backslashreplace' ).decode( 'unicode-escape' )
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.StringSplitterException( 'Could not escape the splitter string. Wrong number of backslashes?' )
             
@@ -1525,7 +1525,7 @@ class StringTagFilter( StringProcessingStep ):
                 tag = list( tags )[0]
                 
             
-        except:
+        except Exception as e:
             
             raise HydrusExceptions.StringMatchException( '{} was not a valid tag!'.format( presentation_text ) )
             
@@ -1643,7 +1643,7 @@ class StringProcessor( StringProcessingStep ):
                         
                         next_strings = processing_step.Slice( current_strings )
                         
-                    except:
+                    except Exception as e:
                         
                         next_strings = current_strings
                         
@@ -1655,7 +1655,7 @@ class StringProcessor( StringProcessingStep ):
                     
                     next_strings = processing_step.ConvertAndFilter( current_strings )
                     
-                except:
+                except Exception as e:
                     
                     next_strings = current_strings
                     
@@ -1666,7 +1666,7 @@ class StringProcessor( StringProcessingStep ):
                     
                     next_strings = processing_step.Join( current_strings )
                     
-                except:
+                except Exception as e:
                     
                     next_strings = current_strings
                     

@@ -303,7 +303,7 @@ class BetterQListWidget( QW.QListWidget ):
                 
                 selected = data in datas # has been known to 'unhashable', so let's failsafe
                 
-            except:
+            except Exception as e:
                 
                 selected = False
                 
@@ -1518,7 +1518,7 @@ class ListBox( QW.QScrollArea ):
         self._last_view_start = None
         
         self._height_num_chars = height_num_chars
-        self._minimum_height_num_chars = 8
+        self._minimum_height_num_chars = 1
         self._maximum_height_num_chars = None
         
         self._num_rows_per_page = 0
@@ -2391,7 +2391,7 @@ class ListBox( QW.QScrollArea ):
                             
                             painter.fillRect( background_colour_x, y_top, rect_width, text_height, rect_drawing_fill )
                             
-                        except:
+                        except Exception as e:
                             
                             painter.fillRect( background_colour_x, y_top, rect_width, text_height, namespace_colour )
                             
@@ -4210,7 +4210,7 @@ class ListBoxTags( ListBox ):
                                 ClientGUIMenus.AppendMenuItem( service_submenu, label, 'Change the tag filter for this service.', ClientGUIModalServersideServiceActions.ManageServiceOptionsTagFilter, self, service_key, new_tags_to_allow = tags_currently_not_ok )
                                 
                             
-                        except:
+                        except Exception as e:
                             
                             ClientGUIMenus.AppendMenuLabel( service_submenu, 'could not fetch service tag filter! maybe your account is unsynced?' )
                             
@@ -5416,6 +5416,8 @@ class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     def __init__( self, parent, tag_presentation_location, enter_func, delete_func ):
         
         super().__init__( parent, ClientTags.TAG_DISPLAY_STORAGE, tag_presentation_location, include_counts = True )
+        
+        self.SetMinimumHeightNumChars( 6 )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

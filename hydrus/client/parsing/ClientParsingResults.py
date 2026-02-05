@@ -363,7 +363,7 @@ class ParsableContentDescriptionTag( ParsableContentDescription ):
                 
                 tag = HydrusTags.CleanTag( combined_tag )
                 
-            except:
+            except Exception as e:
                 
                 tag = 'unparsable tag, will likely be discarded'
                 
@@ -424,7 +424,7 @@ class ParsableContentDescriptionTimestamp( ParsableContentDescription ):
                 
                 timestamp_string = HydrusTime.TimestampToPrettyTime( timestamp )
                 
-            except:
+            except Exception as e:
                 
                 timestamp_string = 'could not convert to integer'
                 
@@ -621,7 +621,7 @@ class ParsedPost( object ):
                     
                     hash = GetHashFromParsedText( parsed_content_description.hash_encoding, parsed_content.parsed_text )
                     
-                except:
+                except Exception as e:
                     
                     continue
                     
@@ -728,7 +728,7 @@ class ParsedPost( object ):
                         
                         timestamp = int( parsed_content.parsed_text )
                         
-                    except:
+                    except Exception as e:
                         
                         continue
                         

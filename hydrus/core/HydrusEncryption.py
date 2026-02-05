@@ -14,7 +14,7 @@ try:
     
     CRYPTO_OK = True
     
-except:
+except Exception as e:
     
     CRYPTO_OK = False
     
@@ -25,7 +25,7 @@ try:
     
     OPENSSL_OK = True
     
-except:
+except Exception as e:
     
     OPENSSL_OK = False
     

@@ -47,7 +47,7 @@ def DoPreImportEnvWork():
         os.environ[ 'OPENCV_LOG_LEVEL' ] = 'ERROR'
         os.environ[ 'OPENCV_FFMPEG_LEVEL' ] = '16' # AV_LOG_ERROR
         
-    except:
+    except Exception as e:
         
         print( 'Could not set OpenCV logging envs.' )
         

@@ -16,7 +16,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIFunctions
 
-HG.last_mouse_click_button = QC.Qt.MouseButton.LeftButton
+LAST_MOUSE_CLICK_BUTTON = QC.Qt.MouseButton.LeftButton
 
 def AddLastClickMemory( gui_item ):
     
@@ -28,7 +28,9 @@ def AddLastClickMemory( gui_item ):
                 
                 event = typing.cast( QG.QMouseEvent, event )
                 
-                HG.last_mouse_click_button = event.button()
+                global LAST_MOUSE_CLICK_BUTTON
+                
+                LAST_MOUSE_CLICK_BUTTON = event.button()
                 
             
             return False
@@ -155,7 +157,7 @@ def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
             
             menu_tuples = sorted( menu_tuples )
             
-        except:
+        except Exception as e:
             
             pass
             

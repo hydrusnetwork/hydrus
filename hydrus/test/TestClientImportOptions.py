@@ -14,7 +14,8 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import ClientImportOptions
-from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import FileFilteringImportOptions
+from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
@@ -212,92 +213,55 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 3600 * ( 100000 // 3600 ) )
         
     
-class TestFileImportOptions( unittest.TestCase ):
+
+class TestFileFilteringImportOptions( unittest.TestCase ):
     
-    def test_file_import_options( self ):
-        
-        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
-        
-        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
-        
-        prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
-        prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
-        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
-        
-        file_import_options.SetPrefetchImportOptions( prefetch_import_options )
+    def test_file_filtering_import_options( self ):
         
         exclude_deleted = False
         allow_decompression_bombs = False
-        min_size = None
-        max_size = None
-        max_gif_size = None
-        min_resolution = None
-        max_resolution = None
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
         
-        automatic_archive = False
-        associate_primary_urls = False
-        associate_source_urls = False
-        
-        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
+        file_filtering_import_options.SetAllowsDecompressionBombs( allow_decompression_bombs )
+        file_filtering_import_options.SetExcludesDeleted( exclude_deleted )
         
         #
         
-        self.assertFalse( file_import_options.ExcludesDeleted() )
-        self.assertFalse( file_import_options.AllowsDecompressionBombs() )
-        self.assertFalse( file_import_options.AutomaticallyArchives() )
-        self.assertFalse( file_import_options.ShouldAssociatePrimaryURLs() )
-        self.assertFalse( file_import_options.ShouldAssociateSourceURLs() )
+        self.assertFalse( file_filtering_import_options.ExcludesDeleted() )
+        self.assertFalse( file_filtering_import_options.AllowsDecompressionBombs() )
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
-        file_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.APPLICATION_7Z, None, None )
         
         #
         
         exclude_deleted = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetExcludesDeleted( exclude_deleted )
         
-        self.assertTrue( file_import_options.ExcludesDeleted() )
-        self.assertFalse( file_import_options.AllowsDecompressionBombs() )
-        self.assertFalse( file_import_options.AutomaticallyArchives() )
+        self.assertTrue( file_filtering_import_options.ExcludesDeleted() )
         
         #
         
         allow_decompression_bombs = True
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetAllowsDecompressionBombs( allow_decompression_bombs )
         
-        self.assertTrue( file_import_options.ExcludesDeleted() )
-        self.assertTrue( file_import_options.AllowsDecompressionBombs() )
-        self.assertFalse( file_import_options.AutomaticallyArchives() )
-        
-        #
-        
-        automatic_archive = True
-        associate_primary_urls = True
-        associate_source_urls  = True
-        
-        file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
-        
-        self.assertTrue( file_import_options.ExcludesDeleted() )
-        self.assertTrue( file_import_options.AllowsDecompressionBombs() )
-        self.assertTrue( file_import_options.AutomaticallyArchives() )
-        self.assertTrue( file_import_options.ShouldAssociatePrimaryURLs() )
-        self.assertTrue( file_import_options.ShouldAssociateSourceURLs() )
+        self.assertTrue( file_filtering_import_options.ExcludesDeleted() )
+        self.assertTrue( file_filtering_import_options.AllowsDecompressionBombs() )
         
         #
         
         min_size = 4096
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetMinSize( min_size )
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 512, HC.IMAGE_JPEG, 640, 480 )
+            file_filtering_import_options.CheckFileIsValid( 512, HC.IMAGE_JPEG, 640, 480 )
             
         
         #
@@ -305,13 +269,14 @@ class TestFileImportOptions( unittest.TestCase ):
         min_size = None
         max_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetMinSize( min_size )
+        file_filtering_import_options.SetMaxSize( max_size )
         
-        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
+            file_filtering_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
             
         
         #
@@ -319,16 +284,17 @@ class TestFileImportOptions( unittest.TestCase ):
         max_size = None
         max_gif_size = 2000
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetMaxSize( max_size )
+        file_filtering_import_options.SetMaxGifSize( max_gif_size )
         
-        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
-        file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
         
-        file_import_options.CheckFileIsValid( 1800, HC.ANIMATION_GIF, 640, 480 )
+        file_filtering_import_options.CheckFileIsValid( 1800, HC.ANIMATION_GIF, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 2200, HC.ANIMATION_GIF, 640, 480 )
+            file_filtering_import_options.CheckFileIsValid( 2200, HC.ANIMATION_GIF, 640, 480 )
             
         
         #
@@ -336,44 +302,47 @@ class TestFileImportOptions( unittest.TestCase ):
         max_gif_size = None
         min_resolution = ( 200, 100 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetMaxGifSize( max_gif_size )
+        file_filtering_import_options.SetMinResolution( min_resolution )
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
-        
-        with self.assertRaises( HydrusExceptions.FileImportRulesException ):
-            
-            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 180, 480 )
-            
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 80 )
+            file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 180, 480 )
             
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 180 )
+        with self.assertRaises( HydrusExceptions.FileImportRulesException ):
+            
+            file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 80 )
+            
+        
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 180 )
         
         #
         
         min_resolution = None
         max_resolution = ( 3000, 4000 )
         
-        file_import_options.SetPreImportOptions( exclude_deleted, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
+        file_filtering_import_options.SetMinResolution( min_resolution )
+        file_filtering_import_options.SetMaxResolution( max_resolution )
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
-        
-        with self.assertRaises( HydrusExceptions.FileImportRulesException ):
-            
-            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 3200, 480 )
-            
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 4200 )
+            file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 3200, 480 )
             
         
-        file_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 2800, 3800 )
+        with self.assertRaises( HydrusExceptions.FileImportRulesException ):
+            
+            file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 640, 4200 )
+            
+        
+        file_filtering_import_options.CheckFileIsValid( 65536, HC.IMAGE_JPEG, 2800, 3800 )
         
     
+
 def GetNotesMediaResult( hash, names_to_notes ):
     
     file_id = 123
@@ -402,6 +371,124 @@ def GetNotesMediaResult( hash, names_to_notes ):
     
     return media_result
     
+
+class TestLocationImportOptions( unittest.TestCase ):
+    
+    def test_location_import_options( self ):
+        
+        destination_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )
+        automatic_archive = False
+        do_archive_already_in_db_files = False
+        do_import_destinations_on_already_in_db_files = False
+        associate_primary_urls = False
+        associate_source_urls = False
+        
+        location_import_options = LocationImportOptions.LocationImportOptions()
+        
+        location_import_options.SetDestinationLocationContext( destination_location_context )
+        location_import_options.SetAutomaticallyArchives( automatic_archive )
+        location_import_options.SetDoAutomaticArchiveOnAlreadyInDBFiles( do_archive_already_in_db_files )
+        location_import_options.SetDoImportDestinationsOnAlreadyInDBFiles( do_import_destinations_on_already_in_db_files )
+        location_import_options.SetShouldAssociatePrimaryURLs( associate_primary_urls )
+        location_import_options.SetShouldAssociateSourceURLs( associate_source_urls )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        automatic_archive = True
+        
+        location_import_options.SetAutomaticallyArchives( automatic_archive )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        do_archive_already_in_db_files = True
+        
+        location_import_options.SetDoAutomaticArchiveOnAlreadyInDBFiles( do_archive_already_in_db_files )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        do_import_destinations_on_already_in_db_files = True
+        
+        location_import_options.SetDoImportDestinationsOnAlreadyInDBFiles( do_import_destinations_on_already_in_db_files )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        associate_primary_urls = True
+        
+        location_import_options.SetShouldAssociatePrimaryURLs( associate_primary_urls )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        associate_source_urls = True
+        
+        location_import_options.SetShouldAssociateSourceURLs( associate_source_urls )
+        
+        #
+        
+        self.assertEqual( location_import_options.GetDestinationLocationContext(), destination_location_context )
+        self.assertEqual( location_import_options.AutomaticallyArchives(), automatic_archive )
+        self.assertEqual( location_import_options.DoAutomaticArchiveOnAlreadyInDBFiles(), do_archive_already_in_db_files )
+        self.assertEqual( location_import_options.DoImportDestinationsOnAlreadyInDBFiles(), do_import_destinations_on_already_in_db_files )
+        self.assertEqual( location_import_options.ShouldAssociatePrimaryURLs(), associate_primary_urls )
+        self.assertEqual( location_import_options.ShouldAssociateSourceURLs(), associate_source_urls )
+        
+        #
+        
+        destination_location_context = ClientLocation.LocationContext( current_service_keys = set(), deleted_service_keys = set() )
+        
+        location_import_options.SetDestinationLocationContext( destination_location_context )
+        
+        with self.assertRaises( HydrusExceptions.FileImportBlockException ):
+            
+            location_import_options.CheckReadyToImport()
+            
+        
+    
+
 class TestNoteImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
@@ -555,6 +642,23 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     
     return media_result
     
+
+class TestPrefetchImportOptions( unittest.TestCase ):
+    
+    def test_prefetch_import_options( self ):
+        
+        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+        
+        prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
+        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
+        
+        self.assertEqual( prefetch_import_options.GetPreImportHashCheckType(), PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        self.assertEqual( prefetch_import_options.GetPreImportURLCheckType(), PrefetchImportOptions.DO_CHECK )
+        self.assertTrue( prefetch_import_options.PreImportURLCheckLooksForNeighbourSpam() )
+        
+    
+
 class TestPresentationImportOptions( unittest.TestCase ):
     
     def test_presentation_import_options( self ):

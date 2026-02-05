@@ -1355,27 +1355,28 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AddLastClickMemory( menu )
         
         # TODO: fix this up to have an optional second callable on menu items for right-click
+        # and clean up the lambda/indent garbage
         
         ClientGUIMenus.AppendMenuItem( menu, 'resize to fit', 'Resize the window to fit the media without changing anything else.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_VIEWER_CENTER ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton 
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton 
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA ) ) ) )
         
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'resize to 50%', 'Zoom the media to 50% and resize the window to fit it.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER, 0.5 ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED, 0.5 ) ) ) )
         ClientGUIMenus.AppendMenuItem( menu, 'resize to 75%', 'Zoom the media to 75% and resize the window to fit it.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER, 0.75  ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED, 0.75 ) ) ) )
         ClientGUIMenus.AppendMenuItem( menu, 'resize to 100%', 'Zoom the media to 100% and resize the window to fit it.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER, 1.0  ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED, 1.0 ) ) ) )
         ClientGUIMenus.AppendMenuItem( menu, 'resize to 150%', 'Zoom the media to 150% and resize the window to fit it.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER, 1.5  ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED, 1.5 ) ) ) )
         ClientGUIMenus.AppendMenuItem( menu, 'resize to 200%', 'Zoom the media to 200% and resize the window to fit it.', lambda: ( self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER, 2.0  ) )
-                                                                                                                                if HG.last_mouse_click_button != QC.Qt.MouseButton.RightButton
+                                                                                                                                if ClientGUIMenus.LAST_MOUSE_CLICK_BUTTON != QC.Qt.MouseButton.RightButton
                                                                                                                                 else self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED, 2.0 ) ) ) )
         
         #append a non clickable note that says you can right click the above options to choose to center the media first or not. so if you left-click it jumps the media back to window center before resizing, if you right click it jumps the window to where the canvas media location is onscreen and resizes there

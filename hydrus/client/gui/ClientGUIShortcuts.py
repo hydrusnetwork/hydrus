@@ -219,7 +219,7 @@ def get_shortcut_mouse_string( shortcut_key: int, call_mouse_buttons_primary_sec
             
             call_mouse_buttons_primary_secondary = CG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
             
-        except:
+        except Exception as e:
             
             call_mouse_buttons_primary_secondary = False
             
@@ -600,7 +600,7 @@ def ConvertQtKeyToShortcutKey( key_qt ):
             
             return ( SHORTCUT_TYPE_KEYBOARD_CHARACTER, casefold_key_ord )
             
-        except:
+        except Exception as e:
             
             if HG.shortcut_report_mode:
                 
@@ -657,7 +657,7 @@ def ConvertKeyEventToShortcut( event, shortcuts_merge_non_number_numpad_override
                     
                     shortcuts_merge_non_number_numpad = CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
                     
-                except:
+                except Exception as e:
                     
                     shortcuts_merge_non_number_numpad = True
                     
@@ -1164,7 +1164,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                 
                 shortcuts_merge_non_number_numpad = CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
                 
-            except:
+            except Exception as e:
                 
                 shortcuts_merge_non_number_numpad = False
                 
@@ -1316,7 +1316,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
                     action_name += chr( self.shortcut_key )
                     
                 
-            except:
+            except Exception as e:
                 
                 action_name += 'unknown key: {}'.format( repr( self.shortcut_key ) )
                 

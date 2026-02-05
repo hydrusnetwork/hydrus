@@ -1153,7 +1153,7 @@ class EditPairComparatorRelativeFileinfoPanel( ClientGUIScrolledPanels.EditPanel
             
             text = value.GetSummary()
             
-        except:
+        except Exception as e:
             
             text = 'Could not calculate current value!'
             

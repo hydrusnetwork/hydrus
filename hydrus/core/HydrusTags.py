@@ -289,7 +289,7 @@ def TagOK( t ):
         
         return True
         
-    except:
+    except Exception as e:
         
         return False
         
@@ -567,7 +567,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                     
                     clean_example_tag = CleanTag( example_tag )
                     
-                except:
+                except Exception as e:
                     
                     continue
                     
@@ -582,7 +582,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                     
                     clean_tag = CleanTag( tag )
                     
-                except:
+                except Exception as e:
                     
                     continue
                     

@@ -299,7 +299,7 @@ class ContentUpdate( object ):
             
             return f'{HC.content_update_string_lookup[ self._action ]} {HC.content_type_string_lookup[ self._data_type ]}{value_string}'
             
-        except:
+        except Exception as e:
             
             return 'could not parse this content update!'
             

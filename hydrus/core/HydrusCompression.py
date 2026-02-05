@@ -9,10 +9,11 @@ try:
     
     LZ4_OK = True
     
-except: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
+except Exception as e: # ImportError wasn't enough here as Linux went up the shoot with a __version__ doesn't exist bs
     
     pass # this is no big deal
     
+
 def CompressBytesToBytes( obj_bytes: bytes ) -> bytes:
     
     return zlib.compress( obj_bytes, 9 )

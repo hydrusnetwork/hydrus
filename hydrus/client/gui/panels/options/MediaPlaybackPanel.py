@@ -32,34 +32,101 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        media_panel = ClientGUICommon.StaticBox( self, 'media' )
+        zoom_panel = ClientGUICommon.StaticBox( self, 'zoom and position' )
         
-        self._animation_start_position = ClientGUICommon.BetterSpinBox( media_panel, min=0, max=100 )
+        self._media_zooms = QW.QLineEdit( zoom_panel )
+        self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
+        self._media_zooms.textChanged.connect( self.EventZoomsChanged )
         
-        self._always_loop_animations = QW.QCheckBox( media_panel )
+        from hydrus.client.gui.canvas import ClientGUICanvasMedia
+        
+        self._media_viewer_zoom_center = ClientGUICommon.BetterChoice( zoom_panel )
+        
+        for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
+            
+            self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
+            
+        
+        tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
+        
+        self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self._media_viewer_default_zoom_type_override = ClientGUICommon.BetterChoice( zoom_panel )
+        
+        for window_zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
+            
+            self._media_viewer_default_zoom_type_override.addItem( ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ window_zoom_type ], window_zoom_type )
+            
+        
+        self._media_viewer_default_zoom_type_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can override the default zoom if you like.' ) )
+        
+        self._preview_default_zoom_type_override = ClientGUICommon.BetterChoice( zoom_panel )
+        
+        for window_zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
+            
+            self._preview_default_zoom_type_override.addItem( ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ window_zoom_type ], window_zoom_type )
+            
+        
+        self._preview_default_zoom_type_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can override the default zoom if you like.' ) )
+        
+        self._media_viewer_recenter_media_on_window_resize = QW.QCheckBox( zoom_panel )
+        self._media_viewer_recenter_media_on_window_resize.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, when you resize the media viewer window, the media inside it will stay exactly as it is with respect to location and size. This is useful if you want to resize the window while zoomed-in to look at details. While checked, media will re-center and zoom itself as normal whenever a media viewer window is resized.' ) )
+        
+        #
+        
+        animations_panel = ClientGUICommon.StaticBox( self, 'video/animations' )
+        
+        self._animation_start_position = ClientGUICommon.BetterSpinBox( animations_panel, min=0, max=100 )
+        
+        self._always_loop_animations = QW.QCheckBox( animations_panel )
         self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
         
-        self._use_legacy_mpv_mediator = QW.QCheckBox( media_panel )
-        self._use_legacy_mpv_mediator.setToolTip( ClientGUIFunctions.WrapToolTip( 'ADVANCED USERS, please try turning this off! Use this if mpv errors out or does not show seekbar progress on any load. This would probably happen because you had an older mpv version. If you have opened any mpv windows, restart the client to take effect.' ) )
+        #
         
-        self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( media_panel )
+        mpv_panel = ClientGUICommon.StaticBox( self, 'mpv' )
+        
+        self._mpv_conf_path = ClientGUIPathWidgets.FilePickerCtrl( mpv_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
+        
+        self._use_legacy_mpv_mediator = QW.QCheckBox( mpv_panel )
+        self._use_legacy_mpv_mediator.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave this off it you can. You can try it if mpv errors out or does not show seekbar progress on any load (probably because of an older mpv version). If you have opened any mpv windows, restart the client to take effect.' ) )
+        
+        self._mpv_loop_playlist_instead_of_file = QW.QCheckBox( mpv_panel )
         self._mpv_loop_playlist_instead_of_file.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if you get "too many events queued" error in mpv.' ) )
         
-        self._mpv_destruction_test = QW.QCheckBox( media_panel )
+        self._persist_media_window_mpv = QW.QCheckBox( mpv_panel )
+        self._persist_media_window_mpv.setToolTip( ClientGUIFunctions.WrapToolTip( 'When moving from video to video, should we re-use the same mpv player or create/swap to a different one? This has been unstable or flickery in the past, but I am ready to test it now.' ) )
+        
+        self._mpv_destruction_test = QW.QCheckBox( mpv_panel )
         self._mpv_destruction_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'Instead of re-using mpv windows, this will destroy old ones and re-create new ones as needed. This has previously been extremely crashy, but hydev thinks it might be ok now. Try it out, try pushing mpv a little harder than usual, and let him know how it goes.' ) )
         
-        self._do_not_setgeometry_on_an_mpv = QW.QCheckBox( media_panel )
+        self._do_not_setgeometry_on_an_mpv = QW.QCheckBox( mpv_panel )
         self._do_not_setgeometry_on_an_mpv.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this if X11 crashes when you zoom an mpv window.' ) )
         
-        from hydrus.core.files.images import HydrusImageColours
+        #
         
-        self._file_has_transparency_strictness = ClientGUICommon.BetterChoice( media_panel )
+        qt_media_panel = ClientGUICommon.StaticBox( self, 'QtMediaPlayer' )
+        
+        self._persist_media_window_qt_media_player = QW.QCheckBox( mpv_panel )
+        self._persist_media_window_qt_media_player.setToolTip( ClientGUIFunctions.WrapToolTip( 'When moving from video to video, should we re-use the same Qt player or create/swap to a different one? This has been unstable or flickery in the past, but I am ready to test it now.' ) )
+        
+        self._qt_media_player_opengl_test = QW.QCheckBox( qt_media_panel )
+        self._qt_media_player_opengl_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this and load up some big heavy vids--does it improve performance? Cause crashes? I noticed some flickering in Windows as windows reinitialise, but maybe it helps elsewhere?' ) )
+        
+        #
+        
+        transparency_panel = ClientGUICommon.StaticBox( self, 'transparency' )
+        
+        self._file_has_transparency_strictness = ClientGUICommon.BetterChoice( transparency_panel )
         
         tt = 'This affects image rendering and the "has transparency" property for new files. If you decide to change this and like it, you will probably want to queue up a large "has transparency" recheck for all your images/animations in the file maintenance system to update all your existing files.'
         tt += '\n\n'
         tt += 'Most users will want to keep this on the "human" setting.'
         
         self._file_has_transparency_strictness.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        from hydrus.core.files.images import HydrusImageColours
         
         for strictness in (
             HydrusImageColours.HAS_TRANSPARENCY_STRICTNESS_HUMAN,
@@ -70,57 +137,15 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             self._file_has_transparency_strictness.addItem( HydrusImageColours.has_transparency_strictness_string_lookup[ strictness ], strictness )
             
         
-        self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
+        self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( transparency_panel )
         self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
         
-        self._draw_transparency_checkerboard_as_greenscreen = QW.QCheckBox( media_panel )
+        self._draw_transparency_checkerboard_as_greenscreen = QW.QCheckBox( transparency_panel )
         self._draw_transparency_checkerboard_as_greenscreen.setToolTip( ClientGUIFunctions.WrapToolTip( 'Instead of a checkerboard pattern, draw a bright green colour.' ) )
-        
-        self._media_zooms = QW.QLineEdit( media_panel )
-        self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
-        self._media_zooms.textChanged.connect( self.EventZoomsChanged )
-        
-        from hydrus.client.gui.canvas import ClientGUICanvasMedia
-        
-        self._media_viewer_zoom_center = ClientGUICommon.BetterChoice( media_panel )
-        
-        for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
-            
-            self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
-            
-        
-        tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
-        
-        self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-
-        #
-        
-        self._media_viewer_default_zoom_type_override = ClientGUICommon.BetterChoice( media_panel )
-        
-        for window_zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
-            
-            self._media_viewer_default_zoom_type_override.addItem( ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ window_zoom_type ], window_zoom_type )
-            
-        
-        self._media_viewer_default_zoom_type_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can override the default zoom if you like.' ) )
-        
-        self._preview_default_zoom_type_override = ClientGUICommon.BetterChoice( media_panel )
-        
-        for window_zoom_type in ClientGUICanvasMedia.MEDIA_VIEWER_ZOOM_TYPES:
-            
-            self._preview_default_zoom_type_override.addItem( ClientGUICanvasMedia.media_viewer_zoom_type_str_lookup[ window_zoom_type ], window_zoom_type )
-            
-        
-        self._preview_default_zoom_type_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can override the default zoom if you like.' ) )
-        
-        self._media_viewer_recenter_media_on_window_resize = QW.QCheckBox( media_panel )
-        self._media_viewer_recenter_media_on_window_resize.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, when you resize the media viewer window, the media inside it will stay exactly as it is with respect to location and size. This is useful if you want to resize the window while zoomed-in to look at details. While checked, media will re-center and zoom itself as normal whenever a media viewer window is resized.' ) )
         
         #
         
         system_panel = ClientGUICommon.StaticBox( self, 'system' )
-        
-        self._mpv_conf_path = ClientGUIPathWidgets.FilePickerCtrl( system_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
         
         self._use_system_ffmpeg = QW.QCheckBox( system_panel )
         self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using any static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
@@ -136,13 +161,13 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        filetype_handling_panel = ClientGUICommon.StaticBox( media_panel, 'per-filetype handling' )
+        filetype_handling_panel = ClientGUICommon.StaticBox( self, 'per-filetype handling' )
         
         media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, self._GetListCtrlDisplayTuple, self._GetListCtrlSortTuple )
         
-        self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, 20, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+        self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, 12, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
         
         media_viewer_list_panel.SetListCtrl( self._filetype_handling_listctrl )
         
@@ -156,8 +181,11 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
         self._use_legacy_mpv_mediator.setChecked( self._new_options.GetBoolean( 'use_legacy_mpv_mediator' ) )
         self._mpv_loop_playlist_instead_of_file.setChecked( self._new_options.GetBoolean( 'mpv_loop_playlist_instead_of_file' ) )
+        self._persist_media_window_mpv.setChecked( self._new_options.GetBoolean( 'persist_media_window_mpv' ) )
         self._mpv_destruction_test.setChecked( self._new_options.GetBoolean( 'mpv_destruction_test' ) )
         self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
+        self._qt_media_player_opengl_test.setChecked( self._new_options.GetBoolean( 'qt_media_player_opengl_test' ) )
+        self._persist_media_window_qt_media_player.setChecked( self._new_options.GetBoolean( 'persist_media_window_qt_media_player' ) )
         self._file_has_transparency_strictness.SetValue( self._new_options.GetInteger( 'file_has_transparency_strictness' ) )
         self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
         self._draw_transparency_checkerboard_as_greenscreen.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ) )
@@ -205,33 +233,62 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Media Viewer default zoom:', self._media_viewer_default_zoom_type_override ) )
         rows.append( ( 'Preview Viewer default zoom:', self._preview_default_zoom_type_override ) )
         rows.append( ( 'Re-center media on window resize:', self._media_viewer_recenter_media_on_window_resize ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( zoom_panel, rows )
+        
+        zoom_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
         rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
         rows.append( ( 'Always Loop Animations:', self._always_loop_animations ) )
-        rows.append( ( 'LEGACY DEBUG: Use legacy mpv communication method:', self._use_legacy_mpv_mediator ) )
-        rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
-        rows.append( ( 'TEST: Destroy/recreate mpv widgets instead of recycling them:', self._mpv_destruction_test ) )
-        rows.append( ( 'LINUX DEBUG: Do not allow combined setGeometry on mpv window:', self._do_not_setgeometry_on_an_mpv ) )
-        rows.append( ( 'Consider a file as "having transparency" when:', self._file_has_transparency_strictness ) )
-        rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
-        rows.append( ( '--Instead of checkerboard, use a bright greenscreen:', self._draw_transparency_checkerboard_as_greenscreen ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( animations_panel, rows )
         
-        media_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        media_panel.Add( filetype_handling_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        #
-        
-        label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, you can overwrite it from another path here.\n\nNote, though, that applying a new mpv.conf will not "reset/undo" any options that are now ommitted in the new file. If you want to remove a line, edit/update the mpv.conf and then restart the client.'
-        
-        st = ClientGUICommon.BetterStaticText( system_panel, label = label )
-        st.setWordWrap( True )
-        
-        system_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        animations_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         rows = []
         
         rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
+        rows.append( ( 'DEBUG: Use legacy mpv communication method:', self._use_legacy_mpv_mediator ) )
+        rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
+        rows.append( ( 'TEST: Use the same mpv player through media transitions:', self._persist_media_window_mpv ) )
+        rows.append( ( 'TEST: Destroy/recreate mpv players instead of recycling them:', self._mpv_destruction_test ) )
+        rows.append( ( 'LINUX DEBUG: Do not allow combined setGeometry on mpv window:', self._do_not_setgeometry_on_an_mpv ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( mpv_panel, rows )
+        
+        label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, if you have everything set up in a different file already, you can overwrite your mpv.conf from that path here.\n\nNote, however, that applying a new mpv.conf will not "reset/undo" any options that are now ommitted in the new file. If you want to remove a line, edit/update the mpv.conf and then restart the client.'
+        
+        st = ClientGUICommon.BetterStaticText( mpv_panel, label = label )
+        st.setWordWrap( True )
+        
+        mpv_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        mpv_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'TEST: Use the same QtMediaPlayer through media transitions:', self._persist_media_window_qt_media_player ) )
+        rows.append( ( 'TEST: Use OpenGL Window in QtMediaPlayer:', self._qt_media_player_opengl_test ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( qt_media_panel, rows )
+        
+        qt_media_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'Consider a file as "having transparency" when:', self._file_has_transparency_strictness ) )
+        rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
+        rows.append( ( '--Instead of checkerboard, use a bright greenscreen:', self._draw_transparency_checkerboard_as_greenscreen ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( transparency_panel, rows )
+        
+        transparency_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        rows = []
+        
         rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
         rows.append( ( 'Apply image ICC Profile colour adjustments:', self._do_icc_profile_normalisation ) )
         rows.append( ( 'Allow loading of truncated images:', self._enable_truncated_images_pil ) )
@@ -241,7 +298,12 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         system_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, media_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, zoom_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, transparency_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, animations_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, filetype_handling_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, mpv_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, qt_media_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, system_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -457,8 +519,11 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
         self._new_options.SetBoolean( 'use_legacy_mpv_mediator', self._use_legacy_mpv_mediator.isChecked() )
         self._new_options.SetBoolean( 'mpv_loop_playlist_instead_of_file', self._mpv_loop_playlist_instead_of_file.isChecked() )
+        self._new_options.SetBoolean( 'persist_media_window_mpv', self._persist_media_window_mpv.isChecked() )
         self._new_options.SetBoolean( 'mpv_destruction_test', self._mpv_destruction_test.isChecked() )
         self._new_options.SetBoolean( 'do_not_setgeometry_on_an_mpv', self._do_not_setgeometry_on_an_mpv.isChecked() )
+        self._new_options.SetBoolean( 'persist_media_window_qt_media_player', self._persist_media_window_qt_media_player.isChecked() )
+        self._new_options.SetBoolean( 'qt_media_player_opengl_test', self._qt_media_player_opengl_test.isChecked() )
         self._new_options.SetInteger( 'file_has_transparency_strictness', self._file_has_transparency_strictness.GetValue() )
         self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
         self._new_options.SetBoolean( 'draw_transparency_checkerboard_as_greenscreen', self._draw_transparency_checkerboard_as_greenscreen.isChecked() )
