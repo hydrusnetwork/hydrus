@@ -56,7 +56,7 @@ jobs:
       -
         name: Compress Client
         run: |
-          7z.exe a -tzip -mm=Deflate -mx=5 Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip .\dist\*
+          7z a -tzip -mm=Deflate -mx=5 Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip .\dist\*
       -
         name: Upload Files
         uses: softprops/action-gh-release@v2
