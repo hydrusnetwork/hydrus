@@ -8,7 +8,7 @@ client_a = Analysis(['hydrus\\hydrus_client.pyw'],
              binaries=[
                ('hydrus\\static\\build_files\\windows\\sqlite3.dll', '.'),
                ('hydrus\\static\\build_files\\windows\\sqlite3.exe', 'db'),
-               ('hydrus\\mpv-2.dll', '.')
+               ('hydrus\\libmpv-2.dll', '.')
              ],
              datas=[
                ('hydrus\\bin', 'bin'),

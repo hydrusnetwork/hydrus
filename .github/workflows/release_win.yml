@@ -33,19 +33,14 @@ jobs:
         run: mkdocs build -d help
         working-directory: hydrus
       -
-        name: Download mpv-dev
-        run: Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20260201-git-40d2947.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
-      -
-        name: Process mpv-dev
+        name: Download and Extract mpv-dev
         run: |
-          7z x mpv-dev-x86_64.7z -ompv
-          move mpv\libmpv-2.dll hydrus\mpv-2.dll
+          Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20260201-git-40d2947.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
+          7z e mpv-dev-x86_64.7z -ohydrus "libmpv-2.dll"
       -
-        name: Download ffmpeg
-        run: Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z" -OutFile "ffmpeg-release-full.7z"
-      -
-        name: Process ffmpeg
+        name: Download and Extract FFmpeg
         run: |
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z" -OutFile "ffmpeg-release-full.7z"
           7z e ffmpeg-release-full.7z -ohydrus/bin "**/bin/ffmpeg.exe"
       -
         name: Build Hydrus
