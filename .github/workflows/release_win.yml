@@ -46,12 +46,12 @@ jobs:
         name: Build Hydrus
         run: |
           python hydrus\static\build_files\windows\file_version_info_maker.py ${{ github.ref_name }}
-          move hydrus\static\build_files\windows\hydrus.spec hydrus.spec
+          copy hydrus\static\build_files\windows\hydrus.spec hydrus.spec
           pyinstaller hydrus.spec
       -
         name: InnoSetup
         run: |
-          move hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
+          copy hydrus\static\build_files\windows\InnoSetup.iss InnoSetup.iss
           ISCC.exe InnoSetup.iss /DVersion=${{ github.ref_name }} /DVersionShort=${{ env.version_short }}
       -
         name: Compress Client
