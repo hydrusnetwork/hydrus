@@ -7,7 +7,7 @@ HEALTHCHECK --interval=20s --timeout=10s --retries=3 --start-period=30s CMD ! su
 ENTRYPOINT ["/bin/sh", "/opt/hydrus/static/build_files/docker/client/entrypoint.sh"]
 LABEL git="https://github.com/hydrusnetwork/hydrus"
 
-RUN apk --no-cache add fvwm tigervnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq libheif shadow \
+RUN apk --no-cache add fvwm tigervnc xvfb supervisor opencv mpv mpv-libs ffmpeg jq libheif shadow  novnc \
  openssl nodejs patch font-noto font-noto-emoji font-noto-cjk \
  py3-pyside6 py3-beautifulsoup4 py3-pillow py3-numpy py3-openssl py3-cryptography py3-pip py3-opencv py3-lxml py3-chardet py3-send2trash py3-cbor2 \
  py3-psutil py3-pysocks py3-requests py3-twisted py3-yaml py3-lz4 py3-html5lib py3-dateutil py3-qtpy py3-mpv py3-service_identity py3-parsing py3-olefile \
@@ -16,23 +16,16 @@ RUN apk --no-cache add fvwm tigervnc xvfb supervisor opencv mpv mpv-libs ffmpeg 
 RUN python3 -m venv /opt/venv --system-site-packages
 RUN /opt/venv/bin/pip install dateparser Pympler pillow-avif-plugin pillow-heif pillow-jxl-plugin
 
+RUN ln -fs /usr/bin/python3 /usr/bin/python && ln -fs /usr/bin/pip3 /usr/bin/pip && ln -fs vnc.html /usr/share/novnc/index.html
+
 RUN set -xe \
     && mkdir -p /opt/hydrus \
     && addgroup -g 1000 hydrus \
     && adduser -h /opt/hydrus -u 1000 -H -S -G hydrus hydrus
 
-RUN mkdir -p /opt/noVNC/utils/websockify \
- && wget $(wget https://api.github.com/repos/novnc/noVNC/releases/latest -qO- | jq  -r '.tarball_url') -qO- | tar xzf - --strip-components=1 -C /opt/noVNC \
- && wget $(wget https://api.github.com/repos/novnc/websockify/releases/latest -qO- | jq  -r '.tarball_url') -qO- | tar xzf - --strip-components=1 -C /opt/noVNC/utils/websockify \
- && sed -i -- "s/ps -p/ps -o pid | grep/g" /opt/noVNC/utils/novnc_proxy \
- && chown hydrus:hydrus -R /opt/noVNC
+COPY static/build_files/docker/client/supervisord.conf /etc/supervisord.conf
 
 COPY --chown=hydrus . /opt/hydrus
-
-RUN mv /opt/hydrus/static/build_files/docker/client/supervisord.conf /etc/supervisord.conf && \
-    cp /opt/noVNC/vnc.html /opt/noVNC/index.html
-
-RUN ln -fs /usr/bin/python3 /usr/bin/python && ln -fs /usr/bin/pip3 /usr/bin/pip
 
 VOLUME /opt/hydrus/db
 
