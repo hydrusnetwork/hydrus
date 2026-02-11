@@ -3124,9 +3124,17 @@
 <p>The downloader is highly parallelisable, but the default <a href="#bandwidth">bandwidth rules</a> should stop you from running too hot and downloading so much at once that you annoy the servers you are downloading from.</p>
 <div class="admonition danger">
 <p class="admonition-title">Danger</p>
-<p>It is very important that you take this slow. Many users get overexcited with their new ability to download 500,000 files <em>and then do so</em>, only discovering later that 98% of what they got was junk that they now have to wade through. Figure out what workflows work for you, how fast you process files, what content you <em>actually</em> want, how much bandwidth and hard drive space you have, and prioritise and throttle your incoming downloads to match. If you can realistically only archive/delete filter 50 files a day, there is little benefit to downloading 500 new files a day. START SLOW.</p>
+<p>It is very important that you take this slow. Many users get overexcited with their new ability to download 500,000 files <em>and then do so</em>, only discovering later that 98% of what they got was junk that they now have to wade through. Figure out what workflows work for you, how fast you process files, what content you <em>actually</em> want, how much bandwidth and hard drive space you have, and prioritise and throttle your incoming downloads to match. If you can realistically only archive/delete filter 50 files a day, there is little benefit to downloading 500 new files a day.</p>
+<p>START SLOW.</p>
 </div>
 <p>It also takes a decent whack of CPU to import a file. You'll usually never notice this with just one hard drive import going, but if you have twenty different download queues all competing for database access and individual 0.1-second hits of heavy CPU work, you will discover your client starts to judder and lag. Keep it in mind, and you'll figure out what your computer is happy with. I also recommend you try to keep your total loaded files/urls to be under 20,000 to keep things snappy. Remember that you can pause your import queues, if you need to calm things down a bit.</p>
+<div class="admonition note">
+<p class="admonition-title">403 errors</p>
+<p>Hydrus's downloader tech is pretty old, and as the infrastructure of the internet changes, some things are breaking.</p>
+<p>You may get a 403 result for a search or file download. This is often because a CDN (e.g. CloudFlare) is gating the site with a captcha-like test. It can hit users in certain IP regions or VPN networks worse. The rules are often applied dynamically, so it sometimes passes within a week.</p>
+<p>The situation is, unfortunately, generally getting worse. Some users have had success with tools like <a href="https://gitgud.io/prkc/hydrus-companion">Hydrus Companion</a>, which can synchronise browser User-Agent and cookies to hydrus, but this is proving less reliable these days. Others have been experimenting with alternate downloaders that use official APIs. These are sometimes great; but some are very restricted and need a login. Check out the <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts">user-run downloader repository</a> to see what people have figured out. There are also more sophisticated downloader solutions like <a href="https://github.com/hyuugi/hydownloader">hydownloader</a> and <a href="https://github.com/mikf/gallery-dl">gallery-dl</a>, but these take some time to set up.</p>
+<p>Hydev is planning to retire default downloaders that become less reliable. I am not yet sure what I will do long-term, but I am thinking about it. Sorry for the trouble!</p>
+</div>
 <h2 id="downloader_types">Downloader types<a class="headerlink" href="#downloader_types" title="Permanent link">&para;</a></h2>
 <p>There are several different downloader types, each with its own purpose:  </p>
 <dl>
@@ -3296,7 +3304,7 @@ A few of the options have more information if you hover over them.</dd>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 4, 2026 21:43:23 UTC">February 4, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 11, 2026 21:35:41 UTC">February 11, 2026</span>
   </span>
 
     
