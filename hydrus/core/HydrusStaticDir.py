@@ -1,17 +1,18 @@
 import os
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 INSTALL_STATIC_DIR = os.path.join( HC.BASE_DIR, 'static' )
 
 USE_USER_STATIC_DIR = True
 
-def GetStaticIconPath( name: str, force_install_dir = False ):
+def GetStaticIconPath( name: str, force_install_dir = False, force_svg = False ) -> str:
     
     ( svg_path, was_userdir ) = GetStaticPathWithResult( name + '.svg', force_install_dir = force_install_dir )
     
-    if not was_userdir:
+    if not force_svg and not was_userdir:
         
         # a little ugly, but user png has preference over install svg
         ( png_path, was_userdir ) = GetStaticPathWithResult( name + '.png', force_install_dir = force_install_dir )
@@ -28,9 +29,16 @@ def GetStaticIconPath( name: str, force_install_dir = False ):
         
     else:
         
-        png_path = GetStaticPath( name + '.png', force_install_dir = force_install_dir )
-        
-        path = png_path
+        if force_svg:
+            
+            raise HydrusExceptions.NotFoundException( f'No SVG with the name "{name}"!' )
+            
+        else:
+            
+            png_path = GetStaticPath( name + '.png', force_install_dir = force_install_dir )
+            
+            path = png_path
+            
         
     
     return path
@@ -58,20 +66,19 @@ def GetStaticPathWithResult( sub_path: str, force_install_dir = False ):
     return ( os.path.join( INSTALL_STATIC_DIR, sub_path ), False )
     
 
-def GetSVGPath( name, userdir = HC.USERPATH_SVG_ICON ):
+def GetRatingSVGPath( name ) -> str:
     
-    svg_path = os.path.join( INSTALL_STATIC_DIR, userdir, name + '.svg' ) 
+    name = os.path.join( HC.USERPATH_SVG_ICON, name )
     
-    if os.path.exists( svg_path ):
+    path = GetStaticIconPath( name, force_svg = True )
+    
+    if os.path.exists( path ):
         
-        return svg_path
+        return path
         
-    
-    svg_path = GetStaticIconPath( name )
-    
-    if os.path.exists( svg_path ):
+    else:
         
-        return svg_path
+        raise HydrusExceptions.NotFoundException( f'Did not have a rating SVG called "{name}"!' )
         
     
 

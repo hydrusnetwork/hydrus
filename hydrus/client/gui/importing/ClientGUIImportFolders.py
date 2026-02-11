@@ -690,6 +690,8 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._CheckValid()
         
+        edited_import_folder = self._import_folder.Duplicate()
+        
         name = self._name.text()
         path = self._path.GetPath()
         file_import_options = self._import_options_button.GetFileImportOptions()
@@ -736,17 +738,17 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_service_keys_to_filename_tagging_options = dict( self._filename_tagging_options.GetData() )
         
-        self._import_folder.SetTuple( name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
+        edited_import_folder.SetTuple( name, path, file_import_options, tag_import_options, tag_service_keys_to_filename_tagging_options, actions, action_locations, period, check_regularly, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page )
         
-        self._import_folder.SetLastModifiedTimeSkipPeriod( self._last_modified_time_skip_period.GetValue() )
+        edited_import_folder.SetLastModifiedTimeSkipPeriod( self._last_modified_time_skip_period.GetValue() )
         
         metadata_routers = self._metadata_routers_button.GetValue()
         
-        self._import_folder.SetMetadataRouters( metadata_routers )
+        edited_import_folder.SetMetadataRouters( metadata_routers )
         
         search_subdirectories = self._search_subdirectories.isChecked()
         
-        self._import_folder.SetSearchSubdirectories( search_subdirectories )
+        edited_import_folder.SetSearchSubdirectories( search_subdirectories )
         
-        return self._import_folder
+        return edited_import_folder
         

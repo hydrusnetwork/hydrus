@@ -1054,7 +1054,7 @@ class VideoRendererFFMPEG( object ):
                         
                     else:
                         
-                        message = 'Unable to render that video! Please send it to hydrus dev so he can look at it!'
+                        message = 'Unable to render that video! It is probably just weird/broken, but hydev would be interested in seeing it!'
                         
                     
                     raise HydrusExceptions.DamagedOrUnusualFileException( message )

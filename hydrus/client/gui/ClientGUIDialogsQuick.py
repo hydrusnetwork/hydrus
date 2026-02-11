@@ -137,6 +137,9 @@ def PickDirectory( parent: QW.QWidget, message: str, starting_dir_path: str | No
         raise HydrusExceptions.CancelledException()
         
     
+    # as well as A/foo/../B collapse stuff, this wangles forward slashes on windows to backslashes (this dialog returns slashes, hooray)
+    path = os.path.normpath( path )
+    
     LAST_FOLDER_SELECTED = path
     
     return path

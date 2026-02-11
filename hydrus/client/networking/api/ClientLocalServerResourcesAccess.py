@@ -339,20 +339,25 @@ class HydrusResourceClientAPIRestrictedGetServiceRatingSVG( ClientLocalServerRes
                 
                 svg_name = star_type.GetRatingSVG()
                 
-                svg_path = HydrusStaticDir.GetSVGPath( svg_name )
+                svg_path = HydrusStaticDir.GetRatingSVGPath( svg_name )
                 
-                svg_file = open( svg_path, 'rb' )
-                
-                svg_content = svg_file.read()
+                with open( svg_path, 'rb' ) as f:
+                    
+                    svg_content = f.read()
+                    
                 
             else:
                 
                 raise HydrusExceptions.NotFoundException( 'Rating service "{}" does not use a SVG icon!'.format( service.GetName() ) )
                 
             
+        except HydrusExceptions.NotFoundException:
+            
+            raise
+            
         except Exception as e:
             
-            raise HydrusExceptions.ServerException( 'There was a problem getting or reading the SVG file "{}" for rating service "{}", at path "{}"! Error follows: {}'.format( svg_name, service.GetName(), svg_path, str(e) ) )
+            raise HydrusExceptions.ServerException( 'There was a problem getting the SVG file for rating service "{}"! Error follows: {}'.format( service.GetName(), str(e) ) )
             
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = HC.IMAGE_SVG, body = svg_content )

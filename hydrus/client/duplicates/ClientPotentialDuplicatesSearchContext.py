@@ -634,6 +634,12 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
                 return (0.0, 1.0)
                 
             
+            # Guard against invalid counts: Wilson assumes 0 <= x <= n
+            if x < 0 or x > n:
+                
+                return (0.0, 1.0)
+                
+            
             phat = x / n
             z2 = z*z
             denom = 1 + z2/n
@@ -675,6 +681,11 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         x = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
         n = self.NumPairsSearched()
         N = self.NumPairsInSearchSpace()
+        
+        if x > n: # something went wrong mate, didn't reset a count properly somewhere
+            
+            return 1.0
+            
         
         if n == N:
             
@@ -755,6 +766,8 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         
         self._potential_duplicate_id_pairs_and_distances_search_space = PotentialDuplicateIdPairsAndDistances( [] )
         self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
+        
         self._search_space_initialised = False
         self._search_space_fetch_started = False
         self._search_space_initialised_time = 0
@@ -819,6 +832,8 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         self._search_space_fetch_started = False
         self._search_space_initialised_time = HydrusTime.GetNowFloat()
         
+        self.StartNewSearch()
+        
     
     def SpawnMediaIdFilteredSearch( self, media_ids ) -> "PotentialDuplicatePairsFragmentarySearch":
         
@@ -831,15 +846,13 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         
         my_copy.SetSearchSpace( potential_duplicate_id_pairs_and_distances_for_media_ids )
         
-        my_copy.StartNewSearch()
-        
         return my_copy
         
     
     def SpawnNewSearch( self ) -> "PotentialDuplicatePairsFragmentarySearch":
         
         # we do this when the caller has a mix of async re-init and search work
-        # spawning a new search ditches the old 'still to search', so we don't have to worrk about an ongoing search messing with any new search space
+        # spawning a new search ditches the old 'still to search', so we don't have to worry about an ongoing search messing with any new search space
         
         my_copy = PotentialDuplicatePairsFragmentarySearch(
             self._potential_duplicates_search_context,
@@ -850,8 +863,10 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             
             my_copy.SetSearchSpace( self._potential_duplicate_id_pairs_and_distances_search_space )
             
-        
-        my_copy.StartNewSearch()
+        else:
+            
+            my_copy.StartNewSearch()
+            
         
         return my_copy
         

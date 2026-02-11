@@ -26,6 +26,19 @@ from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingURLClass
 
+def Show403Info( win: QW.QWidget ):
+    
+    message = 'Hydrus\'s downloader tech is pretty old, and as the infrastructure of the internet changes, some things are breaking.'
+    message += '\n\n'
+    message += 'You may get a 403 result for a search or file download. This is often because a CDN (e.g. CloudFlare) is gating the site with a captcha-like test. It can hit users in certain IP regions or VPN networks worse. The rules are often applied dynamically, so it sometimes passes within a week.'
+    message += '\n\n'
+    message += 'The situation is, unfortunately, generally getting worse. Some users have had success with tools like Hydrus Companion, which can synchronise browser User-Agent and cookies to hydrus, but this is proving less reliable these days. Others have been experimenting with alternate downloaders that use official APIs. These are sometimes great; but some are very restricted and need a login. Check out the user-run downloader repository to see what people have figured out. There are also more sophisticated downloader solutions like hydownloader and gallery-dl, but these take some time to set up.'
+    message += '\n\n'
+    message += 'Hydev is planning to retire default downloaders that become less reliable. I am not yet sure what I will do long-term, but I am thinking about it. Sorry for the trouble!'
+    
+    ClientGUIDialogsMessage.ShowInformation( win, message )
+    
+
 class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display, show_unmatched_urls_in_media_viewer ):

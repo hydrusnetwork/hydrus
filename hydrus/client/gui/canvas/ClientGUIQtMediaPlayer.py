@@ -372,6 +372,36 @@ class GraphicsViewViewportMouseMoveCatcher( QC.QObject ):
         
     
 
+class MyQGraphicsView( QW.QGraphicsView ):
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        super().__init__( parent )
+        
+        if CG.client_controller.new_options.GetBoolean( 'qt_media_player_opengl_test' ):
+            
+            self.setViewport( QW.QOpenGLWidget( self ) )
+            
+        
+        self.setDragMode( QW.QGraphicsView.DragMode.NoDrag )
+        self.setScene( QW.QGraphicsScene( self ) )
+        self.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
+        self.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
+        
+        self.setFrameShape( QW.QFrame.Shape.NoFrame )
+        
+        self.setBackgroundBrush( QC.Qt.GlobalColor.black )
+        
+    
+    # TODO: Revisit mouseMove handling here. seems like if I set setMouseTracking( True ) here, I can catch mouseMoveEvent natively. play with that as a nicer alternative to the MouseMoveCatcher hackery dackery doo
+    
+    def wheelEvent( self, event ):
+        
+        # weird Viewport gubbins means media will sometimes scroll inside the viewport, I guess because it is 1px taller/wider than the viewport or whatever
+        event.ignore()
+        
+    
+
 class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     launchMediaViewer = QC.Signal()
@@ -389,20 +419,7 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
         
         # 2026-01: this is the first time hydev has done GraphicsView stuff, and thus all this was divined via haruspex
         
-        self._my_graphics_view = QW.QGraphicsView( self )
-        
-        if CG.client_controller.new_options.GetBoolean( 'qt_media_player_opengl_test' ):
-            
-            self._my_graphics_view.setViewport( QW.QOpenGLWidget( self._my_graphics_view ) )
-            
-        
-        self._my_graphics_view.setScene( QW.QGraphicsScene( self._my_graphics_view ) )
-        self._my_graphics_view.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
-        self._my_graphics_view.setHorizontalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
-        
-        self._my_graphics_view.setFrameShape( QW.QFrame.Shape.NoFrame )
-        
-        self._my_graphics_view.setBackgroundBrush( QC.Qt.GlobalColor.black )
+        self._my_graphics_view = MyQGraphicsView( self )
         
         self._my_video_output = QMW.QGraphicsVideoItem()
         self._my_video_output.setZValue( 0 )

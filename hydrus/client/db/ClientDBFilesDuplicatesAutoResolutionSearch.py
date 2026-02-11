@@ -195,7 +195,6 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, False )
             fragmentary_search.SetSearchSpace( unsearched_pairs_and_distances )
-            fragmentary_search.StartNewSearch()
             
             matching_potential_duplicate_id_pairs_and_distances = self.modules_files_duplicates_file_query.GetPotentialDuplicateIdPairsAndDistances( fragmentary_search )
             

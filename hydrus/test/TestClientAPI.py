@@ -1017,13 +1017,25 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.getheader( 'content-type' ), 'image/svg+xml' )
         
-        svg_path = HydrusStaticDir.GetSVGPath( 'star' )
+        svg_path = HydrusStaticDir.GetRatingSVGPath( 'star' )
         
         svg_file = open( svg_path, 'rb' )
         
         svg_content = svg_file.read()
         
         self.assertEqual( data, svg_content )
+        
+        #
+        
+        path = f'/get_service_rating_svg?service_key={TG.test_controller.example_numerical_rating_service_key.hex()}'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 404 )
         
     
     def _test_add_files_add_file( self, connection, set_up_permissions ):

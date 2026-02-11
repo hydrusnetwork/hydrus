@@ -17,6 +17,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -277,6 +278,11 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().gallery_pause, self._PausePlayGallery, tooltip = 'pause/play search', enabled_only_on_selection = True )
         
         menu_template_items = []
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'help: random 403 errors', 'Open a short help window regarding 403 errors.', ClientGUIDownloaders.Show403Info, self )
+        menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
         
         menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._RetryIgnored )
         menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
@@ -1414,6 +1420,11 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         self._watchers_listctrl_panel.AddButton( 'check now', self._CheckNow, enabled_only_on_selection = True )
         
         menu_template_items = []
+        
+        menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'help: random 403 errors', 'Open a short help window regarding 403 errors.', ClientGUIDownloaders.Show403Info, self )
+        menu_template_item.SetVisibleCallable( self._CanRetryIgnored )
+        
+        menu_template_items.append( menu_template_item )
         
         menu_template_item = ClientGUIMenuButton.MenuTemplateItemCall( 'retry ignored', 'Retry the files that were moved over for one reason or another.', self._RetryIgnored )
         menu_template_item.SetVisibleCallable( self._CanRetryIgnored )

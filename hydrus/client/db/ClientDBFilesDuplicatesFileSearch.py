@@ -436,7 +436,6 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         
         potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
-        potential_duplicate_pairs_fragmentary_search.StartNewSearch()
         
         count = 0
         
@@ -462,7 +461,6 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         potential_duplicate_pairs_fragmentary_search = ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch( potential_duplicates_search_context, True )
         potential_duplicate_pairs_fragmentary_search.SetDesiredNumHits( 1 )
         potential_duplicate_pairs_fragmentary_search.SetSearchSpace( potential_duplicate_id_pairs_and_distances )
-        potential_duplicate_pairs_fragmentary_search.StartNewSearch()
         
         master_media_id = None
         
