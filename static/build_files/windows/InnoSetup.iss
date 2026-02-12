@@ -245,6 +245,7 @@ Name: {app}\cryptography-46.0.1.dist-info; Type: filesandordirs; Components: ins
 Name: {app}\cryptography-46.0.2.dist-info; Type: filesandordirs; Components: install
 Name: {app}\cryptography-46.0.3.dist-info; Type: filesandordirs; Components: install
 Name: {app}\cryptography-46.0.4.dist-info; Type: filesandordirs; Components: install
+Name: {app}\cryptography-46.0.5.dist-info; Type: filesandordirs; Components: install
 Name: {app}\cryptography; Type: filesandordirs; Components: install
 Name: {app}\cv2; Type: filesandordirs; Components: install
 Name: {app}\dateutil; Type: filesandordirs; Components: install
@@ -528,6 +529,7 @@ Name: {app}\numpy-2.3.5.dist-info; Type: filesandordirs; Components: install
 Name: {app}\numpy-2.4.0.dist-info; Type: filesandordirs; Components: install
 Name: {app}\numpy-2.4.0rc1.dist-info; Type: filesandordirs; Components: install
 Name: {app}\numpy-2.4.1.dist-info; Type: filesandordirs; Components: install
+Name: {app}\numpy-2.4.2.dist-info; Type: filesandordirs; Components: install
 Name: {app}\numpy.libs; Type: filesandordirs; Components: install
 Name: {app}\numpy; Type: filesandordirs; Components: install
 Name: {app}\pillow_jxl; Type: filesandordirs; Components: install
