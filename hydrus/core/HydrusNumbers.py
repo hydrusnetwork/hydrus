@@ -1,4 +1,4 @@
-def FloatToPercentage( f ):
+def FloatToPercentage( f, sf = 1 ):
     
     percent = f * 100
     
@@ -8,7 +8,8 @@ def FloatToPercentage( f ):
         
     else:
         
-        return f'{percent:.1f}%'
+        # this actually works!
+        return f'{percent:.{sf}f}%'
         
     
 

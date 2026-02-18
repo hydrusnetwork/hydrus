@@ -79,6 +79,7 @@ from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.panels import ClientGUIFilesPhysicalStoragePanels
 from hydrus.client.gui.panels import ClientGUILocalFileImports
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
@@ -999,20 +1000,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
     
-    def _CheckDBIntegrity( self ):
-        
-        message = 'This will check the SQLite database files for corruption. It may take several minutes to complete.'
-        message += '\n' * 2
-        message += 'In general, this routine is quite laggy, especially as it checks always checks your entire database, and is better done from the command line where you have more control. If you are worried your database is malformed, check [install_dir/db/help my db is broke.txt].'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Run integrity check?', yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == QW.QDialog.DialogCode.Accepted:
-            
-            self._controller.Write( 'db_integrity' )
-            
-        
-    
     def _CheckImportFolder( self, name = None ):
         
         if self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
@@ -1117,6 +1104,22 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         if result == QW.QDialog.DialogCode.Accepted:
             
             self._controller.Write( 'clear_orphan_file_records' )
+            
+        
+    
+    def _ClearOrphanURLMappings( self ):
+        
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text += '\n' * 2
+        text += 'This will instruct the database to review its URL records\' integrity. If a mapping exists without a master URL, the mapping will be removed. This is useful if your client.master.db has been damaged or truncated because of a partial backup rollback.'
+        text += '\n' * 2
+        text += 'It will create a popup message while it works, but it will not have any feedback until it is complete. It may lock up the client for a bit.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._controller.Write( 'clear_orphan_url_mappings' )
             
         
     
@@ -3366,6 +3369,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear/fix orphan file records' + HC.UNICODE_ELLIPSIS, 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
         
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan URL mappings' + HC.UNICODE_ELLIPSIS, 'Clear out surplus URL mappings after a damaged client.master.db.', self._ClearOrphanURLMappings )
+        
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables' + HC.UNICODE_ELLIPSIS, 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
         
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan hashed serialisables' + HC.UNICODE_ELLIPSIS, 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
@@ -3378,8 +3383,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity' + HC.UNICODE_ELLIPSIS, 'Examine the database for file corruption.', self._CheckDBIntegrity )
-        ClientGUIMenus.AppendSeparator( check_submenu )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags' + HC.UNICODE_ELLIPSIS, 'Scan the database for invalid tags.', self._RepairInvalidTags )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings' + HC.UNICODE_ELLIPSIS, 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
         ClientGUIMenus.AppendSeparator( check_submenu )
@@ -5257,7 +5260,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'move media files' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsReview.MoveMediaFilesPanel( dlg, self._controller )
+            panel = ClientGUIFilesPhysicalStoragePanels.MoveMediaFilesPanel( dlg, self._controller )
             
             dlg.SetPanel( panel )
             

@@ -11,7 +11,7 @@ First off, make sure you are running on good hard drives now. Check the 'help my
 
 Next, boot into the client. If you lost whole media file directories, or they moved to a new location, your client will throw up a repair dialog during boot to help you find the right locations again. If you have truly lost some directories, it should be able to recreate empty ones for you.
 
-FYI: In hydrus's file storage, there are two sets of 256 sub folders. One is 'fxx' and one is 'txx', where 'f' is for files, 't' is for thumbnails, and 'xx' counts from 00 to ff in hexadecimal. You need all 512 directories located to boot.
+FYI: In hydrus's file storage, there are two sets of 256 sub folders. One is 'fxx' and one is 'txx', where 'f' is for files, 't' is for thumbnails, and 'xx' counts from 00 to ff in hexadecimal. Depending on an advanced setting called _granularity_, they may also have 16 subfolders, from 0-f. You need all 512 directories located to boot.
 
 Once you are booted, your client may throw up lots of missing thumbnail/file errors. Do not worry so much about these for now, but it would be best to close your larger pages and pause the import pages for now. Don't pause network traffic, since we'll be using that in a minute.
 

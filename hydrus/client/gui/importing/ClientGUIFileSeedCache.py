@@ -18,6 +18,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
@@ -50,13 +51,21 @@ def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.File
 def GetRetryIgnoredParam( window ):
     
     choice_tuples = [
+        ( 'help: random 403 errors', 'help_403', 'show help regarding 403 errors' ),
         ( 'retry all', None, 'retry all' ),
         ( 'retry 403s', '^403', 'retry all 403s' ),
         ( 'retry 404s', '^404', 'retry all 404s' ),
         ( 'retry blacklisted', 'blacklisted!$', 'retry all blacklisted' )
     ]
     
-    return ClientGUIDialogsQuick.SelectFromListButtons( window, 'select what to retry', choice_tuples )
+    result = ClientGUIDialogsQuick.SelectFromListButtons( window, 'select what to retry', choice_tuples )
+    
+    if result == 'help_403':
+        
+        ClientGUIDownloaders.Show403Info( window )
+        
+        raise HydrusExceptions.CancelledException()
+        
     
 
 # TODO: I pulled this stuff out of the button to share it with the panel. TBH anything without Qt may be better as be FSC methods

@@ -12,7 +12,6 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -416,22 +415,6 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
-        
-    
-    def _GetArchiveNameToDisplay( self, portable_hta_path, namespaces ):
-        
-        hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
-        
-        if len( namespaces ) == 0:
-            
-            name_to_display = hta_path
-            
-        else:
-            
-            name_to_display = hta_path + ' (' + ', '.join( HydrusTags.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
-            
-        
-        return name_to_display
         
     
     def GetValue( self ):

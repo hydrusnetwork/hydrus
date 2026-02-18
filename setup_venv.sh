@@ -17,4 +17,4 @@ if ! type -P $py_command >/dev/null 2>&1; then
 fi
 
 # Delegate to Python setup script
-exec "$py_command" "$script_dir/tools/setup_venv.py"
+exec "$py_command" "$script_dir/setup_venv.py"

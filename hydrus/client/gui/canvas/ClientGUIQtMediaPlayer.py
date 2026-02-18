@@ -472,8 +472,12 @@ class QtMediaPlayerGraphicsView( CAC.ApplicationCommandProcessorMixin, QW.QWidge
     def _RefitVideo( self ):
         
         # ok this is megaslop but it works
+        # had to edit a bit for KISS since it was going bananas
         # doing fitInView( my_video.sceneBoundingRect ) gives some margin for some reason I don't know (viewport QSS?)
-        # so we do the maths ourselves
+        
+        self._my_graphics_view.scene().setSceneRect( self._my_video_output.mapRectToScene( self._my_video_output.boundingRect() ) )
+        
+        self._my_graphics_view.centerOn( self._my_video_output )
         
         rect = self._my_video_output.sceneBoundingRect()
         

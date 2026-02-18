@@ -2114,7 +2114,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         QP.AddToLayout( self._buttonbox, window, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
-    def ImportFromDragDrop( self, paths ):
+    def ImportFromDragDrop( self, paths: list[ str ] ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
@@ -2124,7 +2124,12 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if result == QW.QDialog.DialogCode.Accepted:
             
-            ( jsons, pngs ) = HydrusLists.PartitionIteratorIntoLists( lambda path: path.endswith( '.png' ), paths )
+            def list_test( path: str ):
+                
+                return path.endswith( '.png' )
+                
+            
+            ( jsons, pngs ) = HydrusLists.PartitionIteratorIntoLists( list_test, paths )
             
             self._ImportPNGs( pngs )
             self._ImportJSONs( jsons )

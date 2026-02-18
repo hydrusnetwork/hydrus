@@ -5,9 +5,9 @@ If you have missing file storage subfolders and cannot boot the client, this wal
 
 *** Expected Subfolders ***
 
-The client expects you to have 256 file subfolders and 256 thumbnail subfolders accessible at all times. The folders are in the format fxx or txx, where the xx is 00..ff in hexadecimal.
+The client expects you to have its media subfolders accessible at all times. The folders are in the format fxx or txx, where the xx is 00..ff in hexadecimal, and if you are granularity 3, they will be in the format fxx/x and txx/x.
 
-By default, these subfolders are in 'install_dir/db/client_files', but it does not really matter where they are, and there are a couple ways to tell hydrus to expect them to be somewhere else. The client checks all 512 expected locations on boot, and if any are missing, it throws up the 'repair file locations' dialog. You may have come here from there.
+By default, these subfolders are in 'install_dir/db/client_files', but it does not really matter where they are, and there are a couple ways to tell hydrus to expect them to be somewhere else. The client checks all expected locations on boot, and if any are missing, it throws up the 'repair file locations' dialog. You may have come here from there.
 
 If you are not sure where the subfolders are, search your entire filesystem for whatever is missing, let's say the string 'f47'. If your file search interface allows you to specify only folders, all the better.
 

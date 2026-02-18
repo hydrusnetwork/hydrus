@@ -13,8 +13,10 @@ if errorlevel 1 (
     exit /b 1
 )
 
+echo This setup_venv.bat file is going to be deleted in v673. Please move to setup_venv.py.
+
 REM Delegate to Python setup script
-%python_bin% tools\setup_venv.py
+%python_bin% setup_venv.py
 
 popd
 exit /b %errorlevel%

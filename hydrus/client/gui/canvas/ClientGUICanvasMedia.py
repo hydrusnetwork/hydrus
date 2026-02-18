@@ -861,6 +861,11 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._num_frames = self._media.GetNumFrames()
             
+            if self._num_frames == 0 or self._num_frames is None:
+                
+                self._num_frames = 1
+                
+            
             self._duration_ms = self._media.GetDurationMS()
             
             if self._media.GetMime() == HC.ANIMATION_UGOIRA:

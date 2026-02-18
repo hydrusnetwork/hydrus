@@ -31,7 +31,7 @@ A hydrus client consists of three components:
     
     Thumbnails tend to be fetched dozens at a time, and very randomly, so it is, again, ideal if they are stored on an SSD. Your regular media files--which on many clients total hundreds of GB--are usually fetched one at a time for human consumption and do not benefit from the expensive low-latency of an SSD. They are best stored on a cheap HDD, and, if desired, also work well across a network file system.
     
-    There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. This is likely to change in future to 4096/8192 (i.e. three hex chars).
+    There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. Depending on an advanced setting called _granularity_, each of those may also have 16 subfolders, from 0-f.
     
 
 ## these components can be put on different drives { id="different_drives" }
@@ -81,6 +81,41 @@ The current and ideal usages line up, and the defunct `C:\Hydrus Network\db\clie
     
     Also, if your folders are in the 'wrong' locations but all those locations are known to the client, you will not get the repair dialog--it'll just give you a popup and shuffle its internal knowledge around.
     
+
+## granularity { id="granularity" }
+
+ADVANCED, STILL IN TESTING, BE CAREFUL
+
+To start with, the hydrus database stores its files in a two-hex 'granularity'. This means that your files or thumbnails are split into 256 parts across folders called 'fxx' or 'txx', where 'xx' is 00-ff in hexadecimal and corresponding to the prefix hex of a particular file hash. As the largest clients ran into the millions of files, each subfolder was getting pretty large, slowing access latency in certain cases and causing delays with "open externally" when an external video player scanned the origin folder of a video to search for subtitle files etc.. We realised we needed a finer granularity of storage.
+
+As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx'. You can see your current granularity on the 'move media files' dialog and open up a sub-panel just to handle this variable.
+
+(screenshot here once I'm happy with the UI)
+
+Changing your granularity means moving every single file and thumbnail in your collection. There are two issues with this:
+
+### it can take a while
+
+This has to be done in one step, and it can take a while. Even if we can move hundreds of files per second, if you have millions of files in total, it adds up.
+
+My current estimates/guesses are:
+
+- NVME SSD - 5,000 files/s
+- SATA HDD - 500 files/s
+- NAS - 100 files/s
+- Cloud storage - Assumed to be awful.
+
+I am looking for advanced users who try this to report back their speeds so I can harden these numbers.
+
+### you have to repeat the operation on your backups
+
+Once you have updated your client, you need to update your backups too. Since we have moved every single file, your backup comparison tool is probably going to think that everything has changed and want to do a 100% rewrite. We didn't actually change any files, though, and we don't want to waste this time and energy.
+
+Thus, use the other button on the dialog to change your backup granularity too. If you have separate thumbnail and file storages, run it on each folder.
+
+### you do not have to do this
+
+If either of these issues is a dealbreaker, do not move to granularity 3. Simple as.
 
 ## informing the software that the SQLite database is not in the default location { id="launch_parameter" }
 

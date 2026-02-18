@@ -4,12 +4,13 @@ Hydrus virtual environment setup script.
 Handles interactive configuration and installation of dependencies.
 """
 
+import argparse
 import os
 import sys
 import subprocess
 import shutil
-from pathlib import Path
 
+from pathlib import Path
 
 # Default choices for advanced installation
 DEFAULT_CHOICES = {
@@ -23,7 +24,8 @@ DEFAULT_CHOICES = {
 
 def print_banner():
     """Print the Hydrus ASCII banner."""
-    banner = """   r::::::::::::::::::::::::::::::::::r
+    
+    banner = '''   r::::::::::::::::::::::::::::::::::r
    :                                  :
    :               :PP.               :
    :               vBBr               :
@@ -46,21 +48,31 @@ def print_banner():
    r::::::::::::::::::::::::::::::::::r
 
                   hydrus
-"""
+'''
+    
     print(banner)
-
+    
 
 def check_python_version():
     """Check and display Python version."""
+    
     print("--------")
     print("Your Python version is:")
     print(f"Python {sys.version}")
     print()
-    if sys.version_info < (3, 11):
-        print("WARNING: Python 3.11+ is required!")
+    
+    if sys.version_info < (3, 10):
+        
+        print("WARNING: Python 3.10+ is required!")
         return False
+        
+    elif sys.version_info >= ( 3, 14 ):
+        
+        print( 'You will need the advanced install. Also, select "t" for the (t)est versions of things.' )
+        
+    
     return True
-
+    
 
 def confirm_venv_delete(venv_path):
     """Check if venv exists and confirm deletion."""
@@ -70,13 +82,14 @@ def confirm_venv_delete(venv_path):
         print("Deleting old venv...")
         shutil.rmtree(venv_path)
         if venv_path.exists():
-            print("ERROR: venv directory did not delete. Is it activated elsewhere?")
+            print("ERROR: venv directory did not delete. Is it activated elsewhere, like an IDE?")
             sys.exit(1)
     else:
         print("If you do not know what this is, check the 'running from source' help.")
         print("Press Enter to continue.")
         input()
-
+        
+    
 
 def get_install_type():
     """Ask user for simple or advanced install."""
@@ -101,28 +114,36 @@ def get_user_choice(prompt_text, valid_choices, default_key):
     Returns:
         The user's choice or default value
     """
+    
     while True:
+        
         default = DEFAULT_CHOICES[default_key]
         prompt = f"{prompt_text} [{default}]: "
         user_input = input(prompt).strip().lower()
         
         if not user_input:
+            
             return default
+            
         
         if user_input in valid_choices:
+            
             return user_input
+            
         
         print("Sorry, did not understand that input!")
-
+        
+    
 
 def get_advanced_options():
     """Get advanced configuration options from user."""
+    
     print("--------")
     print("We will now choose versions for larger libraries.")
     print("If something doesn't install, run this script again and it will retry.")
     print("Press Enter to use the default choice (shown in brackets).")
     print()
-
+    
     # Qt
     print("Qt - User Interface")
     print("Most people want 'n'.")
@@ -171,43 +192,54 @@ def get_advanced_options():
     dev = get_user_choice("Install dev tools (y/n)", ("y", "n"), "dev")
 
     return qt, mpv, opencv, future, dev, qt_custom_pyside6, qt_custom_qtpy
-
+    
 
 def create_venv(venv_path):
     """Create a Python virtual environment."""
+    
     print("--------")
     print("Creating new venv...")
+    
     subprocess.check_call([sys.executable, "-m", "venv", str(venv_path)])
-
+    
 
 def run_pip(cmd, venv_path):
     """Run pip command in the venv."""
+    
     if sys.platform == "win32":
+        
         python_exe = venv_path / "Scripts" / "python.exe"
+        
     else:
+        
         python_exe = venv_path / "bin" / "python"
+        
+    
     subprocess.check_call([str(python_exe), "-m", "pip"] + cmd)
-
+    
 
 def install_dependencies_simple(venv_path):
     """Install simple (base) dependencies with default GUI and media support."""
+    
     print("Installing base dependencies with default extras...")
+    
     run_pip(["install", "--upgrade", "pip"], venv_path)
     run_pip(["install", "--upgrade", "wheel"], venv_path)
+    
     # Build extras from default choices
     extras = [
-        "qt6-new",           # DEFAULT_CHOICES['qt'] = 'n'
-        "mpv-new",           # DEFAULT_CHOICES['mpv'] = 'n'
-        "opencv-new",        # DEFAULT_CHOICES['opencv'] = 'n'
+        "qt6-normal",           # DEFAULT_CHOICES['qt'] = 'n'
+        "mpv-normal",           # DEFAULT_CHOICES['mpv'] = 'n'
+        "opencv-normal",        # DEFAULT_CHOICES['opencv'] = 'n'
         "other-normal",      # DEFAULT_CHOICES['future'] = 'n'
     ]
+    
     extras_str = ",".join(extras)
     print(f"Installing package with extras: {extras_str}")
     run_pip(["install", f".[{extras_str}]"], venv_path)
 
 
-def install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev,
-                                   qt_custom_pyside6, qt_custom_qtpy):
+def install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev, qt_custom_pyside6, qt_custom_qtpy):
     """Install advanced (customized) dependencies."""
     print("Upgrading pip and wheel...")
     run_pip(["install", "--upgrade", "pip"], venv_path)
@@ -228,97 +260,183 @@ def install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev,
         except subprocess.CalledProcessError:
             print(f"ERROR: Could not find PySide6 version {qt_custom_pyside6}!")
             sys.exit(1)
-
+    
     # Build extras list
     extras = []
 
     if qt == "n":
-        extras.append("qt6-new")
+        
+        extras.append("qt6-normal")
+        
     elif qt == "o":
+        
         extras.append("qt6-older")
+        
     elif qt == "q":
+        
         extras.append("qt6-new-pyqt6")
+        
     elif qt == "t":
+        
         extras.append("qt6-test")
+        
     # qt == "w" means custom, already installed above
 
     if mpv == "n":
-        extras.append("mpv-new")
+        
+        extras.append("mpv-normal")
+        
     elif mpv == "t":
+        
         extras.append("mpv-test")
+        
 
     if opencv == "o":
+        
         extras.append("opencv-old")
+        
     elif opencv == "n":
-        extras.append("opencv-new")
+        
+        extras.append("opencv-normal")
+        
     elif opencv == "t":
+        
         extras.append("opencv-test")
+        
 
     if future == "y":
+        
         extras.append("other-future")
+        
     else:
+        
         extras.append("other-normal")
+        
 
     if dev == "y":
+        
         extras.append("dev")
-
+        
+    
     # Install with extras
     if extras:
+        
         extras_str = ",".join(extras)
         print(f"Installing package with extras: {extras_str}")
         run_pip(["install", f".[{extras_str}]"], venv_path)
+        
     else:
+        
         print("Installing base package...")
         run_pip(["install", "."], venv_path)
-
+        
+    
 
 def main():
     """Main setup function."""
-    repo_root = Path(__file__).parent.parent
+    
+    repo_root = Path(__file__).parent
     os.chdir(repo_root)
     
+    argparser = argparse.ArgumentParser( description = 'hydrus network venv setup' )
+    
+    argparser.add_argument( '-v', '--venv_name', help = 'set the name of the venv folder (default=venv)' )
+    
+    result = argparser.parse_args()
+    
+    if result.venv_name is None:
+        
+        venv_name = 'venv'
+        
+    else:
+        
+        venv_name = result.venv_name
+        
+    
     print_banner()
-
+    
     # Check Python version
     if not check_python_version():
         sys.exit(1)
-
-    venv_path = repo_root / "venv"
+    
+    venv_path = repo_root / venv_name
+    
+    print( f'venv path: {venv_path}' )
+    print()
+    
     confirm_venv_delete(venv_path)
-
+    
     # Get installation type
     install_type = get_install_type()
-
+    
     if install_type == "a":
+        
+        # TODO: write an object to hold this profile for easier editing in future
         qt, mpv, opencv, future, dev, qt_custom_pyside6, qt_custom_qtpy = get_advanced_options()
+        
     else:
+        
         qt = mpv = opencv = future = dev = None
         qt_custom_pyside6 = qt_custom_qtpy = None
-
+        
+    
     # Create venv
     create_venv(venv_path)
-
+    
     # Install dependencies
     try:
+        
         if install_type == "s":
+            
             install_dependencies_simple(venv_path)
+            
         else:
-            install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev,
-                                         qt_custom_pyside6, qt_custom_qtpy)
+            
+            install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev, qt_custom_pyside6, qt_custom_qtpy)
+            
+        
     except subprocess.CalledProcessError as e:
+        
         print(f"ERROR: Installation failed with exit code {e.returncode}")
         sys.exit(1)
+        
 
     print("--------")
     print("Done!")
+    
     print()
+    
     if sys.platform == "win32":
-        print("To activate the virtual environment, run:")
-        print("  venv\\Scripts\\activate.bat")
+        
+        python_exe = venv_path / "Scripts" / "pythonw.exe"
+        
     else:
-        print("To activate the virtual environment, run:")
-        print("  source venv/bin/activate")
-
+        
+        python_exe = venv_path / "bin" / "python"
+        
+    
+    boot_script_path = repo_root / 'hydrus_client.py'
+    
+    if venv_name == 'venv':
+        
+        if sys.platform == "win32":
+            
+            print( f'To start the client, run hydrus_client.bat or "{python_exe} {boot_script_path}"' )
+            
+            input()
+            
+        elif sys.platform == "darwin":
+            
+            print( f'To start the client, run hydrus_client.command or "{python_exe} {boot_script_path}"' )
+            
+        else:
+            
+            print( f'To start the client, run hydrus_client.sh or "{python_exe} {boot_script_path}"' )
+            
+        
+    
 
 if __name__ == "__main__":
+    
     main()
+    

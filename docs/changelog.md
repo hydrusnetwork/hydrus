@@ -7,12 +7,69 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 660](https://github.com/hydrusnetwork/hydrus/releases/tag/v660)
+
+### misc
+
+* I cleaned up some internal layout logic in my new QtMediaPlayer. transitioning from certain landscape to portrait videos should no longer reposition the video to the right when you have 'use the same QtMediaPlayer' checkbox ticked. thank you for the reports. let's try one more time: if you are happy with this, I'll make it real
+* the new 'help: random 403 errors' menu items on every retry button were driving me nuts, so I moved them to the 'retry ignored' button selection dialog
+* fixed several issues when loading an Ugoira (or several other animation types) that has a faulty (0 or null) number of frames
+* the 'check database integrity' job is completely removed. this thing is only useful for detecting SQLite-level corruption, which we often see as a 'malformed' error, and really should be run from the command line interface, on one file at a time, when working through the 'help my db is broke.txt' document. several users have wasted time with this thing over the years hoping it would fix other bugs--unfortunately, it does not
+* added `database->db maintenance->clear orphan URL mappings`, a new job that helps resolve some 'system:num_urls' stuff if your client.master.db has been damaged
+
+### cleaner venv setup
+
+* _this only matters for users who run from source_
+* thanks to a user, the setup_venv scripts and general venv setup are simplified and improved. years of behind-the-scenes cruft is cleared
+* for a while, I've maintained both a scatter of old requirement.txts to handle the different choices you make in `setup_venv.blah` and a more modern `pyproject.toml` file that bundles everything in a nicer way and can be used by tools like `uv`. the setup_venv script routine is now updated to talk to that pyproject.toml, so all the old .txts are gone. this cleans up how your venv is installed, making it one atomic call and allowing easier editing of package choices in future (also removes the duplicate maintenance situation)
+* further, the three setup_venv scripts are converted into stubs that call one single multiplat `setup_venv.py` file. you can just run that `setup_venv.py` file on its own and it works, so that is now the recommendation for all platforms. this script now talks about how to launch the program after its 'Done!' message, too
+* I've updated the 'running from source' help to talk about this. also, anyone who manually pip-installs their venv is using a different command to hit the single `pyproject.toml` rather than the requirements.txts, and I added some stuff about the venv `activate` script, and I talked a bit about python vs pythonw in Windows
+* as I recently did with the setup_venv, I have decided to rename some of the groups in the `pyproject.toml`. the three groups `mpv-new`, `opencv-new`, and `qt6-new` are being renamed to `xxxx-normal`. I am achieving this today simply by duplicating the groups with new names, so using the old `xxxx-new` name will still work for now. I will be deleting the old group names in three months, v673, so if you have an automatic script that installs hydrus, please update it. since these are the default selections, I presume no one uses them and this doesn't really matter
+* I will also delete the old `setup_venv.bat/sh/command` stubs and the basedir `requirements.txt` in three months, in v673, to be clean. if you use them in an automated script, please switch over to the .py
+* I ran out of time, but I'll do the same for setup_help and git pull--it can all be multiplat .py soon
+
+### file storage granularity test
+
+* _for advanced users now, everyone else soon_
+* after much planning, I am rolling out a test for advanced users with fewer than 1 million files
+* that improves latency on file access and other maintenance operations for clients with many files
+* essentially, instead of storing files in just 256 "fxx" folders, the client can now use 4096 "fxx/x" folders. same for the "txx" thumbnails. this means 16x fewer files per subfolder, where big clients are pushing 10,000+, making for snappier folder scans and file access in the client and when you do something like 'open video externally' and the video player does a brief folder scan for subtitle files and such
+* this is all accessed through `database->move media files...` in a new panel. your client now reports if it is currently granularity 2 or 3 and offers to migrate you to 3. this process involves moving all your files, so it can take a while. my tests suggest about 5,000 files/s on an NVME, so thumbs will zip by, but the actual files on HDD may be a good bit slower, especially on funky USB or NAS connections where there's odd buffering. it is cancellable if it is taking too long
+* some first-draft help here too https://hydrusnetwork.github.io/hydrus/database_migration.html#granularity
+* one additional issue is that this storage rejigger makes a backup look completely different! we don't want to do a 100% backup run just to mirror file moves, so this panel offers a similar migration for a backup. the text and dialogs guide you through it all
+* if you are an advanced user with fewer than 1 million files and you definitely absolutely have a backup, I invite you to try this operation out. obviously let me know if there are any problems, but please also note the final dialog, which will say how long the migration took, and report to me something like, "500,000 files, thumbs on NVME, files on sata HDD, 21 minutes", which I hope to compile into nicer 'expect about x files/s on an HDD' estimates for the normal users
+* if you have 8 million files and really want to do this, you can, but bear in mind it might be a three hour migration
+
+### boring file storage work
+
+* the tables that track physical file storage have been updated to better handle 4096 rows rather than 256. all the tables now use a shared `location_id` table, with the same single read/write calls, ensuring all items here agree on portable vs absolute path storage and so on
+* the database now stores how 'granular' its file storage is, with default being 2 (2 hex chars, or 256 subfolders). if the stored file locations do not match this, it raises a serious error
+* the folder relocation code (when you do a 'move files now' run, and which will be replaced this year I hope by multi-location support and background migration) is more KISS and foolproof
+* the folder repair code (when you boot with a missing location) is similarly more KISS and foolproof
+* fixed a storage weight initialisation issue that could occur if the 'ideal thumbnail location' was specifically set and also in the media file storage locations list
+* all prefix-generating methods now always take an explicit prefix length/granularity. there is no longer a nebulous default anywhere
+* reworked my folder granularisation to be safer, to work both up and down, and added status reporting for an UI panel
+* wrote a routine that looks at an existing base storage location and guesses its current granularisation for job pre-checks
+* wrote a database granularisation routine and added 'aieeeee, it broke half way through, try and undo' code
+* the client files manager now only performs rigorous checks of all existing subfolder locations on startup. any migration or other re-init reason now just repopulates the subfolder store
+* when file subdirs of granularity 3 or more are migrated, if the intervening parent directory, for instance `f83` in a `f83/d` prefix, is empty afterwards, it is now deleted
+* the percentage usages in 'move media files' are now 2 sig figs since we are distributing 4096 things now and you'd get 0.0% sometimes
+* the mysterious 'empty_client_files' archive is updated regarding all this
+* wrote a 'help my db is the wrong granularity.txt' help document in the db dir for help recovering from big problems here
+* wrote unit tests for 2to3 and 3to2 granularisation and cancel tech
+* wrote unit tests for estimate folder granularity tech
+
+### boring cleanup
+
+* I deleted a bunch of very old 'running from source' help from the pre-everything-is-a-wheel days that is no longer pertinent
+* deleted some ancient unused client service UI code
+
 ## [Version 659](https://github.com/hydrusnetwork/hydrus/releases/tag/v659)
 
 ### misc
 
 * certain PNGs that would load very slowly now load about ten times faster! specifically, any PNG with gamma/chromaticity information in its header now has that converted to a bespoke ICC Profile, and the normal ICC Profile translation code is applied to convert to sRGB. my hacky (and possibly unstable) manual conversion is no longer used. typically, a big ~50 megapixel PNG (7,000x8,000) would render in about ten seconds with lots of memory churn; now it renders in one, with far less. this fix brought to you by ChatGPT, which understands ICC Profile header construction, `r/g/bTRC` gamma curves, and D50/D65 `wtpt` and `chad` applicability across ICC Profile engine versions far better than it did last year. thanks for your patience, those who submitted weird big PNGs in. if you have any PNGs (or any other file of course) that suddenly render with the wrong colour, I'm interested to see them
-* the `network->downloaders` menu has new 'user-run downloader repository' and 'help: random 403 errors' items. the former links to https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, the latter opens a little help window that talks about the infrastrucure changes that are slowly breaking some of the original default downloaders. this help window is now linked off any downloader 'retry' icon button that has 'ignored' stuff to retry, and I replicated it in the 'getting started with downloaders' help, so I hope anyone who gets perplexed by a 403 will now see what's going on. there is no excellent solution here, but I am thinking about it (issue #1963)
+* the `network->downloaders` menu has new 'user-run downloader repository' and 'help: random 403 errors' items. the former links to https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, the latter opens a little help window that talks about the infrastructure changes that are slowly breaking some of the original default downloaders. this help window is now linked off any downloader 'retry' icon button that has 'ignored' stuff to retry, and I replicated it in the 'getting started with downloaders' help, so I hope anyone who gets perplexed by a 403 will now see what's going on. there is no excellent solution here, but I am thinking about it (issue #1963)
 
 ### fixes
 
@@ -367,49 +424,3 @@ title: Changelog
 * removed the 'this is being built' warning labels from the UI
 * fixed some bad tooltips in duplicate hover window
 * I put off a couple of features I had planned for launch, like having more modified time merge in duplicate metadata merge options, and a column in the preview's failed-test thumbnail pair list to say which comparator failed. I didn't want to rush these out; I can add thm later in normal work
-
-## [Version 650](https://github.com/hydrusnetwork/hydrus/releases/tag/v650)
-
-### misc
-
-* I forgot to mention last week that the user who added a bunch of nice UI stuff also added file search page predicate changes to the main undo menu. if you accidentally remove some clever predicate, it _should_ be possible to bring it back now. undo is a tricky subject, but we're experimenting with some stuff
-* fixed a logical typo in last week's better prefetching code where the media viewer was prefetching no further than the smaller of the prev/next directions. e.g. if you were set to prefetch 3 back and 5 forward, it would only fetch 3 back and 3 forward. well done to the user with no backwards prefetching who noticed this
-* when subscriptions are set to process in alphabetical order, this is now smart/human alphabetical, such that, for instance, 'my sub 3' is now earlier than 'my sub 11'
-* turned off some 0.5/2x size clamping in the `options->ratings` dialog for incdec ratings. it was a little confusing and sometimes made it seem that the dialog was not saving values correctly
-* fixed a bad dialog title and some non-expanding UI layout in the new 'edit service specifier panel' (the thing I added for the clever new rating pred last week)
-* I believe I have fixed a handful of file storage initialisation and/or migration issues that all stemmed from a file location storage path being stored in a Windows system with forward instead of back slashes (mostly a legacy issue). thanks to the user who worked with me on this
-* install_dir/static has a new 'empty_client_files.7z' that just has an empty 'client_files' structure, 512 subfolders in fxx and txx format, to help ease some database maintenance jobs
-* wrote 'help my media folders are broke.txt' for the db directory to directly talk about missing subfolders
-
-### duplicates smart counting updates
-
-* tl;dr: the duplicates system is less laggy and some annoying stuff is fixed
-* in the panel that sets up a search for potential duplicate pairs (e.g. on duplicates page 'filtering' tab), the little 'x pairs searched; y match' text label now updates very fast to pair changes. previously, any time a new pair was added (e.g. right after an image is imported) or an existing pair removed (e.g. you confirm a pair are duplicates), the count was invalidated and it had to be redone; now, that widget receives clever specific info of '_this_ pair was added/deleted', and it sees if it cares about that and updates its counts or decides to search that new pair as needed. you can now leave the client open looking at a 'filtering' page while a bunch of imports are going on and it is no longer a refresh-fest
-* this is universal to any pair change, no matter the cause (previously there were a couple of maintenance edge cases I'd missed)
-* in a separate set of signals, any time a file moves in and out of any local file domain or 'combined local file domains', these update signals _also_ happen. so moving or deleting a file will cauise an instant count update where appropriate. the problems we had with 'if I delete one file of a pair manually, that count doesn't show up quickly' are solved
-* the underlying search cache this tech relies on uses the same update-optimisations, so the slow 'initialising' step you'd see all around here now only happens on the first access
-
-### duplicates auto-resolution smart counting updates
-
-* tl;dr: you shouldn't see trashed stuff in auto-resolution any more and some annoying stuff is fixed
-* auto-resolution rules are also hooked into this smarter signalling system. they also now only track the pairs that are in their search domain, so if you send one file of a pair to trash, the pair now disappears from the rule (if, for instance, it was sitting in the 'pending actions' queue, it now disappears). and, if you _vice versa_ import or migrate a file to a rule's file domain, any potential pairs that it comes with will be added to the rule, so rules that are set up to only work in one specific local file domain now operate more sensibly
-* there's a new maintenance job under the auto-resolution cog icon button that resyncs all rules to their correct file domains. this routine will run on db update, so you'll likely see some deleted cruft cleared out of your 'denied' queues and so on
-* when you change the location of an auto-resolution rule's search but nothing else, it no longer needs to re-search everything. it just adds new pairs for search and discards an excess it now has. just works a bit faster on this particular change
-* when you do some semi-automatic auto-resolution 'pending actions' work in the duplicate filter, the pending/actioned/declined lists now refresh properly when you exit the filter after work done. because of the location filtering, deleting a file from a pair now correctly removes it from the pending actions queue!
-* same deal for the preview panel, when editing a rule--if you open the list up in the filter and do work, the list will refresh on exiting the filter
-
-### boring duplicates tech that makes this all work
-
-* when potential duplicate pairs are added, deleted, deleted-by-group-dissolve, or completely cleared, the duplicates database module now broadcasts specific pubsubs for each change. its cache of initialised potential duplicate pair search spaces are also updated directly rather than being cleared for regen
-* the potential duplicate id pair and distance object now stores a smarter internal mapping allowing for more types of search and filtering, and obviously now supports the above update routines, including delete stuff, which it couldn't do before. the merge routine of this guy, which is used in some clever multi-domain searches, now also correctly eliminates duplicate rows
-* the internal mapping of this object now also updates on these changes, rather than needing regen every time
-* the fragmentary potential duplicate pair search object can now eat these pubsubs and update its search space and 'remaining to search' stores
-* the fragmentary search now tracks actual rows that hit, not just a count. when a potential pairs update comes through, the hit store is also updated!
-* the potential pairs search panel listens for the pubsubs and updates its fragmentary search live
-* the fragmentary search is now aware of being in a '1700 out of 1703 rows searched' situation, where there is just a little bit more to do. in this case, it'll run those last three nice and quick rather than lazily settling for an estimate. this obviously happens all the time with these new incremental updates
-* deleted the old and blunter 'potential counts have changed' pubsub
-* I plugged the file add/delete routines into this system and wrote a bunch of domain filtering code to quickly figure out pair-updates based on file migration, and I wrote some location context consideration logic to make sure every guy who cares about this stuff gets told at the appropriate point
-* I overhauled the auto-resolution update signals to fit into this smarter system
-* the db module that manages duplicate file info is now split into a 'storage' unit, which does filtering and id management, and an 'update' side, which does verbs and update signals. auto-resolution now has access to the storage to do its filtering gubbins
-* cleaned up a bunch of code here
-* fixed a logical error when a duplicate pairs count search is asked to estimate the final count before any searching has happened

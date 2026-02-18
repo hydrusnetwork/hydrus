@@ -120,7 +120,7 @@ def ConvertPortablePathToAbsPath( portable_path, base_dir_override = None ):
         abs_path = os.path.normpath( os.path.join( base_dir, portable_path ) )
         
     
-    # is this sensible, what am I trying to do here? recover from a legacy platform migration maybe, from perhaps when I stored backslashes in portable paths?
+    # is this sensible, what am I trying to do here? recover from a legacy platform migration maybe?
     if not HC.PLATFORM_WINDOWS and not os.path.exists( abs_path ):
         
         abs_path = abs_path.replace( '\\', '/' )
@@ -604,7 +604,7 @@ def FigureOutDBDir( arg_db_dir: str ):
         
         db_dir = arg_db_dir
         
-        db_dir = ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
+        db_dir = ConvertPortablePathToAbsPath( db_dir, base_dir_override = HC.BASE_DIR )
         
     
     if not DirectoryIsWriteable( db_dir ):
@@ -683,6 +683,16 @@ def FilterOlderModifiedFiles( paths: collections.abc.Collection[ str ], grace_pe
         
     
     return good_paths
+    
+
+def GetAllSubDirsNonRecursive( path ):
+    
+    with os.scandir( path ) as scan:
+        
+        subdir_paths = { entry.path for entry in scan if entry.is_dir() }
+        
+    
+    return subdir_paths
     
 
 def GetDefaultLaunchPath():

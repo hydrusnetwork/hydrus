@@ -40,6 +40,8 @@ class ClientFilesManager( object ):
         
         self._prefixes_to_client_files_subfolders: collections.defaultdict[ str, list[ ClientFilesPhysical.FilesStorageSubfolder ] ] = collections.defaultdict( list )
         
+        self._current_granularity = HydrusFilesPhysicalStorage.DEFAULT_PREFIX_LENGTH
+        
         self._physical_file_delete_wait = threading.Event()
         
         self._locations_to_free_space = {}
@@ -48,6 +50,8 @@ class ClientFilesManager( object ):
         self._missing_subfolders = set()
         
         self._Reinit()
+        
+        self._DoMissingLocationsCheck()
         
         self._controller.sub( self, 'Reinit', 'new_ideal_client_files_locations' )
         self._controller.sub( self, 'shutdown', 'shutdown' )
@@ -257,6 +261,109 @@ class ClientFilesManager( object ):
         return needed_to_copy_file
         
     
+    def _DoMissingLocationsCheck( self ):
+        
+        if CG.client_controller.IsFirstStart():
+            
+            try:
+                
+                dirs_to_test = set()
+                
+                for subfolder in self._GetAllSubfolders():
+                    
+                    dirs_to_test.add( subfolder.base_location.path )
+                    dirs_to_test.add( subfolder.path )
+                    
+                
+                for dir_to_test in dirs_to_test:
+                    
+                    try:
+                        
+                        HydrusPaths.MakeSureDirectoryExists( dir_to_test )
+                        
+                    except Exception as e:
+                        
+                        text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( dir_to_test )
+                        
+                        self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
+                        
+                        raise
+                        
+                    
+                
+            except Exception as e:
+                
+                text = 'Attempting to create the database\'s client_files folder structure failed!'
+                
+                self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
+                
+                raise
+                
+            
+        else:
+            
+            self._RepopulateMissingLocationsReference()
+            
+            if len( self._missing_subfolders ) > 0:
+                
+                self._AttemptToHealMissingLocations()
+                
+                self._ReinitSubfolders()
+                
+                self._RepopulateMissingLocationsReference()
+                
+            
+            if len( self._missing_subfolders ) > 0:
+                
+                self._bad_error_occurred = True
+                
+                #
+                
+                missing_dict = HydrusData.BuildKeyToListDict( [ ( subfolder.base_location, subfolder.prefix ) for subfolder in self._missing_subfolders ] )
+                
+                missing_base_locations = sorted( missing_dict.keys(), key = lambda b_l: b_l.path )
+                
+                missing_string = ''
+                
+                for missing_base_location in missing_base_locations:
+                    
+                    missing_prefixes = sorted( missing_dict[ missing_base_location ] )
+                    
+                    missing_prefixes_string = '    ' + '\n'.join( ( ', '.join( block ) for block in HydrusLists.SplitListIntoChunks( missing_prefixes, 32 ) ) )
+                    
+                    missing_string += '\n'
+                    missing_string += str( missing_base_location )
+                    missing_string += '\n'
+                    missing_string += missing_prefixes_string
+                    
+                
+                #
+                
+                if len( self._missing_subfolders ) > 4:
+                    
+                    HydrusData.DebugPrint( 'Missing locations follow:' )
+                    HydrusData.DebugPrint( missing_string )
+                    
+                    text = 'When initialising the client files manager, some file locations did not exist! They have all been written to the log!'
+                    text += '\n' * 2
+                    text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
+                    
+                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
+                    
+                else:
+                    
+                    text = 'When initialising the client files manager, these file locations did not exist:'
+                    text += '\n' * 2
+                    text += missing_string
+                    text += '\n' * 2
+                    text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
+                    
+                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
+                    
+                
+            
+        
+    
     def _GenerateExpectedFilePath( self, hash, mime ):
         
         # TODO: this guy is presumably nuked or altered when we move to overlapping locations. there is no 'expected' to check, but there might be multiple, or a 'preferred' for imports
@@ -398,7 +505,7 @@ class ClientFilesManager( object ):
     
     def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> list[ ClientFilesPhysical.FilesStorageSubfolder ]:
         
-        prefix = HydrusFilesPhysicalStorage.GetPrefix( hash, prefix_type )
+        prefix = HydrusFilesPhysicalStorage.GetPrefix( hash, prefix_type, self._current_granularity )
         
         if prefix in self._prefixes_to_client_files_subfolders:
             
@@ -413,7 +520,7 @@ class ClientFilesManager( object ):
         You can only call this guy if you have the total lock already!
         """
         
-        prefix = HydrusFilesPhysicalStorage.GetPrefix( hash, prefix_type )
+        prefix = HydrusFilesPhysicalStorage.GetPrefix( hash, prefix_type, self._current_granularity )
         
         return self._prefixes_to_rwlocks[ prefix ]
         
@@ -729,110 +836,10 @@ class ClientFilesManager( object ):
         
         self._ReinitSubfolders()
         
-        if CG.client_controller.IsFirstStart():
-            
-            try:
-                
-                dirs_to_test = set()
-                
-                for subfolder in self._GetAllSubfolders():
-                    
-                    dirs_to_test.add( subfolder.base_location.path )
-                    dirs_to_test.add( subfolder.path )
-                    
-                
-                for dir_to_test in dirs_to_test:
-                    
-                    try:
-                        
-                        HydrusPaths.MakeSureDirectoryExists( dir_to_test )
-                        
-                    except Exception as e:
-                        
-                        text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( dir_to_test )
-                        
-                        self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
-                        
-                        raise
-                        
-                    
-                
-            except Exception as e:
-                
-                text = 'Attempting to create the database\'s client_files folder structure failed!'
-                
-                self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
-                
-                raise
-                
-            
-        else:
-            
-            self._ReinitMissingLocations()
-            
-            if len( self._missing_subfolders ) > 0:
-                
-                self._AttemptToHealMissingLocations()
-                
-                self._ReinitSubfolders()
-                
-                self._ReinitMissingLocations()
-                
-            
-            if len( self._missing_subfolders ) > 0:
-                
-                self._bad_error_occurred = True
-                
-                #
-                
-                missing_dict = HydrusData.BuildKeyToListDict( [ ( subfolder.base_location, subfolder.prefix ) for subfolder in self._missing_subfolders ] )
-                
-                missing_base_locations = sorted( missing_dict.keys(), key = lambda b_l: b_l.path )
-                
-                missing_string = ''
-                
-                for missing_base_location in missing_base_locations:
-                    
-                    missing_prefixes = sorted( missing_dict[ missing_base_location ] )
-                    
-                    missing_prefixes_string = '    ' + '\n'.join( ( ', '.join( block ) for block in HydrusLists.SplitListIntoChunks( missing_prefixes, 32 ) ) )
-                    
-                    missing_string += '\n'
-                    missing_string += str( missing_base_location )
-                    missing_string += '\n'
-                    missing_string += missing_prefixes_string
-                    
-                
-                #
-                
-                if len( self._missing_subfolders ) > 4:
-                    
-                    HydrusData.DebugPrint( 'Missing locations follow:' )
-                    HydrusData.DebugPrint( missing_string )
-                    
-                    text = 'When initialising the client files manager, some file locations did not exist! They have all been written to the log!'
-                    text += '\n' * 2
-                    text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
-                    
-                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
-                    
-                else:
-                    
-                    text = 'When initialising the client files manager, these file locations did not exist:'
-                    text += '\n' * 2
-                    text += missing_string
-                    text += '\n' * 2
-                    text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
-                    
-                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
-                    
-                
-            
-        
     
     def _ReinitSubfolders( self ):
         
-        subfolders = self._controller.Read( 'client_files_subfolders' )
+        ( self._current_granularity, subfolders ) = self._controller.Read( 'client_files_subfolders' )
         
         self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
         
@@ -841,30 +848,14 @@ class ClientFilesManager( object ):
             self._prefixes_to_client_files_subfolders[ subfolder.prefix ].append( subfolder )
             
         
-        all_subfolders = []
-        
-        for subfolders in self._prefixes_to_client_files_subfolders.values():
-            
-            all_subfolders.extend( subfolders )
-            
-        
         self._prefixes_to_rwlocks.clear()
         
     
-    def _ReinitMissingLocations( self ):
+    def _RepopulateMissingLocationsReference( self ):
         
-        self._missing_subfolders = set()
+        # this would be faster if we did a scandir on the shared parents, but I tried it and it has bad worst case scenarios if we hit a granularity 2 with granularity 3 expectations
         
-        for subfolders in self._prefixes_to_client_files_subfolders.values():
-            
-            for subfolder in subfolders:
-                
-                if not subfolder.PathExists():
-                    
-                    self._missing_subfolders.add( subfolder )
-                    
-                
-            
+        self._missing_subfolders = { subfolder for subfolders in self._prefixes_to_client_files_subfolders.values() for subfolder in subfolders if not subfolder.PathExists() }
         
     
     def _WaitOnWakeup( self ):
@@ -1405,6 +1396,18 @@ class ClientFilesManager( object ):
         return path
         
     
+    def Granularise2To3( self, job_status: ClientThreading.JobStatus ):
+        
+        with self._master_locations_rwlock.write:
+            
+            granularise_result = CG.client_controller.WriteSynchronous( 'granularise_2to3', job_status )
+            
+            self._Reinit()
+            
+            return granularise_result
+            
+        
+    
     def LocklessHasFile( self, hash, mime ):
         
         path = self._GenerateExpectedFilePath( hash, mime )
@@ -1580,8 +1583,10 @@ class ClientFilesManager( object ):
     
     def Reinit( self ):
         
-        # this is still useful to hit on ideals changing, since subfolders bring the weight and stuff of those settings. we'd rather it was generally synced
-        self._Reinit()
+        with self._master_locations_rwlock.write:
+            
+            self._Reinit()
+            
         
     
     def UpdateFileModifiedTimestampMS( self, media, modified_timestamp_ms: int ):

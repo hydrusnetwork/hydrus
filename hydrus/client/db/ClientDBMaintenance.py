@@ -7,7 +7,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
@@ -333,66 +332,6 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
         self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp_ms ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNowMS() ) )
-        
-    
-    def CheckDBIntegrity( self ):
-        
-        prefix_string = 'checking db integrity: '
-        
-        job_status = ClientThreading.JobStatus( cancellable = True )
-        
-        num_errors = 0
-        
-        try:
-            
-            job_status.SetStatusTitle( prefix_string + 'preparing' )
-            
-            CG.client_controller.pub( 'modal_message', job_status )
-            
-            job_status.SetStatusTitle( prefix_string + 'running' )
-            job_status.SetStatusText( 'errors found so far: ' + HydrusNumbers.ToHumanInt( num_errors ) )
-            
-            db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
-            
-            for db_name in db_names:
-                
-                for ( text, ) in self._Execute( 'PRAGMA ' + db_name + '.integrity_check;' ):
-                    
-                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
-                    
-                    if should_quit:
-                        
-                        job_status.SetStatusTitle( prefix_string + 'cancelled' )
-                        job_status.SetStatusText( 'errors found: ' + HydrusNumbers.ToHumanInt( num_errors ) )
-                        
-                        return
-                        
-                    
-                    if text != 'ok':
-                        
-                        if num_errors == 0:
-                            
-                            HydrusData.Print( 'During a db integrity check, these errors were discovered:' )
-                            
-                        
-                        HydrusData.Print( text )
-                        
-                        num_errors += 1
-                        
-                    
-                    job_status.SetStatusText( 'errors found so far: ' + HydrusNumbers.ToHumanInt( num_errors ) )
-                    
-                
-            
-        finally:
-            
-            job_status.SetStatusTitle( prefix_string + 'completed' )
-            job_status.SetStatusText( 'errors found: ' + HydrusNumbers.ToHumanInt( num_errors ) )
-            
-            HydrusData.Print( job_status.ToString() )
-            
-            job_status.Finish()
-            
         
     
     def ClearOrphanTables( self ):

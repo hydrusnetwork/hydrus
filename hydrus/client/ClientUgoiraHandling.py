@@ -49,6 +49,11 @@ def GetFrameDurationsMSUgoira( media: ClientMediaResult.MediaResult ):
     
     num_frames = media.GetNumFrames()
     
+    if num_frames == 0 or num_frames is None:
+        
+        num_frames = 1
+        
+    
     return [UGOIRA_DEFAULT_FRAME_DURATION_MS] * num_frames
     
 

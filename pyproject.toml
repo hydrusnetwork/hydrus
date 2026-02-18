@@ -1,9 +1,9 @@
 [project]
 name = "hydrus"
-version = "v659"
+version = "v660"
 description = "A personal booru-style media tagger"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     # requirements_core.txt
     "beautifulsoup4>=4.0.0",
@@ -37,15 +37,19 @@ dependencies = [
     "pywin32 ; sys_platform == 'win32'",
 ]
 
+# the three `mpv-new`, `opencv-new`, and `qt6-new` groups are old synonyms for what I now call -normal. the -new groups will be deleted on v673
+
 [tool.uv]
-default-groups = [ "mpv-new", "opencv-new", "other-normal", "qt6-new" ]
+default-groups = [ "mpv-normal", "opencv-normal", "other-normal", "qt6-normal" ]
 conflicts = [
     [
         { group = "mpv-new" },
+        { group = "mpv-normal" },
         { group = "mpv-test" },
     ],
     [
         { group = "opencv-new" },
+        { group = "opencv-normal" },
         { group = "opencv-test" },
         { group = "opencv-old" },
     ],
@@ -55,6 +59,7 @@ conflicts = [
     ],
     [
         { group = "qt6-new" },
+        { group = "qt6-normal" },
         { group = "qt6-new-pyqt6" },
         { group = "qt6-older" },
         { group = "qt6-test" },
@@ -69,10 +74,17 @@ conflicts = [
 mpv-new = [
     "mpv==1.0.8",
 ]
+mpv-normal = [
+    "mpv==1.0.8",
+]
 mpv-test = [
     "mpv==1.0.8",
 ]
 opencv-new = [
+    "opencv-python-headless==4.11.0.86",
+    "numpy<=2.3.1",
+]
+opencv-normal = [
     "opencv-python-headless==4.11.0.86",
     "numpy<=2.3.1",
 ]
@@ -90,6 +102,10 @@ other-future = [
 other-normal = [
 ]
 qt6-new = [
+    "pyside6==6.9.3",
+    "qtpy==2.4.3",
+]
+qt6-normal = [
     "pyside6==6.9.3",
     "qtpy==2.4.3",
 ]
@@ -129,10 +145,17 @@ dev = [
 "mpv-new" = [
     "mpv==1.0.8",
 ]
+"mpv-normal" = [
+    "mpv==1.0.8",
+]
 "mpv-test" = [
     "mpv==1.0.8",
 ]
 "opencv-new" = [
+    "opencv-python-headless==4.11.0.86",
+    "numpy<=2.3.1",
+]
+"opencv-normal" = [
     "opencv-python-headless==4.11.0.86",
     "numpy<=2.3.1",
 ]
@@ -149,6 +172,10 @@ dev = [
 ]
 "other-normal" = []
 "qt6-new" = [
+    "pyside6==6.9.3",
+    "qtpy==2.4.3",
+]
+"qt6-normal" = [
     "pyside6==6.9.3",
     "qtpy==2.4.3",
 ]

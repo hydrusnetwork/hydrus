@@ -30,18 +30,18 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._missing_subfolders_to_new_subfolders = {}
         
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
-        text += '\n' * 2
+        text += '\n\n'
         text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will be clicking _add a possibly correct location_ and then select the new folder where the subdirectories all went. You can repeat this if your folders are missing in multiple locations. Check everything reports _ok!_'
-        text += '\n' * 2
+        text += '\n\n'
         text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' and \'r\' are for your thumbnails, which can be regenerated with a bit of work.'
-        text += '\n' * 2
+        text += '\n\n'
         text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under \'database->move media files\' immediately.'
-        text += '\n' * 2
+        text += '\n\n'
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help. Regardless of the situation, the document at "install_dir/db/help my media files-folders are broke.txt" may be useful background reading.'
         
         if self._only_thumbs:
             
-            text += '\n' * 2
+            text += '\n\n'
             text += 'SPECIAL NOTE FOR YOUR SITUATION: The only paths missing are thumbnail paths. If you cannot recover these folders, you can hit apply to create empty paths at the original or corrected locations and then run a maintenance routine to regenerate the thumbnails from their originals.'
             
         

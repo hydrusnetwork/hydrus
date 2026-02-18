@@ -760,6 +760,11 @@ class RasterContainerVideo( RasterContainer ):
         
         num_frames_in_video = self.GetNumFrames()
         
+        if num_frames_in_video == 0 or num_frames_in_video is None:
+            
+            return
+            
+        
         frame_request_is_impossible = FrameIndexOutOfRange( next_index_to_expect, 0, num_frames_in_video - 1 )
         
         if frame_request_is_impossible:

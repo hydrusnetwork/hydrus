@@ -477,6 +477,7 @@ class ClientDBMasterTexts( ClientDBModule.ClientDBModule ):
         return text_id
         
     
+
 class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
