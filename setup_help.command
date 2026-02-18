@@ -17,7 +17,7 @@ echo "Creating new help..."
 
 source venv/bin/activate
 
-pip install mkdocs-material
+pip install mkdocs-material==9.7.1
 
 mkdocs build -d help
 

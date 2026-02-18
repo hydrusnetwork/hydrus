@@ -21,7 +21,7 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           python3 -m pip install --upgrade wheel
-          python3 -m pip install mkdocs-material
+          python3 -m pip install mkdocs-material==9.7.1
           mkdocs build -d help
       -
         name: Install PyOxidizer

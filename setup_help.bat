@@ -28,7 +28,7 @@ echo Creating new help...
 
 CALL venv\Scripts\activate.bat
 
-pip install mkdocs-material
+pip install mkdocs-material==9.7.1
 
 mkdocs build -d help
 

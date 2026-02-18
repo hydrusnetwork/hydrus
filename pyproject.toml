@@ -125,7 +125,7 @@ qt6-test = [
 dev = [
     # Common dev tools
     "httmock>=1.4.0",
-    "mkdocs-material",
+    "mkdocs-material==9.7.1",
     "setuptools==78.1.1",
     "PyInstaller==6.14.1",
     # Windows-specific build tools
@@ -195,7 +195,7 @@ dev = [
 "dev" = [
     # Common dev tools
     "httmock>=1.4.0",
-    "mkdocs-material",
+    "mkdocs-material==9.7.1",
     "setuptools==78.1.1",
     "PyInstaller==6.14.1",
     # Windows-specific build tools

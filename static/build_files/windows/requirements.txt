@@ -35,7 +35,7 @@ PySide6==6.9.3
 setuptools==78.1.1
 pyinstaller==6.14.1
 
-mkdocs-material
+mkdocs-material==9.7.1
 
 PyWin32
 pefile
