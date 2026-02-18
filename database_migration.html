@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
     
     
       
@@ -1404,6 +1404,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        granularity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="granularity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#it_can_take_a_while" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        it can take a while
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you_have_to_repeat_the_operation_on_your_backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        you have to repeat the operation on your backups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you_do_not_have_to_do_this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        you do not have to do this
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#launch_parameter" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2770,6 +2820,56 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#granularity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        granularity
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="granularity">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#it_can_take_a_while" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        it can take a while
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you_have_to_repeat_the_operation_on_your_backups" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        you have to repeat the operation on your backups
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#you_do_not_have_to_do_this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        you do not have to do this
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#launch_parameter" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2872,7 +2972,7 @@
 <p><strong>your media files</strong></p>
 <p>All of your actual jpegs and webms and so on (and their thumbnails) are stored in a single complicated directory that is by default at <em>install_dir/db/client_files</em>. All the files are named by their hash and stored in efficient hash-based subdirectories. In general, it is not navigable by humans, but it works very well for the fast access from a giant pool of files the client needs to do to manage your media.</p>
 <p>Thumbnails tend to be fetched dozens at a time, and very randomly, so it is, again, ideal if they are stored on an SSD. Your regular media files--which on many clients total hundreds of GB--are usually fetched one at a time for human consumption and do not benefit from the expensive low-latency of an SSD. They are best stored on a cheap HDD, and, if desired, also work well across a network file system.</p>
-<p>There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. This is likely to change in future to 4096/8192 (i.e. three hex chars).</p>
+<p>There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. Depending on an advanced setting called <em>granularity</em>, each of those may also have 16 subfolders, from 0-f.</p>
 </li>
 </ol>
 <h2 id="different_drives">these components can be put on different drives<a class="headerlink" href="#different_drives" title="Permanent link">&para;</a></h2>
@@ -2907,6 +3007,27 @@
 <p>Note that you cannot boot a client until it has located all the file subfolders.</p>
 <p>Also, if your folders are in the 'wrong' locations but all those locations are known to the client, you will not get the repair dialog--it'll just give you a popup and shuffle its internal knowledge around.</p>
 </div>
+<h2 id="granularity">granularity<a class="headerlink" href="#granularity" title="Permanent link">&para;</a></h2>
+<p>ADVANCED, STILL IN TESTING, BE CAREFUL</p>
+<p>To start with, the hydrus database stores its files in a two-hex 'granularity'. This means that your files or thumbnails are split into 256 parts across folders called 'fxx' or 'txx', where 'xx' is 00-ff in hexadecimal and corresponding to the prefix hex of a particular file hash. As the largest clients ran into the millions of files, each subfolder was getting pretty large, slowing access latency in certain cases and causing delays with "open externally" when an external video player scanned the origin folder of a video to search for subtitle files etc.. We realised we needed a finer granularity of storage.</p>
+<p>As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx'. You can see your current granularity on the 'move media files' dialog and open up a sub-panel just to handle this variable.</p>
+<p>(screenshot here once I'm happy with the UI)</p>
+<p>Changing your granularity means moving every single file and thumbnail in your collection. There are two issues with this:</p>
+<h3 id="it_can_take_a_while">it can take a while<a class="headerlink" href="#it_can_take_a_while" title="Permanent link">&para;</a></h3>
+<p>This has to be done in one step, and it can take a while. Even if we can move hundreds of files per second, if you have millions of files in total, it adds up.</p>
+<p>My current estimates/guesses are:</p>
+<ul>
+<li>NVME SSD - 5,000 files/s</li>
+<li>SATA HDD - 500 files/s</li>
+<li>NAS - 100 files/s</li>
+<li>Cloud storage - Assumed to be awful.</li>
+</ul>
+<p>I am looking for advanced users who try this to report back their speeds so I can harden these numbers.</p>
+<h3 id="you_have_to_repeat_the_operation_on_your_backups">you have to repeat the operation on your backups<a class="headerlink" href="#you_have_to_repeat_the_operation_on_your_backups" title="Permanent link">&para;</a></h3>
+<p>Once you have updated your client, you need to update your backups too. Since we have moved every single file, your backup comparison tool is probably going to think that everything has changed and want to do a 100% rewrite. We didn't actually change any files, though, and we don't want to waste this time and energy.</p>
+<p>Thus, use the other button on the dialog to change your backup granularity too. If you have separate thumbnail and file storages, run it on each folder.</p>
+<h3 id="you_do_not_have_to_do_this">you do not have to do this<a class="headerlink" href="#you_do_not_have_to_do_this" title="Permanent link">&para;</a></h3>
+<p>If either of these issues is a dealbreaker, do not move to granularity 3. Simple as.</p>
 <h2 id="launch_parameter">informing the software that the SQLite database is not in the default location<a class="headerlink" href="#launch_parameter" title="Permanent link">&para;</a></h2>
 <p>A straight call to the hydrus_client executable will look for a SQLite database in <em>install_dir/db</em>. If one is not found, it will create one. If you move your database and then try to run the client again, it will try to create a new empty database in that old location!</p>
 <p>To tell it about the new database location, pass it a <code>-d</code> or <code>--db_dir</code> command line argument, like so:</p>
@@ -3011,7 +3132,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 15, 2025 20:18:30 UTC">October 15, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 18, 2026 22:37:22 UTC">February 18, 2026</span>
   </span>
 
     
