@@ -479,13 +479,13 @@ Then, to create a new venv:
 **After you have activated the venv**, you can use pip to install everything you need to it from the `pyproject.toml` in the install_dir:
 
 ```
-python -m pip install .
+python -m pip install . --group qt6-normal --group opencv-normal --group mpv-normal --group other-normal
 ```
 
 If you need different versions of libraries, check the `pyproject.toml` file itself. For instance, for the newer OpenCV and Qt, you'd do this:
 
 ```
-python -m pip install .[opencv-test,qt6-test]
+python -m pip install . --group qt6-test --group opencv-test --group mpv-normal --group other-normal
 ```
 
 ### Qt { id="qt" }
@@ -493,7 +493,7 @@ python -m pip install .[opencv-test,qt6-test]
 Qt is the UI library. I used to support Qt5, but no longer. You can run PySide6 or PyQt6--a wrapper library called `qtpy` allows this. The default is PySide6, but if it is missing, qtpy will fall back to an available alternative. You can choose PyQt6 like this:
 
 ```
-python -m pip install .[qt6-new-pyqt6]
+python -m pip install . --group qt6-new-pyqt6 --group opencv-normal --group mpv-normal --group other-normal
 ```
 
 If you have multiple Qts installed, then select which one you want to use by setting the `QT_API` environment variable to 'pyside6' or 'pyqt6'. Check _help->about_ to make sure it loaded the right one.

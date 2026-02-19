@@ -1,3 +1,8 @@
+# For pip, install like this:
+#   pip install . --group opencv-normal --group qt6-normal --group mpv-normal --group other-normal
+# For uv, just do, as normal:
+#   uv sync
+
 [project]
 name = "hydrus"
 version = "v660"
@@ -5,7 +10,6 @@ description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    # requirements_core.txt
     "beautifulsoup4>=4.0.0",
     "cbor2>=5.6.5",
     "chardet>=3.0.4",
@@ -29,11 +33,9 @@ dependencies = [
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
     "requests==2.32.5",
-    # requirements_macos.txt
     "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
     "pyobjc-framework-cocoa>=10.1 ; sys_platform == 'darwin'",
     "pyobjc-framework-quartz>=10.1 ; sys_platform == 'darwin'",
-    # requirements_windows.txt
     "pywin32 ; sys_platform == 'win32'",
 ]
 
@@ -66,10 +68,6 @@ conflicts = [
     ]
 ]
 
-# NOTE: The dependency groups below are synchronized with [project.optional-dependencies].
-# If you change versions or add/remove packages, update BOTH sections:
-# 1. [dependency-groups] - for uv package manager support
-# 2. [project.optional-dependencies] - for pip support
 [dependency-groups]
 mpv-new = [
     "mpv==1.0.8",
@@ -94,7 +92,7 @@ opencv-old = [
 ]
 opencv-test = [
     "opencv-python-headless==4.13.0.90",
-    "numpy==2.4.1",
+    "numpy==2.4.1 ; python_version >= '3.11'",
 ]
 other-future = [
     "tldextract==5.3.1",
@@ -126,85 +124,15 @@ dev = [
     # Common dev tools
     "httmock>=1.4.0",
     "mkdocs-material==9.7.1",
-    "setuptools==78.1.1",
-    "PyInstaller==6.14.1",
+    #"setuptools==78.1.1",
+    #"PyInstaller==6.14.1",
     # Windows-specific build tools
-    "pefile==2024.8.26 ; sys_platform == 'win32'",
+    #"pefile ; sys_platform == 'win32'",
     # macOS-specific build tools
-    "pyoxidizer==0.24.0 ; sys_platform == 'darwin'",
-    "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
-    "pyobjc-framework-Cocoa>=10.1 ; sys_platform == 'darwin'",
-    "pyobjc-framework-Quartz>=10.1 ; sys_platform == 'darwin'",
-]
-
-# NOTE: These optional dependencies are synchronized with [dependency-groups] above.
-# If you change versions or add/remove packages, update BOTH sections:
-# 1. [dependency-groups] - for uv package manager support
-# 2. [project.optional-dependencies] - for pip support
-[project.optional-dependencies]
-"mpv-new" = [
-    "mpv==1.0.8",
-]
-"mpv-normal" = [
-    "mpv==1.0.8",
-]
-"mpv-test" = [
-    "mpv==1.0.8",
-]
-"opencv-new" = [
-    "opencv-python-headless==4.11.0.86",
-    "numpy<=2.3.1",
-]
-"opencv-normal" = [
-    "opencv-python-headless==4.11.0.86",
-    "numpy<=2.3.1",
-]
-"opencv-old" = [
-    "opencv-python-headless==4.8.1.78",
-    "numpy<=2.3.1",
-]
-"opencv-test" = [
-    "opencv-python-headless==4.13.0.90",
-    "numpy==2.4.1",
-]
-"other-future" = [
-    "tldextract==5.3.1",
-]
-"other-normal" = []
-"qt6-new" = [
-    "pyside6==6.9.3",
-    "qtpy==2.4.3",
-]
-"qt6-normal" = [
-    "pyside6==6.9.3",
-    "qtpy==2.4.3",
-]
-"qt6-new-pyqt6" = [
-    "pyqt6",
-    "pyqt6-charts",
-    "qtpy",
-]
-"qt6-older" = [
-    "pyside6==6.3.1",
-    "qtpy==2.3.1",
-]
-"qt6-test" = [
-    "pyside6==6.10.1",
-    "qtpy==2.4.3",
-]
-"dev" = [
-    # Common dev tools
-    "httmock>=1.4.0",
-    "mkdocs-material==9.7.1",
-    "setuptools==78.1.1",
-    "PyInstaller==6.14.1",
-    # Windows-specific build tools
-    "pefile ; sys_platform == 'win32'",
-    # macOS-specific build tools
-    "pyoxidizer ; sys_platform == 'darwin'",
-    "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
-    "pyobjc-framework-Cocoa>=10.1 ; sys_platform == 'darwin'",
-    "pyobjc-framework-Quartz>=10.1 ; sys_platform == 'darwin'",
+    #"pyoxidizer==0.24.0 ; sys_platform == 'darwin'",
+    #"pyobjc-core>=10.1 ; sys_platform == 'darwin'",
+    #"pyobjc-framework-Cocoa>=10.1 ; sys_platform == 'darwin'",
+    #"pyobjc-framework-Quartz>=10.1 ; sys_platform == 'darwin'",
 ]
 
 [build-system]

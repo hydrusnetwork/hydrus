@@ -218,6 +218,21 @@ def run_pip(cmd, venv_path):
     subprocess.check_call([str(python_exe), "-m", "pip"] + cmd)
     
 
+def get_groups_components( groups: list[ str ] ):
+    
+    # pip install . --group opencv-normal --group qt6-normal --group mpv-normal --group other-normal
+    
+    groups_components = []
+    
+    for group in groups:
+        
+        groups_components.append( '--group' )
+        groups_components.append( group )
+        
+    
+    return groups_components
+    
+
 def install_dependencies_simple(venv_path):
     """Install simple (base) dependencies with default GUI and media support."""
     
@@ -226,17 +241,18 @@ def install_dependencies_simple(venv_path):
     run_pip(["install", "--upgrade", "pip"], venv_path)
     run_pip(["install", "--upgrade", "wheel"], venv_path)
     
-    # Build extras from default choices
-    extras = [
+    groups = [
         "qt6-normal",           # DEFAULT_CHOICES['qt'] = 'n'
         "mpv-normal",           # DEFAULT_CHOICES['mpv'] = 'n'
         "opencv-normal",        # DEFAULT_CHOICES['opencv'] = 'n'
         "other-normal",      # DEFAULT_CHOICES['future'] = 'n'
     ]
     
-    extras_str = ",".join(extras)
-    print(f"Installing package with extras: {extras_str}")
-    run_pip(["install", f".[{extras_str}]"], venv_path)
+    # pip install . --group opencv-normal --group qt6-normal --group mpv-normal --group other-normal
+    groups_components = get_groups_components( groups )
+    
+    print(f"Installing package: {groups}")
+    run_pip(['install', '.' ] + groups_components, venv_path)
 
 
 def install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev, qt_custom_pyside6, qt_custom_qtpy):
@@ -262,74 +278,68 @@ def install_dependencies_advanced(venv_path, qt, mpv, opencv, future, dev, qt_cu
             sys.exit(1)
     
     # Build extras list
-    extras = []
+    groups = []
 
     if qt == "n":
         
-        extras.append("qt6-normal")
+        groups.append("qt6-normal")
         
     elif qt == "o":
         
-        extras.append("qt6-older")
+        groups.append("qt6-older")
         
     elif qt == "q":
         
-        extras.append("qt6-new-pyqt6")
+        groups.append("qt6-new-pyqt6")
         
     elif qt == "t":
         
-        extras.append("qt6-test")
+        groups.append("qt6-test")
         
     # qt == "w" means custom, already installed above
 
     if mpv == "n":
         
-        extras.append("mpv-normal")
+        groups.append("mpv-normal")
         
     elif mpv == "t":
         
-        extras.append("mpv-test")
+        groups.append("mpv-test")
         
 
     if opencv == "o":
         
-        extras.append("opencv-old")
+        groups.append("opencv-old")
         
     elif opencv == "n":
         
-        extras.append("opencv-normal")
+        groups.append("opencv-normal")
         
     elif opencv == "t":
         
-        extras.append("opencv-test")
+        groups.append("opencv-test")
         
 
     if future == "y":
         
-        extras.append("other-future")
+        groups.append("other-future")
         
     else:
         
-        extras.append("other-normal")
+        groups.append("other-normal")
         
 
     if dev == "y":
         
-        extras.append("dev")
+        groups.append("dev")
         
     
+    # pip install . --group opencv-normal --group qt6-normal --group mpv-normal --group other-normal
+    groups_components = get_groups_components( groups )
+    
     # Install with extras
-    if extras:
-        
-        extras_str = ",".join(extras)
-        print(f"Installing package with extras: {extras_str}")
-        run_pip(["install", f".[{extras_str}]"], venv_path)
-        
-    else:
-        
-        print("Installing base package...")
-        run_pip(["install", "."], venv_path)
-        
+    print(f"Installing package: {groups}")
+    run_pip(['install', '.' ] + groups_components, venv_path)
     
 
 def main():
