@@ -76,6 +76,9 @@ PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
 PREDICATE_TYPE_SYSTEM_URLS = 53
 PREDICATE_TYPE_SYSTEM_TAG_ADVANCED = 54
 PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY = 55 # not using
+PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT = 56
+PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT = 57
+PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS = 58
 PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 66
 
 SYSTEM_PREDICATE_TYPES = {
@@ -129,6 +132,9 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
     PREDICATE_TYPE_SYSTEM_TIME,
     PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
+    PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT,
+    PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT,
+    PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS
 }
 
 def ConvertSpecificFiletypesToSummary( specific_mimes: collections.abc.Collection[ int ], only_searchable = True ) -> collections.abc.Collection[ int ]:
@@ -364,7 +370,10 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_OR_CONTAINER,
     PREDICATE_TYPE_NAMESPACE,
     PREDICATE_TYPE_WILDCARD,
-    PREDICATE_TYPE_TAG
+    PREDICATE_TYPE_TAG,
+    PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT,
+    PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT,
+    PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS,
 }
 
 # this has useful order
@@ -2076,6 +2085,59 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     else:
                         
                         base = 'does not have note with name "{}"'.format( name )
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT:
+                
+                base = 'note matches'
+                
+                if self._value is not None:
+                    
+                    ( operator, name ) = self._value
+                    
+                    if operator:
+                        
+                        base = 'has note that matches "{}"'.format( name )
+                        
+                    else:
+                        
+                        base = 'does not have note that matches "{}"'.format( name )
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT:
+                
+                base = 'note contains'
+                
+                if self._value is not None:
+                    
+                    ( operator, name ) = self._value
+                    
+                    if operator:
+                        
+                        base = 'has note that contains "{}"'.format( name )
+                        
+                    else:
+                        
+                        base = 'does not have note that contains "{}"'.format( name )
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS:
+                
+                base = 'note contains words'
+                
+                if self._value is not None:
+                    
+                    ( operator, name ) = self._value
+                    
+                    if operator:
+                        
+                        base = 'has note that contains the words "{}"'.format( name )
+                        
+                    else:
+                        
+                        base = 'does not have note that contains the words "{}"'.format( name )
                         
                     
                 

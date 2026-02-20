@@ -2430,7 +2430,106 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteName( note_name, temp_table_name, job_status = job_status )
                     
                     query_hash_ids.difference_update( notes_hash_ids )
+                
+            
+        
+        if 'note_matches' in simple_preds:
+            
+            inclusive_contents = simple_preds[ 'note_matches' ]
+            
+            for content in inclusive_contents:
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
                     
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteContent( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, notes_hash_ids )
+                
+            
+        
+        if 'not_note_matches' in simple_preds:
+            
+            exclusive_contents = simple_preds[ 'not_note_matches' ]
+            
+            for content in exclusive_contents:
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteContent( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids.difference_update( notes_hash_ids )
+                
+            
+        
+        if 'note_contains' in simple_preds:
+            
+            inclusive_contents = simple_preds[ 'note_contains' ]
+            
+            for content in inclusive_contents:
+                
+                content = f"%{content}%"
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteContent( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, notes_hash_ids )
+                
+            
+        
+        if 'not_note_contains' in simple_preds:
+            
+            exclusive_contents = simple_preds[ 'not_note_contains' ]
+            
+            for content in exclusive_contents:
+                
+                content = f"%{content}%"
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteContent( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids.difference_update( notes_hash_ids )
+                
+            
+        
+        if 'note_contains_words' in simple_preds:
+            
+            inclusive_contents = simple_preds[ 'note_contains_words' ]
+            
+            for content in inclusive_contents:
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteWords( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids = intersection_update_qhi( query_hash_ids, notes_hash_ids )
+                
+            
+        
+        if 'not_note_contains_words' in simple_preds:
+            
+            exclusive_contents = simple_preds[ 'not_note_contains_words' ]
+            
+            for content in exclusive_contents:
+                
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
+                    
+                    notes_hash_ids = self.modules_notes_map.GetHashIdsFromNoteWords( content, temp_table_name, job_status = job_status )
+                    
+                    query_hash_ids.difference_update( notes_hash_ids )
                 
             
         
