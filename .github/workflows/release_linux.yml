@@ -14,6 +14,12 @@ jobs:
         with:
           path: hydrus
       -
+        name: Extract Version Metadata
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
+      -
         name: Setup Python
         uses: actions/setup-python@v6
         with:
@@ -34,39 +40,20 @@ jobs:
       -
         name: Build Hydrus
         run: |
-          cp hydrus/static/build_files/linux/hydrus_client.spec hydrus_client.spec
-          cp hydrus/static/build_files/linux/hydrus_server.spec hydrus_server.spec
-          pyinstaller hydrus_server.spec
-          pyinstaller hydrus_client.spec
-      -
-        name: Remove Chonk
-        run: |
-            find dist/hydrus_client/ -type f -name "*.pyc" -delete
-            while read line; do find dist/hydrus_client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+          cp hydrus/static/build_files/linux/hydrus.spec hydrus.spec
+          pyinstaller hydrus.spec
       -
         name: Remove Surplus File
         run: |
-          rm -f dist/hydrus_client/libxkbcommon.so*
+          rm -f "dist/Hydrus Network/"libxkbcommon.so*
       -
         name: Set Permissions
         run: |
-            sudo chown --recursive 1000:1000 dist/hydrus_client
-            sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
+          sudo find dist -type d -exec chmod 0755 {} \;
       -
         name: Compress Client
         run: |
-            mv dist/hydrus_client "dist/Hydrus Network"
-            tar --zstd -cvf Ubuntu-Extract.tar.zst -C dist "Hydrus Network"
-      -
-        name: Extract Version Metadata
-        id: meta
-        run: |
-          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
-          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
-      - 
-        name: Rename Files
-        run: |
-          mv Ubuntu-Extract.tar.zst Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst
+          tar --zstd -cvf Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst -C dist "Hydrus Network"
       - 
         name: Upload Files
         uses: softprops/action-gh-release@v2
