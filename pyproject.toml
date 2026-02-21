@@ -120,6 +120,11 @@ qt6-test = [
     "pyside6==6.10.1",
     "qtpy==2.4.3",
 ]
+release = [
+    "pyinstaller",
+    "httmock>=1.4.0",
+    "mkdocs-material==9.7.1",
+]
 dev = [
     # Common dev tools
     "httmock>=1.4.0",

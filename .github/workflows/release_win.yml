@@ -21,7 +21,7 @@ jobs:
           architecture: x64
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/windows/requirements.txt
+        run: python3 -m pip install .\hydrus --group hydrus/pyproject.toml:release --group hydrus/pyproject.toml:mpv-normal --group hydrus/pyproject.toml:opencv-normal --group hydrus/pyproject.toml:other-normal --group hydrus/pyproject.toml:qt6-normal
       - 
         name: Build docs to /help
         run: mkdocs build -d help
