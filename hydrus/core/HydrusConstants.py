@@ -6,13 +6,18 @@ import sys
 # if you ever remove this, don't forget it is in HydrusBoot as the third party library check
 import yaml
 
-# old method of getting frozen dir, doesn't work for symlinks looks like:
-# BASE_DIR = getattr( sys, '_MEIPASS', None )
-
 RUNNING_CLIENT = False
 RUNNING_SERVER = False
 
 RUNNING_FROM_FROZEN_BUILD = getattr( sys, 'frozen', False )
+
+# since pyinstaller 4.3, __file__ is corrected and will work in frozen as it does in source
+# __file__ paths are virtual--the actual .pyc files are bundled into a PYZ-00.pyz archive inside the exe or whatever
+
+# this file is stored in hydrus/core
+HYDRUS_MODULE_BASE_DIR = os.path.dirname( os.path.dirname( os.path.realpath( __file__ ) ) )
+
+CONTENT_BASE_DIR = os.path.dirname( HYDRUS_MODULE_BASE_DIR )
 
 if RUNNING_FROM_FROZEN_BUILD:
     
@@ -20,26 +25,39 @@ if RUNNING_FROM_FROZEN_BUILD:
     
     BASE_DIR = os.path.dirname( real_exe_path )
     
+    if os.path.exists( os.path.join( CONTENT_BASE_DIR, 'static' ) ):
+        
+        # ok everything is fine. in the new spec, this location is base_dir/lib
+        pass
+        
+    elif os.path.exists( os.path.join( BASE_DIR, 'static' ) ):
+        
+        # something crazy is going on, but let's try and recover
+        CONTENT_BASE_DIR = BASE_DIR
+        
+    else:
+        
+        raise Exception( 'Could not determine the data base directory! Please tell hydev!' )
+        
+    
 else:
     
-    try:
-        
-        hc_realpath_dir = os.path.dirname( os.path.realpath( __file__ ) )
-        
-        HYDRUS_MODULE_DIR = os.path.split( hc_realpath_dir )[0]
-        
-        BASE_DIR = os.path.split( HYDRUS_MODULE_DIR )[0]
-        
-    except NameError: # if __file__ is not defined due to some weird OS
-        
-        BASE_DIR = os.path.realpath( sys.path[0] )
-        
+    BASE_DIR = CONTENT_BASE_DIR
     
-    if BASE_DIR == '':
-        
-        BASE_DIR = os.getcwd()
-        
+
+if BASE_DIR == '':
     
+    raise Exception( 'Could not determine the base directory! Please tell hydev!' )
+    
+
+BIN_DIR = os.path.join( CONTENT_BASE_DIR, 'bin' )
+HELP_DIR = os.path.join( CONTENT_BASE_DIR, 'help' )
+
+LICENSE_PATH = os.path.join( CONTENT_BASE_DIR, 'license.txt' )
+
+DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
+
+#
 
 muh_platform = sys.platform.lower()
 
@@ -77,11 +95,6 @@ elif RUNNING_FROM_FROZEN_BUILD:
 elif RUNNING_FROM_MACOS_APP:
     NICE_RUNNING_AS_STRING = 'from App'
 
-BIN_DIR = os.path.join( BASE_DIR, 'bin' )
-HELP_DIR = os.path.join( BASE_DIR, 'help' )
-
-DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
-
 if PLATFORM_MACOS:
     
     desired_userpath_db_dir = os.path.join( '~', 'Library', 'Hydrus' )
@@ -101,8 +114,6 @@ if USERPATH_DB_DIR == desired_userpath_db_dir:
     
 
 WE_SWITCHED_TO_USERPATH = False
-
-LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
 
 #
 

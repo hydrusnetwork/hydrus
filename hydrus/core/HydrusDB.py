@@ -702,6 +702,26 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
                 self._is_first_start = True
                 
+                if self._db_dir != HC.DEFAULT_DB_DIR:
+                    
+                    # we are creating a new db dir outside of the default structure, so let's copy the help stuff over
+                    
+                    for filename in os.listdir( HC.DEFAULT_DB_DIR ):
+                        
+                        source_path = os.path.join( HC.DEFAULT_DB_DIR, filename )
+                        
+                        if os.path.isfile( source_path ):
+                            
+                            if filename.endswith( '.txt' ) or ( HC.PLATFORM_WINDOWS and filename == 'sqlite3.exe' ):
+                                
+                                dest_path = os.path.join( self._db_dir, filename )
+                                
+                                HydrusPaths.MirrorFile( source_path, dest_path )
+                                
+                            
+                        
+                    
+                
                 self._CreateDB()
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()

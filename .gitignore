@@ -76,6 +76,11 @@ ENV/
 env.bak/
 venv.bak/
 
+# uv stuff
+# normally you _do_ commit this, but we are not. there are still wrinkles to be ironed out before we commit to this
+# thus, we will ignore so as also not to confuse the branch of users who do use uv
+uv.lock
+
 # User-changeable files
 /client-user.bat
 /client-user.sh

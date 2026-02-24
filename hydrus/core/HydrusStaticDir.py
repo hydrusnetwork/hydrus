@@ -4,7 +4,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
-INSTALL_STATIC_DIR = os.path.join( HC.BASE_DIR, 'static' )
+INSTALL_STATIC_DIR = os.path.join( HC.CONTENT_BASE_DIR, 'static' )
 
 USE_USER_STATIC_DIR = True
 

@@ -8,7 +8,7 @@ name = "hydrus"
 version = "v660"
 description = "A personal booru-style media tagger"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "beautifulsoup4>=4.0.0",
     "cbor2>=5.6.5",
@@ -125,7 +125,7 @@ dev = [
     "httmock>=1.4.0",
     "mkdocs-material==9.7.1",
     #"setuptools==78.1.1",
-    #"PyInstaller==6.14.1",
+    #"PyInstaller==6.14.1", # py 3.14 issue here, so when you bring this back, test it
     # Windows-specific build tools
     #"pefile ; sys_platform == 'win32'",
     # macOS-specific build tools
