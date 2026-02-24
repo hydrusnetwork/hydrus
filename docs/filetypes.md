@@ -103,6 +103,7 @@ When played hydrus will first attempt to use the `animation.json` file, but if t
 | --------- | ------------ | ----------------------------- | :--------: | :----------------: | -------------------------------------------------------------------------------- |
 | clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint                                                                |
 | krita     | `.kra`       | `application/x-krita`         |     ✅     |         ✅         | Krita. Hydrus shows the embedded preview image if present in the file.           |
+| ora       | `.ora`       | `image/openraster`            |     ✅     |         ✅         | OpenRaster. Hydrus shows the embedded preview image if present in the file.      |
 | procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app                                                                    |
 | psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop. Hydrus shows the embedded preview image if present in the file. |
 | sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2                                                                   |

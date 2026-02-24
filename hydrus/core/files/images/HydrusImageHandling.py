@@ -146,6 +146,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusKritaHandling
 from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files import HydrusORAHandling
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageNormalisation
@@ -275,6 +276,18 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
             
         
         pil_image = HydrusKritaHandling.MergedPILImageFromKra( path )
+        
+        return GenerateNumPyImageFromPILImage( pil_image )
+        
+    
+    if mime == HC.IMAGE_OPENRASTER:
+        
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading ORA' )
+            
+        
+        pil_image = HydrusORAHandling.MergedPILImageFromOra( path )
         
         return GenerateNumPyImageFromPILImage( pil_image )
         
