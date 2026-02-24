@@ -37,7 +37,7 @@ if RUNNING_FROM_FROZEN_BUILD:
         
     else:
         
-        raise Exception( 'Could not determine the data base directory! Please tell hydev!' )
+        raise Exception( 'Could not determine the content base directory! Please tell hydev!' )
         
     
 else:
@@ -56,6 +56,7 @@ HELP_DIR = os.path.join( CONTENT_BASE_DIR, 'help' )
 LICENSE_PATH = os.path.join( CONTENT_BASE_DIR, 'license.txt' )
 
 DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
+CONTENT_DB_DIR = os.path.join( CONTENT_BASE_DIR, 'db' )
 
 #
 

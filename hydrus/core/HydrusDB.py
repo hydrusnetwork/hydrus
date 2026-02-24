@@ -702,13 +702,13 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
                 self._is_first_start = True
                 
-                if self._db_dir != HC.DEFAULT_DB_DIR:
+                if self._db_dir != HC.CONTENT_DB_DIR:
                     
                     # we are creating a new db dir outside of the default structure, so let's copy the help stuff over
                     
-                    for filename in os.listdir( HC.DEFAULT_DB_DIR ):
+                    for filename in os.listdir( HC.CONTENT_DB_DIR ):
                         
-                        source_path = os.path.join( HC.DEFAULT_DB_DIR, filename )
+                        source_path = os.path.join( HC.CONTENT_DB_DIR, filename )
                         
                         if os.path.isfile( source_path ):
                             
