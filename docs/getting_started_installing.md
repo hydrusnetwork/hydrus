@@ -33,14 +33,16 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     * The program has always worked better on macOS when [run from source](running_from_source.md), and this is now the only option here.
 
     !!! info "mpv on macOS"
-        macOS users have no mpv support for now, so no audio, and video (which has to be rendered with the software-based native viewer) may be laggy. Sorry!
+        macOS users have no mpv support for now. Use the QtMediaPlayer instead!
 
 === "Linux"
     
     !!! warning "Wayland (and MPV)"
-        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and [running from source](running_from_source.md) may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.
+        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and [running from source](running_from_source.md) may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.
         
-        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
+        If mpv is the only problem, then switch to the QtMediaPlayer under `options->media playback`.
+        
+        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
         
         It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
         
@@ -89,7 +91,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
             1. Search your /usr/ dir for `libgmodule*`. You are looking for something like `libgmodule-2.0.so`. Users report finding it in `/usr/lib64/` and `/usr/lib/x86_64-linux-gnu`.
             2. Copy that .so file to the hydrus install base directory.
             3. Boot the client and hit _help->about_ to see if it reports a version.
-            4. If it all seems good, hit _options->media_ to set up mpv as your player for video/audio and try to view some things.
+            4. If it all seems good, hit _options->media playback_ to set up mpv as your player for video/audio and try to view some things.
             5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
     *   You can also try [running the Windows version in wine](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
@@ -190,12 +192,12 @@ However, you need to be careful not to delete your database! It sounds silly, bu
 
 *   Make a backup if you can!
 *   Go to your install directory.
-*   Delete all the files and folders except the 'db' dir (and all of its contents, obviously).
+*   Delete all the files and folders except the 'db' dir and its contents. The 'db' dir is where all your stuff is.
 *   Extract the new version of hydrus as you normally do.
 
-After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
+After that, you'll have a 'clean' version of hydrus that is as if you had installed for the first time, with only the latest dlls, but still with your old db. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
 
-*Note that macOS App users will not ever have to do a clean install because every App is self-contained and non-merging with previous Apps. Source users similarly do not have to worry about this issue, although if they update their system python, they'll want to recreate their venv. Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.*
+*Note that source users do not have to worry about clean installs, although if they update their system python, they'll want to recreate their venv. Also, Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.*
 
 ## Big updates { id="big_updates" }
 

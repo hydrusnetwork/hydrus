@@ -287,7 +287,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
     Run `hydrus_client.bat` to start the client.
     
-    Alternately, if you want a very simple shortcut, you can call the venv directly with the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
+    Alternately, if you want a very simple shortcut, you can call the venv directly, using the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
     
     `C:\Hydrus\venv\Scripts\pythonw.exe C:\Hydrus\hydrus_client.py`
 
@@ -296,7 +296,9 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
     !!! warning "Wayland (and MPV)"
         Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, but some of these issues, particularly mpv embedding, seem to be intractable.
         
-        User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
+        If mpv is the only problem, then switch to the QtMediaPlayer under `options->media playback`.
+        
+        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
         
         It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
         
@@ -329,7 +331,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
     
     Run `hydrus_client.sh` to start the client. Don't forget to `chmod +x hydrus_client.sh` if you need it.
     
-    Alternately, if you want a very simple shortcut, you can call the venv directly with the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
+    Alternately, if you want a very simple shortcut, you can call the venv directly, using the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
     
     `/path/to/your/Hydrus/venv/bin/python /path/to/your/Hydrus/hydrus_client.py`
 
@@ -337,7 +339,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
     
     Run `hydrus_client.command` to start the client. Don't forget to `chmod +x hydrus_client.command` and `sudo xattr -rd com.apple.quarantine hydrus_client.command` if you need it.
     
-    Alternately, if you want a very simple shortcut, you can call the venv directly with the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
+    Alternately, if you want a very simple shortcut, you can call the venv directly, using the python executable we just installed. The setup venv script may have given you an example. It will look something like this:
     
     `/path/to/your/Hydrus/venv/bin/python /path/to/your/Hydrus/hydrus_client.py`
     
@@ -477,6 +479,8 @@ Then, to create a new venv:
     
 
 **After you have activated the venv**, you can use pip to install everything you need to it from the `pyproject.toml` in the install_dir:
+
+_This is going to be simpler in future!_
 
 ```
 python -m pip install . --group qt6-normal --group opencv-normal --group mpv-normal --group other-normal

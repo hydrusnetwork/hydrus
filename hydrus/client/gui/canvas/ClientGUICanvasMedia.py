@@ -317,7 +317,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    if show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ):
+    if show_action not in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER ):
         
         return False
         
@@ -331,7 +331,7 @@ def ShouldHaveAnimationBar( media, show_action ):
     is_audio = media.GetMime() in HC.AUDIO
     is_video = media.GetMime() in HC.VIDEO
     
-    if show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ):
+    if show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER ):
         
         if is_animation or is_audio or is_video:
             
@@ -353,7 +353,7 @@ def WeAreExpectingToLoadThisMediaFile( media_result: ClientMediaResult.MediaResu
     
     ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( media_result, canvas_type )
     
-    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ):
+    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER ):
         
         return True
         
@@ -1228,7 +1228,7 @@ class AnimationBar( QW.QWidget ):
             
             self._media_window.GotoFrame( current_frame_index )
             
-        elif isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ) ):
+        elif isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer ) ):
             
             time_index_ms = int( proportion * self._duration_ms )
             
@@ -1593,7 +1593,7 @@ class MediaContainer( QW.QWidget ):
         
         if media_window is not None:
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, ClientGUIQtMediaPlayer.QtMediaPlayer )
             
             media_window.removeEventFilter( self._additional_event_filter )
             
@@ -1635,7 +1635,7 @@ class MediaContainer( QW.QWidget ):
                         
                     
                 
-                if isinstance( media_window, ( ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ) ):
+                if isinstance( media_window, ClientGUIQtMediaPlayer.QtMediaPlayer ):
                     
                     qt_media_player = media_window
                     
@@ -1673,7 +1673,7 @@ class MediaContainer( QW.QWidget ):
 
     def _GetMaxZoomDimension( self ):
         
-        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW ) or isinstance( self._media_window, Animation ):
+        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER ) or isinstance( self._media_window, Animation ):
             
             return 8000
             
@@ -1759,18 +1759,11 @@ class MediaContainer( QW.QWidget ):
                     self._media_window.SetMedia( self._media, start_paused = self._start_paused )
                     
                 
-            elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET:
+            elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER:
                 
-                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_qt_media_player' ) or not isinstance( old_media_window, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget ):
+                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_qt_media_player' ) or not isinstance( old_media_window, ClientGUIQtMediaPlayer.QtMediaPlayer ):
                     
-                    self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget( self, self._canvas_type, self._background_colour_generator )
-                    
-                
-            elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW:
-                
-                if not CG.client_controller.new_options.GetBoolean( 'persist_media_window_qt_media_player' ) or not isinstance( old_media_window, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ):
-                    
-                    self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView( self, self._canvas_type, self.parentWidget(), self._background_colour_generator )
+                    self._media_window = ClientGUIQtMediaPlayer.QtMediaPlayer( self, self._canvas_type, self.parentWidget(), self._background_colour_generator )
                     
                     self._media_window.InstallMouseMoveCatcher( self._qt_media_player_graphics_view_mouse_move_catcher )
                     
@@ -1799,7 +1792,7 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.installEventFilter( self._additional_event_filter )
             
-            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView )
+            launch_media_viewer_classes = ( Animation, ClientGUIMPV.MPVWidget, StaticImage, ClientGUIQtMediaPlayer.QtMediaPlayer )
             
             if isinstance( self._media_window, launch_media_viewer_classes ):
                 
@@ -2142,7 +2135,7 @@ class MediaContainer( QW.QWidget ):
     
     def CurrentlyPresentingMediaWithDuration( self ):
         
-        return isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ) )
+        return isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer ) )
         
     
     def DoEdgePan( self, pan_type: int ):
@@ -2234,8 +2227,7 @@ class MediaContainer( QW.QWidget ):
         class_to_desc_dict = {
             StaticImage : 'Hydrus Native Static Image',
             Animation : 'Hydrus Native Animation Player',
-            ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget : 'QtMediaPlayer (VideoPlayer)',
-            ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView : 'QtMediaPlayer (GraphicsView)',
+            ClientGUIQtMediaPlayer.QtMediaPlayer : 'QtMediaPlayer',
             ClientGUIMPV.MPVWidget : 'MPV Embed Player',
             EmbedButton : 'Embed Button',
             OpenExternallyPanel : 'Open Externally Panel'
@@ -2628,7 +2620,7 @@ class MediaContainer( QW.QWidget ):
             return False
             
         
-        return isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget, ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ) ) and self._media.HasAudio()
+        return isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer ) ) and self._media.HasAudio()
         
     
     def sizeHint(self) -> QC.QSize:

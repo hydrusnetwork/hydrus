@@ -109,7 +109,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         qt_media_panel = ClientGUICommon.StaticBox( self, 'QtMediaPlayer' )
         
         self._persist_media_window_qt_media_player = QW.QCheckBox( mpv_panel )
-        self._persist_media_window_qt_media_player.setToolTip( ClientGUIFunctions.WrapToolTip( 'When moving from video to video, should we re-use the same Qt player or create/swap to a different one? This has been unstable or flickery in the past, but I am ready to test it now.' ) )
+        self._persist_media_window_qt_media_player.setToolTip( ClientGUIFunctions.WrapToolTip( 'When moving from video to video, should we re-use the same Qt player or create/swap to a different one? This can sometimes be flickery.' ) )
         
         self._qt_media_player_opengl_test = QW.QCheckBox( qt_media_panel )
         self._qt_media_player_opengl_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'Try this and load up some big heavy vids--does it improve performance? Cause crashes? I noticed some flickering in Windows as windows reinitialise, but maybe it helps elsewhere?' ) )
@@ -268,7 +268,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'TEST: Use the same QtMediaPlayer through media transitions:', self._persist_media_window_qt_media_player ) )
+        rows.append( ( 'DEBUG: Use the same QtMediaPlayer through media transitions:', self._persist_media_window_qt_media_player ) )
         rows.append( ( 'TEST: Use OpenGL Window in QtMediaPlayer:', self._qt_media_player_opengl_test ) )
         
         gridbox = ClientGUICommon.WrapInGrid( qt_media_panel, rows )
@@ -398,7 +398,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             pretty_preview_show_action += ', start with embed button'
             
         
-        no_show = { media_show_action, preview_show_action }.isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW } )
+        no_show = { media_show_action, preview_show_action }.isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER } )
         
         if no_show:
             

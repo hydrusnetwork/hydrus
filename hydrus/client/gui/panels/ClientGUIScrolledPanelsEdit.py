@@ -1847,8 +1847,6 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preview_start_paused = QW.QCheckBox( self )
         self._preview_start_with_embed = QW.QCheckBox( self )
         
-        advanced_mode = CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
-        
         for action in possible_show_actions:
             
             if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV and not ClientGUIMPV.MPV_IS_AVAILABLE:
@@ -1933,9 +1931,16 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = 'Setting media view options for ' + HC.mime_string_lookup[ self._mime ] + '.'
         
-        if not ClientGUIMPV.MPV_IS_AVAILABLE:
+        if CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV in possible_show_actions:
             
-            text += ' MPV is not available for this client.'
+            if not ClientGUIMPV.MPV_IS_AVAILABLE:
+                
+                text += '\n\nmpv is not available for this client. Try the QtMediaPlayer as a fallback.'
+                
+            else:
+                
+                text += '\n\nmpv is higher quality but can be buggy. If you have problems, try the QtMediaPlayer as a fallback.'
+                
             
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1951,7 +1956,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'preview starts paused: ', self._preview_start_paused ) )
         rows.append( ( 'preview starts covered with an embed button: ', self._preview_start_with_embed ) )
         
-        if set( possible_show_actions ).isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_GRAPHICS_VIEW } ):
+        if set( possible_show_actions ).isdisjoint( { CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER } ):
             
             self._media_scale_up.hide()
             self._media_scale_down.hide()

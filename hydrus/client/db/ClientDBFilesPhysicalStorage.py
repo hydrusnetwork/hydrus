@@ -1,3 +1,4 @@
+import functools
 import os
 import sqlite3
 
@@ -185,6 +186,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         return absolute_location
         
     
+    @functools.lru_cache( maxsize = 16 )
     def GetLocationId( self, absolute_location: str ):
         
         # TODO: we may need to have some clever alternate call or bool here that says 'hey I need you to check every possible conjugation of this location', which will read all locations and absolute normalise them somehow
@@ -208,7 +210,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         return location_id
         
     
-    def Granularise2To3( self, job_status: ClientThreading.JobStatus ):
+    def Granularise( self, job_status: ClientThreading.JobStatus, starting_granularity: int, ending_granularity: int ):
         
         location_ids = self._STL( self._Execute( 'SELECT DISTINCT location_id FROM client_files_subfolders;' ) )
         
@@ -216,7 +218,9 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         try:
             
-            granularise_result = ClientFilesPhysical.RegranulariseBaseLocation( locations, [ 'f', 't' ], 2, 3, job_status )
+            # IN FUTURE, IF AND WHEN WE SUPPORT MULTIPLE LOCATIONS FOR A PREFIX, WE WILL WANT TO MAKE THIS MORE SOPHISTICATED
+            
+            ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files ) = ClientFilesPhysical.RegranulariseFileStorage( locations, [ 'f', 't' ], starting_granularity, ending_granularity, job_status )
             
         except HydrusExceptions.CancelledException:
             
@@ -230,7 +234,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             CG.client_controller.pub( 'message', job_status )
             
-            ClientFilesPhysical.RegranulariseBaseLocation( locations, [ 'f', 't' ], 3, 2, job_status )
+            ClientFilesPhysical.RegranulariseFileStorage( locations, [ 'f', 't' ], ending_granularity, starting_granularity, job_status )
             
             raise
             
@@ -238,7 +242,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             HydrusData.PrintException( e, do_wait = False )
             
-            message = 'Granularisation failed!! I am paused now, but when this dialog is closed, I will attempt to undo and return to granularisation 2. If you do not want to attempt to repair the damage, kill the hydrus process now. The status window will move to the bottom-right of the main gui window. Just wait it out please.'
+            message = f'Granularisation failed!! I am paused now, but when this dialog is closed, I will attempt to undo and return to granularisation {starting_granularity}. If you do not want to attempt to repair the damage, kill the hydrus process now. The status window will move to the bottom-right of the main gui window. Just wait it out please.'
             message += '\n\n'
             message += 'The error, which has been logged in more detail and will be repeated later, is:'
             message += '\n\n'
@@ -252,31 +256,29 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             
             CG.client_controller.pub( 'message', job_status )
             
-            ClientFilesPhysical.RegranulariseBaseLocation( locations, [ 'f', 't' ], 3, 2, job_status )
+            ClientFilesPhysical.RegranulariseFileStorage( locations, [ 'f', 't' ], ending_granularity, starting_granularity, job_status )
             
             raise
             
-        
-        hex_chars = '0123456789abcdef'
-        
-        old_data = self._Execute( 'SELECT prefix, location_id FROM client_files_subfolders;' ).fetchall()
         
         self._Execute( 'DELETE FROM client_files_subfolders;' )
         
         inserts = []
         
-        for ( prefix, location_id ) in old_data:
+        for ( prefix, location ) in new_prefixes_to_locations.items():
             
-            inserts.extend( [ ( prefix + hex_char, location_id ) for hex_char in hex_chars ] )
+            location_id = self.GetLocationId( location )
+            
+            inserts.append( ( prefix, location_id ) )
             
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location_id ) VALUES ( ?, ? );', inserts )
         
         self._Execute( 'DELETE FROM current_storage_granularity;' )
         
-        self._Execute( 'INSERT INTO current_storage_granularity ( granularity ) VALUES ( ? );', ( 3, ) )
+        self._Execute( 'INSERT INTO current_storage_granularity ( granularity ) VALUES ( ? );', ( ending_granularity, ) )
         
-        return granularise_result
+        return ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files )
         
     
     def Initialise( self ):
@@ -433,13 +435,14 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM ideal_client_files_locations;' )
         
+        # small chance that this does an 'IGNORE' if two given paths have the same portable path; I'm actually ok with it
         for base_location in media_base_locations:
             
             location_id = self.GetLocationId( base_location.path )
             ideal_weight = base_location.ideal_weight
             max_num_bytes = base_location.max_num_bytes
             
-            self._Execute( 'INSERT INTO ideal_client_files_locations ( location_id, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( location_id, ideal_weight, max_num_bytes ) )
+            self._Execute( 'INSERT OR IGNORE INTO ideal_client_files_locations ( location_id, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( location_id, ideal_weight, max_num_bytes ) )
             
         
         self._Execute( 'DELETE FROM ideal_thumbnail_override_location;' )

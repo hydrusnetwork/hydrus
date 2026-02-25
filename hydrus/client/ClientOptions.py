@@ -22,7 +22,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_NAME = 'Client Options'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self ):
         
@@ -53,8 +53,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            video_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
-            audio_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            video_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER
+            audio_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER
             
             video_zoom_info = ( CC.MEDIA_VIEWER_SCALE_100, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, CC.MEDIA_VIEWER_SCALE_TO_CANVAS, True, CC.ZOOM_LANCZOS4, CC.ZOOM_AREA )
             
@@ -346,7 +346,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'always_start_media_viewers_always_on_top' : False,
             'always_start_media_viewers_frameless' : False,
             'qt_media_player_opengl_test' : False,
-            'persist_media_window_qt_media_player' : True,
+            'persist_media_window_qt_media_player' : False,
             'persist_media_window_mpv' : False,
         }
         
@@ -1147,6 +1147,33 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            if 'media_view' in loaded_dictionary:
+                
+                for ( mime, ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) ) in list( loaded_dictionary[ 'media_view' ].items() ):
+                    
+                    if media_show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET:
+                        
+                        media_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER
+                        
+                    
+                    if preview_show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER_VIDEO_WIDGET:
+                        
+                        preview_show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER
+                        
+                    
+                    loaded_dictionary[ 'media_view' ][ mime ] = ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info )
+                    
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 7, new_serialisable_info )
             
         
     

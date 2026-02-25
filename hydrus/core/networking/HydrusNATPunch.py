@@ -57,6 +57,7 @@ for filename in possible_bin_filenames:
         break
         
     
+
 EXTERNAL_IP = {}
 EXTERNAL_IP[ 'ip' ] = None
 EXTERNAL_IP[ 'time' ] = 0

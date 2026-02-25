@@ -43,6 +43,10 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 
 * [hydownloader](https://gitgud.io/thatfuckingbird/hydownloader): Hydrus-like download system based on gallery-dl. It solves many advanced problems the native downloader cannot handle.
 
+### AI integration
+
+* [HydrusMCP](https://github.com/TheElo/HydrusMCPServer): Teaches an AI model how to interact with the Client API so you can task it to work with hydrus with natural language.
+
 ### Auto-taggers
 
 * [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus.

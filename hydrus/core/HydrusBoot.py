@@ -32,7 +32,7 @@ def AddBaseDirToEnvPath():
         
         ORIGINAL_PATH = os.environ[ 'PATH' ]
         
-        os.environ[ 'PATH' ] = HC.BASE_DIR + os.pathsep + os.environ[ 'PATH' ]
+        os.environ[ 'PATH' ] = HC.CONTENT_BASE_DIR + os.pathsep + os.environ[ 'PATH' ]
         
     
 

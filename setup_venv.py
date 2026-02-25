@@ -66,6 +66,10 @@ def check_python_version():
         print("WARNING: Python 3.10+ is required!")
         return False
         
+    elif sys.version_info >= ( 3, 15 ):
+        
+        print( 'You have a version of python newer than hydev tests with. You will definitely need the advanced install; I do not know if it can work!' )
+        
     elif sys.version_info >= ( 3, 14 ):
         
         print( 'You will need the advanced install. Also, select "t" for the (t)est versions of things.' )

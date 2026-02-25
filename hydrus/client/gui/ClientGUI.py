@@ -3796,10 +3796,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
         ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers' + HC.UNICODE_ELLIPSIS, 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
         
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage upnp' + HC.UNICODE_ELLIPSIS, 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
-        
         ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
         
         #
@@ -5249,11 +5245,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 domain_manager.SetURLClassKeysToParserKeys( url_class_keys_to_parser_keys )
                 
             
-        
-    
-    def _ManageUPnP( self ):
-        
-        with ClientGUIDialogsManage.DialogManageUPnP( self ) as dlg: dlg.exec()
         
     
     def _MoveMediaFiles( self ):
@@ -8663,7 +8654,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._persistent_mpv_widgets.append( mpv_widget )
         
     
-    def _UnloadAndPurgeQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget | ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView):
+    def _UnloadAndPurgeQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayer):
         
         if qt_media_player.IsCompletelyUnloaded():
             
@@ -8677,7 +8668,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def ReleaseQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayerVideoWidget | ClientGUIQtMediaPlayer.QtMediaPlayerGraphicsView ):
+    def ReleaseQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayer ):
         
         if qt_media_player.parentWidget() != self:
             

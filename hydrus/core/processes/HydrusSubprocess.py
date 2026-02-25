@@ -96,7 +96,7 @@ def GetSubprocessEnv():
                 
                 # pyinstaller can just replace this nice usually long str with multiple paths with base_dir/share
                 # absent the _orig above to rescue this, we'll populate with basic
-                if ':' not in xdg_data_dirs and HC.BASE_DIR in xdg_data_dirs:
+                if ':' not in xdg_data_dirs and ( HC.BASE_DIR in xdg_data_dirs or HC.CONTENT_BASE_DIR in xdg_data_dirs ):
                     
                     xdg_data_dirs = '/usr/local/share:/usr/share'
                     

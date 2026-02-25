@@ -197,11 +197,30 @@ class TestClientGranularisation( unittest.TestCase ):
                 
                 HydrusPaths.MakeSureDirectoryExists( subfolder.path )
                 
+                if prefix == 'f83':
+                    
+                    with open( subfolder.GetFilePath( '83' + os.urandom(30).hex() ), 'wb' ) as f:
+                        
+                        f.write( b'I am a file' )
+                        
+                    
+                    HydrusPaths.MakeSureDirectoryExists( os.path.join( subfolder.path, 'weird dir' ) )
+                    
+                    with open( subfolder.GetFilePath( 'hello' ), 'wb' ) as f:
+                        
+                        f.write( b'I am a weird file' )
+                        
+                    
+                
             
         
         job_status = ClientThreading.JobStatus()
         
-        ClientFilesPhysical.RegranulariseBaseLocation( [ base_location.path ], [ 'f', 't' ], 2, 3, job_status )
+        ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files ) = ClientFilesPhysical.RegranulariseFileStorage( [ base_location.path ], [ 'f', 't' ], 2, 3, job_status )
+        
+        self.assertEqual( num_files_moved, 1 )
+        self.assertEqual( num_weird_dirs, 1 )
+        self.assertEqual( num_weird_files, 1 )
         
         num_done = 0
         
@@ -211,6 +230,7 @@ class TestClientGranularisation( unittest.TestCase ):
                 
                 subfolder = ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location )
                 
+                self.assertEqual( new_prefixes_to_locations[ prefix ], subfolder.base_location.path )
                 self.assertTrue( subfolder.PathExists() )
                 
                 num_done += 1
@@ -236,11 +256,23 @@ class TestClientGranularisation( unittest.TestCase ):
                 
                 HydrusPaths.MakeSureDirectoryExists( subfolder.path )
                 
+                if prefix == 'f83a':
+                    
+                    with open( subfolder.GetFilePath( '83a' + os.urandom(29).hex() ), 'wb' ) as f:
+                        
+                        f.write( b'hello' )
+                        
+                    
+                
             
         
         job_status = ClientThreading.JobStatus()
         
-        ClientFilesPhysical.RegranulariseBaseLocation( [ base_location.path ], [ 'f', 't' ], 3, 2, job_status )
+        ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files ) = ClientFilesPhysical.RegranulariseFileStorage( [ base_location.path ], [ 'f', 't' ], 3, 2, job_status )
+        
+        self.assertEqual( num_files_moved, 1 )
+        self.assertEqual( num_weird_dirs, 0 )
+        self.assertEqual( num_weird_files, 0 )
         
         num_done = 0
         
@@ -257,6 +289,7 @@ class TestClientGranularisation( unittest.TestCase ):
                 
                 subfolder = ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location )
                 
+                self.assertEqual( new_prefixes_to_locations[ prefix ], subfolder.base_location.path )
                 self.assertTrue( subfolder.PathExists() )
                 
                 num_done += 1
@@ -284,7 +317,7 @@ class TestClientGranularisation( unittest.TestCase ):
                 
                 if prefix == 'f83':
                     
-                    with open( subfolder.GetFilePath( os.urandom(32).hex() ), 'wb' ) as f:
+                    with open( subfolder.GetFilePath( '83' + os.urandom(30).hex() ), 'wb' ) as f:
                         
                         f.write( b'hello' )
                         
@@ -298,7 +331,43 @@ class TestClientGranularisation( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.CancelledException ):
             
-            ClientFilesPhysical.RegranulariseBaseLocation( [ base_location.path ], [ 'f' ], 2, 3, job_status )
+            ClientFilesPhysical.RegranulariseFileStorage( [ base_location.path ], [ 'f' ], 2, 3, job_status )
+            
+        
+        HydrusPaths.DeletePath( test_dir )
+        
+    
+    def test_folder_creation_error( self ):
+        
+        test_dir = HydrusTemp.GetSubTempDir( 'test_granularisation_cancel' )
+        
+        base_location = ClientFilesPhysical.FilesStorageBaseLocation( test_dir, 1 )
+        
+        for prefix_type in [ 'f' ]:
+            
+            for prefix in HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, 2 ):
+                
+                subfolder = ClientFilesPhysical.FilesStorageSubfolder( prefix, base_location )
+                
+                HydrusPaths.MakeSureDirectoryExists( subfolder.path )
+                
+                if prefix == 'f83':
+                    
+                    with open( subfolder.GetFilePath( 'd' ), 'wb' ) as f:
+                        
+                        f.write( b'hello I am blocking the creation of a d folder' )
+                        
+                    
+                
+            
+        
+        job_status = ClientThreading.JobStatus()
+        
+        job_status.Cancel()
+        
+        with self.assertRaises( Exception ):
+            
+            ClientFilesPhysical.RegranulariseFileStorage( [ base_location.path ], [ 'f' ], 2, 3, job_status )
             
         
         HydrusPaths.DeletePath( test_dir )

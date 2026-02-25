@@ -9,7 +9,7 @@ hide:
 
 The hydrus network client is a file-management application written for internet-fluent media nerds who have large file collections. It browses with tags instead of folders, a little like a booru on your desktop. If they wish, users can easily share tags anonymously through a public server. Everything is free, no ads, and privacy is the first concern. If you have 10,000+ files and cannot find anything, hydrus might help!
 
-Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](filetypes.md). On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. Some supported filetypes cannot be viewed directly in the client, such as PDF, but it is easy to launch any file with your OS's default program.
+Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](filetypes.md). It has audio and video playback via an mpv embed or a native Qt player. Some supported filetypes cannot be viewed directly in the client, such as PDF, but it is easy to launch any file with your OS's default program.
 
 I am continually working on the software and try to put out a new release every Wednesday by 8pm EST. Executable releases are available for Windows and Linux, but the program is in python, so you can also just run it straight from the source code in Windows, Linux, or macOS. I welcome feedback of any sort and will try to get back to any pings every Saturday.
 

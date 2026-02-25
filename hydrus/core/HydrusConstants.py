@@ -75,6 +75,8 @@ elif PLATFORM_LINUX:
     NICE_PLATFORM_STRING = 'Linux'
 elif PLATFORM_HAIKU:
     NICE_PLATFORM_STRING = 'Haiku'
+else:
+    NICE_PLATFORM_STRING = 'Unknown?!'
 
 NICE_ARCHITECTURE_STRING = platform.machine()
 
@@ -83,10 +85,9 @@ if NICE_ARCHITECTURE_STRING == 'AMD64':
     NICE_ARCHITECTURE_STRING = 'x86_64'
     
 
+# this is obviously old, but we'll leave it in for any future attempts
 RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
 
-# I used to check argv[0], but it is unreliable
-# sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
 RUNNING_FROM_SOURCE = not ( RUNNING_FROM_FROZEN_BUILD or RUNNING_FROM_MACOS_APP )
 
 if RUNNING_FROM_SOURCE:
@@ -95,6 +96,8 @@ elif RUNNING_FROM_FROZEN_BUILD:
     NICE_RUNNING_AS_STRING = 'from frozen build'
 elif RUNNING_FROM_MACOS_APP:
     NICE_RUNNING_AS_STRING = 'from App'
+else:
+    NICE_RUNNING_AS_STRING = 'from unknown?!'
 
 if PLATFORM_MACOS:
     
@@ -123,7 +126,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 660
+SOFTWARE_VERSION = 661
 CLIENT_API_VERSION = 88
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

@@ -76,9 +76,9 @@ Now:
 
 Hydrus supports many filetypes. A full list can be viewed on the [Supported Filetypes](filetypes.md) page.
 
-Although some support is imperfect for the complicated filetypes. For the Windows and Linux built releases, hydrus now embeds an MPV player for video, audio and gifs, which provides smooth playback and audio, but some other environments may not support MPV and so will default when possible to the native hydrus software renderer, which does not support audio. When something does not render how you want, right-clicking on its thumbnail presents the option 'open externally', which will open the file in the appropriate default program (e.g. ACDSee, VLC).
+Support is imperfect for the complicated filetypes. For Windows and non-Wayland Linux, you can view video and audio smoothly with an mpv embed. For others, there is a native Qt Media Player that is more reliable but less powerful. You can right-click any media and easily 'open externally', which will open the file in the appropriate default program (e.g. qView, VLC).
 
-The client can also download files from several websites, including 4chan and other imageboards, many boorus, and gallery sites like deviant art and hentai foundry. You will learn more about this later.
+The client can also download files from several websites. You will learn more about this later.
 
 ## Inbox and archive
 

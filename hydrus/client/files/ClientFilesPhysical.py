@@ -5,6 +5,7 @@ import os
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core.files import HydrusFilesPhysicalStorage
@@ -87,9 +88,21 @@ def EstimateBaseLocationGranularity( base_location_path ) -> int | None:
         
     
 
-def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: list[ str ], starting_prefix_length: int, target_prefix_length: int, job_status: ClientThreading.JobStatus ):
+def RegranulariseFileStorage( base_location_paths: list[ str ], prefix_types: list[ str ], starting_prefix_length: int, ending_prefix_length: int, job_status: ClientThreading.JobStatus ):
+    """
+    This guy will potentially blat a future version of file storage that has multiple potential locations for a thing.
+    
+    It selects one canonical destination for each ending prefix, so if there are multiple sources that satisfy the starting prefix, we are going to be moving and merging things!
+    """
+    
+    # there is one canonical destination for each ending prefix, which means going from 3 to 2 may mean moving and merging some things
+    ending_prefixes_to_ending_subfolders = dict()
     
     base_location_paths_to_granular_folder_prefixes_deleted = collections.defaultdict( list )
+    
+    # I tested this with worker pool, to which it would batch out 100 renames at a time. the idea was to buffer renames against high latency storage
+    # ultimately it rarely got anything better than +20% speed, and at a huge cost to best-case speed because of overhead
+    # I KISSed it away. good try, but failed
     
     try:
         
@@ -97,7 +110,7 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
         num_weird_dirs = 0
         num_weird_files = 0
         
-        if starting_prefix_length == target_prefix_length:
+        if starting_prefix_length == ending_prefix_length:
             
             raise Exception( f'Called to granularise a file storage folder, but the starting and ending granularisation was the same ({starting_prefix_length})!!' )
             
@@ -108,10 +121,12 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
         for prefix_type in prefix_types:
             
             starting_prefixes_potential.update( HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, starting_prefix_length ) )
-            ending_prefixes_potential.update( HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, target_prefix_length ) )
+            ending_prefixes_potential.update( HydrusFilesPhysicalStorage.IteratePrefixes( prefix_type, ending_prefix_length ) )
             
         
         source_subfolders_we_are_doing: list[ FilesStorageSubfolder ] = []
+        
+        job_status.SetStatusText( 'checking sources' )
         
         for base_location_path in base_location_paths:
             
@@ -139,25 +154,28 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
             job_status.SetStatusText( f'Working "{starting_prefix}" ({HydrusNumbers.ValueRangeToPrettyString( num_source_subfolders_done, num_source_subfolders_to_do )})' + HC.UNICODE_ELLIPSIS )
             job_status.SetGauge( num_source_subfolders_done, num_source_subfolders_to_do )
             
-            if starting_prefix_length < target_prefix_length:
+            if starting_prefix_length < ending_prefix_length:
                 
-                ending_subfolders = [ FilesStorageSubfolder( ending_prefix, source_subfolder.base_location ) for ending_prefix in ending_prefixes_potential if ending_prefix.startswith( starting_prefix ) ]
-                
-                for ending_viable_subfolder in ending_subfolders:
-                    
-                    ending_viable_subfolder.MakeSureExists()
-                    
+                ending_prefixes_for_this_subfolder = [ ending_prefix for ending_prefix in ending_prefixes_potential if ending_prefix.startswith( starting_prefix ) ]
                 
             else:
                 
-                ending_prefix = starting_prefix[ : target_prefix_length + 1 ]
-                
-                ending_subfolders = [ FilesStorageSubfolder( ending_prefix, source_subfolder.base_location ) ]
+                ending_prefixes_for_this_subfolder = [ starting_prefix[ : ending_prefix_length + 1 ] ]
                 
             
-            hex_prefixes_to_ending_subfolders = { ending_subfolder.hex_prefix : ending_subfolder for ending_subfolder in ending_subfolders }
+            for ending_prefix in ending_prefixes_for_this_subfolder:
+                
+                if ending_prefix not in ending_prefixes_to_ending_subfolders:
+                    
+                    ending_subfolder = FilesStorageSubfolder( ending_prefix, source_subfolder.base_location )
+                    
+                    ending_subfolder.MakeSureExists()
+                    
+                    ending_prefixes_to_ending_subfolders[ ending_prefix ] = ending_subfolder
+                    
+                
             
-            all_filenames_to_move = []
+            all_rename_jobs = []
             
             # this returns isdir results very quickly!
             with os.scandir( source_subfolder.path ) as scan:
@@ -166,7 +184,7 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
                     
                     if entry.is_dir():
                         
-                        expected_dir = True in ( ending_subfolder.path.startswith( entry.path ) for ending_subfolder in ending_subfolders )
+                        expected_dir = True in ( ending_subfolder.path.startswith( entry.path ) for ending_subfolder in ending_prefixes_to_ending_subfolders.values() )
                         
                         if not expected_dir:
                             
@@ -177,55 +195,54 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
                         
                     else:
                         
-                        all_filenames_to_move.append( entry.name )
+                        filename = str( entry.name )
                         
-                    
-                
-            
-            num_filenames_to_do = len( all_filenames_to_move )
-            
-            for ( num_filenames_done, filename ) in enumerate( all_filenames_to_move ):
-                
-                if num_filenames_done % 100 == 0:
-                    
-                    job_status.SetStatusText( f'File {HydrusNumbers.ValueRangeToPrettyString( num_filenames_done, num_filenames_to_do )}', level = 2 )
-                    job_status.SetGauge( num_filenames_done, num_filenames_to_do, level = 2 )
-                    
-                    while job_status.IsPaused() or job_status.IsCancelled():
+                        source_path = source_subfolder.GetFilePath( filename )
                         
-                        time.sleep( 0.1 )
+                        filename_prefix = source_subfolder.prefix[0] + filename[ : ending_prefix_length ]
                         
-                        if job_status.IsCancelled():
+                        if filename_prefix in ending_prefixes_to_ending_subfolders:
                             
-                            raise HydrusExceptions.CancelledException( 'Cancelled by user' )
+                            destination_subfolder = ending_prefixes_to_ending_subfolders[ filename_prefix ]
+                            
+                            destination_path = destination_subfolder.GetFilePath( filename )
+                            
+                            all_rename_jobs.append( ( source_path, destination_path ) )
+                            
+                        else:
+                            
+                            num_weird_files += 1
+                            
+                            HydrusData.Print( f'When regranularising folders, I failed to find a destination for the file with path "{source_path}"! I imagine it does not have a nice normal hex name and snuck into Hydrus File Storage by accident. You probably want to clean it up.')
                             
                         
                     
                 
-                source_path = source_subfolder.GetFilePath( filename )
+            
+            for ( num_renames_done, num_renames_to_do, chunk_of_rename_jobs ) in HydrusLists.SplitListIntoChunksRich( all_rename_jobs, 100 ):
                 
-                filename_prefix = filename[ : target_prefix_length ]
+                job_status.SetStatusText( f'File {HydrusNumbers.ValueRangeToPrettyString( num_renames_done, num_renames_to_do )}', level = 2 )
+                job_status.SetGauge( num_renames_done, num_renames_to_do, level = 2 )
                 
-                if filename_prefix in hex_prefixes_to_ending_subfolders:
+                while job_status.IsPaused() or job_status.IsCancelled():
                     
-                    destination_subfolder = hex_prefixes_to_ending_subfolders[ filename_prefix ]
+                    time.sleep( 0.1 )
                     
-                    destination_path = destination_subfolder.GetFilePath( filename )
+                    if job_status.IsCancelled():
+                        
+                        raise HydrusExceptions.CancelledException( 'Cancelled by user' )
+                        
                     
-                    # very low overhead primitive that works well in this context. we are moving many small things across the same partition
+                
+                for ( source_path, destination_path ) in chunk_of_rename_jobs:
+                    
                     os.replace( source_path, destination_path )
                     
-                    num_files_moved += 1
-                    
-                else:
-                    
-                    num_weird_files += 1
-                    
-                    HydrusData.Print( f'When regranularising folders, I failed to find a destination for the file with path "{source_path}"! I imagine it does not have a nice normal hex name and snuck into Hydrus File Storage by accident. You probably want to clean it up.')
-                    
+                
+                num_files_moved += len( chunk_of_rename_jobs )
                 
             
-            if starting_prefix_length > target_prefix_length and len( os.listdir( str( source_subfolder.path ) ) ) == 0:
+            if starting_prefix_length > ending_prefix_length and len( os.listdir( str( source_subfolder.path ) ) ) == 0:
                 
                 base_location_paths_to_granular_folder_prefixes_deleted[ source_subfolder.base_location.path ].append( source_subfolder.prefix )
                 
@@ -234,7 +251,9 @@ def RegranulariseBaseLocation( base_location_paths: list[ str ], prefix_types: l
                 
             
         
-        return ( num_files_moved, num_weird_dirs, num_weird_files )
+        new_prefixes_to_canonical_locations = { ending_prefix : ending_subfolder.base_location.path for ( ending_prefix, ending_subfolder ) in ending_prefixes_to_ending_subfolders.items() }
+        
+        return ( new_prefixes_to_canonical_locations, num_files_moved, num_weird_dirs, num_weird_files )
         
     finally:
         

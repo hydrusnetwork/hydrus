@@ -100,8 +100,8 @@ from hydrus.client.networking import ClientNetworkingSessionsLegacy
 from hydrus.client.networking import ClientNetworkingBandwidthLegacy
 
 #
-#                                𝓑𝓵𝓮𝓼𝓼𝓲𝓷𝓰𝓼 𝓸𝓯 𝓽𝓱𝓮 𝓢𝓱𝓻𝓲𝓷𝓮 𝓸𝓷 𝓽𝓱𝓲𝓼 𝓗𝓮𝓵𝓵 𝓒𝓸𝓭𝓮
-#                                              ＲＥＳＯＬＶＥ ＩＮＣＩＤＥＮＴ
+#                                   𝓑𝓵𝓮𝓼𝓼𝓲𝓷𝓰𝓼 𝓸𝓯 𝓽𝓱𝓮 𝓢𝓱𝓻𝓲𝓷𝓮 𝓸𝓷 𝓽𝓱𝓲𝓼 𝓗𝓮𝓵𝓵 𝓒𝓸𝓭𝓮
+#                                           ＲＥＳＯＬＶＥ ＩＮＣＩＤＥＮＴ
 #
 # ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
 # ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
@@ -4041,7 +4041,7 @@ class DB( HydrusDB.HydrusDB ):
                 'file_maintenance_add_jobs_hashes' : self.modules_files_maintenance_queue.AddJobsHashes,
                 'file_maintenance_cancel_jobs' : self.modules_files_maintenance_queue.CancelJobs,
                 'file_maintenance_clear_jobs' : self.modules_files_maintenance.ClearJobs,
-                'granularise_2to3' : self.modules_files_physical_storage.Granularise2To3,
+                'granularise' : self.modules_files_physical_storage.Granularise,
                 'ideal_client_files_locations' : self.modules_files_physical_storage.SetIdealClientFilesLocations,
                 'maintain_hashed_serialisables' : self.modules_serialisable.MaintainHashedStorage,
                 'maintain_similar_files_tree' : self.modules_similar_files.MaintainTree,
@@ -8566,7 +8566,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     location_id = get_location_id_659( location )
                     
-                    self._Execute( 'INSERT INTO ideal_client_files_locations ( location_id, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( location_id, weight, max_num_bytes ) )
+                    # insert _or ignore_--one guy got a unique constraint error here, suggesting previously the same location was listed twice through some means
+                    self._Execute( 'INSERT OR IGNORE INTO ideal_client_files_locations ( location_id, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( location_id, weight, max_num_bytes ) )
                     
                 
                 for ( location, ) in old_ideal_thumbnail_override_location:
@@ -8575,6 +8576,51 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._Execute( 'INSERT INTO ideal_thumbnail_override_location ( location_id ) VALUES ( ? );', ( location_id, ) )
                     
+                
+            
+        
+        if version == 660:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                do_the_message = False
+                
+                media_view_options = new_options.GetMediaViewOptions()
+                
+                for ( mime, ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) ) in media_view_options.items():
+                    
+                    ( possible_show_actions, can_start_paused, can_start_with_embed ) = CC.media_viewer_capabilities[ mime ]
+                    
+                    if CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER in possible_show_actions and media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON ):
+                        
+                        do_the_message = True
+                        
+                        break
+                        
+                    
+                
+                if do_the_message:
+                    
+                    message = 'Hey, hydev is launching the QtMediaPlayer with this release. This is a nicer fallback for users who cannot run mpv. Unlike the "native player", it supports audio!'
+                    message += '\n\n'
+                    message += 'I noticed that you are set to view some audio/video with the "native player" or an "open externally button". I have not changed anything, but you might like to check out _options->media playback_ and try the QtMediaPlayer out!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+                new_options.SetBoolean( 'persist_media_window_qt_media_player', False )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to inspect/update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
                 
             
         

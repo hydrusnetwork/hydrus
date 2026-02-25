@@ -13,15 +13,15 @@ A hydrus client consists of three components:
 
 1.  **the software installation**
     
-    This is the part that comes with the installer or extract release, with the executable and dlls and a handful of resource folders. It doesn't store any of your settings--it just knows how to present a database as a nice application. If you just run the hydrus_client executable straight, it looks in its 'db' subdirectory for a database, and if one is not found, it creates a new one. If it sees a database running at a lower version than itself, it will update the database before booting it.
+    This is the part that comes with the installer or extract release, with the main executable and, in subdirectories, library files (.dll/.pyd/.so) and other resources. None of your settings or files are buried in this mess--it just knows how to present a database folder as a nice application. If you just run the hydrus_client executable straight, it looks at the `install_dir/db` subdirectory to see if there is a database, and if one is not found, it creates a new one. If it discovers a database running at a lower version than itself, it will update the database before booting it.
     
-    It doesn't really matter where you put this. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like _Program Files_.
+    It doesn't really matter where you put the software. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like _Program Files_.
     
-    If you run from source, things are basically the same, but you are building a virtual environment in the `venv` folder and launching hydrus_client.py from the activated venv instead. Note: a venv includes absolute path links, so you will have to rebuild your venv every time you move your install directory!
+    If you run from source, things are basically the same, but you are building a virtual environment, probably in a `venv` folder, and launching hydrus_client.py from the venv instead. Note: a venv includes absolute path links, so you will have to rebuild your venv every time you move your install directory!
     
 2.  **the actual SQLite database**
     
-    The client stores all of your settings and its current knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to _install_dir/db_. Everything you have ever set is in here. Depending on the amount of metadata your client is tracking, these files might total 1MB or upwards of 100GB.
+    The client stores all of your settings and its current knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to `install_dir/db`. Everything you have ever set is in here. Depending on the amount of metadata your client is tracking, these files might total 1MB or upwards of 100GB.
     
     In order to perform a search or to fetch or process tags, the client has to interact with these files in many small bursts, which means it is best if these files are on a drive with low latency. An SSD is ideal, but a regularly-defragged HDD with a reasonable amount of free space also works well.
     
@@ -31,14 +31,14 @@ A hydrus client consists of three components:
     
     Thumbnails tend to be fetched dozens at a time, and very randomly, so it is, again, ideal if they are stored on an SSD. Your regular media files--which on many clients total hundreds of GB--are usually fetched one at a time for human consumption and do not benefit from the expensive low-latency of an SSD. They are best stored on a cheap HDD, and, if desired, also work well across a network file system.
     
-    There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. Depending on an advanced setting called _granularity_, each of those may also have 16 subfolders, from 0-f.
+    There are 256 file folders, named using the hexadecimal prefix of the files they store, from f00 to fff, and 256 thumbnail folders, from t00 to tff. Thus you should expect to have 512 folders total. Depending on an advanced setting called _granularity_, you may have 16 further subfolders in each, named 0-f.
     
 
 ## these components can be put on different drives { id="different_drives" }
 
-Although an initial install will keep these parts together, it is possible to, say, run the SQLite database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.
+Although an initial install will keep these parts together, it is possible to, say, run the SQLite database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. If you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.
 
-Backing such an arrangement up is obviously more complicated, and the internal client backup is not sophisticated enough to capture everything, so I recommend you figure out a broader solution with a third-party backup program like FreeFileSync.
+Backing such an arrangement up is obviously more complicated, and the internal client backup is not sophisticated enough to capture everything, nor restore it, so I recommend you figure out a broader solution with a third-party backup program like FreeFileSync.
 
 ## pulling your media apart { id="pulling_media_apart" }
 
@@ -84,34 +84,34 @@ The current and ideal usages line up, and the defunct `C:\Hydrus Network\db\clie
 
 ## granularity { id="granularity" }
 
-ADVANCED, STILL IN TESTING, BE CAREFUL
+<span class="hydrus-warning">ADVANCED</span>
 
-To start with, the hydrus database stores its files in a two-hex 'granularity'. This means that your files or thumbnails are split into 256 parts across folders called 'fxx' or 'txx', where 'xx' is 00-ff in hexadecimal and corresponding to the prefix hex of a particular file hash. As the largest clients ran into the millions of files, each subfolder was getting pretty large, slowing access latency in certain cases and causing delays with "open externally" when an external video player scanned the origin folder of a video to search for subtitle files etc.. We realised we needed a finer granularity of storage.
+When you first start, the hydrus database stores its files in a two-hex 'granularity'. This means that your files or thumbnails are split into two sets of 256 folders called 'fxx' or 'txx', where 'xx' is 00-ff in hexadecimal and corresponding to the prefix hex of a particular file hash. As the largest clients ran into the millions of files, each subfolder was getting pretty large, slowing access latency in certain cases (e.g. "open externally" causing an external video player to scan the origin folder to search for subtitle files). We realised we needed a finer granularity of storage.
 
-As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx'. You can see your current granularity on the 'move media files' dialog and open up a sub-panel just to handle this variable.
+As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx', for two sets of 4096 partitions. You can see your current granularity on the `database->move media files` dialog and open up a sub-panel just to handle this variable:
 
-(screenshot here once I'm happy with the UI)
+![](images/db_migration_granularity_panel.png)
 
 Changing your granularity means moving every single file and thumbnail in your collection. There are two issues with this:
 
 ### it can take a while
 
-This has to be done in one step, and it can take a while. Even if we can move hundreds of files per second, if you have millions of files in total, it adds up.
+For now, this has to be done in one step, and it can take a while. Even if we can move hundreds of files per second, if you have millions of files in total, it adds up.
 
-My current estimates/guesses are:
+It works at about:
 
-- NVME SSD - 5,000 files/s
-- SATA HDD - 500 files/s
-- NAS - 100 files/s
-- Cloud storage - Assumed to be awful.
+- NVME/SSD: 3,000-5,000 files/s
+- SATA/USB HDD: 100-500 files/s
+- NAS/SMB: 50-250 files/s
+- Cloud storage: Assumed to be awful.
 
-I am looking for advanced users who try this to report back their speeds so I can harden these numbers.
+Since this can mean an 8-hour job on very large clients--the very clients I want to improve latency for--I am planning to break this job into pieces.
 
 ### you have to repeat the operation on your backups
 
 Once you have updated your client, you need to update your backups too. Since we have moved every single file, your backup comparison tool is probably going to think that everything has changed and want to do a 100% rewrite. We didn't actually change any files, though, and we don't want to waste this time and energy.
 
-Thus, use the other button on the dialog to change your backup granularity too. If you have separate thumbnail and file storages, run it on each folder.
+Thus, use the other buttons on the panel to change your backup granularity too. If you have separate thumbnail and file storages, run it on each folder.
 
 ### you do not have to do this
 

@@ -30,6 +30,20 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 
+granularity_speed_estimate = 'Granularisation migration works at about this speed:'
+granularity_speed_estimate += '\n\n'
+granularity_speed_estimate += 'NVME/SSD: 3,000-5,000 files/s'
+granularity_speed_estimate += '\n'
+granularity_speed_estimate += 'SATA/USB HDD: 100-500 files/s'
+granularity_speed_estimate += '\n'
+granularity_speed_estimate += 'NAS/SMB: 50-250 files/s'
+granularity_speed_estimate += '\n'
+granularity_speed_estimate += 'Cloud storage: should not be attempted'
+granularity_speed_estimate += '\n'
+granularity_speed_estimate += 'BTRFS filesystems are about 10x as fast.'
+granularity_speed_estimate += '\n\n'
+granularity_speed_estimate += 'If this is going to be too slow for you, it is ok to back out!'
+
 class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", current_granularity: int ):
@@ -65,6 +79,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._granularity_st.setWordWrap( True )
         
         self._migrate_2to3_button = ClientGUICommon.BetterButton( granularity_panel, 'I AM READY TO GO FROM 2 TO 3', self._Migrate2To3 )
+        self._migrate_3to2_button = ClientGUICommon.BetterButton( granularity_panel, 'I want to return from 3 back to 2', self._Migrate3To2 )
         
         backup_panel = ClientGUICommon.StaticBox( self, 'granularising offline storage' )
         
@@ -80,6 +95,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         granularity_panel.Add( self._granularity_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         granularity_panel.Add( self._migrate_2to3_button, CC.FLAGS_ON_RIGHT )
+        granularity_panel.Add( self._migrate_3to2_button, CC.FLAGS_ON_RIGHT )
         
         backup_panel.Add( self._backup_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         backup_panel.Add( self._migrate_backup_button_2to3, CC.FLAGS_ON_RIGHT )
@@ -89,7 +105,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        warning = 'THIS IS SERIOUSLY ONLY FOR ADVANCED USERS. AS I GATHER BETTER SPEED ESTIMATES, I ONLY WANT USERS WITH LESS THAN A MILLION USERS TO TRY THIS FOR NOW.'
+        warning = 'THIS IS SERIOUSLY ONLY FOR ADVANCED USERS. THE MIGRATION IS BIG AND SLOW, SO USERS WITH >1m FILES SHOULD THINK CAREFULLY.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setObjectName( 'HydrusWarning' )
@@ -108,18 +124,34 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._UpdateGranularityLabel()
         
     
-    def _Migrate2To3( self ):
+    def _MigrateDB( self, starting_granularity: int, ending_granularity: int ):
         
-        if self._current_granularity != 2:
+        if self._current_granularity != starting_granularity:
             
-            ClientGUIDialogsMessage.ShowCritical( self, 'error!', f'Hey, your current granularity is {self._current_granularity}, but it needs to be 2 to enter this process! Something went wrong, please tell hydev.' )
+            ClientGUIDialogsMessage.ShowCritical( self, 'error!', f'Hey, your current granularity is {self._current_granularity}, but it needs to be {starting_granularity} to start this process! Something went wrong, please tell hydev.' )
             
             return
             
         
-        message = 'We are going to be rearranging your file storage completely. The process can be cancelled if it is taking too long, but it has to do the same amount of work to undo. Once it is completed, it cannot currently be easily reversed. If it fails half way through, I will attempt to undo it.'
-        message += '\n\n'
-        message += 'Ideally, your client is currently calm and not trying to import many things. I estimate this runs on an SSD at 5,000 files/s, an HDD at 500 files/s, NAS at 100 files/s, and should not be attempted on cloud storage. If you think it will take too long, is ok to simply not do this.'
+        if starting_granularity == 2:
+            
+            message = 'We are going to be rearranging your file storage completely. The process can be cancelled if it is taking too long, but it has to do the same amount of work to undo. If it fails half way through, I will attempt to undo it.'
+            message += '\n\n'
+            
+        elif starting_granularity == 3:
+            
+            message = 'We are going to be rearranging your file storage completely, restoring it to how a client starts, granularity 2. The process can be cancelled if it is taking too long, but it has to do the same amount of work to undo. If it fails half way through, I will attempt to undo it.'
+            message += '\n\n'
+            message += 'If your client has done a lot of "move media files" since you moved to granularity 3, this job will require additional time to shuffle things around!'
+            
+        else:
+            
+            ClientGUIDialogsMessage.ShowCritical( 'error!', 'This process was started with a granularity other than 2 or 3! Something went wrong, please tell hydev!' )
+            
+            return
+            
+        
+        message += ' Ideally, your client is currently calm and not trying to import many things. ' + granularity_speed_estimate
         message += '\n\n'
         message += 'Do you have a recent backup, in case something goes wrong?'
         
@@ -132,7 +164,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
         
-        job_status.SetStatusTitle( 'Granularising Client File Storage' )
+        job_status.SetStatusTitle( f'Granularising Client File Storage {starting_granularity} to {ending_granularity}' )
         
         def qt_cancelled():
             
@@ -172,21 +204,26 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                self._current_granularity = 3
+                self._current_granularity = ending_granularity
                 
                 self._UpdateGranularityLabel()
                 
                 message = f'{HydrusNumbers.ToHumanInt( num_files_moved )} files moved in {HydrusTime.TimeDeltaToPrettyTimeDelta( time_took_float )}.'
                 
-                if num_weird_dirs == 0 and num_weird_files == 0:
+                if starting_granularity < ending_granularity:
                     
-                    message += '\n\n'
-                    message += 'Everything went great. You now have lower-latency file storage. The next step is to repeat this process for your backup file storage folders. Let hydev know if you have any problems!'
+                    granularity_desc = 'You now have finer, lower-latency file storage.'
                     
                 else:
                     
-                    message += '\n\n'
-                    message += 'Things went great. You now have lower-latency file storage. The next step is to repeat this process for your backup file storage folders. Let hydev know if you have any problems!'
+                    granularity_desc = 'You now have simpler file storage.'
+                    
+                
+                message += '\n\n'
+                message += f'Everything went great. {granularity_desc} The next step is to repeat this process for your backup file storage folders. Let hydev know if you have any problems!'
+                
+                if num_weird_dirs > 0 or num_weird_files > 0:
+                    
                     message += '\n\n'
                     message += f'By the way, you had {HydrusNumbers.ToHumanInt( num_weird_dirs )} weird directories and {HydrusNumbers.ToHumanInt( num_weird_files )} weird files in your storage. They were not touched, but everything has been logged, so check out your log and see what that old cruft is. It is probably something like OS-level thumbnail metadata; not a big deal.'
                     
@@ -205,7 +242,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 time_started_float = HydrusTime.GetNowFloat()
                 
-                ( num_files_moved, num_weird_dirs, num_weird_files ) = CG.client_controller.client_files_manager.Granularise2To3( job_status )
+                ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files ) = CG.client_controller.client_files_manager.Granularise( job_status, starting_granularity, ending_granularity )
                 
                 time_took_float = HydrusTime.GetNowFloat() - time_started_float
                 
@@ -242,6 +279,16 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _Migrate2To3( self ):
+        
+        self._MigrateDB( 2, 3 )
+        
+    
+    def _Migrate3To2( self ):
+        
+        self._MigrateDB( 3, 2 )
+        
+    
     def _MigrateFolder2To3( self ):
         
         self.MigrateFolder( 2, 3 )
@@ -254,7 +301,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def MigrateFolder( self, starting_granularity: int, ending_granularity: int ):
         
-        message = 'We are going to be rearranging the file storage of your selected folder completely. The process cannot be cancelled or undone. I estimate it runs on an SSD at 5,000 files/s, an HDD at 500 files/s, NAS at 100 files/s, and should not be attempted on cloud storage.'
+        message = 'We are going to be rearranging the file storage of your selected folder completely.' + granularity_speed_estimate
         message += '\n\n'
         message += 'When I ask which folder to work on, you want to select the one that _contains_ stuff like f86 or t32, often called "client_files" under a "db" dir. I will scan it beforehand to make sure it looks correct.'
         message += '\n\n'
@@ -327,7 +374,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def qt_cancelled():
             
-            message = 'You cancelled the job. The folder is now likely in a mixed state, so you will want to re-do the job either way to undo or complete it.'
+            message = 'You cancelled the job. The folder is now likely in a mixed state, so you will want to re-do the job either way to complete or undo it.'
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
@@ -369,7 +416,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 time_started_float = HydrusTime.GetNowFloat()
                 
-                ( num_files_moved, num_weird_dirs, num_weird_files ) = ClientFilesPhysical.RegranulariseBaseLocation( [ base_location_path ], [ 'f', 't' ], starting_granularity, ending_granularity, job_status )
+                ( new_prefixes_to_locations, num_files_moved, num_weird_dirs, num_weird_files ) = ClientFilesPhysical.RegranulariseFileStorage( [ base_location_path ], [ 'f', 't' ], starting_granularity, ending_granularity, job_status )
                 
                 time_took_float = HydrusTime.GetNowFloat() - time_started_float
                 
@@ -399,11 +446,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _UpdateGranularityLabel( self ):
         
-        show_button = False
-        
         if self._current_granularity == 2:
-            
-            show_button = True
             
             granularity_label = 'Your granularity is currently 2. If you are an advanced user, you are invited to move to 3.'
             
@@ -417,7 +460,8 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self._granularity_st.setText( granularity_label )
-        self._migrate_2to3_button.setVisible( show_button )
+        self._migrate_2to3_button.setVisible( self._current_granularity == 2 )
+        self._migrate_3to2_button.setVisible( self._current_granularity == 3 )
         
     
 

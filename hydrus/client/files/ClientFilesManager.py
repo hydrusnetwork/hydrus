@@ -1396,11 +1396,11 @@ class ClientFilesManager( object ):
         return path
         
     
-    def Granularise2To3( self, job_status: ClientThreading.JobStatus ):
+    def Granularise( self, job_status: ClientThreading.JobStatus, starting_granularity: int, ending_granularity: int ):
         
         with self._master_locations_rwlock.write:
             
-            granularise_result = CG.client_controller.WriteSynchronous( 'granularise_2to3', job_status )
+            granularise_result = CG.client_controller.WriteSynchronous( 'granularise', job_status, starting_granularity, ending_granularity )
             
             self._Reinit()
             

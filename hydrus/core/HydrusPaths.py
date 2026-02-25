@@ -923,9 +923,11 @@ def LaunchFile( path, launch_path = None ):
 
 def MakeSureDirectoryExists( path ):
     
-    if os.path.exists( path ):
+    try:
         
-        if os.path.isdir( path ):
+        st = os.stat( path )
+        
+        if stat.S_ISDIR( st.st_mode ):
             
             return
             
@@ -934,16 +936,19 @@ def MakeSureDirectoryExists( path ):
             raise Exception( f'Cannot create the directory "{path}" because it already exists as a normal file!' )
             
         
-    else:
+    except FileNotFoundError as e:
         
-        try:
-            
-            os.makedirs( path, exist_ok = True )
-            
-        except FileNotFoundError as e:
-            
-            raise FileNotFoundError( f'While trying to ensure the directory "{path}" exists, none of the possible parent folders seem to exist either! Is the device not plugged in?' ) from e
-            
+        pass # looking good
+        
+    
+    try:
+        
+        # lol this takes 100ms on my USB stick
+        os.makedirs( path, exist_ok = True )
+        
+    except FileNotFoundError as e:
+        
+        raise FileNotFoundError( f'While trying to ensure the directory "{path}" exists, none of the possible parent folders seem to exist either! Is the device not plugged in?' ) from e
         
     
 

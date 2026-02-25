@@ -7,6 +7,74 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 661](https://github.com/hydrusnetwork/hydrus/releases/tag/v661)
+
+### qt media player
+
+* the QtMediaPlayer test is complete, and I am making it the default fallback if mpv is unavailable! thanks to everyone who helped with it
+* this player is a video and audio player just like mpv, but it uses simpler native Qt tech and works more reliably than mpv. it has lower performance, but for macOS and Wayland users, there is now a viable way to play noise in hydrus
+* if you start up a new client and mpv is not available, video and audio is now set to use the QtMediaPlayer
+* users who are currently set to view some video/audio with the native viewer or an open externally button will get a special popup after updating explaining there is a new player and how to check it out
+* the old 'video widget (Test 1)' QtMediaPlayer is retired and the successful 'Graphics View (Test 2)' player is now just `QtMediaPlayer` in UI and code. anyone who has a view setting for the old test will be switched to the new on update
+* the 'use the same QtMediaPlayer through media transitions' test setting now defaults to False, is renamed to a DEBUG setting, and all users will be set to False on update. I fixed the bugs, but it has some flicker and doesn't appear to improve performance over just creating a new one every time
+
+### openraster support
+
+* thanks to a user, we now have OpenRaster (.ora) support! not dissimilar to Krita, this is an open 'image project' format (like PSD) that is supported by some programs like Gimp
+* we show the image like Krita or PSD in the normal media viewer
+
+### more granularisation work
+
+* thank you to those who tested the granularisation migrations! we found the migration speed was about as expected, except that the clever BTRFS filesysttem worked at 10x speed. no failures, just a bit slow for big clients
+* I wrote some more migration tech and have added a 'I want to return from 3 back to 2' button to the panel, so this is now completely undoable at the db level, and a couple pain-in-the-neck failure or backup recovery states are now easier to navigate
+* the granularisation routine also has some folder optimisations to reduce worst-time performance on some very slow storage devices
+* in an effort to buffer against high latency file storage, I tested out some worker pools to rename files in parallel. there may be a world where this improves performance radically for general use, but across my test platforms I would rarely get better than 20% improvement in speed, and best-case performance generally nosedived because of overhead. in my ongoing KISS push, I thus unwound the clever answer that didn't help all that much. this overall suggests that renaming isn't something you can cheat--depending on the device, it is either already well buffered or a rename is so primitive that the OS forces atomicity
+* updated the unit tests to test more file moves, prefix canonisation, and a subfolder creation failure error state
+* gave the help in 'database migration' a soft pass and added a screen of the panel
+
+### hydrus MCP
+
+* a user has been working on an MCP server for the hydrus API! this is basically an instruction set that teaches an AI model you are running (e.g. with LM Studio) how to talk to hydrus, so you can ask your model questions in natural language like 'how much did I import in the past 24 hours', and it goes and fetches the data it needs, thinks about it, and reports back. I added it to the Client API help list, and you can find it here: https://github.com/TheElo/HydrusMCPServer
+* as a side thing, I played with plugging some AI models into my IDE (PyCharm) this week. I haven't got much real experience with this stuff yet so I wanted to poke around. as many others say, I think it is really cool for certain things, but you need a high-performance model. I'm passionate about running models locally, and my underpowered NUCs can't run the bigger models that produce better-quality work, so I turned most of the tech off again and hardening my plan to get an AI box to sit under my desk (probably my new vidya machine when I have dosh saved up and can snipe a good price). I will thus be contributing my part to the tightening ram/GPU market, hooray
+
+### future build with new install structure
+
+* _only for advanced users. we'll test how this goes and then roll it out to everyone next week assuming no problems_
+* thanks to the work of another user, I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
+* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
+* special notes for this time: new cleaner one-directory build, and some version updates. clean install needed. I'd like to know if you have any path problems and how mpv goes on Windows
+* the specific changes this week are--
+* the builds now tuck all the .dlls and other library files and folders into a single `lib` subfolder, so the program is now structured `hydrus_client` and `hydrus_server` executables and a `lib` dir. if you boot like normal, you then get a second `db` directory. all much simpler and cleaner
+* if you use the Windows installer, you do not have to do anything; just install like normal and your old install will be cleaned up and the new one put in place. if you use the Windows or Linux extracts, **you will have to do a 'clean install'**, help here: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs. this is the last time you'll have to do such a messy clean install like this. if you haven't done a 'clean install' before, basically you delete everything except the 'db' dir and its contents before extracting like normal, to clear out old dlls and such
+* futhermore--
+* the Docker packages are updated to Alpine 3.23
+* SQLite on Windows is updated to 3.51.2
+* mpv on Windows is updated to 2026-02-01
+* thanks to the clean install, the Windows mpv dll is no longer renamed, but now `libmpv-2.dll`
+* and for the build scripts, the client and server specs are now merged into one, the gubbins in the spec is pushed to the new content_dir 'lib', Docker builds are cached better, and everything is cleaner
+
+### boring build path stuff
+
+* **if you patch how hydrus sets up its paths, watch out for changes to `HydrusConstants` and friends this week**
+* with the changes in the future build, hydrus is now a bit smarter about how it figures out paths--
+* it now differentiates between the base install dir and contents dir. it uses `__file__` tech more than before. in a source install, the base and contents dir are the same, but in a one-dir pyinstaller deployment, like we are testing, stuff like `static` is now in `base_dir/lib/static`
+
+### misc boring stuff
+
+* I finally finally caught up with a github repository job that was sitting on my desktop and now `https://hydrusnetwork.github.io/` redirects to the normal help at `https://hydrusnetwork.github.io/hydrus`
+* added the uv-specific `uv.lock` to the `.gitignore`. one is supposed to commit this, but there are still wrinkles to be ironed out before we buy in, and adding it to the ignore list stops some branch confusion for users who do use `uv`
+* added `.python-version` to the base dir, which certain environment managers pick up on as the suggested version to deploy. I have selected `3.13` as the current recommended source python. if you are otherwise, it isn't a big deal
+* the `pyproject.toml` now explicitly says `>=3.10,<3.15` as the supported pythons for hydrus (this adds a new 'not ready for 3.15.x' bound)
+* the `setup_venv.py` now moans at you especially if you start it up with python `>=3.15`
+* I am not totally happy with the recent changes to `pyproject.toml`, which had to be emergency-patched last week. I will be revisiting it in the near future with a big KISS brush. most of the overly-complicated groups are going to disappear such that normal package managers will just work out of the box with it, and `setup_venv.py` will be the canonical place to install test library versions. no big changes yet, but since I was already planning to sunset some group stuff for v373, expect that to be the new date for this to get much simpler. I'll try and push on this next week
+* because of a surprise unicode issue that broke the Windows github build last week, `mkdocs-material` is now pinned to `9.7.1`
+* if you create a new non-default-location database using the --db_dir (or the new build structure creates a new db in the new clean basedir), I now copy the .txt help files and the sqlite3.exe on Windows over to the new dir
+* misc help cleanup regarding the install structure
+* updated the help here and there to talk about QtMediaPlayer versus mpv
+* misc `HydrusConstants` cleanup
+* deleted the ancient UPnP dialog. I have no idea if any of it still worked, and I don't bundle the exe it relies on any more. I'll be clearing the optional upnp tech out from the servers similarly--this stuff is not my job and I'm not keeping up with the technical debt
+* fixed an issue with the location storage update code last week when the client being updated has two ideal storage locations set that are actually the same location. same deal for updating the locations in the 'move media files' dialog
+
 ## [Version 660](https://github.com/hydrusnetwork/hydrus/releases/tag/v660)
 
 ### misc
@@ -379,48 +447,3 @@ title: Changelog
 * fixed a checker options unit test that I accidentally broke last week with a last-minute change
 * updated the versions of the github actions in the runner workflows to be ready for Node24. I think that migration triggers on Github around April 2026, so we are way early. it looks like some of the docker stuff isn't 24 compat yet, so there may be another round of this early next year
 * deleted an old duplicate of the docker.yml workflow in 'build_files' that had fallen behind the master
-
-## [Version 651](https://github.com/hydrusnetwork/hydrus/releases/tag/v651)
-
-### user submission
-
-* the user who has been sending in UI features has some more--
-* the options dialog now has a search bar!! you type something in, and it'll present any text strings in the whole options dialog that match. you select one and it'll take you to the associated page and highlight the text. it is still experimental and because the underlying strings are a little jank, sometimes the results are weird too, but it is pretty cool and a clever way to get this functionality without a whole dialog rewrite, as I was expecting to do
-* the regular command palette now supports smart wraparound so you can press 'up' after typing something to get to the bottom of the list
-* it also supports page up/down/home/end for fast results navigation! I fixed a couple things with page up/down and made home/page up terminate on the top result, rather than the text entry--let me know if anything feels/renders wrong
-* a new checkbox in `options->command palette`, default on, makes favourite search selections in the command palette open a new page rather than populating the current
-* the command palette now highlights favourite search 'folder' name
-* bug fixes for some recent menu search stuff and undo/redo search stuff
-
-### duplicates auto-resolution launch
-
-* this system is now v1.0 and ready for all users to use. I invite everyone who has done some duplicates work but has yet to touch auto-resolution to check out the updated help here https://hydrusnetwork.github.io/hydrus/advanced_duplicates_auto_resolution.html
-* if you are interested but don't want to get into the details, there's a 'tl;dr:' section that tells you how to get set up in about a minute
-* if you have yet to do any duplicates work at all in hydrus, I also updated the core dupes help here: https://hydrusnetwork.github.io/hydrus/duplicates.html
-
-### misc
-
-* the duplicates filter's right-hand hover window now has a 'this window is always visible' checkbox under the cog menu. turn it off, and it will only appear when your mouse is over it, like the other hover windows
-* all 'checker options' in subscriptions and watchers now support sub-integer 'intended files per check' values. the spinner widget now changes in increments of 0.05 and can go as low as 0.25 (previously '1')
-* videos that are rotated with file metadata 90 or -90 degrees in the ffmpeg metadata report now get the correct resolution in hydrus and will get the correct shape of video canvas (non-letterboxed) with mpv or the native renderer. I have not scheduled all videos for a metadata regen since these seem to be very rare, but if you see a video with a whack thumbnail and it renders in, say, a small landscape cutout within a portrait black box, while being fine in an external player, try hitting `manage->maintenance->regen file metadata` on it. it is still doesn't fix, send it to me please!
-* an error of 'There are no playback devices available' in an 'ao/xxxxx' component from mpv now counts as 'crashy' in the emergency dump-out mpv error handler
-* all `fatal` mpv errors are now caught by the emergency dump-out mpv error handler and assumed to be 'crashy'
-* fixed a bug related to the new search history stuff that could raise an error if a search page were edited in some early initialisation states
-
-### boring stuff
-
-* added a new call to create new file search pages that uses the richer 'file search context' object. this allows the new 'load a favourite search from command palette' job to load the correct tag context. we still don't set the 'searching immediately' state correctly here, but it'd be nice to have one day
-* when file maintenance changes a file's filetype or resolution, details are now printed to the log
-* a safety throttle that stopped checker options checking too fast is relaxed to 'no faster than _one quarter_ of the time since the last hit'
-* tweaked some layout stuff in the options dialog
-
-### duplicates auto-resolution misc work, mostly boring
-
-* gave the duplicates and duplicates auto-resolution help a full pass
-* in the auto-resolution review actions window, the approve, deny, select-all, and both undo buttons will now enable/disable as their respective lists' selection status changes
-* for clarity and unity, replaced some final instances of 'declined' with 'denied' in the auto-resolution system
-* renamed 'both files match different searches' to 'the two files match different searches'
-* the pause icon button is now a clear text button with 'pause/play'. when I figure out a nice icon or dynamic icon-switching button for pause/play, I'll put this back
-* removed the 'this is being built' warning labels from the UI
-* fixed some bad tooltips in duplicate hover window
-* I put off a couple of features I had planned for launch, like having more modified time merge in duplicate metadata merge options, and a column in the preview's failed-test thumbnail pair list to say which comparator failed. I didn't want to rush these out; I can add thm later in normal work
