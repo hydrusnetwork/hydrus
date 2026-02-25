@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.2">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
     
     
       
@@ -2992,14 +2992,15 @@
 </ul>
 <div class="admonition info">
 <p class="admonition-title">mpv on macOS</p>
-<p>macOS users have no mpv support for now, so no audio, and video (which has to be rendered with the software-based native viewer) may be laggy. Sorry!</p>
+<p>macOS users have no mpv support for now. Use the QtMediaPlayer instead!</p>
 </div>
 </div>
 <div class="tabbed-block">
 <div class="admonition warning">
 <p class="admonition-title">Wayland (and MPV)</p>
-<p>Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and <a href="running_from_source.html">running from source</a> may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.</p>
-<p>User testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable <code>QT_QPA_PLATFORM=xcb</code> (e.g. by putting <code>export QT_QPA_PLATFORM=xcb</code> in a boot script that launches <code>hydrus_client</code>) should do it. The 'xcb' should force X11.</p>
+<p>Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and <a href="running_from_source.html">running from source</a> may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.</p>
+<p>If mpv is the only problem, then switch to the QtMediaPlayer under <code>options-&gt;media playback</code>.</p>
+<p>If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable <code>QT_QPA_PLATFORM=xcb</code> (e.g. by putting <code>export QT_QPA_PLATFORM=xcb</code> in a boot script that launches <code>hydrus_client</code>) should do it. The 'xcb' should force X11.</p>
 <p>It does not work for everyone, though. If it fails, another user says setting <code>WAYLAND_DISPLAY=</code> (as in setting it to nothing) or unsetting it entirely with <code>unset WAYLAND_DISPLAY</code>, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do <code>sudo apt install xwayland</code> first.</p>
 <p>You should be able to see which window manager hydrus thinks it is running under in <code>help-&gt;about</code>, on the "Qt" row.</p>
 <p>I expect to revisit this question in future versions of Qt and Wayland, and I plan to try a different mpv embedding technique that I know Wayland should support--we'll see if the situation stabilises.</p>
@@ -3041,7 +3042,7 @@ Then please do this:  <ol>
 <li>Search your /usr/ dir for <code>libgmodule*</code>. You are looking for something like <code>libgmodule-2.0.so</code>. Users report finding it in <code>/usr/lib64/</code> and <code>/usr/lib/x86_64-linux-gnu</code>.</li>
 <li>Copy that .so file to the hydrus install base directory.</li>
 <li>Boot the client and hit <em>help-&gt;about</em> to see if it reports a version.</li>
-<li>If it all seems good, hit <em>options-&gt;media</em> to set up mpv as your player for video/audio and try to view some things.</li>
+<li>If it all seems good, hit <em>options-&gt;media playback</em> to set up mpv as your player for video/audio and try to view some things.</li>
 <li>If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider <a href="running_from_source.html">running from source</a></li>
 </ol>
 </li>
@@ -3138,11 +3139,11 @@ Then please do this:  <ol>
 <ul>
 <li>Make a backup if you can!</li>
 <li>Go to your install directory.</li>
-<li>Delete all the files and folders except the 'db' dir (and all of its contents, obviously).</li>
+<li>Delete all the files and folders except the 'db' dir and its contents. The 'db' dir is where all your stuff is.</li>
 <li>Extract the new version of hydrus as you normally do.</li>
 </ul>
-<p>After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.</p>
-<p><em>Note that macOS App users will not ever have to do a clean install because every App is self-contained and non-merging with previous Apps. Source users similarly do not have to worry about this issue, although if they update their system python, they'll want to recreate their venv. Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.</em></p>
+<p>After that, you'll have a 'clean' version of hydrus that is as if you had installed for the first time, with only the latest dlls, but still with your old db. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.</p>
+<p><em>Note that source users do not have to worry about clean installs, although if they update their system python, they'll want to recreate their venv. Also, Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.</em></p>
 <h2 id="big_updates">Big updates<a class="headerlink" href="#big_updates" title="Permanent link">&para;</a></h2>
 <p>If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v290-&gt;v330, may not work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to <a href="https://en.wikipedia.org/wiki/Software_rot">bit rot</a>, and so some underlying truth I assumed for the v299-&gt;v300 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.</p>
 <p>As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v290-&gt;v310 first, and boot it. If the database updates correctly and the program boots, then shut down and move on to v310-&gt;v330. If the update does not work, cut down the gap and try v290-&gt;v300, and so on. <strong>Again, it is very important you make a backup before starting a process like this so you can roll back and try a different version if things go wrong.</strong></p>
@@ -3281,7 +3282,7 @@ Almost every OS you can name.</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 7, 2026 20:58:05 UTC">January 7, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 25, 2026 22:07:16 UTC">February 25, 2026</span>
   </span>
 
     

@@ -35,6 +35,63 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_661"><a href="#version_661">version 661</a></h2>
+                    <ul>
+                        <li><h3>qt media player</h3></li>
+                        <li>the QtMediaPlayer test is complete, and I am making it the default fallback if mpv is unavailable! thanks to everyone who helped with it</li>
+                        <li>this player is a video and audio player just like mpv, but it uses simpler native Qt tech and works more reliably than mpv. it has lower performance, but for macOS and Wayland users, there is now a viable way to play noise in hydrus</li>
+                        <li>if you start up a new client and mpv is not available, video and audio is now set to use the QtMediaPlayer</li>
+                        <li>users who are currently set to view some video/audio with the native viewer or an open externally button will get a special popup after updating explaining there is a new player and how to check it out</li>
+                        <li>the old 'video widget (Test 1)' QtMediaPlayer is retired and the successful 'Graphics View (Test 2)' player is now just `QtMediaPlayer` in UI and code. anyone who has a view setting for the old test will be switched to the new on update</li>
+                        <li>the 'use the same QtMediaPlayer through media transitions' test setting now defaults to False, is renamed to a DEBUG setting, and all users will be set to False on update. I fixed the bugs, but it has some flicker and doesn't appear to improve performance over just creating a new one every time</li>
+                        <li><h3>openraster support</h3></li>
+                        <li>thanks to a user, we now have OpenRaster (.ora) support! not dissimilar to Krita, this is an open 'image project' format (like PSD) that is supported by some programs like Gimp</li>
+                        <li>we show the image like Krita or PSD in the normal media viewer</li>
+                        <li><h3>more granularisation work</h3></li>
+                        <li>thank you to those who tested the granularisation migrations! we found the migration speed was about as expected, except that the clever BTRFS filesysttem worked at 10x speed. no failures, just a bit slow for big clients</li>
+                        <li>I wrote some more migration tech and have added a 'I want to return from 3 back to 2' button to the panel, so this is now completely undoable at the db level, and a couple pain-in-the-neck failure or backup recovery states are now easier to navigate</li>
+                        <li>the granularisation routine also has some folder optimisations to reduce worst-time performance on some very slow storage devices</li>
+                        <li>in an effort to buffer against high latency file storage, I tested out some worker pools to rename files in parallel. there may be a world where this improves performance radically for general use, but across my test platforms I would rarely get better than 20% improvement in speed, and best-case performance generally nosedived because of overhead. in my ongoing KISS push, I thus unwound the clever answer that didn't help all that much. this overall suggests that renaming isn't something you can cheat--depending on the device, it is either already well buffered or a rename is so primitive that the OS forces atomicity</li>
+                        <li>updated the unit tests to test more file moves, prefix canonisation, and a subfolder creation failure error state</li>
+                        <li>gave the help in 'database migration' a soft pass and added a screen of the panel</li>
+                        <li><h3>hydrus MCP</h3></li>
+                        <li>a user has been working on an MCP server for the hydrus API! this is basically an instruction set that teaches an AI model you are running (e.g. with LM Studio) how to talk to hydrus, so you can ask your model questions in natural language like 'how much did I import in the past 24 hours', and it goes and fetches the data it needs, thinks about it, and reports back. I added it to the Client API help list, and you can find it here: https://github.com/TheElo/HydrusMCPServer</li>
+                        <li>as a side thing, I played with plugging some AI models into my IDE (PyCharm) this week. I haven't got much real experience with this stuff yet so I wanted to poke around. as many others say, I think it is really cool for certain things, but you need a high-performance model. I'm passionate about running models locally, and my underpowered NUCs can't run the bigger models that produce better-quality work, so I turned most of the tech off again and hardening my plan to get an AI box to sit under my desk (probably my new vidya machine when I have dosh saved up and can snipe a good price). I will thus be contributing my part to the tightening ram/GPU market, hooray</li>
+                        <li><h3>future build with new install structure</h3></li>
+                        <li>_only for advanced users. we'll test how this goes and then roll it out to everyone next week assuming no problems_</li>
+                        <li>thanks to the work of another user, I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.</li>
+                        <li>in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out</li>
+                        <li>special notes for this time: new cleaner one-directory build, and some version updates. clean install needed. I'd like to know if you have any path problems and how mpv goes on Windows</li>
+                        <li>the specific changes this week are--</li>
+                        <li>the builds now tuck all the .dlls and other library files and folders into a single `lib` subfolder, so the program is now structured `hydrus_client` and `hydrus_server` executables and a `lib` dir. if you boot like normal, you then get a second `db` directory. all much simpler and cleaner</li>
+                        <li>if you use the Windows installer, you do not have to do anything; just install like normal and your old install will be cleaned up and the new one put in place. if you use the Windows or Linux extracts, **you will have to do a 'clean install'**, help here: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs. this is the last time you'll have to do such a messy clean install like this. if you haven't done a 'clean install' before, basically you delete everything except the 'db' dir and its contents before extracting like normal, to clear out old dlls and such</li>
+                        <li>futhermore--</li>
+                        <li>the Docker packages are updated to Alpine 3.23</li>
+                        <li>SQLite on Windows is updated to 3.51.2</li>
+                        <li>mpv on Windows is updated to 2026-02-01</li>
+                        <li>thanks to the clean install, the Windows mpv dll is no longer renamed, but now `libmpv-2.dll`</li>
+                        <li>and for the build scripts, the client and server specs are now merged into one, the gubbins in the spec is pushed to the new content_dir 'lib', Docker builds are cached better, and everything is cleaner</li>
+                        <li><h3>boring build path stuff</h3></li>
+                        <li>**if you patch how hydrus sets up its paths, watch out for changes to `HydrusConstants` and friends this week**</li>
+                        <li>with the changes in the future build, hydrus is now a bit smarter about how it figures out paths--</li>
+                        <li>it now differentiates between the base install dir and contents dir. it uses `__file__` tech more than before. in a source install, the base and contents dir are the same, but in a one-dir pyinstaller deployment, like we are testing, stuff like `static` is now in `base_dir/lib/static`</li>
+                        <li><h3>misc boring stuff</h3></li>
+                        <li>I finally finally caught up with a github repository job that was sitting on my desktop and now `https://hydrusnetwork.github.io/` redirects to the normal help at `https://hydrusnetwork.github.io/hydrus`</li>
+                        <li>added the uv-specific `uv.lock` to the `.gitignore`. one is supposed to commit this, but there are still wrinkles to be ironed out before we buy in, and adding it to the ignore list stops some branch confusion for users who do use `uv`</li>
+                        <li>added `.python-version` to the base dir, which certain environment managers pick up on as the suggested version to deploy. I have selected `3.13` as the current recommended source python. if you are otherwise, it isn't a big deal</li>
+                        <li>the `pyproject.toml` now explicitly says `&gt;=3.10,&lt;3.15` as the supported pythons for hydrus (this adds a new 'not ready for 3.15.x' bound)</li>
+                        <li>the `setup_venv.py` now moans at you especially if you start it up with python `&gt;=3.15`</li>
+                        <li>I am not totally happy with the recent changes to `pyproject.toml`, which had to be emergency-patched last week. I will be revisiting it in the near future with a big KISS brush. most of the overly-complicated groups are going to disappear such that normal package managers will just work out of the box with it, and `setup_venv.py` will be the canonical place to install test library versions. no big changes yet, but since I was already planning to sunset some group stuff for v373, expect that to be the new date for this to get much simpler. I'll try and push on this next week</li>
+                        <li>because of a surprise unicode issue that broke the Windows github build last week, `mkdocs-material` is now pinned to `9.7.1`</li>
+                        <li>if you create a new non-default-location database using the --db_dir (or the new build structure creates a new db in the new clean basedir), I now copy the .txt help files and the sqlite3.exe on Windows over to the new dir</li>
+                        <li>misc help cleanup regarding the install structure</li>
+                        <li>updated the help here and there to talk about QtMediaPlayer versus mpv</li>
+                        <li>misc `HydrusConstants` cleanup</li>
+                        <li>deleted the ancient UPnP dialog. I have no idea if any of it still worked, and I don't bundle the exe it relies on any more. I'll be clearing the optional upnp tech out from the servers similarly--this stuff is not my job and I'm not keeping up with the technical debt</li>
+                        <li>fixed an issue with the location storage update code last week when the client being updated has two ideal storage locations set that are actually the same location. same deal for updating the locations in the 'move media files' dialog</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_660"><a href="#version_660">version 660</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
