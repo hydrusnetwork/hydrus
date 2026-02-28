@@ -1,7 +1,8 @@
 {
-  "editor.trimAutoWhitespace": false,
-  "editor.renderWhitespace": "boundary",
-  "files.trimTrailingWhitespace": false,
-  "diffEditor.ignoreTrimWhitespace": false,
-  "editor.tabSize": 4
+    "editor.trimAutoWhitespace": false,
+    "editor.renderWhitespace": "boundary",
+    "files.trimTrailingWhitespace": false,
+    "diffEditor.ignoreTrimWhitespace": false,
+    "editor.tabSize": 4,
+    "git.ignoreLimitWarning": true
 }
