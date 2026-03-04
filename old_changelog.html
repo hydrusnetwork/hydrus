@@ -35,6 +35,59 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_662"><a href="#version_662">version 662</a></h2>
+                    <ul>
+                        <li><h3>future build committed, clean install needed</h3></li>
+                        <li>This release commits the changes tested with the recent future build. The test went well but for the new mpv dll, which we will try again later.</li>
+                        <li>**Windows and Linux users who extract must perform a 'clean install' this week!** https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs</li>
+                        <li>Windows users who use the installer can update as normal</li>
+                        <li>In this new build, we have--</li>
+                        <li>build folder structure now tucks dlls and such into a 'lib' dir</li>
+                        <li>the Docker packages are updated to Alpine 3.23</li>
+                        <li>SQLite on Windows is updated to 3.51.2</li>
+                        <li>thanks to the clean install, the Windows mpv dll is no longer renamed, but now `libmpv-2.dll`</li>
+                        <li>and for the build scripts, the client and server specs are now merged into one, the gubbins in the spec is pushed to the new content_dir 'lib', Docker builds are cached better, and everything is cleaner</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>I wrote a new Comparator type that does weird hardcoded jobs on just one file, debuting 'A/B/either is a progressive jpeg/is a non-progressive jpeg'</li>
+                        <li>wrote an edit panel for these</li>
+                        <li>added some unit tests for this new type</li>
+                        <li><h3>tag menu and inversion</h3></li>
+                        <li>the tag/active predicates list 'search' menu is now split into 'open' and 'search'</li>
+                        <li>the 'invert' item in 'search' is updated for clarity--previously, it was trying to tapdance over some 'require/exclude' verbiage, but it wasn't clean. now it just says 'invert'</li>
+                        <li>after talking with some people and looking at the code, I'm making `system:(like rating) is x` no longer invertible (this is a special state that acts as a perfect 'not' and feeds into some UI actions and menu labels, for instance system:inbox/archive are inverts of each other). previously it did a 'like/dislike' flip, but that doesn't include files not rated. 'has rating' and 'no rating' still flip as before</li>
+                        <li>`system:rating less/greater than x` is now only invertible for inc/dec services, and it now does precise `&gt;3/&lt;4` switching</li>
+                        <li>'system:all/any x y z ratings rated' now invert correctly (they were previously just flipping the rated part, not the all/any too. the 'only' version is no longer invertible--I think we just don't support this with existing logic??</li>
+                        <li><h3>misc</h3></li>
+                        <li>the 'edit subscriptions' dialog now has an 'overwrite downloader' button to mass-set a new downloader for a selection of subs</li>
+                        <li>if the media viewer has not had a slideshow yet, the 'pause/play slideshow' shortcut will now start a new slideshow at the first defined custom time (default 1.0 seconds)</li>
+                        <li>if you stop a slideshow, the slideshow menu now provides 'resume at x seconds', firing off the 'pause/play' action</li>
+                        <li>the `resize window to fit media at specified zoom and recenter it in the viewer` shortcut action now says that specified zoom in its text where it is set (e.g. in the edit shortcuts UI)</li>
+                        <li><h3>setup_venv.py updates</h3></li>
+                        <li>_only important to advanced source users_</li>
+                        <li>after talking about it with several users, we are doing a bit more `pyproject.toml` and `setup_venv.py` work.</li>
+                        <li>the `groups` stuff in `pyproject.toml` is not really working out nice. it breaks a simple `pip install .` and other managers' install lines that many users are going to default to. trying to maintain the `setup_venv.py` choices in a `pyproject.toml` file was a nice idea but is not proving a good fit</li>
+                        <li>THEREFORE: I am planning to make the `pyproject.toml` nice and KISS so it works out the box, with only the `dev` group surviving. `setup_venv.py` will be the place to do weird/test venv setup</li>
+                        <li>this will happen on v673, a little under three months from now. I was previously planning just some `new` to `normal` renaming, but instead we'll do a bigger clearout. if you use the groups in the current `pyproject.toml` in any way, migrate away before then, likely to `setup_venv.py`</li>
+                        <li>I did the `setup_venv.py` stuff for today though; it now hardcodes all its decisions, entirely within the .py. no more relying on some other requirements definition standard; I just hack it with code for whatever I need, pipe it all to a pip install call, and it all installs in one clean step</li>
+                        <li>also brushed up the `setup_venv.py` code and prompts and all that a bit</li>
+                        <li>I wrote a `setup_help.py` for building the help and a `git_pull.py` convenience script to multiplat-replace the other .bat/.command/.sh stuff in the base dir. all the old scripts will be deleted on v673</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>fixed an issue hitting 'cancel' on note import options via the subscription or duplicate merge import options dialogs</li>
+                        <li>all temp files that hydrus makes in its tempdir now have a job-respective prefix rather than always `hydrus`, for instance `file_download_`</li>
+                        <li>updated the Linux install help regarding Wayland/X11 environment variables. both `unset WAYLAND_DISPLAY` and `export QT_QPA_PLATFORM=xcb` seem to be the trick to run in X11</li>
+                        <li>misc 'running from source' help brush-up</li>
+                        <li>updated some stuff in the 'installing' help about clean installs</li>
+                        <li><h3>boring import options overhaul progress</h3></li>
+                        <li>rewrote my new container and manager to have a stricter swiss-cheese/full dichotomy. rather than navigating layers of swiss cheese over and over, for every request, the manager now compresses the slices into a 'full' import options container that can answer any questions further down the file import chain</li>
+                        <li>moved `FilenameTaggingOptions` out of the legacy `TagImportOptions` stuff to its own file</li>
+                        <li>moved `ServiceTagImportOptions` out of the legacy `TagImportOptions` stuff to a new file that holds the new `TagImportOptions` object</li>
+                        <li>updated the legacy `TagImportOptions` to now hold the new `TagFilteringImportOptions` and`TagImportOptions` in prep for the big migration, just like I've done for `FileImportOptions`. the whole import pipeline is updated to talk to these two guys as appropriate</li>
+                        <li>wrote specific edit panels for the new objects</li>
+                        <li>also updated the unit tests for all this</li>
+                        <li>all the options objects are now ready to migrate. next I need to write a bunch of UI to handle the new edit panels I've written and manage my 'swiss cheese' defaults model in a user-friendly way. all the defaults setup and the 'import options' buttons in all downloaders need a rework. then I need to rejigger the file import path to pass around one container object rather than the current scatter. I feel pretty good about it. two more pushes on this, I think, and I can flip the switch</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_661"><a href="#version_661">version 661</a></h2>
                     <ul>
                         <li><h3>qt media player</h3></li>
@@ -81,7 +134,7 @@
                         <li>added `.python-version` to the base dir, which certain environment managers pick up on as the suggested version to deploy. I have selected `3.13` as the current recommended source python. if you are otherwise, it isn't a big deal</li>
                         <li>the `pyproject.toml` now explicitly says `&gt;=3.10,&lt;3.15` as the supported pythons for hydrus (this adds a new 'not ready for 3.15.x' bound)</li>
                         <li>the `setup_venv.py` now moans at you especially if you start it up with python `&gt;=3.15`</li>
-                        <li>I am not totally happy with the recent changes to `pyproject.toml`, which had to be emergency-patched last week. I will be revisiting it in the near future with a big KISS brush. most of the overly-complicated groups are going to disappear such that normal package managers will just work out of the box with it, and `setup_venv.py` will be the canonical place to install test library versions. no big changes yet, but since I was already planning to sunset some group stuff for v373, expect that to be the new date for this to get much simpler. I'll try and push on this next week</li>
+                        <li>I am not totally happy with the recent changes to `pyproject.toml`, which had to be emergency-patched last week. I will be revisiting it in the near future with a big KISS brush. most of the overly-complicated groups are going to disappear such that normal package managers will just work out of the box with it, and `setup_venv.py` will be the canonical place to install test library versions. no big changes yet, but since I was already planning to sunset some group stuff for v673, expect that to be the new date for this to get much simpler. I'll try and push on this next week</li>
                         <li>because of a surprise unicode issue that broke the Windows github build last week, `mkdocs-material` is now pinned to `9.7.1`</li>
                         <li>if you create a new non-default-location database using the --db_dir (or the new build structure creates a new db in the new clean basedir), I now copy the .txt help files and the sqlite3.exe on Windows over to the new dir</li>
                         <li>misc help cleanup regarding the install structure</li>
