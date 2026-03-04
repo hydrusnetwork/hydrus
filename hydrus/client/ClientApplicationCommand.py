@@ -1084,6 +1084,15 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                         s = f'{s} (to index {HydrusNumbers.ToHumanInt(rearrange_data)})'
                         
                     
+                elif action == SIMPLE_RESIZE_WINDOW_TO_MEDIA_ZOOMED_VIEWER_CENTER:
+                    
+                    new_zoom = self.GetSimpleData()
+                    
+                    if new_zoom is not None:
+                        
+                        s = f'resize window to fit media at {HydrusNumbers.FloatToPercentage( new_zoom )} and recenter it in the viewer'
+                        
+                    
                 
                 return s
                 

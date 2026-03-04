@@ -131,7 +131,7 @@ There are now setup scripts that make this easy. You do not need any python expe
 
 The whole repository will be copied to that location--this is now your install dir. You can move it if you like.
 
-If Git is not available, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere.
+If Git is definitely not available, then go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere.
 
 !!! warning "Read-only install locations"
     Make sure the install directory has convenient write permissions (e.g. on Windows, don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.
@@ -212,6 +212,8 @@ There are three special external libraries. You just have to get them and put th
         
 
 #### Environment setup
+
+Different systems sometimes call python different names. If I tell you to run `python blah` here and you get an error about it being missing, try `python3 blah`.
 
 === "Windows"
 
@@ -298,9 +300,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
         
         If mpv is the only problem, then switch to the QtMediaPlayer under `options->media playback`.
         
-        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
-        
-        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
+        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11. Launch the program _without_ the WAYLAND_DISPLAY variable and _with_ `QT_QPA_PLATFORM=xcb`, which you can achieve with `unset WAYLAND_DISPLAY` and `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`. You might need to do `sudo apt install xwayland` first.
         
         You should be able to see which window manager hydrus thinks it is running under in `help->about`, on the "Qt" row.
         

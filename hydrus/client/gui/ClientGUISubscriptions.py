@@ -1709,6 +1709,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions_panel.NewButtonRow()
         
         self._subscriptions_panel.AddButton( 'select subscriptions', self.SelectSubscriptions )
+        self._subscriptions_panel.AddButton( 'overwrite downloader', self.SetDownloader, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite checker options', self.SetCheckerOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite file import options', self.SetFileImportOptions, enabled_only_on_selection = True )
         self._subscriptions_panel.AddButton( 'overwrite tag import options', self.SetTagImportOptions, enabled_only_on_selection = True )
@@ -3308,6 +3309,34 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+    def SetDownloader( self ):
+        
+        subscriptions = self._subscriptions.GetData( only_selected = True )
+        
+        if len( subscriptions ) == 0:
+            
+            return
+            
+        
+        gug_key_and_name = subscriptions[0].GetGUGKeyAndName()
+        
+        try:
+            
+            edited_gug_key_and_name = ClientGUIImport.SelectGUGKeyAndName( self, gug_key_and_name )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        for subscription in subscriptions:
+            
+            subscription.SetGUGKeyAndName( edited_gug_key_and_name )
+            
+        
+        self._subscriptions.UpdateDatas( subscriptions )
+        
+    
     def SetFileImportOptions( self ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
@@ -3355,13 +3384,17 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit note import options' ) as dlg:
             
-            panel = ClientGUIImportOptions.EditNoteImportOptionsPanel( dlg, note_import_options, allow_default_selection )
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            edit_notes_widget = ClientGUIImportOptions.EditNoteImportOptionsPanel( panel, note_import_options, allow_default_selection )
+            
+            panel.SetControl( edit_notes_widget )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                note_import_options = panel.GetValue()
+                note_import_options = edit_notes_widget.GetValue()
                 
                 for subscription in subscriptions:
                     
@@ -3388,7 +3421,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIImportOptions.EditTagImportOptionsPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
+            panel = ClientGUIImportOptions.EditTagImportOptionsLegacyPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             

@@ -660,7 +660,7 @@ def ParseClientAPIPOSTArgs( request ):
             
             parsed_request_args = HydrusNetworkVariableHandling.ParsedRequestArguments()
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'client_api_upload' )
             
             request.temp_file_info = ( os_file_handle, temp_path )
             

@@ -1048,6 +1048,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         starting_num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
         starting_num_done = starting_num_urls - starting_num_unknown
         
+        x_out_of_y = 'initialising: '
+        
         try:
             
             while True:
@@ -1137,7 +1139,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_QUIET, self._tag_import_options, self._note_import_options )
                     
-                    query_tag_import_options = query_header.GetTagImportOptions()
+                    query_tag_import_options_legacy = query_header.GetTagImportOptions()
+                    
+                    query_tag_import_options = query_tag_import_options_legacy.GetTagImportOptions()
                     
                     if query_tag_import_options.HasAdditionalTags() and file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                         
@@ -1612,6 +1616,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def SetFileImportOptions( self, file_import_options ):
         
         self._file_import_options = file_import_options.Duplicate()
+        
+    
+    def SetGUGKeyAndName( self, gug_key_and_name ):
+        
+        self._gug_key_and_name = gug_key_and_name
         
     
     def SetPaused( self, value ):

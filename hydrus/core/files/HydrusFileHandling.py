@@ -116,7 +116,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
     
     if mime == HC.APPLICATION_CBZ or mime == HC.APPLICATION_EPUB:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'cover_page_thumb' )
         
         try:
             
@@ -150,7 +150,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
     elif mime == HC.APPLICATION_CLIP:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'clip_thumb' )
         
         try:
             
@@ -210,7 +210,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
     elif mime == HC.APPLICATION_PROCREATE:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'procreate_thumb' )
         
         try:
             
@@ -480,7 +480,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     # keep this in the specific-first, general-last test order
     if mime == HC.APPLICATION_CBZ or mime == HC.APPLICATION_EPUB:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'coverpage_file' )
         
         try:
             

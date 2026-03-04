@@ -32,6 +32,8 @@ from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.importing.options import TagFilteringImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
 
@@ -278,6 +280,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
@@ -1146,7 +1149,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptionsLegacy.ServiceTagImportOptions, show_downloader_options: bool = True ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, service_tag_import_options: TagImportOptions.ServiceTagImportOptions, show_downloader_options: bool = True ):
         
         super().__init__( parent )
         
@@ -1180,9 +1183,9 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        downloader_options_panel = ClientGUICommon.StaticBox( main_box, 'tag parsing' )
+        tag_parsing_panel = ClientGUICommon.StaticBox( main_box, 'tag parsing' )
         
-        self._get_tags_checkbox = QW.QCheckBox( 'get tags', downloader_options_panel )
+        self._get_tags_checkbox = QW.QCheckBox( 'get tags', tag_parsing_panel )
         
         if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -1197,14 +1200,14 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
-        self._get_tags_filter_button = ClientGUITagFilter.TagFilterButton( downloader_options_panel, message, get_tags_filter, label_prefix = 'adding: ' )
+        self._get_tags_filter_button = ClientGUITagFilter.TagFilterButton( tag_parsing_panel, message, get_tags_filter, label_prefix = 'adding: ' )
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._get_tags_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._get_tags_filter_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        downloader_options_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        tag_parsing_panel.Add( hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -1218,11 +1221,11 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not self._show_downloader_options:
             
-            downloader_options_panel.hide()
+            tag_parsing_panel.hide()
             
         
         main_box.Add( cog_button, CC.FLAGS_ON_RIGHT )
-        main_box.Add( downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        main_box.Add( tag_parsing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         main_box.Add( self._additional_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
@@ -1342,18 +1345,18 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.valueChanged.emit()
         
     
-    def GetValue( self ) -> TagImportOptionsLegacy.ServiceTagImportOptions:
+    def GetValue( self ) -> TagImportOptions.ServiceTagImportOptions:
         
         get_tags = self._get_tags_checkbox.isChecked()
         
         get_tags_filter = self._get_tags_filter_button.GetValue()
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = get_tags, get_tags_filter = get_tags_filter, additional_tags = self._additional_tags, to_new_files = self._to_new_files, to_already_in_inbox = self._to_already_in_inbox, to_already_in_archive = self._to_already_in_archive, only_add_existing_tags = self._only_add_existing_tags, only_add_existing_tags_filter = self._only_add_existing_tags_filter, get_tags_overwrite_deleted = self._get_tags_overwrite_deleted, additional_tags_overwrite_deleted = self._additional_tags_overwrite_deleted )
         
         return service_tag_import_options
         
     
-    def SetValue( self, service_tag_import_options: TagImportOptionsLegacy.ServiceTagImportOptions ):
+    def SetValue( self, service_tag_import_options: TagImportOptions.ServiceTagImportOptions ):
         
         ( get_tags, get_tags_filter, self._additional_tags, self._to_new_files, self._to_already_in_inbox, self._to_already_in_archive, self._only_add_existing_tags, self._only_add_existing_tags_filter, self._get_tags_overwrite_deleted, self._additional_tags_overwrite_deleted ) = service_tag_import_options.ToTuple()
         
@@ -1367,11 +1370,111 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
-class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditTagFilteringImportOptionsPanel( QW.QWidget ):
     
-    isDefaultChanged = QC.Signal( bool )
+    def __init__( self, parent: QW.QWidget, tag_filtering_import_options: TagFilteringImportOptions.TagFilteringImportOptions ):
+        
+        super().__init__( parent )
+        
+        tag_blacklist = tag_filtering_import_options.GetTagBlacklist()
+        
+        message = 'If a file about to be downloaded has a tag on the site that this blacklist blocks, the file will not be downloaded and imported. If you want to stop \'scat\' or \'gore\', just type them into the list.'
+        message += '\n' * 2
+        message += 'This system tests the all tags that are parsed from the site, not any other tags the files may have in different places. Siblings of all those tags will also be tested. If none of your tag services have excellent siblings, it is worth adding multiple versions of your tag, just to catch different sites terms. Link up \'gore\', \'guro\', \'violence\', etc...'
+        message += '\n' * 2
+        message += 'Additionally, unnamespaced rules will apply to namespaced tags. \'metroid\' in the blacklist will catch \'series:metroid\' as parsed from a site.'
+        message += '\n' * 2
+        message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
+        
+        self._tag_blacklist_button = ClientGUITagFilter.TagFilterButton( self, message, tag_blacklist, only_show_blacklist = True )
+        
+        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' ) )
+        
+        self._tag_whitelist = list( tag_filtering_import_options.GetTagWhitelist() )
+        
+        self._tag_whitelist_button = ClientGUICommon.BetterButton( self, 'whitelist', self._EditWhitelist )
+        
+        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A whitelist will ignore files if they do not have any of a certain list of tags.' ) )
+        
+        self._UpdateTagWhitelistLabel()
+        
+        #
+        
+        self.SetValue( tag_filtering_import_options )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'set file blacklist: ', self._tag_blacklist_button ) )
+        rows.append( ( 'set file whitelist: ', self._tag_whitelist_button ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
     
-    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, show_downloader_options: bool, allow_default_selection: bool ):
+    def _EditWhitelist( self ):
+        
+        message = 'If you add tags here, then any file importing with these options must have at least one of these tags from the download source. You can mix it with a blacklist--both will apply in turn.'
+        message += '\n' * 2
+        message += 'This is usually easier and faster to do just by adding tags to the downloader query (e.g. "artistname desired_tag"), so reserve this for downloaders that do not work on tags or where you want to whitelist multiple tags.'
+        
+        with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, list( self._tag_whitelist ), message = message ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                self._tag_whitelist = dlg.GetTags()
+                
+                self._UpdateTagWhitelistLabel()
+                
+            
+        
+    
+    def SetValue( self, tag_filtering_import_options: TagFilteringImportOptions.TagFilteringImportOptions ):
+        
+        self._tag_blacklist_button.SetValue( tag_filtering_import_options.GetTagBlacklist() )
+        
+        self._tag_whitelist = list( tag_filtering_import_options.GetTagWhitelist() )
+        
+        self._UpdateTagWhitelistLabel()
+        
+    
+    def _UpdateTagWhitelistLabel( self ):
+        
+        if len( self._tag_whitelist ) == 0:
+            
+            label = 'no whitelist'
+            
+        else:
+            
+            label = 'whitelist of {} tags'.format( HydrusNumbers.ToHumanInt( len( self._tag_whitelist ) ) )
+            
+        
+        self._tag_whitelist_button.setText( label )
+        
+    
+    def GetValue( self ) -> TagFilteringImportOptions.TagFilteringImportOptions:
+        
+        tag_blacklist = self._tag_blacklist_button.GetValue()
+        tag_whitelist = list( self._tag_whitelist )
+        
+        tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions( tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist )
+        
+        return tag_filtering_import_options
+        
+    
+
+class EditTagImportOptionsPanel( QW.QWidget ):
+    
+    def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool ):
         
         super().__init__( parent )
         
@@ -1385,6 +1488,122 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these tag options.' ) )
         
         #
+        
+        self._no_tags_label = ClientGUICommon.BetterStaticText( self, label = 'THIS CURRENTLY GETS NO TAGS' )
+        
+        self._no_tags_label.setObjectName( 'HydrusWarning' )
+        
+        self._services_vbox = QP.VBoxLayout()
+        
+        #
+        
+        self._InitialiseServices( tag_import_options )
+        
+        self.SetValue( tag_import_options )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, self._no_tags_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+        #
+        
+        self._UpdateNoTagsLabel()
+        
+    
+    def _InitialiseServices( self, tag_import_options: TagImportOptions.TagImportOptions ):
+        
+        services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+        
+        for service in services:
+            
+            service_key = service.GetServiceKey()
+            
+            service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
+            
+            panel = EditServiceTagImportOptionsPanel( self, service_key, service_tag_import_options, show_downloader_options = self._show_downloader_options )
+            
+            self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
+            
+            QP.AddToLayout( self._services_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            panel.valueChanged.connect( self._UpdateNoTagsLabel )
+            
+        
+    
+    def SetValue( self, tag_import_options: TagImportOptions.TagImportOptions ):
+        
+        for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items():
+            
+            service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
+            
+            panel.SetValue( service_tag_import_options )
+            
+        
+    
+    def _ShowHelp( self ):
+        
+        message = '''Here you can select which kinds of tags you would like applied to the files that are imported.
+
+If this import context can fetch and parse tags from a remote location (such as a gallery downloader, which may provide 'creator' or 'series' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.
+
+In these cases, if the URL has been previously downloaded and the client knows its file is already in the database, the client will usually not make a new network request to fetch the file's tags. This allows for quick reprocessing/skipping of previously seen items in large download queues and saves bandwidth. If you however wish to purposely fetch tags for files you have previously downloaded, you can also force tag fetching for these 'already in db' files.
+
+You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my unsorted folder' or 'pixiv subscription') to be applied to all imported files.
+
+---
+
+Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
+        
+        ClientGUIDialogsMessage.ShowInformation( self, message )
+        
+    
+    def _UpdateNoTagsLabel( self ):
+        
+        tag_import_options = self.GetValue()
+        
+        we_explicitly_get_no_tags = not tag_import_options.CanAddTags()
+        
+        self._no_tags_label.setVisible( we_explicitly_get_no_tags )
+        
+    
+    def GetValue( self ) -> TagImportOptions.TagImportOptions:
+        
+        service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list( self._service_keys_to_service_tag_import_options_panels.items() ) }
+        
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        return tag_import_options
+        
+    
+
+class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    isDefaultChanged = QC.Signal( bool )
+    
+    def __init__( self, parent: QW.QWidget, tag_import_options_legacy: TagImportOptionsLegacy.TagImportOptionsLegacy, show_downloader_options: bool, allow_default_selection: bool ):
+        
+        super().__init__( parent )
+        
+        self._show_downloader_options = show_downloader_options
+        
+        self._service_keys_to_service_tag_import_options_panels = {}
+        
+        #
+        
+        help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these tag options.' ) )
+        
+        #
+        
+        tag_filtering_import_options = tag_import_options_legacy.GetTagFilteringImportOptions()
+        tag_import_options = tag_import_options_legacy.GetTagImportOptions()
         
         default_panel = ClientGUICommon.StaticBox( self, 'default options' )
         
@@ -1411,10 +1630,10 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        downloader_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'fetch options' )
+        prefetch_import_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'prefetch options' )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
         
         tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
         tt += '\n' * 2
@@ -1428,44 +1647,26 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        tag_blacklist = tag_import_options.GetTagBlacklist()
+        #
         
-        message = 'If a file about to be downloaded has a tag on the site that this blacklist blocks, the file will not be downloaded and imported. If you want to stop \'scat\' or \'gore\', just type them into the list.'
-        message += '\n' * 2
-        message += 'This system tests the all tags that are parsed from the site, not any other tags the files may have in different places. Siblings of all those tags will also be tested. If none of your tag services have excellent siblings, it is worth adding multiple versions of your tag, just to catch different sites terms. Link up \'gore\', \'guro\', \'violence\', etc...'
-        message += '\n' * 2
-        message += 'Additionally, unnamespaced rules will apply to namespaced tags. \'metroid\' in the blacklist will catch \'series:metroid\' as parsed from a site.'
-        message += '\n' * 2
-        message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
+        tag_filtering_import_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'tag filtering options' )
         
-        self._tag_blacklist_button = ClientGUITagFilter.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
-        
-        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' ) )
-        
-        self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
-        
-        self._tag_whitelist_button = ClientGUICommon.BetterButton( downloader_options_panel, 'whitelist', self._EditWhitelist )
-        
-        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A whitelist will ignore files if they do not have any of a certain list of tags.' ) )
-        
-        self._UpdateTagWhitelistLabel()
-        
-        self._no_tags_label = ClientGUICommon.BetterStaticText( self, label = 'THIS CURRENTLY GETS NO TAGS' )
-        
-        self._no_tags_label.setObjectName( 'HydrusWarning' )
-        
-        self._services_vbox = QP.VBoxLayout()
+        self._tag_filtering_import_options = EditTagFilteringImportOptionsPanel( tag_filtering_import_options_panel, tag_filtering_import_options )
         
         #
         
-        self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
+        tag_import_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'tag import options' )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        self._tag_import_options = EditTagImportOptionsPanel( tag_import_options_panel, tag_import_options, show_downloader_options )
         
-        self._InitialiseServices( tag_import_options )
+        #
         
-        self._SetValue( tag_import_options )
+        self._use_default_dropdown.SetValue( tag_import_options_legacy.IsDefault() )
+        
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        
+        self._SetValue( tag_import_options_legacy )
         
         #
         
@@ -1491,25 +1692,34 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'force page fetch even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
         rows.append( ( 'force page fetch even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
-        rows.append( ( 'set file blacklist: ', self._tag_blacklist_button ) )
-        rows.append( ( 'set file whitelist: ', self._tag_whitelist_button ) )
         
-        gridbox = ClientGUICommon.WrapInGrid( downloader_options_panel, rows )
+        gridbox = ClientGUICommon.WrapInGrid( prefetch_import_options_panel, rows )
         
-        downloader_options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        prefetch_import_options_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        #
+        
+        tag_filtering_import_options_panel.Add( self._tag_filtering_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        tag_import_options_panel.Add( self._tag_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
         
         if not self._show_downloader_options:
             
-            downloader_options_panel.hide()
+            prefetch_import_options_panel.setVisible( False )
+            tag_filtering_import_options_panel.setVisible( False )
             
         
         #
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, downloader_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._no_tags_label, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._services_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, prefetch_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, tag_filtering_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, tag_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._specific_options_panel.setLayout( vbox )
         
@@ -1530,45 +1740,6 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
         
         self._UpdateIsDefault()
-        
-        self._UpdateNoTagsLabel()
-        
-    
-    def _EditWhitelist( self ):
-        
-        message = 'If you add tags here, then any file importing with these options must have at least one of these tags from the download source. You can mix it with a blacklist--both will apply in turn.'
-        message += '\n' * 2
-        message += 'This is usually easier and faster to do just by adding tags to the downloader query (e.g. "artistname desired_tag"), so reserve this for downloaders that do not work on tags or where you want to whitelist multiple tags.'
-        
-        with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, list( self._tag_whitelist ), message = message ) as dlg:
-            
-            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
-                
-                self._tag_whitelist = dlg.GetTags()
-                
-                self._UpdateTagWhitelistLabel()
-                
-            
-        
-    
-    def _InitialiseServices( self, tag_import_options ):
-        
-        services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
-        
-        for service in services:
-            
-            service_key = service.GetServiceKey()
-            
-            service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
-            
-            panel = EditServiceTagImportOptionsPanel( self._specific_options_panel, service_key, service_tag_import_options, show_downloader_options = self._show_downloader_options )
-            
-            self._service_keys_to_service_tag_import_options_panels[ service_key ] = panel
-            
-            QP.AddToLayout( self._services_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            panel.valueChanged.connect( self._UpdateNoTagsLabel )
-            
         
     
     def _LoadDefaultOptions( self ):
@@ -1612,44 +1783,26 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._SetValue( default_tag_import_options )
         
     
-    def _SetValue( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
+    def _SetValue( self, tag_import_options_legacy: TagImportOptionsLegacy.TagImportOptionsLegacy ):
         
-        self._use_default_dropdown.SetValue( tag_import_options.IsDefault() )
+        tag_import_options = tag_import_options_legacy.GetTagImportOptions()
+        tag_filtering_import_options = tag_import_options_legacy.GetTagFilteringImportOptions()
         
-        self._tag_blacklist_button.SetValue( tag_import_options.GetTagBlacklist() )
+        self._use_default_dropdown.SetValue( tag_import_options_legacy.IsDefault() )
         
-        self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
-        self._UpdateTagWhitelistLabel()
+        self._tag_filtering_import_options.SetValue( tag_filtering_import_options )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
-        
-        for ( service_key, panel ) in self._service_keys_to_service_tag_import_options_panels.items():
-            
-            service_tag_import_options = tag_import_options.GetServiceTagImportOptions( service_key )
-            
-            panel.SetValue( service_tag_import_options )
-            
+        self._tag_import_options.SetValue( tag_import_options )
         
         self._UpdateIsDefault()
         
     
     def _ShowHelp( self ):
         
-        message = '''Here you can select which kinds of tags you would like applied to the files that are imported.
-
-If this import context can fetch and parse tags from a remote location (such as a gallery downloader, which may provide 'creator' or 'series' tags, amongst others), then the namespaces it provides will be listed here with checkboxes--simply check which ones you are interested in for the tag services you want them to be applied to and it will all occur as the importer processes its files.
-
-In these cases, if the URL has been previously downloaded and the client knows its file is already in the database, the client will usually not make a new network request to fetch the file's tags. This allows for quick reprocessing/skipping of previously seen items in large download queues and saves bandwidth. If you however wish to purposely fetch tags for files you have previously downloaded, you can also force tag fetching for these 'already in db' files.
-
-I strongly recommend that you only ever turn this 'fetch tags even...' option for one-time jobs. It is typically only useful if you download some files and realised you forgot to set the tag parsing options you like--you can set the fetch option on and 'try again' the files to force the downloader to fetch the tags.
-
-You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my unsorted folder' or 'pixiv subscription') to be applied to all imported files.
-
----
-
-Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
+        message = '''I strongly recommend that you only ever turn the 'force page fetch...' options for one-time jobs. It is typically only useful if you download some files and realised you forgot to set tag parsing up--you can set the "force fetch" options on and 'try again' the files to force the downloader to fetch the tags.'''
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
@@ -1669,34 +1822,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             self.window().adjustSize()
             
         
-        self._UpdateNoTagsLabel()
-        
         self.isDefaultChanged.emit( is_default )
-        
-    
-    def _UpdateNoTagsLabel( self ):
-        
-        tag_import_options = self.GetValue()
-        
-        we_explicitly_get_no_tags = ( not tag_import_options.IsDefault() ) and ( not tag_import_options.CanAddTags() )
-        
-        self._no_tags_label.setVisible( we_explicitly_get_no_tags )
-        
-        self.updateGeometry()
-        
-    
-    def _UpdateTagWhitelistLabel( self ):
-        
-        if len( self._tag_whitelist ) == 0:
-            
-            label = 'no whitelist'
-            
-        else:
-            
-            label = 'whitelist of {} tags'.format( HydrusNumbers.ToHumanInt( len( self._tag_whitelist ) ) )
-            
-        
-        self._tag_whitelist_button.setText( label )
         
     
     def GetValue( self ) -> TagImportOptionsLegacy.TagImportOptionsLegacy:
@@ -1712,12 +1838,15 @@ Please note that once you know what tags you like, you can (and should) set up t
             fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.isChecked()
             fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.isChecked()
             
-            service_keys_to_service_tag_import_options = { service_key : panel.GetValue() for ( service_key, panel ) in list( self._service_keys_to_service_tag_import_options_panels.items() ) }
+            tag_filtering_import_options = self._tag_filtering_import_options.GetValue()
+            tag_import_options = self._tag_import_options.GetValue()
             
-            tag_blacklist = self._tag_blacklist_button.GetValue()
-            tag_whitelist = list( self._tag_whitelist )
-            
-            tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db, tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+            tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy(
+                fetch_tags_even_if_url_recognised_and_file_already_in_db = fetch_tags_even_if_url_recognised_and_file_already_in_db,
+                fetch_tags_even_if_hash_recognised_and_file_already_in_db = fetch_tags_even_if_hash_recognised_and_file_already_in_db,
+                tag_filtering_import_options = tag_filtering_import_options,
+                tag_import_options = tag_import_options
+            )
             
         
         return tag_import_options
@@ -1897,7 +2026,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             raise Exception( 'This Import Options Panel already has File Import Options set!' )
             
         
-        self._tag_import_options_panel = EditTagImportOptionsPanel( self._notebook, tag_import_options, self._show_downloader_options, self._allow_default_selection )
+        self._tag_import_options_panel = EditTagImportOptionsLegacyPanel( self._notebook, tag_import_options, self._show_downloader_options, self._allow_default_selection )
         
         self._notebook.addTab( self._tag_import_options_panel, 'tag' )
         

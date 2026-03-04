@@ -58,7 +58,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
             
             delete_after_successful_import = request.parsed_request_args.GetValue( 'delete_after_successful_import', bool, default_value = False )
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'client_api_import' )
             
             request.temp_file_info = ( os_file_handle, temp_path )
             
@@ -315,7 +315,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
                 raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
                 
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'client_api_hashing' )
             
             request.temp_file_info = ( os_file_handle, temp_path )
             

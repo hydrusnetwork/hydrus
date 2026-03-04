@@ -619,7 +619,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 def GetSmartEXIFAndICCComparators():
     
-    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     one_file_comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
     
@@ -635,7 +635,7 @@ def GetSmartEXIFAndICCComparators():
     
     one_file_comparator.SetMetadataConditional( metadata_conditional )
     
-    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
     
     smart_exif_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
         [
@@ -646,7 +646,7 @@ def GetSmartEXIFAndICCComparators():
     
     #
     
-    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    one_file_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     one_file_comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
     
@@ -662,7 +662,7 @@ def GetSmartEXIFAndICCComparators():
     
     one_file_comparator.SetMetadataConditional( metadata_conditional )
     
-    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME )
+    hardcoded_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME )
     
     smart_icc_profile_comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
         [
@@ -730,7 +730,7 @@ def GetDefaultRuleSuggestionsPixelPerfectFiletypePairs() -> list[ DuplicatesAuto
     
     selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     
@@ -797,7 +797,7 @@ def GetDefaultRuleSuggestionsPixelPerfectFiletypePairs() -> list[ DuplicatesAuto
     
     selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     
@@ -866,7 +866,7 @@ def GetDefaultRuleSuggestionsPixelPerfectFiletypePairs() -> list[ DuplicatesAuto
     
     comparators = []
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     
@@ -946,7 +946,7 @@ def GetDefaultRuleSuggestionsPixelPerfectFiletypePairs() -> list[ DuplicatesAuto
     
     comparators = []
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     
@@ -1061,7 +1061,7 @@ def GetDefaultRuleSuggestionsPixelPerfectPairs() -> list[ DuplicatesAutoResoluti
     )
     comparators.append( or_comparator )
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME )
     
     comparators.append( comparator )
     
@@ -1155,7 +1155,7 @@ def GetDefaultRuleSuggestionsVisuallySimilar() -> list[ DuplicatesAutoResolution
     
     comparators.append( comparator )
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME )
     
     comparators.append( comparator )
     
@@ -1251,7 +1251,7 @@ def GetDefaultRuleSuggestionsNearPerfectFiletypePairs() -> list[ DuplicatesAutoR
     
     comparators = []
     
-    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+    comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
     
     comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
     

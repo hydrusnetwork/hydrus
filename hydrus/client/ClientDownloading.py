@@ -308,7 +308,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                             
                             if file_repository.IsFunctional():
                                 
-                                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+                                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'repo_file_import' )
                                 
                                 try:
                                     

@@ -28,11 +28,8 @@ fi
 # Also, if you need to put environment variables in this script, do it like this (before the program is booted!):
 #
 # export QT_QPA_PLATFORM=xcb
-# export WAYLAND_DISPLAY=
-#
-# To unset an env, do this:
-#
 # unset WAYLAND_DISPLAY
+#
 
 python hydrus_client.py "$@"
 

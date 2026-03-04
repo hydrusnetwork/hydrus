@@ -24,6 +24,7 @@ from hydrus.client.files import ClientFiles
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
+from hydrus.client.importing.options import FilenameTaggingOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
@@ -790,15 +791,17 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                         hash = file_seed.GetHash()
                         
-                        if self._tag_import_options.HasAdditionalTags() or len( self._metadata_routers ) > 0:
+                        has_additional_tags = self._tag_import_options.GetTagImportOptions().HasAdditionalTags()
+                        
+                        if has_additional_tags or len( self._metadata_routers ) > 0:
                             
                             media_result = CG.client_controller.Read( 'media_result', hash )
                             
-                            if self._tag_import_options.HasAdditionalTags():
+                            if has_additional_tags:
                                 
                                 downloaded_tags = []
                                 
-                                content_update_package = self._tag_import_options.GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
+                                content_update_package = self._tag_import_options.GetTagImportOptions().GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
                                 
                                 if content_update_package.HasContent():
                                     
@@ -979,7 +982,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             for service_key in txt_parse_tag_service_keys:
                 
-                filename_tagging_options = TagImportOptionsLegacy.FilenameTaggingOptions()
+                filename_tagging_options = FilenameTaggingOptions.FilenameTaggingOptions()
                 
                 filename_tagging_options._load_from_neighbouring_txt_files = True
                 

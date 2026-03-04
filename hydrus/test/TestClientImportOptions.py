@@ -19,6 +19,8 @@ from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.importing.options import TagFilteringImportOptions
+from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -990,6 +992,63 @@ class TestPresentationImportOptions( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+
+class TestTagFilteringImportOptions( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        default_tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions()
+        
+        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        
+        blacklist = default_tag_filtering_import_options.GetTagBlacklist()
+        
+        self.assertEqual( blacklist.Filter( some_tags ), some_tags )
+        
+        whitelist = default_tag_filtering_import_options.GetTagWhitelist()
+        
+        self.assertEqual( whitelist, [] )
+        
+    
+    def test_blacklist( self ):
+        
+        tag_blacklist = HydrusTags.TagFilter()
+        
+        tag_blacklist.SetRule( 'series:', HC.FILTER_BLACKLIST )
+        
+        tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions( tag_blacklist = tag_blacklist )
+        
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit' }, { 'series:metroid' } )
+            
+        
+        tag_filtering_import_options.CheckTagsVeto( { 'bodysuit' }, set() )
+        
+    
+    def test_whitelist( self ):
+        
+        example_service_key = TG.test_controller.example_tag_repo_service_key
+        
+        tag_whitelist = [ 'bodysuit' ]
+        
+        tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions( tag_whitelist = tag_whitelist )
+        
+        with self.assertRaises( HydrusExceptions.VetoException ):
+            
+            tag_filtering_import_options.CheckTagsVeto( { 'series:metroid' }, set() )
+            
+        
+        tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
+        tag_filtering_import_options.CheckTagsVeto( { 'series:metroid' }, { 'bodysuit' } )
+        
+    
+
 class TestTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
@@ -1002,78 +1061,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
-        
-        self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
-        self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
-        
-        blacklist = default_tag_import_options.GetTagBlacklist()
-        
-        self.assertEqual( blacklist.Filter( some_tags ), some_tags )
-        
-        whitelist = default_tag_import_options.GetTagWhitelist()
-        
-        self.assertEqual( whitelist, [] )
+        default_tag_import_options = TagImportOptions.TagImportOptions()
         
         HF.compare_content_update_packages( self, default_tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), ClientContentUpdates.ContentUpdatePackage() )
-        
-        #
-        
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_url_recognised_and_file_already_in_db = True )
-        
-        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), True )
-        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
-        
-        #
-        
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_hash_recognised_and_file_already_in_db = True )
-        
-        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
-        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), True )
-        
-    
-    def test_blacklist( self ):
-        
-        example_service_key = TG.test_controller.example_tag_repo_service_key
-        
-        tag_blacklist = HydrusTags.TagFilter()
-        
-        tag_blacklist.SetRule( 'series:', HC.FILTER_BLACKLIST )
-        
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
-        
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( tag_blacklist = tag_blacklist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
-        
-        with self.assertRaises( HydrusExceptions.VetoException ):
-            
-            tag_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
-            
-        
-        with self.assertRaises( HydrusExceptions.VetoException ):
-            
-            tag_import_options.CheckTagsVeto( { 'bodysuit' }, { 'series:metroid' } )
-            
-        
-        tag_import_options.CheckTagsVeto( { 'bodysuit' }, set() )
-        
-    
-    def test_whitelist( self ):
-        
-        example_service_key = TG.test_controller.example_tag_repo_service_key
-        
-        tag_whitelist = [ 'bodysuit' ]
-        
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
-        
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( tag_whitelist = tag_whitelist, service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
-        
-        with self.assertRaises( HydrusExceptions.VetoException ):
-            
-            tag_import_options.CheckTagsVeto( { 'series:metroid' }, set() )
-            
-        
-        tag_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
-        tag_import_options.CheckTagsVeto( { 'series:metroid' }, { 'bodysuit' } )
         
     
     def test_external_tags( self ):
@@ -1089,9 +1079,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
         
@@ -1112,9 +1102,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         get_tags_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = get_tags_filter ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags, external_filterable_tags = external_filterable_tags, external_additional_service_keys_to_tags = external_additional_service_keys_to_tags )
         
@@ -1143,10 +1133,10 @@ class TestTagImportOptions( unittest.TestCase ):
         
         service_keys_to_service_tag_import_options = {}
         
-        service_keys_to_service_tag_import_options[ example_service_key_1 ] = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True )
-        service_keys_to_service_tag_import_options[ example_service_key_2 ] = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = False )
+        service_keys_to_service_tag_import_options[ example_service_key_1 ] = TagImportOptions.ServiceTagImportOptions( get_tags = True )
+        service_keys_to_service_tag_import_options[ example_service_key_2 ] = TagImportOptions.ServiceTagImportOptions( get_tags = False )
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1171,9 +1161,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1190,9 +1180,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1218,9 +1208,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = some_tags ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = some_tags ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1237,9 +1227,9 @@ class TestTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True, additional_tags = some_tags ) }
+        service_keys_to_service_tag_import_options = { example_service_key : TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True, additional_tags = some_tags ) }
         
-        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
         
         result = tag_import_options.GetContentUpdatePackage( CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags )
         
@@ -1255,6 +1245,37 @@ class TestTagImportOptions( unittest.TestCase ):
         self.assertEqual( result_tags, filtered_tags )
         
     
+
+class TestTagImportOptionsLegacy( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        example_hash = HydrusData.GenerateKey()
+        example_service_key = TG.test_controller.example_tag_repo_service_key
+        
+        #
+        
+        default_tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy()
+        
+        self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
+        self.assertEqual( default_tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
+        
+        #
+        
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_url_recognised_and_file_already_in_db = True )
+        
+        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), True )
+        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), False )
+        
+        #
+        
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( fetch_tags_even_if_hash_recognised_and_file_already_in_db = True )
+        
+        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB(), False )
+        self.assertEqual( tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB(), True )
+        
+    
+
 class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
@@ -1267,7 +1288,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        default_service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions()
+        default_service_tag_import_options = TagImportOptions.ServiceTagImportOptions()
         
         self.assertEqual( default_service_tag_import_options._get_tags, False )
         self.assertEqual( default_service_tag_import_options._additional_tags, [] )
@@ -1289,7 +1310,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
         
@@ -1299,7 +1320,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         only_namespaced.SetRule( '', HC.FILTER_BLACKLIST )
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran', 'series:metroid' } )
         
@@ -1311,7 +1332,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         only_samus.SetRule( ':', HC.FILTER_BLACKLIST )
         only_samus.SetRule( 'character:samus aran', HC.FILTER_WHITELIST )
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1326,7 +1347,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = [ 'wew' ] )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags.union( [ 'wew' ] ) )
         
@@ -1341,19 +1362,19 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), some_tags )
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1368,19 +1389,19 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
         
@@ -1396,7 +1417,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = True, to_already_in_inbox = False, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), some_tags )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
@@ -1404,7 +1425,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = True, to_already_in_archive = False )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), some_tags )
@@ -1412,7 +1433,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, to_new_files = False, to_already_in_inbox = False, to_already_in_archive = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, inbox_media_result, some_tags ), set() )
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, inbox_media_result, some_tags ), set() )
@@ -1432,7 +1453,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), existing_tags )
         
@@ -1447,7 +1468,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         TG.test_controller.SetRead( 'filter_existing_tags', existing_tags )
         
-        service_tag_import_options = TagImportOptionsLegacy.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
         
         self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
         

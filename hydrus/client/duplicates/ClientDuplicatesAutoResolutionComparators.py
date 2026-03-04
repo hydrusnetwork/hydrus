@@ -45,10 +45,153 @@ LOOKING_AT_A = 0
 LOOKING_AT_B = 1
 LOOKING_AT_EITHER = 2
 
-class PairComparatorOneFile( PairComparator ):
+HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE = 0
+HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE = 1
+
+hardcoded_comparator_type_one_file_str_lookup = {
+    HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE : 'is a progressive jpeg',
+    HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE : 'is a non-progressive jpeg',
+}
+
+class PairComparatorOneFileHardcoded( PairComparator ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE
-    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - One File'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE_HARDCODED
+    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - One File (Hardcoded)'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        """
+        This guy holds one hardcoded test and is told to test either the better or worse candidate.
+        """
+        
+        super().__init__()
+        
+        self._looking_at = LOOKING_AT_A
+        
+        self._comparator_type = HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._looking_at, self._comparator_type )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._looking_at, self._comparator_type ) = serialisable_info
+        
+    
+    def CanDetermineBetter( self ) -> bool:
+        
+        return self._looking_at in ( LOOKING_AT_A, LOOKING_AT_B )
+        
+    
+    def GetComparatorType( self ) -> int:
+        
+        return self._comparator_type
+        
+    
+    def GetLookingAt( self ) -> int:
+        
+        return self._looking_at
+        
+    
+    def GetSummary( self ) -> str:
+        
+        comparison_statement = hardcoded_comparator_type_one_file_str_lookup.get( self._comparator_type, 'unknown' )
+        
+        if self._looking_at == LOOKING_AT_A:
+            
+            return f'A will match: {comparison_statement}'
+            
+        elif self._looking_at == LOOKING_AT_B:
+            
+            return f'B will match: {comparison_statement}'
+            
+        elif self._looking_at == LOOKING_AT_EITHER:
+            
+            return f'either will match: {comparison_statement}'
+            
+        else:
+            
+            return 'unknown comparator rule!'
+            
+        
+    
+    def IsFast( self ) -> bool:
+        
+        return self._comparator_type not in { HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE, HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE }
+        
+    
+    def OrderDoesNotMatter( self ) -> bool:
+        
+        return self._looking_at == LOOKING_AT_EITHER
+        
+    
+    def SetComparatorType( self, comparator_type: int ):
+        
+        self._comparator_type = comparator_type
+        
+    
+    def SetLookingAt( self, looking_at: int ):
+        
+        self._looking_at = looking_at
+        
+    
+    def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
+        
+        media_results_to_test: list[ ClientMediaResult.MediaResult ] = []
+        
+        if self._looking_at == LOOKING_AT_A:
+            
+            media_results_to_test.append( media_result_a )
+            
+        elif self._looking_at == LOOKING_AT_B:
+            
+            media_results_to_test.append( media_result_b )
+            
+        elif self._looking_at == LOOKING_AT_EITHER:
+            
+            media_results_to_test.append( media_result_a )
+            media_results_to_test.append( media_result_b )
+            
+        
+        for media_result in media_results_to_test:
+            
+            if self._comparator_type in ( HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE, HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE ):
+                
+                if media_result.GetMime() != HC.IMAGE_JPEG:
+                    
+                    continue
+                    
+                
+                expected_progressive_result = self._comparator_type == HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE 
+                
+                hash = media_result.GetHash()
+                
+                ClientDuplicatesComparisonStatements.populate_jpeg_quality_storage( hash )
+                
+                jpeg_quality_storage = ClientDuplicatesComparisonStatements.JpegQualityStorage.instance()
+                
+                jpeg_quality = typing.cast( ClientDuplicatesComparisonStatements.JpegQuality, jpeg_quality_storage.GetData( hash ) )
+                
+                if jpeg_quality.progressive == expected_progressive_result:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE_HARDCODED ] = PairComparatorOneFileHardcoded
+
+class PairComparatorOneFileMetadataConditional( PairComparator ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE_METADATA_CONDITIONAL
+    SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - One File (Metadata Conditional)'
     SERIALISABLE_VERSION = 1
     
     def __init__( self ):
@@ -160,7 +303,7 @@ class PairComparatorOneFile( PairComparator ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE ] = PairComparatorOneFile
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_ONE_FILE_METADATA_CONDITIONAL ] = PairComparatorOneFileMetadataConditional
 
 class PairComparatorRelativeFileInfo( PairComparator ):
     
@@ -316,18 +459,18 @@ class PairComparatorRelativeFileInfo( PairComparator ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_PAIR_COMPARATOR_TWO_FILES_RELATIVE_FILE_INFO ] = PairComparatorRelativeFileInfo
 
-HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME = 0
-HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS = 1
-HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME = 2
-HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME = 3
-HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY = 4
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME = 0
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS = 1
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME = 2
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME = 3
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY = 4
 
-hardcoded_comparator_type_str_lookup = {
-    HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME : 'A and B have the same filetype',
-    HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS : 'A and B have different filetypes',
-    HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME : 'A and B have the same "has exif" value',
-    HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME : 'A and B have the same "has icc profile" value',
-    HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY : 'A has clearly better jpeg quality than B',
+hardcoded_comparator_type_two_files_str_lookup = {
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME : 'A and B have the same filetype',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS : 'A and B have different filetypes',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME : 'A and B have the same "has exif" value',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME : 'A and B have the same "has icc profile" value',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY : 'A has clearly better jpeg quality than B',
 }
 
 class PairComparatorRelativeHardcoded( PairComparator ):
@@ -336,7 +479,7 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     SERIALISABLE_NAME = 'Duplicates Auto-Resolution Pair Comparator - Relative Hardcoded'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, hardcoded_type = HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ):
+    def __init__( self, hardcoded_type = HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ):
         """
         This guy compares the pair directly using special code for tricky jobs. 
         """
@@ -358,7 +501,7 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def CanDetermineBetter( self ) -> bool:
         
-        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
             
             return True
             
@@ -368,12 +511,12 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def GetSummary( self ):
         
-        return hardcoded_comparator_type_str_lookup[ self._hardcoded_type ]
+        return hardcoded_comparator_type_two_files_str_lookup[ self._hardcoded_type ]
         
     
     def IsFast( self ) -> bool:
         
-        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
             
             return False
             
@@ -383,7 +526,7 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def OrderDoesNotMatter( self ):
         
-        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
             
             return False
             
@@ -393,29 +536,29 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def Test( self, media_result_a: ClientMediaResult.MediaResult, media_result_b: ClientMediaResult.MediaResult ) -> bool:
         
-        if self._hardcoded_type in ( HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME, HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS ):
+        if self._hardcoded_type in ( HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME, HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS ):
             
             a_filetype = media_result_a.GetMime()
             b_filetype = media_result_b.GetMime()
             
-            if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME:
+            if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME:
                 
                 return a_filetype == b_filetype
                 
-            elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS:
+            elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS:
                 
                 return a_filetype != b_filetype
                 
             
-        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME:
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME:
             
             return media_result_a.GetFileInfoManager().has_exif == media_result_b.GetFileInfoManager().has_exif
             
-        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME:
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME:
             
             return media_result_a.GetFileInfoManager().has_icc_profile == media_result_b.GetFileInfoManager().has_icc_profile
             
-        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
             
             a_mime = media_result_a.GetMime()
             b_mime = media_result_b.GetMime()

@@ -5,7 +5,7 @@ from hydrus.core import HydrusTemp
 
 def ExtractDBPNGToPath( path, temp_path ):
     
-    ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath()
+    ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath( 'clip_sqlite' )
     
     try:
         
@@ -39,7 +39,7 @@ def ExtractDBPNGToPath( path, temp_path ):
 
 def GetClipProperties( path ):
     
-    ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath()
+    ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath( 'clip_sqlite' )
     
     num_frames = None
     duration_ms = None

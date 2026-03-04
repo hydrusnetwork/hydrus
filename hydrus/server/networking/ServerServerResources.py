@@ -82,7 +82,7 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
                 
             else:
                 
-                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'file_upload' )
                 
                 request.temp_file_info = ( os_file_handle, temp_path )
                 

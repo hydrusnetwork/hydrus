@@ -27,7 +27,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIPathWidgets
 from hydrus.client.importing import ClientImportLocal
-from hydrus.client.importing.options import TagImportOptionsLegacy
+from hydrus.client.importing.options import FilenameTaggingOptions
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 
@@ -449,7 +449,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
-            filename_tagging_options = TagImportOptionsLegacy.FilenameTaggingOptions()
+            filename_tagging_options = FilenameTaggingOptions.FilenameTaggingOptions()
             
             panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options, example_path = example_path )
             

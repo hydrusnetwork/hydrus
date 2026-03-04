@@ -577,6 +577,7 @@ def populate_jpeg_quality_storage( jpeg_hash ):
         
         subsampling = HydrusImageMetadata.SUBSAMPLING_UNKNOWN
         quality_result = ( 'unknown', None )
+        progressive = False
         
         try:
             
@@ -586,6 +587,8 @@ def populate_jpeg_quality_storage( jpeg_hash ):
             
             quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
             
+            progressive = 'progression' in raw_pil_image.info
+            
         except Exception as e:
             
             pass
@@ -593,7 +596,7 @@ def populate_jpeg_quality_storage( jpeg_hash ):
         
         ( quality_label, quality ) = quality_result
         
-        jpeg_quality = JpegQuality( subsampling, quality_label, quality )
+        jpeg_quality = JpegQuality( subsampling, quality_label, quality, progressive )
         
         jpeg_quality_storage.AddData( jpeg_hash, jpeg_quality )
         
@@ -835,12 +838,13 @@ def GetVisualDataTiled( media_result: ClientMediaResult.MediaResult ) -> ClientV
 
 class JpegQuality( ClientCachesBase.CacheableObject ):
     
-    def __init__( self, subsampling, quality_label, quality ):
+    def __init__( self, subsampling, quality_label, quality, progressive: bool ):
         
         self.subsampling = subsampling
         
         self.quality_label = quality_label
         self.quality = quality
+        self.progressive = progressive
         
     
     def GetEstimatedMemoryFootprint( self ) -> int:

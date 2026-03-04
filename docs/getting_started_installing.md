@@ -42,9 +42,7 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         
         If mpv is the only problem, then switch to the QtMediaPlayer under `options->media playback`.
         
-        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11, and I now encourage this for all Wayland users. Launching with the environment variable `QT_QPA_PLATFORM=xcb` (e.g. by putting `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`) should do it. The 'xcb' should force X11.
-        
-        It does not work for everyone, though. If it fails, another user says setting `WAYLAND_DISPLAY=` (as in setting it to nothing) or unsetting it entirely with `unset WAYLAND_DISPLAY`, which forces hydrus (and its embedded mpv windows) to use Xwayland, is another solution. You might need to do `sudo apt install xwayland` first.
+        If you really want mpv or have other UI issues, user testing suggests that the best solution for now is just to launch the program in X11. Launch the program _without_ the WAYLAND_DISPLAY variable and _with_ `QT_QPA_PLATFORM=xcb`, which you can achieve with `unset WAYLAND_DISPLAY` and `export QT_QPA_PLATFORM=xcb` in a boot script that launches `hydrus_client`. You might need to do `sudo apt install xwayland` first.
         
         You should be able to see which window manager hydrus thinks it is running under in `help->about`, on the "Qt" row.
         
@@ -192,10 +190,15 @@ However, you need to be careful not to delete your database! It sounds silly, bu
 
 *   Make a backup if you can!
 *   Go to your install directory.
-*   Delete all the files and folders except the 'db' dir and its contents. The 'db' dir is where all your stuff is.
+*   Delete all the files and folders except the 'db' dir and its contents. The 'db' dir is where all your stuff is, so don't delete it!
 *   Extract the new version of hydrus as you normally do.
 
-After that, you'll have a 'clean' version of hydrus that is as if you had installed for the first time, with only the latest dlls, but still with your old db. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
+!!! note "Since v662"
+    Before v662, the install was messy, with 100+ folders and dlls in the base directory. A clean install there involves selecting a whole bunch of stuff other than the db dir and clearing it out.
+    
+    Ever since v662, you should just have a couple executables and a 'db' and a 'lib' dir. A clean install with the new structure follows the same script, but since it is now so simple, the only thing you really need to delete is the 'lib' dir.
+
+After you have re-extracted, you'll have a 'clean' version of hydrus that is as if you had installed for the first time, with only the latest dlls, but still with your old db. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
 
 *Note that source users do not have to worry about clean installs, although if they update their system python, they'll want to recreate their venv. Also, Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.*
 
@@ -203,11 +206,11 @@ After that, you'll have a 'clean' version of hydrus that is as if you had instal
 
 If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v290->v330, may not work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to [bit rot](https://en.wikipedia.org/wiki/Software_rot), and so some underlying truth I assumed for the v299->v300 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.
 
-As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v290->v310 first, and boot it. If the database updates correctly and the program boots, then shut down and move on to v310->v330. If the update does not work, cut down the gap and try v290->v300, and so on. **Again, it is very important you make a backup before starting a process like this so you can roll back and try a different version if things go wrong.**
+As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v290->v310 first, and boot it once. If the database updates correctly and the program launches ok, then shut down and move on to v310->v330. If the update does not work, cut down the gap and try v290->v300, and so on. **Again, it is very important you make a backup before starting a process like this so you can roll back and try a different version if things go wrong.**
 
 If you narrow the gap down to just one version and still get an error, please let me know. If the problem is ever quick to appear and ugly/serious-looking, and perhaps talking about a "bootloader" or "dll" issue, then try doing a clean install as above. I am very interested in these sorts of problems and will be happy to help figure out a fix with you (and everyone else who might be affected).
 
-_All that said, and while updating is complex and every client is different, various user reports over the years suggest this route works and is efficient: 204 > 238 > 246 > 291 > 328 > 335 (clean install) > 376 > 421 > 466 (clean install) > 474 > 480 > 521 (maybe clean install) > 527 (special clean install) > 535 > 558 > 571 (clean install) > 603 > 652_ 
+_All that said, and while updating is complex and every client is different, various user reports over the years suggest this route works and is efficient: 204 > 238 > 246 > 291 > 328 > 335 (clean install) > 376 > 421 > 466 (clean install) > 474 > 480 > 521 (maybe clean install) > 527 (special clean install) > 535 > 558 > 571 (clean install) > 603 > 652 > 662 (clean install)_ 
 
 ??? note "334->335"
     We moved from python 2 to python 3.
@@ -248,6 +251,16 @@ _All that said, and while updating is complex and every client is different, var
     * If you use the Windows installer, install as normal.
     * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
     * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, there are no special instructions. Update as normal.
+
+??? note "661->662"
+    662 moved the "contents" of the PyInstaller package all up to a 'lib' dir, to tidy up the base directory. Testing suggests it doesn't actually _need_ a clean install, but we should be tidy and not entertain two programs in the same directory!
+    
+    If you need to update from 661 or before to 662 or later, then:
+    
+    * If you use the Windows installer, install as normal.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
+    * We no longer have the macOS App, sorry!
     * If you run from source, there are no special instructions. Update as normal.
 
 ## Backing up

@@ -32,6 +32,7 @@ from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.importing.options import TagFilteringImportOptions
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -279,7 +280,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._source_urls.update( urls )
         
     
-    def _CheckTagsVeto( self, tags, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
+    def _CheckTagsVeto( self, tags, tag_filtering_import_options: TagFilteringImportOptions.TagFilteringImportOptions ):
         
         if len( tags ) > 0:
             
@@ -287,7 +288,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             all_chain_tags = set( itertools.chain.from_iterable( tags_to_siblings.values() ) )
             
-            tag_import_options.CheckTagsVeto( tags, all_chain_tags )
+            tag_filtering_import_options.CheckTagsVeto( tags, all_chain_tags )
             
         
     
@@ -738,9 +739,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._UpdateModified()
         
     
-    def CheckPreFetchMetadata( self, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy ):
+    def CheckPreFetchMetadata( self, tag_filtering_import_options: TagFilteringImportOptions.TagFilteringImportOptions ):
         
-        self._CheckTagsVeto( self._tags, tag_import_options )
+        self._CheckTagsVeto( self._tags, tag_filtering_import_options )
         
     
     def DownloadAndImportRawFile( self, file_url: str, file_import_options, loud_or_quiet: int, network_job_factory, network_job_presentation_context_factory, status_hook, override_bandwidth = False, spawning_url = None, forced_referral_url = None, file_seed_cache = None ):
@@ -749,7 +750,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.AddPrimaryURLs( ( file_url, ) )
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'file_download' )
         
         try:
             
@@ -1197,7 +1198,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Source file does not exist!' )
                 
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'file_import' )
             
             try:
                 
@@ -1286,7 +1287,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PredictPreImportStatus( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options: NoteImportOptions.NoteImportOptions, file_url = None ):
+    def PredictPreImportStatus( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, tag_import_options_legacy: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options: NoteImportOptions.NoteImportOptions, file_url = None ):
         
         ( hash_match_found, hash_matches_are_dispositive, hash_file_import_status ) = self.GetPreImportStatusPredictionHash( file_import_options )
         ( url_match_found, url_matches_are_dispositive, url_file_import_status ) = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
@@ -1320,11 +1321,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         should_download_metadata = should_download_file # if we want the file, we need the metadata to get the file_url!
         
+        tag_import_options = tag_import_options_legacy.GetTagImportOptions()
+        
         # but if we otherwise still want to force some tags, let's do it
         if not should_download_metadata and tag_import_options.WorthFetchingTags():
             
-            url_override = url_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
-            hash_override = hash_file_import_status.AlreadyInDB() and tag_import_options.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB()
+            url_override = url_file_import_status.AlreadyInDB() and tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB()
+            hash_override = hash_file_import_status.AlreadyInDB() and tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB()
             
             if url_override or hash_override:
                 
@@ -1485,6 +1488,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             tag_import_options = self._SetupTagImportOptions( tag_import_options )
             note_import_options = self._SetupNoteImportOptions( note_import_options )
             
+            tag_filtering_import_options = tag_import_options.GetTagFilteringImportOptions()
+            
             status_hook( 'checking url status' )
             
             ( should_download_metadata, should_download_file ) = self.PredictPreImportStatus( file_import_options, tag_import_options, note_import_options )
@@ -1549,7 +1554,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if len( parsed_posts ) == 0:
                         
-                        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+                        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'empty_document_test' )
                         
                         it_was_a_real_file = False
                         
@@ -1620,7 +1625,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         self.AddParsedPost( parsed_post, file_import_options )
                         
-                        self.CheckPreFetchMetadata( tag_import_options )
+                        self.CheckPreFetchMetadata( tag_filtering_import_options )
                         
                         desired_urls = parsed_post.GetURLs( ( HC.URL_TYPE_DESIRED, ), only_get_top_priority = True )
                         
@@ -1713,7 +1718,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 if should_download_file:
                     
-                    self.CheckPreFetchMetadata( tag_import_options )
+                    self.CheckPreFetchMetadata( tag_filtering_import_options )
                     
                     did_substantial_work = True
                     
@@ -1923,7 +1928,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 media_result = CG.client_controller.Read( 'media_result', hash )
                 
             
-            for ( service_key, content_updates ) in tag_import_options.GetContentUpdatePackage( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).IterateContentUpdates():
+            for ( service_key, content_updates ) in tag_import_options.GetTagImportOptions().GetContentUpdatePackage( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).IterateContentUpdates():
                 
                 content_update_package.AddContentUpdates( service_key, content_updates )
                 

@@ -38,6 +38,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import ClientImportOptions
+from hydrus.client.importing.options import FilenameTaggingOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptionsLegacy
@@ -170,7 +171,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             # pull from an options default
             
-            filename_tagging_options = TagImportOptionsLegacy.FilenameTaggingOptions()
+            filename_tagging_options = FilenameTaggingOptions.FilenameTaggingOptions()
             
         
         super().__init__( parent )
@@ -203,7 +204,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
     
     def GetFilenameTaggingOptions( self ):
         
-        filename_tagging_options = TagImportOptionsLegacy.FilenameTaggingOptions()
+        filename_tagging_options = FilenameTaggingOptions.FilenameTaggingOptions()
         
         self._advanced_panel.UpdateFilenameTaggingOptions( filename_tagging_options )
         self._simple_panel.UpdateFilenameTaggingOptions( filename_tagging_options )
@@ -1585,6 +1586,85 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
+
+def SelectGUGKeyAndName( win: QW.QWidget, gug_key_and_name ):
+    
+    domain_manager = CG.client_controller.network_engine.domain_manager
+    
+    # maybe relegate to hidden page and something like "(does not work)" if no gallery url class match
+    
+    # will be None for missing entries
+    my_gug = domain_manager.GetGUG( gug_key_and_name )
+    
+    gugs = list( domain_manager.GetGUGs() )
+    gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
+    
+    gugs.sort( key = lambda g: g.GetName() )
+    
+    functional_gugs = []
+    non_functional_gugs = []
+    
+    for gug in gugs:
+        
+        if gug.IsFunctional():
+            
+            functional_gugs.append( gug )
+            
+        else:
+            
+            non_functional_gugs.append( gug )
+            
+        
+    
+    choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() in gug_keys_to_display ]
+    
+    second_choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() not in gug_keys_to_display ]
+    
+    if len( second_choice_tuples ) > 0:
+        
+        choice_tuples.append( ( f'--other galleries{HC.UNICODE_ELLIPSIS}', -1 ) )
+        
+    
+    non_functional_choice_tuples = []
+    
+    if len( non_functional_gugs ) > 0:
+        
+        for gug in non_functional_gugs:
+            
+            s = gug.GetName()
+            
+            try:
+                
+                gug.CheckFunctional()
+                
+            except HydrusExceptions.ParseException as e:
+                
+                s = '{} ({})'.format( gug.GetName(), e )
+                
+            
+            non_functional_choice_tuples.append( ( s, gug ) )
+            
+        
+        choice_tuples.append( ( f'--non-functional galleries{HC.UNICODE_ELLIPSIS}', -2 ) )
+        
+    
+    gug = ClientGUIDialogsQuick.SelectFromList( win, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
+    
+    
+    if gug == -1:
+        
+        gug = ClientGUIDialogsQuick.SelectFromList( win, 'select gallery', second_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
+        
+    elif gug == -2:
+        
+        gug = ClientGUIDialogsQuick.SelectFromList( win, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
+        
+    
+    gug_key_and_name = gug.GetGUGKeyAndName()
+    
+    return gug_key_and_name
+    
+
 class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
@@ -1608,97 +1688,14 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        domain_manager = CG.client_controller.network_engine.domain_manager
-        
-        # maybe relegate to hidden page and something like "(does not work)" if no gallery url class match
-        
-        my_gug = domain_manager.GetGUG( self._gug_key_and_name )
-        
-        gugs = list( domain_manager.GetGUGs() )
-        gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
-        
-        gugs.sort( key = lambda g: g.GetName() )
-        
-        functional_gugs = []
-        non_functional_gugs = []
-        
-        for gug in gugs:
-            
-            if gug.IsFunctional():
-                
-                functional_gugs.append( gug )
-                
-            else:
-                
-                non_functional_gugs.append( gug )
-                
-            
-        
-        choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() in gug_keys_to_display ]
-        
-        second_choice_tuples = [ ( gug.GetName(), gug ) for gug in functional_gugs if gug.GetGUGKey() not in gug_keys_to_display ]
-        
-        if len( second_choice_tuples ) > 0:
-            
-            choice_tuples.append( ( f'--other galleries{HC.UNICODE_ELLIPSIS}', -1 ) )
-            
-        
-        non_functional_choice_tuples = []
-        
-        if len( non_functional_gugs ) > 0:
-            
-            for gug in non_functional_gugs:
-                
-                s = gug.GetName()
-                
-                try:
-                    
-                    gug.CheckFunctional()
-                    
-                except HydrusExceptions.ParseException as e:
-                    
-                    s = '{} ({})'.format( gug.GetName(), e )
-                    
-                
-                non_functional_choice_tuples.append( ( s, gug ) )
-                
-            
-            choice_tuples.append( ( f'--non-functional galleries{HC.UNICODE_ELLIPSIS}', -2 ) )
-            
-        
         try:
             
-            gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
+            gug_key_and_name = SelectGUGKeyAndName( self, self._gug_key_and_name )
             
         except HydrusExceptions.CancelledException:
             
             return
             
-        
-        if gug == -1:
-            
-            try:
-                
-                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', second_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-        elif gug == -2:
-            
-            try:
-                
-                gug = ClientGUIDialogsQuick.SelectFromList( self, 'select gallery', non_functional_choice_tuples, value_to_select = my_gug, sort_tuples = False, allow_insta_one_item_select = False )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-        
-        gug_key_and_name = gug.GetGUGKeyAndName()
         
         self._SetValue( gug_key_and_name )
         

@@ -283,7 +283,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -385,7 +385,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -443,7 +443,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -505,7 +505,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -763,7 +763,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -878,7 +878,7 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         

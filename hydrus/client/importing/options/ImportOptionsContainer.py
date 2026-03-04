@@ -57,8 +57,8 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.SerialisableDictionary()
         self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.SerialisableDictionary()
         
-        self._favourite_import_options_containers = HydrusSerialisable.SerialisableDictionary() # names to containers
-        self._favourite_import_options = HydrusSerialisable.SerialisableDictionary( { import_options_type : HydrusSerialisable.SerialisableDictionary() for import_options_type in IMPORT_OPTIONS_CANONICAL_ORDER } )
+        self._names_to_favourite_import_options_containers = HydrusSerialisable.SerialisableDictionary()
+        self._import_options_types_to_names_to_favourite_import_options = HydrusSerialisable.SerialisableDictionary( { import_options_type : HydrusSerialisable.SerialisableDictionary() for import_options_type in IMPORT_OPTIONS_CANONICAL_ORDER } )
         
         self._lock = threading.Lock()
         
@@ -67,14 +67,14 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_import_options_caller_types_to_default_import_options_containers = self._import_options_caller_types_to_default_import_options_containers.GetSerialisableTuple()
         serialisable_url_class_keys_to_default_import_options_containers = self._url_class_keys_to_default_import_options_containers.GetSerialisableTuple()
-        serialisable_favourite_import_options_containers = self._favourite_import_options_containers.GetSerialisableTuple()
-        serialisable_favourite_import_options = self._favourite_import_options.GetSerialisableTuple()
+        serialisable_names_to_favourite_import_options_containers = self._names_to_favourite_import_options_containers.GetSerialisableTuple()
+        serialisable_names_to_favourite_import_options = self._import_options_types_to_names_to_favourite_import_options.GetSerialisableTuple()
         
         return (
             serialisable_import_options_caller_types_to_default_import_options_containers,
             serialisable_url_class_keys_to_default_import_options_containers,
-            serialisable_favourite_import_options_containers,
-            serialisable_favourite_import_options,
+            serialisable_names_to_favourite_import_options_containers,
+            serialisable_names_to_favourite_import_options,
         )
         
     
@@ -83,42 +83,26 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         (
             serialisable_import_options_caller_types_to_default_import_options_containers,
             serialisable_url_class_keys_to_default_import_options_containers,
-            serialisable_favourite_import_options_containers,
-            serialisable_favourite_import_options,
+            serialisable_names_to_favourite_import_options_containers,
+            serialisable_names_to_favourite_import_options,
         ) = serialisable_info
         
         self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_caller_types_to_default_import_options_containers )
         self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_class_keys_to_default_import_options_containers )
-        self._favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_favourite_import_options_containers )
-        self._favourite_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_favourite_import_options )
+        self._names_to_favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_names_to_favourite_import_options_containers )
+        self._import_options_types_to_names_to_favourite_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_names_to_favourite_import_options )
         
     
-    def GetDerivedImportOptionsFromContainer( self, import_options_container: "ImportOptionsContainer", import_options_type: int, import_options_caller_type: int, url_class_key = None ):
+    def GenerateFullImportOptionsContainer( self, caller_import_options_container_slice: "ImportOptionsContainer", import_options_caller_type: int, url_class_key = None ) -> "ImportOptionsContainer":
         
-        # TODO: Yeah rewrite this guy to a 'convert my swiss cheese slice and import options caller type to a solid base and I'll never talk to you again this file import'
+        import_options_container_slices_in_preference_order = [ caller_import_options_container_slice ]
         
         with self._lock:
             
-            possible_import_options = import_options_container.GetImportOptions( import_options_type )
-            
-            if possible_import_options is not None:
-                
-                return possible_import_options
-                
-            
-            # the importer's primary container doesn't have an entry for this type, so we are looking at the defaults. let's check urls if that's what we are
-            
             if url_class_key is not None and url_class_key in self._url_class_keys_to_default_import_options_containers:
                 
-                possible_import_options = self._url_class_keys_to_default_import_options_containers[ url_class_key ].GetImportOptions( import_options_type )
+                import_options_container_slices_in_preference_order.append( self._url_class_keys_to_default_import_options_containers[ url_class_key ] )
                 
-                if possible_import_options is not None:
-                    
-                    return possible_import_options
-                    
-                
-            
-            # ok, let's set up the order we want to consult things
             
             if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION:
                 
@@ -138,15 +122,21 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
             for import_options_caller_type in preference_stack:
                 
-                possible_import_options = self._import_options_caller_types_to_default_import_options_containers[ import_options_caller_type ].GetImportOptions( import_options_type )
-                
-                if possible_import_options is not None:
-                    
-                    return possible_import_options
-                    
+                import_options_container_slices_in_preference_order.append( self._import_options_caller_types_to_default_import_options_containers[ import_options_caller_type ] )
                 
             
-            raise Exception( f'Your global default import options have a hole! This should never happen. The problem originated from {import_options_caller_type_str_lookup[ import_options_caller_type ]}/{import_options_type_str_lookup[ import_options_type ]}! Please tell hydev, and try opening and re-saving your default import options to see if it re-fills-in the default.' )
+            import_options_container_result = ImportOptionsContainer()
+            
+            # we have a bunch of slices, now we fill in all the holes
+            for import_options_container_slice in import_options_container_slices_in_preference_order:
+                
+                import_options_container_result.FillInWithThisSlice( import_options_container_slice )
+                
+            
+            import_options_container_result.SetAndCheckFull()
+            
+            # this guy is now ready to answer any import question the caller has
+            return import_options_container_result
             
         
     
@@ -154,7 +144,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return dict( self._favourite_import_options_containers )
+            return dict( self._names_to_favourite_import_options_containers )
             
         
     
@@ -162,7 +152,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            return dict( self._favourite_import_options[ import_options_type ] )
+            return dict( self._import_options_types_to_names_to_favourite_import_options[ import_options_type ] )
             
         
     
@@ -182,19 +172,19 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFavouriteImportOptionContainers( self, favourite_import_options_containers ):
+    def SetFavouriteImportOptionContainers( self, names_to_favourite_import_options_containers ):
         
         with self._lock:
             
-            self._favourite_import_options_containers = HydrusSerialisable.SerialisableDictionary( favourite_import_options_containers )
+            self._names_to_favourite_import_options_containers = HydrusSerialisable.SerialisableDictionary( names_to_favourite_import_options_containers )
             
         
     
-    def SetFavouriteImportOptions( self, import_options_type, favourite_import_options ):
+    def SetFavouriteImportOptions( self, import_options_type, names_to_favourite_import_options ):
         
         with self._lock:
             
-            self._favourite_import_options[ import_options_type ] = HydrusSerialisable.SerialisableDictionary( favourite_import_options )
+            self._import_options_types_to_names_to_favourite_import_options[ import_options_type ] = HydrusSerialisable.SerialisableDictionary( names_to_favourite_import_options )
             
         
     
@@ -217,11 +207,6 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER ] = ImportOptionsManager
 
-# TODO: Ok splitting this guy into Swiss Cheese vs Solid. come up with better names.
-# he is so simple though, I could just have a bool that changes his None-return to an exception etc.., and alter any edit panel based on that bool
-# I do need names for this transition though
-# ditch the 'getderivedimportoptionsfromcontainer' stuff in the manager above. collapse a swiss cheese template and importer context to a frozen solid base early in the pipeline, and pass that around thereafter for that file import
-
 class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER
@@ -233,13 +218,21 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         super().__init__()
         
         self._import_options = HydrusSerialisable.SerialisableDictionary()
+        self._should_be_full = False
         
         self._lock = threading.Lock()
         
     
     def _GetImportOptions( self, import_options_type: int ):
         
-        return self._import_options.get( import_options_type, None )
+        result = self._import_options.get( import_options_type, None )
+        
+        if result is None and self._should_be_full:
+            
+            raise Exception( f'Hey, an import options container that was supposed to be able to serve any request was just asked for an import options of type {import_options_type_str_lookup[ import_options_type ]}, but it was missing! Please report this to hydev!' )
+            
+        
+        return result
         
     
     def _GetSerialisableInfo( self ):
@@ -256,11 +249,61 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         self._import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options )
         
     
+    def _SetImportOptions( self, import_options_type: int, import_options: HydrusSerialisable.SerialisableBase ):
+        
+        self._import_options[ import_options_type ] = import_options
+        
+    
+    def FillInWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer" ):
+        
+        with self._lock:
+            
+            for import_options_type in IMPORT_OPTIONS_CANONICAL_ORDER:
+                
+                if self._GetImportOptions( import_options_type ) is None:
+                    
+                    import_options = import_options_container_slice.GetImportOptions( import_options_type )
+                    
+                    if import_options is not None:
+                        
+                        self._SetImportOptions( import_options_type, import_options )
+                        
+                    
+                
+            
+        
+    
     def GetImportOptions( self, import_options_type: int ):
         
         with self._lock:
             
             return self._GetImportOptions( import_options_type )
+            
+        
+    
+    def SetImportOptions( self, import_options_type: int, import_options: HydrusSerialisable.SerialisableBase ):
+        
+        with self._lock:
+            
+            self._SetImportOptions( import_options_type, import_options )
+            
+        
+    
+    def SetAndCheckFull( self ):
+        
+        with self._lock:
+            
+            for import_options_type in IMPORT_OPTIONS_CANONICAL_ORDER:
+                
+                result = self._GetImportOptions( import_options_type )
+                
+                if result is None:
+                    
+                    raise Exception( f'Hey, an import options container that was supposed to be able to serve any request was missing an import options of type {import_options_type_str_lookup[ import_options_type ]} on construction! Please report this to hydev!' )
+                    
+                
+            
+            self._should_be_full = True
             
         
     

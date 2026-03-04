@@ -3807,36 +3807,38 @@ class ListBoxTags( ListBox ):
                 
                 if self.can_spawn_new_windows or self._CanProvideCurrentPagePredicates():
                     
-                    search_menu = ClientGUIMenus.GenerateMenu( menu )
-                    
-                    ClientGUIMenus.AppendMenu( menu, search_menu, 'search' )
-                    
                     if self.can_spawn_new_windows:
                         
-                        ClientGUIMenus.AppendMenuItem( search_menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPages, [ predicates ] )
+                        open_menu = ClientGUIMenus.GenerateMenu( menu )
+                        
+                        ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+                        
+                        ClientGUIMenus.AppendMenuItem( open_menu, 'open a new search page for ' + selection_string, 'Open a new search page starting with the selected predicates.', self._NewSearchPages, [ predicates ] )
                         
                         if or_predicate is not None:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'open a new OR search page for ' + selection_string, 'Open a new search page starting with the selected merged as an OR search predicate.', self._NewSearchPages, [ ( or_predicate, ) ] )
+                            ClientGUIMenus.AppendMenuItem( open_menu, 'open a new OR search page for ' + selection_string, 'Open a new search page starting with the selected merged as an OR search predicate.', self._NewSearchPages, [ ( or_predicate, ) ] )
                             
                         
                         if len( predicates ) > 1:
                             
                             for_each_predicates = [ ( predicate, ) for predicate in predicates ]
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
+                            ClientGUIMenus.AppendMenuItem( open_menu, 'open new search pages for each in selection', 'Open one new search page for each selected predicate.', self._NewSearchPages, for_each_predicates )
                             
                         
-                        ClientGUIMenus.AppendSeparator( search_menu )
+                        ClientGUIMenus.AppendSeparator( open_menu )
                         
-                        ClientGUIMenus.AppendMenuItem( search_menu, f'open a new duplicate filter page for {selection_string}', 'Open a new duplicate filter page starting with the selected predicates.', self._NewDuplicateFilterPage, predicates )
-                        
-                        ClientGUIMenus.AppendSeparator( search_menu )
+                        ClientGUIMenus.AppendMenuItem( open_menu, f'open a new duplicate filter page for {selection_string}', 'Open a new duplicate filter page starting with the selected predicates.', self._NewDuplicateFilterPage, predicates )
                         
                     
-                    self._AddEditMenu( search_menu )
+                    edit_menu = ClientGUIMenus.GenerateMenu( menu )
                     
-                    ClientGUIMenus.AppendSeparator( search_menu )
+                    ClientGUIMenus.AppendMenu( menu, edit_menu, 'search' )
+                    
+                    self._AddEditMenu( edit_menu )
+                    
+                    ClientGUIMenus.AppendSeparator( edit_menu )
                     
                     if self._CanProvideCurrentPagePredicates():
                         
@@ -3860,49 +3862,39 @@ class ListBoxTags( ListBox ):
                         
                         if some_selected_not_in_current:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, 'add {} to current search'.format( predicates_selection_string ), 'Add the selected predicates to the current search.', self._ProcessMenuPredicateEvent, 'add_predicates' )
                             
                         
                         some_selected_in_current = HydrusLists.SetsIntersect( predicates, current_predicates )
                         
                         if some_selected_in_current:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, 'remove {} from current search'.format( predicates_selection_string ), 'Remove the selected predicates from the current search.', self._ProcessMenuPredicateEvent, 'remove_predicates' )
                             
                         
                         we_can_flip_some_of_selection = len( inverse_predicates ) > 0
                         
                         if we_can_flip_some_of_selection:
                             
-                            inclusives = { p.IsInclusive() for p in inverse_predicates }
-                            
-                            inverse_all_exclusive = True not in inclusives
-                            inverse_all_inclusive = False not in inclusives
-                            
-                            if inverse_all_exclusive:
-                                
-                                text = 'exclude {} from the current search'.format( predicates_selection_string )
-                                desc = 'Disallow the selected predicates for the current search.'
-                                
-                            elif inverse_all_inclusive and len( inverse_predicates ) == 1:
+                            if len( inverse_predicates ) == 1:
                                 
                                 ( p, ) = inverse_predicates
                                 
                                 inverse_selection_string = p.ToString( with_count = False )
                                 
-                                text = 'require {} for the current search'.format( inverse_selection_string )
-                                desc = 'Stop disallowing the selected predicates from the current search.'
+                                text = 'invert: add {} to current search'.format( inverse_selection_string )
                                 
                             else:
                                 
-                                text = 'invert selection for the current search'
-                                desc = 'Flip the inclusive/exclusive nature of the selected predicates from the current search.'
+                                text = 'invert selected and add to current search'
                                 
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, text, desc, self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
+                            desc = 'Invert the selected predicates for the current search.'
+                            
+                            ClientGUIMenus.AppendMenuItem( edit_menu, text, desc, self._ProcessMenuPredicateEvent, 'add_inverse_predicates' )
                             
                         
-                        ClientGUIMenus.AppendSeparator( search_menu )
+                        ClientGUIMenus.AppendSeparator( edit_menu )
                         
                         if or_predicate is not None and or_predicate not in predicates:
                             
@@ -3910,36 +3902,36 @@ class ListBoxTags( ListBox ):
                             
                             if all_selected_in_current:
                                 
-                                ClientGUIMenus.AppendMenuItem( search_menu, f'replace {predicates_selection_string} with their OR', 'Remove the selected predicates and replace them with an OR predicate that searches for any of them.', self._ProcessMenuPredicateEvent, 'replace_or_predicate')
+                                ClientGUIMenus.AppendMenuItem( edit_menu, f'replace {predicates_selection_string} with their OR', 'Remove the selected predicates and replace them with an OR predicate that searches for any of them.', self._ProcessMenuPredicateEvent, 'replace_or_predicate')
                                 
                             else:
                                 
-                                ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
+                                ClientGUIMenus.AppendMenuItem( edit_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
                                 
                             
                         
                         if True not in ( p.IsORPredicate() for p in predicates ):
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, f'start an OR predicate with {predicates_selection_string}', 'Start up the Edit OR Predicate panel starting with this.', self._ProcessMenuPredicateEvent, 'start_or_predicate' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, f'start an OR predicate with {predicates_selection_string}', 'Start up the Edit OR Predicate panel starting with this.', self._ProcessMenuPredicateEvent, 'start_or_predicate' )
                             
                         
                         if False not in ( p.IsORPredicate() for p in predicates ):
                             
                             label = f'dissolve {predicates_selection_string} into single predicates'
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, label, 'Convert OR predicates to their constituent parts.', self._ProcessMenuPredicateEvent, 'dissolve_or_predicate' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, label, 'Convert OR predicates to their constituent parts.', self._ProcessMenuPredicateEvent, 'dissolve_or_predicate' )
                             
                         
-                        ClientGUIMenus.AppendSeparator( search_menu )
+                        ClientGUIMenus.AppendSeparator( edit_menu )
                         
                         if namespace_predicate is not None and namespace_predicate not in current_predicates:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'add {} to current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Add the namespace predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_namespace_predicate' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, 'add {} to current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Add the namespace predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_namespace_predicate' )
                             
                         
                         if inverse_namespace_predicate is not None and inverse_namespace_predicate not in current_predicates:
                             
-                            ClientGUIMenus.AppendMenuItem( search_menu, 'exclude {} from the current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Disallow the namespace predicate from the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_namespace_predicate' )
+                            ClientGUIMenus.AppendMenuItem( edit_menu, 'exclude {} from the current search'.format( namespace_predicate.ToString( with_count = False ) ), 'Disallow the namespace predicate from the current search.', self._ProcessMenuPredicateEvent, 'add_inverse_namespace_predicate' )
                             
                         
                     

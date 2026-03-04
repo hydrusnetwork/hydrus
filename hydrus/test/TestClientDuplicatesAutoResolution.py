@@ -24,14 +24,183 @@ from hydrus.test import TestController
 from hydrus.test import TestGlobals as TG
 from hydrus.test import HelperFunctions
 
-class TestComparatorOneFile( unittest.TestCase ):
+class TestComparatorOneFileHardcoded( unittest.TestCase ):
+    
+    _db: typing.Any = None
+    
+    @classmethod
+    def _clear_db( cls ):
+        
+        cls._delete_db()
+        
+        # class variable
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def _delete_db( cls ):
+        
+        cls._db.Shutdown()
+        
+        while not cls._db.LoopIsFinished():
+            
+            time.sleep( 0.1 )
+            
+        
+        db_filenames = list(cls._db._db_filenames.values())
+        
+        for filename in db_filenames:
+            
+            path = os.path.join( TestController.DB_DIR, filename )
+            
+            os.remove( path )
+            
+        
+        del cls._db
+        
+        TG.test_controller.ClearTestDB()
+        
+    
+    @classmethod
+    def setUpClass( cls ):
+        
+        cls._db = ClientDB.DB( TG.test_controller, TestController.DB_DIR, 'client' )
+        
+        TG.test_controller.SetTestDB( cls._db )
+        
+    
+    @classmethod
+    def tearDownClass( cls ):
+        
+        cls._delete_db()
+        
+    
+    def _read( self, action, *args, **kwargs ): return TestComparatorOneFileHardcoded._db.Read( action, *args, **kwargs )
+    def _write( self, action, *args, **kwargs ): return TestComparatorOneFileHardcoded._db.Write( action, True, *args, **kwargs )
+    
+    def _do_file_import( self, name ):
+        
+        path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', name ) )
+        
+        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
+        file_import_options.SetIsDefault( True )
+        
+        file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+        
+        file_import_job.GeneratePreImportHashAndStatus()
+        
+        file_import_job.GenerateInfo()
+        
+        TG.test_controller.client_files_manager.AddFile( file_import_job.GetHash(), file_import_job.GetMime(), file_import_job._temp_path, thumbnail_bytes = file_import_job._thumbnail_bytes )
+        
+        self._write( 'import_file', file_import_job )
+        
+        hash = file_import_job.GetHash()
+        
+        ( media_result, ) = self._read( 'media_results', ( hash, ) )
+        
+        return media_result
+        
+    
+    def test_comparator_0_is_progressive( self ):
+        
+        self._clear_db()
+        
+        media_result_a = self._do_file_import( 'jpeg_progressive.jpg' )
+        media_result_b = self._do_file_import( 'jpeg_non_progressive.jpg' )
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileHardcoded()
+        
+        #
+        
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        self.assertFalse( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        self.assertFalse( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_B )
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        self.assertFalse( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertFalse( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        self.assertFalse( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_EITHER )
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE )
+        
+        self.assertFalse( comparator.CanDetermineBetter() )
+        self.assertTrue( comparator.OrderDoesNotMatter() )
+        self.assertFalse( comparator.IsFast() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        #
+        
+        media_result_png = self._do_file_import( 'muh_png.png' )
+        media_result_gif = self._do_file_import( 'muh_gif.gif' )
+        
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_PROGRESSIVE )
+        
+        self.assertFalse( comparator.Test( media_result_png, media_result_gif ) )
+        self.assertFalse( comparator.Test( media_result_gif, media_result_png ) )
+        
+        comparator.SetComparatorType( ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_ONE_FILE_JPEG_IS_NOT_PROGRESSIVE )
+        
+        self.assertFalse( comparator.Test( media_result_png, media_result_gif ) )
+        self.assertFalse( comparator.Test( media_result_gif, media_result_png ) )
+        
+    
+
+class TestComparatorOneFileMetadataConditional( unittest.TestCase ):
     
     def test_comparator_1_empty( self ):
         
         media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         comparator.SetLookingAt( ClientDuplicatesAutoResolutionComparators.LOOKING_AT_A )
         
@@ -60,7 +229,7 @@ class TestComparatorOneFile( unittest.TestCase ):
         media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -524,7 +693,7 @@ class TestComparatorHardcoded( unittest.TestCase ):
         media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
         media_result_c = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_PNG )
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME )
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
@@ -536,7 +705,7 @@ class TestComparatorHardcoded( unittest.TestCase ):
         
         #
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_DIFFERS )
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
@@ -559,7 +728,7 @@ class TestComparatorHardcoded( unittest.TestCase ):
         media_result_c.GetFileInfoManager().has_exif = False
         media_result_d.GetFileInfoManager().has_exif = False
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
@@ -584,7 +753,7 @@ class TestComparatorHardcoded( unittest.TestCase ):
         media_result_c.GetFileInfoManager().has_icc_profile = False
         media_result_d.GetFileInfoManager().has_icc_profile = False
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_ICC_PROFILE_SAME )
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME )
         
         self.assertFalse( comparator.CanDetermineBetter() )
         
@@ -607,7 +776,7 @@ class TestComparatorHardcoded( unittest.TestCase ):
         
         #
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_A_HAS_CLEARLY_BETTER_JPEG_QUALITY )
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY )
         
         self.assertTrue( comparator.CanDetermineBetter() )
         self.assertFalse( comparator.OrderDoesNotMatter() )
@@ -813,8 +982,8 @@ class TestComparatorAND( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorAND(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
             ]
         )
         
@@ -836,8 +1005,8 @@ class TestComparatorAND( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorAND(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
             ]
         )
         
@@ -876,7 +1045,7 @@ class TestComparatorAND( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorAND(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
                 filesize_comparator
             ]
         )
@@ -917,8 +1086,8 @@ class TestComparatorOR( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
             ]
         )
         
@@ -940,8 +1109,8 @@ class TestComparatorOR( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_HAS_EXIF_SAME )
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME )
             ]
         )
         
@@ -980,7 +1149,7 @@ class TestComparatorOR( unittest.TestCase ):
         
         comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOR(
             [
-                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_FILETYPE_SAME ),
+                ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME ),
                 filesize_comparator
             ]
         )
@@ -1017,7 +1186,7 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1048,7 +1217,7 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1080,7 +1249,7 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1109,7 +1278,7 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1125,7 +1294,7 @@ class TestSelector( unittest.TestCase ):
         
         comparator_1.SetMetadataConditional( mc )
         
-        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1154,7 +1323,7 @@ class TestSelector( unittest.TestCase ):
         
         selector = ClientDuplicatesAutoResolutionComparators.PairSelector()
         
-        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator_1 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         
@@ -1170,7 +1339,7 @@ class TestSelector( unittest.TestCase ):
         
         comparator_1.SetMetadataConditional( mc )
         
-        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFile()
+        comparator_2 = ClientDuplicatesAutoResolutionComparators.PairComparatorOneFileMetadataConditional()
         
         mc = ClientMetadataConditional.MetadataConditional()
         

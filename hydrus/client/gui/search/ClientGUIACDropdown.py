@@ -1081,7 +1081,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _InitSearchResultsList( self ):
+    def _InitSearchResultsList( self ) -> ListBoxTagsPredicatesAC:
         
         raise NotImplementedError()
         
@@ -1875,7 +1875,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         return None
         
     
-    def _InitSearchResultsList( self ):
+    def _InitSearchResultsList( self ) -> ListBoxTagsPredicatesAC:
         
         raise NotImplementedError()
         
@@ -2706,7 +2706,7 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
         return favs_list
         
     
-    def _InitSearchResultsList( self ):
+    def _InitSearchResultsList( self ) -> ListBoxTagsPredicatesAC:
         
         if self._fixed_results_list_height is None:
             
@@ -3513,7 +3513,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return favs_list
         
     
-    def _InitSearchResultsList( self ):
+    def _InitSearchResultsList( self ) -> ListBoxTagsPredicatesAC:
         
         height_num_chars = CG.client_controller.new_options.GetInteger( 'ac_write_list_height_num_chars' )
         

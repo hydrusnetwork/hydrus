@@ -75,7 +75,7 @@ While the ideal usage has changed significantly, note that the current usage rem
 The current and ideal usages line up, and the defunct `C:\Hydrus Network\db\client_files` location, which no longer stores anything, is removed from the list.
 
 !!! note "Missing Locations"
-    If any of the 512 file/thumbnail media folders are not where the client expects them to be on program boot, a repair dialog appears to let you update the record. This is not impossible to figure out, _and in some situations doing this on purpose can be faster than letting the client migrate things itself_. I generally do not recommend moving folders around while the client is not up, but if you are feeling confident, go for it. You made a backup, right? :^)
+    If any of the file/thumbnail media subfolders are not where the client expects them to be on program boot, a repair dialog appears to let you update the record. This is not impossible to figure out, _and in some situations doing this on purpose can be faster than letting the client migrate things itself_. I generally do not recommend moving folders around while the client is not up, but if you are feeling confident, go for it. You made a backup, right? :^)
     
     Note that you cannot boot a client until it has located all the file subfolders.
     

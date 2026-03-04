@@ -5,7 +5,7 @@
 
 [project]
 name = "hydrus"
-version = "v661"
+version = "v662"
 description = "A personal booru-style media tagger"
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -39,7 +39,10 @@ dependencies = [
     "pywin32 ; sys_platform == 'win32'",
 ]
 
-# the three `mpv-new`, `opencv-new`, and `qt6-new` groups are old synonyms for what I now call -normal. the -new groups will be deleted on v673
+# This pyproject.toml will become simpler on v673!
+# all these groups but the 'dev' group will be deleted, and the 'dependencies' list above will be populated with the 'normal' stuff
+# all 'old' and 'test' support is being offloaded to the setup_venv.py script
+# if you use non-normal test groups here, migrate to the setup_venv.py or otherwise before v673!
 
 [tool.uv]
 default-groups = [ "mpv-normal", "opencv-normal", "other-normal", "qt6-normal" ]

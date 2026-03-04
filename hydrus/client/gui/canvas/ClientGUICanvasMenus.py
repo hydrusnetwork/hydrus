@@ -6,7 +6,12 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 
-def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True ):
+def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True, slideshow_resume_duration = None ):
+    
+    if slideshow_resume_duration == 0.0:
+        
+        slideshow_resume_duration = None
+        
     
     slideshow_menu_label = 'slideshow running' if slideshow_is_running else 'start slideshow'
     
@@ -21,14 +26,21 @@ def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMe
         slideshow_menu = menu
         
     
+    slideshow_durations = CG.client_controller.new_options.GetSlideshowDurations()
+    
     if slideshow_is_running:
         
         ClientGUIMenus.AppendMenuItem( slideshow_menu, 'stop', 'Stop the current slideshow.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW ) )
         
-        ClientGUIMenus.AppendSeparator( slideshow_menu )
+    else:
+        
+        if slideshow_resume_duration is not None:
+            
+            ClientGUIMenus.AppendMenuItem( slideshow_menu, 'resume at ' + HydrusTime.TimeDeltaToPrettyTimeDelta( slideshow_resume_duration ), 'Resume at the previous slideshow period.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_PAUSE_PLAY_SLIDESHOW ) )
+            
         
     
-    slideshow_durations = CG.client_controller.new_options.GetSlideshowDurations()
+    ClientGUIMenus.AppendSeparator( slideshow_menu )
     
     for slideshow_duration in slideshow_durations:
         

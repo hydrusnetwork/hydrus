@@ -154,7 +154,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
     finished_image = numpy.concatenate( ( top_image, payload_image ) )
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
+    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'serialisable_png', suffix = '.png' )
     
     try:
         
@@ -173,6 +173,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
         HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     
+
 def GetPayloadBytesAndLength( payload_obj ):
     
     if isinstance( payload_obj, bytes ):
@@ -241,7 +242,7 @@ def LoadFromQtImage( qt_image: QG.QImage ):
 def LoadFromPNG( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
-    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'serialised_png' )
     
     try:
         

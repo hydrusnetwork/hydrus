@@ -796,6 +796,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._current_zoom = 1.0
         self._current_index_string = ''
         
+        self._slideshow_period = 0.0
+        
         self._top_left_hbox = QP.HBoxLayout()
         self._top_center_hbox = QP.HBoxLayout()
         self._top_right_hbox = QP.HBoxLayout()
@@ -1468,6 +1470,11 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._SizeAndPosition()
         
     
+    def SetSlideshowPeriod( self, value: float ):
+        
+        self._slideshow_period = value
+        
+    
     def SetIndexString( self, canvas_key, text ):
         
         if canvas_key == self._canvas_key:
@@ -1611,7 +1618,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUICanvasMenus.AppendSlideshowMenu( self._my_canvas, menu, self._my_canvas.SlideshowIsRunning(), do_submenu = False )
+        ClientGUICanvasMenus.AppendSlideshowMenu( self._my_canvas, menu, self._my_canvas.SlideshowIsRunning(), do_submenu = False, slideshow_resume_duration = self._slideshow_period )
         
         CGC.core().PopupMenu( self, menu )
         

@@ -256,7 +256,7 @@ class TestPanel( QW.QWidget ):
                 
                 if example_bytes is not None:
                     
-                    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+                    ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'example_data' )
                     
                     try:
                         

@@ -2235,20 +2235,20 @@ class CanvasWithHovers( Canvas ):
         
         self._hovers = []
         
-        top_hover = self._GenerateHoverTopFrame()
+        self._top_hover = self._GenerateHoverTopFrame()
         
-        self.mediaChanged.connect( top_hover.SetMedia )
-        self.mediaCleared.connect( top_hover.ClearMedia )
+        self.mediaChanged.connect( self._top_hover.SetMedia )
+        self.mediaCleared.connect( self._top_hover.ClearMedia )
         
-        top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        self._top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
-        self._media_container.zoomChanged.connect( top_hover.SetCurrentZoom )
+        self._media_container.zoomChanged.connect( self._top_hover.SetCurrentZoom )
         
-        self._hovers.append( top_hover )
+        self._hovers.append( self._top_hover )
         
-        self._my_shortcuts_handler.AddWindowToFilter( top_hover )
+        self._my_shortcuts_handler.AddWindowToFilter( self._top_hover )
         
-        self._tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key, self._location_context )
+        self._tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, self._top_hover, self._canvas_key, self._location_context )
         
         self.mediaChanged.connect( self._tags_hover.SetMedia )
         self.mediaCleared.connect( self._tags_hover.ClearMedia )
@@ -2259,7 +2259,7 @@ class CanvasWithHovers( Canvas ):
         
         self._my_shortcuts_handler.AddWindowToFilter( self._tags_hover )
         
-        self._top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, top_hover, self._canvas_key )
+        self._top_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTopRight( self, self, self._top_hover, self._canvas_key )
         
         self.mediaChanged.connect( self._top_right_hover.SetMedia )
         self.mediaCleared.connect( self._top_right_hover.ClearMedia )
@@ -2858,7 +2858,7 @@ class CanvasWithHovers( Canvas ):
             
         
     
-    def _GenerateHoverTopFrame( self ):
+    def _GenerateHoverTopFrame( self ) -> ClientGUICanvasHoverFrames.CanvasHoverFrameTop:
         
         raise NotImplementedError()
         
@@ -3206,7 +3206,7 @@ class CanvasMediaList( CanvasWithHovers ):
             
         
     
-    def _GenerateHoverTopFrame( self ):
+    def _GenerateHoverTopFrame( self ) -> ClientGUICanvasHoverFrames.CanvasHoverFrameTop:
         
         raise NotImplementedError()
         
@@ -3548,7 +3548,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
         return True
         
     
-    def _GenerateHoverTopFrame( self ):
+    def _GenerateHoverTopFrame( self ) -> ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter:
         
         return ClientGUICanvasHoverFrames.CanvasHoverFrameTopArchiveDeleteFilter( self, self, self._canvas_key )
         
@@ -3847,7 +3847,7 @@ class CanvasMediaListNavigable( CanvasMediaList ):
         CG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         
     
-    def _GenerateHoverTopFrame( self ):
+    def _GenerateHoverTopFrame( self ) -> ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList:
         
         return ClientGUICanvasHoverFrames.CanvasHoverFrameTopNavigableList( self, self, self._canvas_key )
         
@@ -4226,7 +4226,25 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             self._StopSlideshow()
             
-        elif self._normal_slideshow_period > 0.0:
+        else:
+            
+            if self._normal_slideshow_period == 0.0:
+                
+                slideshow_durations = CG.client_controller.new_options.GetSlideshowDurations()
+                
+                if len( slideshow_durations ) > 0:
+                    
+                    slideshow_default = slideshow_durations[0]
+                    
+                else:
+                    
+                    slideshow_default = 1.0
+                    
+                
+                self._normal_slideshow_period = slideshow_default
+                
+                self._top_hover.SetSlideshowPeriod( self._normal_slideshow_period )
+                
             
             self._StartSlideshow( self._normal_slideshow_period )
             
@@ -4251,6 +4269,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         if period > 0.0:
             
             self._normal_slideshow_period = period
+            
+            self._top_hover.SetSlideshowPeriod( self._normal_slideshow_period )
             
             self._slideshow_is_running = True
             
@@ -4436,7 +4456,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
                 
             
-            ClientGUICanvasMenus.AppendSlideshowMenu( self, menu, self._slideshow_is_running )
+            ClientGUICanvasMenus.AppendSlideshowMenu( self, menu, self._slideshow_is_running, slideshow_resume_duration = self._normal_slideshow_period )
             
             ClientGUIMenus.AppendSeparator( menu )
             
