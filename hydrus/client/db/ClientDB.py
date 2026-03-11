@@ -8624,6 +8624,55 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 662:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                try:
+                    
+                    value = new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
+                    
+                except Exception as e:
+                    
+                    value = not HC.PLATFORM_MACOS
+                    
+                
+                new_options.SetBoolean( 'anchor_canvas_drags', value )
+                new_options.SetBoolean( 'hide_canvas_drags', value )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE has_audio IS NULL;'.format( temp_hash_ids_table_name ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'A file maintenance job failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

@@ -268,7 +268,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoToDisplayTuple, self._ConvertDomainAndLoginInfoToSortTuple )
         
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrlTreeView( self._domains_and_login_info_panel, 16, model, use_simple_delete = True, activation_callback = self._EditCredentials )
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrlTreeView( self._domains_and_login_info_panel, 8, model, use_simple_delete = True, activation_callback = self._EditCredentials, max_height_num_chars = 12 )
         
         self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         
@@ -1369,7 +1369,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToDisplayTuple, self._ConvertCredentialDefinitionToSortTuple )
         
-        self._credential_definitions = ClientGUIListCtrl.BetterListCtrlTreeView( credential_definitions_panel, 4, model, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
+        self._credential_definitions = ClientGUIListCtrl.BetterListCtrlTreeView( credential_definitions_panel, 4, model, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions, max_height_num_chars = 8 )
         
         credential_definitions_panel.SetListCtrl( self._credential_definitions )
         
@@ -1397,7 +1397,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToDisplayTuple, self._ConvertExampleDomainInfoToSortTuple )
         
-        self._example_domains_info = ClientGUIListCtrl.BetterListCtrlTreeView( example_domains_info_panel, 6, model, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
+        self._example_domains_info = ClientGUIListCtrl.BetterListCtrlTreeView( example_domains_info_panel, 4, model, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo, max_height_num_chars = 12 )
         
         example_domains_info_panel.SetListCtrl( self._example_domains_info )
         
@@ -1417,7 +1417,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToDisplayTuple, self._ConvertTestResultToSortTuple )
         
-        self._test_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( test_listctrl_panel, 6, model, activation_callback = self._ReviewTestResult )
+        self._test_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( test_listctrl_panel, 4, model, activation_callback = self._ReviewTestResult, max_height_num_chars = 12 )
         
         test_listctrl_panel.SetListCtrl( self._test_listctrl )
         
@@ -1973,7 +1973,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToDisplayTuple, self._ConvertLoginScriptToSortTuple )
         
-        self._login_scripts = ClientGUIListCtrl.BetterListCtrlTreeView( login_scripts_panel, 20, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._login_scripts = ClientGUIListCtrl.BetterListCtrlTreeView( login_scripts_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         login_scripts_panel.SetListCtrl( self._login_scripts )
         

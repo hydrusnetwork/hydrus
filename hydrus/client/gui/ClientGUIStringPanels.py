@@ -319,7 +319,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         # I'm doing all sorts of moveup/down and other adjustments to our # here, but who cares about displaying and maintaining that--there is only one appropriate sort
         
         # TODO: Yo, if I converted the conversion steps to their own serialisable object, this guy could have import/export/duplicate buttons nice and easy
-        self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, 7, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
+        self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, 6, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion, max_height_num_chars = 12 )
         
         conversions_panel.SetListCtrl( self._conversions )
         

@@ -283,7 +283,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToDisplayTuple, self._ConvertGallerySeedToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 30, model, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self._DeleteSelected )
         
         #
         

@@ -56,6 +56,12 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, 72, none_phrase = 'no age limit', min = 0, max = 8640 )
         self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, 2048, none_phrase = 'no size limit', min = 0, max = 20480 )
         
+        self._maintain_trash_in_normal_time = QW.QCheckBox( self )
+        self._maintain_trash_in_normal_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'The above trash settings are checked by a maintenance routine. Files that are too old or big are queued for physically deletion. This can always happen in idle time. Check this if you are ok with it running in normal time too. Uncheck this if you notice a big trash adds lag.' ) )
+        
+        self._deferred_file_deletes_in_normal_time = QW.QCheckBox( self )
+        self._deferred_file_deletes_in_normal_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'When files are queued for physical deletion, they are deleted slowly in the background. This can always happen in idle time. Check this if you are ok with it running in normal time too. Uncheck this if you notice big trash clears or physical deletes adds lag.' ) )
+        
         self._do_not_do_chmod_mode = QW.QCheckBox( self )
         self._do_not_do_chmod_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'CAREFUL. When hydrus copies files around, it preserves or sets permission bits. If you are on ACL-backed storage, e.g. via NFSv4 with ACL set, chmod is going to raise errors and/or audit logspam. You can try stopping all chmod here--hydrus will use differing copy calls that only copy the file contents and try to preserve access/modified times.' ) )
         
@@ -113,6 +119,9 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
         self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
         
+        self._maintain_trash_in_normal_time.setChecked( self._new_options.GetBoolean( 'maintain_trash_in_normal_time' ) )
+        self._deferred_file_deletes_in_normal_time.setChecked( self._new_options.GetBoolean( 'deferred_file_deletes_in_normal_time' ) )
+        
         self._do_not_do_chmod_mode.setChecked( self._new_options.GetBoolean( 'do_not_do_chmod_mode' ) )
         
         self._delete_lock_for_archived_files.setChecked( self._new_options.GetBoolean( 'delete_lock_for_archived_files' ) )
@@ -135,6 +144,8 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_CENTER )
         
+        # TODO: this could do with breaking up into staticboxes
+        
         rows = []
         
         rows.append( ( 'When copying file hashes, prefix with booru-friendly hash type: ', self._prefix_hash_when_copying ) )
@@ -150,8 +161,10 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '--even skipped files: ', self._remove_filtered_files_even_when_skipped ) )
         rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
         rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
-        rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
+        rows.append( ( 'Number of hours a file will stay in the trash before being deleted: ', self._trash_max_age ) )
         rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
+        rows.append( ( 'Allow trash maintenance during normal time: ', self._maintain_trash_in_normal_time ) )
+        rows.append( ( 'Allow deferred file deletes during normal time: ', self._deferred_file_deletes_in_normal_time ) )
         rows.append( ( 'ADVANCED: Do not do chmod when copying files', self._do_not_do_chmod_mode ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -258,6 +271,9 @@ class FilesAndTrashPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'remove_local_domain_moved_files', self._remove_local_domain_moved_files.isChecked() )
         HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
         HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+        
+        self._new_options.SetBoolean( 'maintain_trash_in_normal_time', self._maintain_trash_in_normal_time.isChecked() )
+        self._new_options.SetBoolean( 'deferred_file_deletes_in_normal_time', self._deferred_file_deletes_in_normal_time.isChecked() )
         
         self._new_options.SetBoolean( 'do_not_do_chmod_mode', self._do_not_do_chmod_mode.isChecked() )
         

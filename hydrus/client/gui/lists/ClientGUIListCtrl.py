@@ -510,7 +510,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()
     
-    def __init__( self, parent, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None ):
+    def __init__( self, parent, min_height_num_chars: int, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None, max_height_num_chars = None ):
         
         super().__init__( parent )
         
@@ -533,8 +533,14 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.setRootIsDecorated( False )
         self.setEditTriggers( QW.QAbstractItemView.EditTrigger.NoEditTriggers )
         
-        self._initial_height_num_chars = height_num_chars
-        self._forced_height_num_chars = None
+        self._min_height_num_chars = min_height_num_chars
+        
+        if max_height_num_chars is None:
+            
+            max_height_num_chars = min_height_num_chars
+            
+        
+        self._max_height_num_chars = max_height_num_chars
         
         self._has_initialised_size = False
         
@@ -864,6 +870,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         self.columnListContentsChanged.emit()
         
+        self.updateGeometry()
+        
     
     def AddRowsMenuCallable( self, menu_callable ):
         
@@ -882,6 +890,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.columnListContentsChanged.emit()
         
         self._has_done_deletes = True
+        
+        self.updateGeometry()
         
     
     def DeleteSelected( self ):
@@ -943,24 +953,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     def EventShowMenu( self ):
         
         CG.client_controller.CallAfterQtSafe( self, self._ShowRowsMenu )
-        
-    
-    def ForceHeight( self, rows ):
-        
-        # TODO: Rework this. I use this guy to do the gallery/watcher auto-grow, but really I think sizeHint would handle it better via an internal bounding range
-        # with presumably an 'updateGeometry()' call when we recognise we have a diff number of rows
-        
-        self._forced_height_num_chars = rows
-        
-        self.updateGeometry()
-        
-        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
-        
-        #existing_min_width = self.minimumWidth()
-        
-        #( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
-        
-        #QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
     def count( self ):
@@ -1056,14 +1048,10 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         width += FRAMEWIDTH_PADDING
         
-        if self._forced_height_num_chars is None:
-            
-            num_rows = 4
-            
-        else:
-            
-            num_rows = self._forced_height_num_chars
-            
+        num_rows = self._min_height_num_chars
+        
+        #num_rows = max( self._min_height_num_chars, self.model().rowCount() )
+        #num_rows = min( num_rows, self._max_height_num_chars )
         
         data_area_height = self._GetRowHeightEstimate() * num_rows
         
@@ -1270,14 +1258,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         #
         
-        if self._forced_height_num_chars is None:
-            
-            num_rows = self._initial_height_num_chars
-            
-        else:
-            
-            num_rows = self._forced_height_num_chars
-            
+        num_rows = max( self._min_height_num_chars, self.model().rowCount() )
+        num_rows = min( num_rows, self._max_height_num_chars )
         
         data_area_height = self._GetRowHeightEstimate() * num_rows
         
@@ -1375,6 +1357,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.Sort()
         
         self.columnListContentsChanged.emit()
+        
+        self.updateGeometry()
         
     
     def SetNonDupeName( self, obj: object, do_casefold = False ):
@@ -2145,11 +2129,21 @@ class BetterListCtrlPanel( QW.QWidget ):
         QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_ON_RIGHT )
         
     
-    def SetListCtrl( self, listctrl: BetterListCtrlTreeView ):
+    def SetListCtrl( self, listctrl: BetterListCtrlTreeView, minimum_expanding = False ):
         
         self._listctrl = listctrl
         
-        QP.AddToLayout( self._vbox, self._listctrl, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( self._vbox, self._listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        if minimum_expanding:
+            
+            size_policy = self._listctrl.sizePolicy()
+            
+            size_policy.setVerticalPolicy( QW.QSizePolicy.Policy.MinimumExpanding )
+            
+            self._listctrl.setSizePolicy( size_policy )
+            
+        
         QP.AddToLayout( self._vbox, self._buttonbox, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( self._vbox )

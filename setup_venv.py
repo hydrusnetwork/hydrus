@@ -326,7 +326,7 @@ def main():
         requirements_dict = {
             'beautifulsoup4' : '>=4.0.0',
             'cbor2' : '>=5.6.5',
-            'chardet' : '>=3.0.4',
+            'chardet' : '>=3.0.4,<6',
             'cryptography' : '>=44.0.0',
             'dateparser' : '==1.2.1',
             'html5lib' : '>=1.0.1',

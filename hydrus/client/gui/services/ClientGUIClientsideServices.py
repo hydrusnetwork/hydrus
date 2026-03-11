@@ -56,7 +56,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToDisplayTuple, self._ConvertServiceToSortTuple )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self._Delete, activation_callback = self._Edit, max_height_num_chars = 24 )
         
         menu_template_items = []
         
@@ -2021,7 +2021,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, 10, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, 4, model, delete_key_callback = self._Delete, activation_callback = self._Edit, max_height_num_chars = 12 )
         
         permissions_list_panel.SetListCtrl( self._permissions_list )
         
@@ -3560,7 +3560,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IPFS_SHARES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, 6, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, 4, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes, max_height_num_chars = 12 )
         
         self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
         

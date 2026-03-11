@@ -180,7 +180,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 14, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 8, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
             

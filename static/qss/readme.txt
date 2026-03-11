@@ -5,7 +5,7 @@ The qss files in this place (and, if you create it, in a mirrored location under
 
 - How to create custom stylesheets -
 
-Don't edit any of the files in here in place--they'll just be overwritten the next time you update. Instead, create a new folder under "db_dir/static/qss" and copy one of these over for editing. Search the help files for 'custom assets' for more info on how this works.
+Don't edit any of the files in here--they'll just be overwritten the next time you update. Instead, create a new folder under "db_dir/static/qss" and copy one of these over for editing. Search the help files for 'custom assets' for more info on how this works.
 
 The best thing is just to change some colour hex code, but if you feel brave, feel free to try inserting your own stuff. QSS is cool, and you can edit text size, change colours, make borders, add hover behaviour, all sorts.
 

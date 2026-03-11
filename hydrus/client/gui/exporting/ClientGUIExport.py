@@ -50,7 +50,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToDisplayTuple, self._ConvertExportFolderToSortTuple )
         
-        self._export_folders = ClientGUIListCtrl.BetterListCtrlTreeView( self._export_folders_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._export_folders = ClientGUIListCtrl.BetterListCtrlTreeView( self._export_folders_panel, 4, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
         self._export_folders_panel.SetListCtrl( self._export_folders )
         
@@ -613,7 +613,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._paths = ClientGUIListCtrl.BetterListCtrlTreeView( self, 24, model, delete_key_callback = self._DeletePaths )
+        self._paths = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self._DeletePaths )
         
         self._paths.Sort()
         

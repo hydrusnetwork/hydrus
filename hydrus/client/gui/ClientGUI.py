@@ -4644,7 +4644,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
             except Exception as e:
                 
-                HydrusData.ShowException( e )
+                HydrusData.ShowException( 'Could not apply stylesheet:' + str( e ) )
                 
             
         

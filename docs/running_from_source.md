@@ -278,12 +278,23 @@ The setup should _just work_ on most normal computers, but very old or new syste
 
 Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to update to the current help.
 
+??? note "Custom python"
+    If you want to set up a venv using a different python than your system, just run `setup_venv.py` with that python, like this:
+    
+    `/path/to/my/python setup_venv.py`
+    
+    You can also select a custom venv destination:
+    
+    `/path/to/my/314/python setup_venv.py -v=venv314`
+    
+    If you are developing with hydrus, you can set up multiple venvs to test out different versions of python or, say, PySide vs PyQt.
+
 #### Running it
 
 !!! note "Run the launch script, not the .py"
-    Do not run `hydrus_client.py` on its own by, say double-clicking it, because you will get errors about missing libraries (probably `yaml`/`qtpy`). You will be running `hydrus_client.bat/.sh/.command` instead, or setting up a shortcut to the new python exe we just made in the venv dir.
+    Do not run `hydrus_client.py` on its own by, say, double-clicking it, or it will fail with errors about missing libraries (probably `yaml`/`qtpy`).
     
-    We have just set up a "venv", which is not the same as your system python, and so in order to run `hydrus_client.py`, we need to "activate" the venv first to load all the libraries we just installed with the `setup_venv` script. Feel free to check the contents of the launch scripts--they are very simple--to see how it works.
+    We have just set up all the hydrus stuff in a "venv", which is not the same as your system python. In order to run `hydrus_client.py`, we need to run it with that venv instead, which we can do with a shortcut or script.
 
 === "Windows"
 
@@ -348,7 +359,7 @@ The first start will take a little longer (it has to compile all the code into s
 !!! warning "Missing a Library"
     If the client fails to boot, it should place a 'hydrus_crash.log' in your 'db' directory or your desktop, or, if it got far enough, it may write the error straight to the 'client - date.log' file in your db directory.  
     
-    If that error talks about a missing library, particularly 'yaml', try reinstalling your venv. Scroll through the output--are you sure it installed everything correctly? Do you need to run the advanced setup and select a different version of Qt?
+    If that error talks about a missing library, particularly `yaml`, try reinstalling your venv. Scroll through the output--are you sure it installed everything correctly? If it is upset about `qtpy` or `PySide`, do you need to run the advanced setup and select a different version of Qt?
 
 === "Windows"
 

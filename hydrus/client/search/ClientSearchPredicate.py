@@ -722,13 +722,16 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 self._value = tuple( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ) )
                 
-                try:
+                if CG.client_controller.IsBooted():
                     
-                    self._value = tuple( sorted( self._value, key = lambda p: HydrusText.HumanTextSortKey( p.ToString() ) ) )
-                    
-                except Exception as e:
-                    
-                    pass
+                    try:
+                        
+                        self._value = tuple( sorted( self._value, key = lambda p: HydrusText.HumanTextSortKey( p.ToString() ) ) )
+                        
+                    except Exception as e:
+                        
+                        pass
+                        
                     
                 
             elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
@@ -2950,9 +2953,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         except Exception as e:
             
-            HydrusData.PrintException( e, do_wait = False )
-            
-            return 'error:cannot render this predicate, check log'
+            return 'error:cannot render this predicate' + str( e )
             
         
     

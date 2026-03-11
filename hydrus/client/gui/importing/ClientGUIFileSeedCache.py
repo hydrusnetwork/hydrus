@@ -67,8 +67,8 @@ def GetRetryIgnoredParam( window ):
         raise HydrusExceptions.CancelledException()
         
     
-
-# TODO: I pulled this stuff out of the button to share it with the panel. TBH anything without Qt may be better as be FSC methods
+    return result
+    
 
 def GetExportableSourcesString( file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
@@ -78,6 +78,7 @@ def GetExportableSourcesString( file_seed_cache: ClientImportFileSeeds.FileSeedC
     
     return '\n'.join( sources )
     
+
 def GetSourcesFromSourcesString( sources_string ):
     
     sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
@@ -402,7 +403,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, self._ConvertFileSeedToDisplayTuple, self._ConvertFileSeedToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 30, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
         #
         
@@ -838,6 +839,18 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         file_seeds = self._list_ctrl.GetData( only_selected = True )
         
+        def qt_once_done():
+            
+            self.setEnabled( True )
+            
+            for file_seed in file_seeds:
+                
+                file_seed.SetStatus( status_to_set )
+                
+            
+            self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
+            
+        
         if status_to_set == CC.STATUS_UNKNOWN:
             
             deleted_and_clearable_file_seeds = [ file_seed for file_seed in file_seeds if file_seed.IsDeleted() and file_seed.HasHash() ]
@@ -858,17 +871,23 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
                     
-                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                    self.setEnabled( False )
+                    
+                    def do_it():
+                        
+                        CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                        
+                        CG.client_controller.CallAfterQtSafe( self, qt_once_done )
+                        
+                    
+                    CG.client_controller.CallToThread( do_it )
+                    
+                    return
                     
                 
             
         
-        for file_seed in file_seeds:
-            
-            file_seed.SetStatus( status_to_set )
-            
-        
-        self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
+        qt_once_done()
         
     
     def _ShowSelectionInNewPage( self ):

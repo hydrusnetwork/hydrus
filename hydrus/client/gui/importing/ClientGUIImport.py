@@ -24,7 +24,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -257,7 +257,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToDisplayTuple, self._ConvertQuickRegexDataToSortTuple )
             
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrlTreeView( quick_namespaces_listctrl_panel, 4, model, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrlTreeView( quick_namespaces_listctrl_panel, 4, model, use_simple_delete = True, activation_callback = self.EditQuickNamespaces, max_height_num_chars = 12 )
             
             quick_namespaces_listctrl_panel.SetListCtrl( self._quick_namespaces_list )
             
@@ -967,7 +967,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 10, model )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model )
             
             self._paths_list.selectionModel().selectionChanged.connect( self.EventItemSelected )
             
@@ -1082,7 +1082,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 10, model )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model )
             
             allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
             allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
@@ -1364,7 +1364,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
@@ -1800,7 +1800,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )

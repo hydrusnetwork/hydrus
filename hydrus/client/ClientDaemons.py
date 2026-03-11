@@ -52,6 +52,11 @@ def DAEMONMaintainTrash():
     
     controller = CG.client_controller
     
+    if not controller.CurrentlyIdle() and not controller.new_options.GetBoolean( 'maintain_trash_in_normal_time' ):
+        
+        return
+        
+    
     if HC.options[ 'trash_max_size' ] is not None:
         
         max_size = HC.options[ 'trash_max_size' ] * 1048576

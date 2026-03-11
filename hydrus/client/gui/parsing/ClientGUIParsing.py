@@ -63,7 +63,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToDisplayTuple, self._ConvertContentToSortTuple )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 14, model, use_simple_delete = True )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, use_simple_delete = True )
         
         self._listctrl.Sort()
         
@@ -1028,7 +1028,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToDisplayTuple, self._ConvertContentParserToSortTuple )
         
-        self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
         content_parsers_panel.SetListCtrl( self._content_parsers )
         
@@ -1247,7 +1247,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
         
-        self._subsidiary_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( subsidiary_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
+        self._subsidiary_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( subsidiary_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser, max_height_num_chars = 12 )
         
         subsidiary_page_parsers_panel.SetListCtrl( self._subsidiary_page_parsers )
         
@@ -1702,7 +1702,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToDisplayTuple, self._ConvertParserToSortTuple )
         
-        self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, 20, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, 24, model, use_simple_delete = True, activation_callback = self._Edit )
         
         parsers_panel.SetListCtrl( self._parsers )
         

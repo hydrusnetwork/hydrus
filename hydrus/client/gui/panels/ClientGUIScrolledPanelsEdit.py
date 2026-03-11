@@ -24,7 +24,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -71,12 +71,12 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         show_downloader_options = True
         allow_default_selection = False
         
-        self._file_post_default_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._file_post_default_import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._file_post_default_import_options_button.SetTagImportOptions( file_post_default_tag_import_options )
         self._file_post_default_import_options_button.SetNoteImportOptions( file_post_default_note_import_options )
         
-        self._watchable_default_import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._watchable_default_import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._watchable_default_import_options_button.SetTagImportOptions( watchable_default_tag_import_options )
         self._watchable_default_import_options_button.SetNoteImportOptions( watchable_default_note_import_options )
@@ -85,7 +85,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 15, model, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -296,7 +296,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 show_downloader_options = True
                 allow_default_selection = True
                 
-                panel = ClientGUIImportOptions.EditImportOptionsPanel( dlg, show_downloader_options, allow_default_selection )
+                panel = ClientGUIImportOptionsLegacy.EditImportOptionsPanel( dlg, show_downloader_options, allow_default_selection )
                 
                 panel.SetTagImportOptions( tag_import_options )
                 panel.SetNoteImportOptions( note_import_options )

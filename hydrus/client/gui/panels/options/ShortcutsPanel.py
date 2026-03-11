@@ -44,7 +44,7 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
-        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, 6, model, activation_callback = self._EditReserved )
+        self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, 6, model, activation_callback = self._EditReserved, max_height_num_chars = 12 )
         
         ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._reserved_shortcuts, ( 32, 12 ) )
         
@@ -59,7 +59,7 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
-        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, 6, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
+        self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, 4, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom, max_height_num_chars = 12 )
         
         self._add_button = ClientGUICommon.BetterButton( custom_panel, 'add', self._Add )
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )

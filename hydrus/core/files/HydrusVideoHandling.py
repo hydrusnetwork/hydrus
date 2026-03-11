@@ -833,6 +833,8 @@ def VideoHasAudio( path, info_lines ) -> bool:
         raise HydrusFFMPEG.HandleFFMPEGFileNotFoundAndGenerateException( e, path )
         
     
+    return False
+    
 
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):

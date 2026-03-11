@@ -27,7 +27,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -152,7 +152,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         show_downloader_options = False
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         

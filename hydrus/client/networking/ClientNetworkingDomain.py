@@ -1416,6 +1416,22 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetURLClassFromKey( self, url_class_key: bytes ) -> ClientNetworkingURLClass.URLClass:
+        
+        with self._lock:
+            
+            for url_class in self._url_classes:
+                
+                if url_class.GetClassKey() == url_class_key:
+                    
+                    return url_class
+                    
+                
+            
+        
+        raise HydrusExceptions.DataMissing( f'Did not find URL Class with key "{url_class_key.hex()}"!' )
+        
+    
     def GetURLClassFromName( self, name: str ):
         
         with self._lock:

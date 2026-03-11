@@ -18,13 +18,14 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUILayout as CGL
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -156,7 +157,7 @@ class SidebarImporterHDD( SidebarImporter ):
         show_downloader_options = False
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         
@@ -164,19 +165,19 @@ class SidebarImporterHDD( SidebarImporter ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._media_collect_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        CGL.AddWidgetToLayout( vbox, self._media_sort_widget, CGL.FLAGS_EXPAND_PERPENDICULAR )
+        CGL.AddWidgetToLayout( vbox, self._media_collect_widget, CGL.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._current_action, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
-        QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        CGL.AddWidgetToLayout( hbox, self._current_action, CGL.FLAGS_EXPAND_DEPTH, align_flag = CGL.FLAGS_ALIGN_CENTER_PERPENDICULAR )
+        CGL.AddWidgetToLayout( hbox, self._pause_button, CGL.FLAGS_EXPAND_SHRINKABLE, align_flag = CGL.FLAGS_ALIGN_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, self._import_queue_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        CGL.AddWidgetToLayout( vbox, self._import_queue_panel, CGL.FLAGS_EXPAND_PERPENDICULAR )
         
         self._MakeCurrentSelectionTagsBox( vbox )
         
@@ -267,9 +268,9 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport, max_height_num_chars = 24 )
         
-        self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
+        self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl, minimum_expanding = True )
         
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().highlight, self._HighlightSelectedGalleryImport, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
         self._gallery_importers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
@@ -314,7 +315,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
@@ -1293,12 +1294,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
                 
                 self._gallery_importers_listctrl.SetData( gallery_imports )
                 
-                ideal_rows = len( gallery_imports )
-                ideal_rows = max( 4, ideal_rows )
-                ideal_rows = min( ideal_rows, 24 )
-                
-                self._gallery_importers_listctrl.ForceHeight( ideal_rows )
-                
             else:
                 
                 sort_data_has_changed = self._gallery_importers_listctrl.UpdateDatas( check_for_changed_sort_data = True )
@@ -1403,9 +1398,9 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher, max_height_num_chars = 24 )
         
-        self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
+        self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl, minimum_expanding = True )
         
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().highlight, self._HighlightSelectedWatcher, tooltip = 'highlight', enabled_check_func = self._CanHighlight )
         self._watchers_listctrl_panel.AddIconButton( CC.global_icons().clear_highlight, self._ClearExistingHighlightAndPanel, tooltip = 'clear highlight', enabled_check_func = self._CanClearHighlight )
@@ -1440,7 +1435,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
@@ -2477,12 +2472,6 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
                 
                 self._watchers_listctrl.SetData( watchers )
                 
-                ideal_rows = len( watchers )
-                ideal_rows = max( 4, ideal_rows )
-                ideal_rows = min( ideal_rows, 24 )
-                
-                self._watchers_listctrl.ForceHeight( ideal_rows )
-                
             else:
                 
                 sort_data_has_changed = self._watchers_listctrl.UpdateDatas( check_for_changed_sort_data = True )
@@ -2618,7 +2607,7 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         
@@ -3002,7 +2991,7 @@ class SidebarImporterURLs( SidebarImporter ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )

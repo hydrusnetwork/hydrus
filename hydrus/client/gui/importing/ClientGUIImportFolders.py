@@ -17,7 +17,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIImport
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMetadataMigration
@@ -41,7 +41,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToDisplayTuple, self._ConvertImportFolderToSortTuple )
         
-        self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, 4, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
@@ -233,7 +233,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         show_downloader_options = False
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
@@ -278,7 +278,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToDisplayTuple, self._ConvertFilenameTaggingOptionsToSortTuple )
         
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, 5, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, 4, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions, max_height_num_chars = 12 )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         

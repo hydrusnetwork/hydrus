@@ -172,7 +172,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'page_drag_change_tab_with_shift' : True,
             'wheel_scrolls_tab_bar' : False,
             'remove_local_domain_moved_files' : False,
-            'anchor_and_hide_canvas_drags' : HC.PLATFORM_WINDOWS,
+            'anchor_canvas_drags' : not HC.PLATFORM_MACOS,
+            'hide_canvas_drags' : not HC.PLATFORM_MACOS,
             'touchscreen_canvas_drags_unanchor' : False,
             'import_page_progress_display' : True,
             'rename_page_of_pages_on_pick_new' : False,
@@ -348,6 +349,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'qt_media_player_opengl_test' : False,
             'persist_media_window_qt_media_player' : False,
             'persist_media_window_mpv' : False,
+            'maintain_trash_in_normal_time' : True,
+            'deferred_file_deletes_in_normal_time' : True,
         }
         
         #

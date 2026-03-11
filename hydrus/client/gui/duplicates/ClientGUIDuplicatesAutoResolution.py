@@ -65,7 +65,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EDIT_DUPLICATES_AUTO_RESOLUTION_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
-        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 12, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
@@ -1427,7 +1427,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_DUPLICATES_AUTO_RESOLUTION_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
-        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 6, model, use_simple_delete = True, activation_callback = self._ReviewActions )
+        self._duplicates_auto_resolution_rules = ClientGUIListCtrl.BetterListCtrlTreeView( self._duplicates_auto_resolution_rules_panel, 6, model, use_simple_delete = True, activation_callback = self._ReviewActions, max_height_num_chars = 24 )
         
         self._duplicates_auto_resolution_rules_panel.SetListCtrl( self._duplicates_auto_resolution_rules )
         
@@ -1745,12 +1745,6 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
                 
             
             self._duplicates_auto_resolution_rules.SetData( rules )
-            
-            ideal_rows = len( rules )
-            ideal_rows = max( 4, ideal_rows )
-            ideal_rows = min( ideal_rows, 24 )
-            
-            self._duplicates_auto_resolution_rules.ForceHeight( ideal_rows )
             
         
         return ClientGUIAsync.AsyncQtUpdater( 'review auto-resolution rules fetch', self, loading_callable, work_callable, publish_callable )

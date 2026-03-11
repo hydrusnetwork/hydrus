@@ -1127,6 +1127,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._file_history_chart.SetXRange( self._start_date.dateTime(), self._end_date.dateTime() )
         
     
+
 class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, stats ):
@@ -1147,7 +1148,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToDisplayTuple, self._ConvertJobTypeToSortTuple )
         
-        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, 8, model )
+        self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, 4, model, max_height_num_chars = 12 )
         
         jobs_listctrl_panel.SetListCtrl( self._jobs_listctrl )
         
@@ -2135,7 +2136,7 @@ class JobSchedulerPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -2202,7 +2203,7 @@ class ThreadsPanel( QW.QWidget ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -2281,7 +2282,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
-        self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, 24, model )
+        self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, 12, model )
         
         deferred_delete_listctrl_panel.SetListCtrl( self._deferred_delete_listctrl )
         

@@ -78,7 +78,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertShortcutTupleToDisplayTuple, self._ConvertShortcutTupleToSortTuple )
         
-        self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, 20, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
+        self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, 12, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts, max_height_num_chars = 24 )
         
         self._shortcuts_panel.SetListCtrl( self._shortcuts )
         
@@ -87,8 +87,6 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         tt = 'Click this to replicate the current selection of commands with "incremented" shortcuts. If you want to create a list of "set rating to 1, 2, 3" or "set tag" commands, use this.'
         
         self._shortcuts_panel.AddButton( 'special duplicate', self._SpecialDuplicate, enabled_only_on_selection = True, tooltip = tt )
-        
-        self._shortcuts.setMinimumSize( QC.QSize( 360, 480 ) )
         
         self._add = QW.QPushButton( 'add', self )
         self._add.clicked.connect( self.AddShortcut )

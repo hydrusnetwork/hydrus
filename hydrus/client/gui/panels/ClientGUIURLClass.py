@@ -475,7 +475,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToDisplayTuple, self._ConvertParameterToSortTuple )
         
-        self._parameters = ClientGUIListCtrl.BetterListCtrlTreeView( parameters_listctrl_panel, 5, model, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        self._parameters = ClientGUIListCtrl.BetterListCtrlTreeView( parameters_listctrl_panel, 4, model, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters, max_height_num_chars = 8 )
         
         parameters_listctrl_panel.SetListCtrl( self._parameters )
         
@@ -1409,7 +1409,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 15, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 24, model, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         

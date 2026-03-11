@@ -436,21 +436,13 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return False
             
         
-        def do_it( content_update_packages ):
-            
-            for content_update_package in content_update_packages:
-                
-                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-                
-            
-        
         if just_get_content_update_packages:
             
             return content_update_packages
             
         else:
             
-            CG.client_controller.CallToThread( do_it, content_update_packages )
+            ClientGUIMediaSimpleActions.CommitContentUpdatePackagesAsync( 'deleting files', content_update_packages )
             
             return True
             
@@ -3005,7 +2997,7 @@ class CanvasWithHovers( Canvas ):
         
         has_moved = event_pos != self._last_motion_pos
         
-        we_are_hiding_an_anchored_drag = False
+        we_are_hiding_a_drag = is_dragging and CG.client_controller.new_options.GetBoolean( 'hide_canvas_drags' )
         
         if is_dragging:
             
@@ -3027,11 +3019,9 @@ class CanvasWithHovers( Canvas ):
                 # touch events obviously don't mix with warping well. the touch just warps it back and again and we get a massive delta!
                 
                 touch_anchor_override = touchscreen_canvas_drags_unanchor and self._current_drag_is_touch
-                anchor_and_hide_canvas_drags = CG.client_controller.new_options.GetBoolean( 'anchor_and_hide_canvas_drags' )
+                anchor_canvas_drags = CG.client_controller.new_options.GetBoolean( 'anchor_canvas_drags' )
                 
-                if anchor_and_hide_canvas_drags and not touch_anchor_override:
-                    
-                    we_are_hiding_an_anchored_drag = True
+                if anchor_canvas_drags and not touch_anchor_override:
                     
                     global_mouse_pos = self.mapToGlobal( self._last_drag_pos )
                     
@@ -3055,14 +3045,26 @@ class CanvasWithHovers( Canvas ):
                 
             
         
-        if has_moved and not we_are_hiding_an_anchored_drag:
+        if has_moved:
             
-            if not mouse_currently_shown:
+            if we_are_hiding_a_drag:
                 
-                self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
+                if mouse_currently_shown:
+                    
+                    self.setCursor( QG.QCursor( QC.Qt.CursorShape.BlankCursor ) )
+                    
                 
-            
-            self._RestartCursorHideWait()
+                self._cursor_autohide_timer.stop()
+                
+            else: 
+                
+                if not mouse_currently_shown:
+                    
+                    self.setCursor( QG.QCursor( QC.Qt.CursorShape.ArrowCursor ) )
+                    
+                
+                self._RestartCursorHideWait()
+                
             
         
     
@@ -3420,7 +3422,7 @@ def CommitArchiveDelete( deletee_location_context: ClientLocation.LocationContex
         deletee_file_service_keys = [ CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ]
         
     
-    BLOCK_SIZE = 64
+    BLOCK_SIZE = 10
     
     for ( num_done, num_to_do, block_of_deleted ) in HydrusLists.SplitListIntoChunksRich( deleted, BLOCK_SIZE ):
         

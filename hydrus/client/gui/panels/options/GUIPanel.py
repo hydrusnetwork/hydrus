@@ -80,7 +80,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._frame_locations_panel = ClientGUIListCtrl.BetterListCtrlPanel( frame_locations_panel )
         
-        self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( self._frame_locations_panel, 15, model, activation_callback = self.EditFrameLocations )
+        self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( self._frame_locations_panel, 12, model, activation_callback = self.EditFrameLocations )
         
         self._frame_locations_panel.SetListCtrl( self._frame_locations )
         

@@ -27,7 +27,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
-from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.importing import ClientGUIImportOptionsLegacy
+from hydrus.client.gui.importing import ClientGUIImportOptionsPanels
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUITime
@@ -299,7 +300,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, self._ConvertQueryHeaderToDisplayTuple, self._ConvertQueryHeaderToSortTuple )
         
-        self._query_headers = ClientGUIListCtrl.BetterListCtrlTreeView( queries_panel, 10, model, use_simple_delete = True, activation_callback = self._EditQuery )
+        self._query_headers = ClientGUIListCtrl.BetterListCtrlTreeView( queries_panel, 6, model, use_simple_delete = True, activation_callback = self._EditQuery, max_height_num_chars = 24 )
         
         queries_panel.SetListCtrl( self._query_headers )
         
@@ -395,7 +396,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         show_downloader_options = True
         allow_default_selection = True
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetFileImportOptions( file_import_options )
         self._import_options_button.SetTagImportOptions( tag_import_options )
@@ -1470,7 +1471,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
         allow_default_selection = False
         
-        self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
+        self._import_options_button = ClientGUIImportOptionsLegacy.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         
         self._import_options_button.SetTagImportOptions( tag_import_options )
         
@@ -1664,7 +1665,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, self._ConvertSubscriptionToDisplayTuple, self._ConvertSubscriptionToSortTuple )
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrlTreeView( self._subscriptions_panel, 12, model, use_simple_delete = True, activation_callback = self.Edit )
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrlTreeView( self._subscriptions_panel, 6, model, use_simple_delete = True, activation_callback = self.Edit, max_height_num_chars = 24 )
         
         self._subscriptions_panel.SetListCtrl( self._subscriptions )
         
@@ -3352,7 +3353,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit file import options' ) as dlg:
             
-            panel = ClientGUIImportOptions.EditFileImportOptionsPanel( dlg, file_import_options, show_downloader_options, allow_default_selection )
+            panel = ClientGUIImportOptionsPanels.EditFileImportOptionsLegacyPanel( dlg, file_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             
@@ -3386,7 +3387,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            edit_notes_widget = ClientGUIImportOptions.EditNoteImportOptionsPanel( panel, note_import_options, allow_default_selection )
+            edit_notes_widget = ClientGUIImportOptionsPanels.EditNoteImportOptionsPanel( panel, note_import_options, allow_default_selection )
             
             panel.SetControl( edit_notes_widget )
             
@@ -3421,7 +3422,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit tag import options' ) as dlg:
             
-            panel = ClientGUIImportOptions.EditTagImportOptionsLegacyPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
+            panel = ClientGUIImportOptionsPanels.EditTagImportOptionsLegacyPanel( dlg, tag_import_options, show_downloader_options, allow_default_selection )
             
             dlg.SetPanel( panel )
             

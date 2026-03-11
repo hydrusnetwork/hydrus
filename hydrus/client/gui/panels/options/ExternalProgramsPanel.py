@@ -38,7 +38,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
         
-        self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, 15, model, activation_callback = self._EditMimeLaunch )
+        self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, 12, model, activation_callback = self._EditMimeLaunch )
         
         for mime in HC.SEARCHABLE_MIMES:
             

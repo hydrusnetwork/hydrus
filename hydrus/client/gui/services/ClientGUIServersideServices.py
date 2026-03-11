@@ -258,7 +258,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SERVICES.ID, self._ConvertServiceToDisplayTuple, self._ConvertServiceToSortTuple )
         
-        self._services_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        self._services_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 4, model, delete_key_callback = self._Delete, activation_callback = self._Edit, max_height_num_chars = 24 )
         
         menu_template_items = []
         

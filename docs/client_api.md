@@ -55,6 +55,7 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 ### Misc
 
 * [Hydrus Video Deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter. 
+* [HydrusTools](https://github.com/GiovanH/HydrusTools): Toolkit for multiple kinds of metadata management and organisation.
 * [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
 * [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations.
 * [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): Send URLs from your Android device to your client.

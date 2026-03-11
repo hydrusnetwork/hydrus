@@ -66,7 +66,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 24 )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         

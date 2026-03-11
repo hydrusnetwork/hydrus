@@ -364,7 +364,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 15, model, use_simple_delete = True, activation_callback = self._Edit )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -653,7 +653,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToDisplayTuple, self._ConvertNetworkContextsToSortTuple )
         
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self._bandwidths_panel, 20, model, activation_callback = self.ShowNetworkContext )
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self._bandwidths_panel, 8, model, activation_callback = self.ShowNetworkContext )
         
         self._bandwidths_panel.SetListCtrl( self._bandwidths )
         
@@ -1236,7 +1236,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 20, model )
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 8, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -1390,7 +1390,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToDisplayTuple, self._ConvertNetworkContextToSortTuple )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 32, model, delete_key_callback = self._Clear, activation_callback = self._Review )
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, delete_key_callback = self._Clear, activation_callback = self._Review )
         
         self._listctrl.Sort()
         

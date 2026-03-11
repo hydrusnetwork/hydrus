@@ -41,8 +41,14 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disallow_media_drags_on_duration_media = QW.QCheckBox( mouse_panel )
         
-        self._anchor_and_hide_canvas_drags = QW.QCheckBox( mouse_panel )
+        self._anchor_canvas_drags = QW.QCheckBox( mouse_panel )
+        self._anchor_canvas_drags.setToolTip( ClientGUIFunctions.WrapToolTip( 'When dragging media around in the media viewer, should I try and pin the mouse in place? Some OSes do not like this.' ) )
+        
+        self._hide_canvas_drags = QW.QCheckBox( mouse_panel )
+        self._hide_canvas_drags.setToolTip( ClientGUIFunctions.WrapToolTip( 'When dragging media around in the media viewer, should I hide the mouse during the drag?' ) )
+        
         self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( mouse_panel )
+        self._touchscreen_canvas_drags_unanchor.setToolTip( ClientGUIFunctions.WrapToolTip( 'A touchscreen finger drag does not play well with the anchor-in-place tech, and it feels like the image suddenly accelerates. I can detect that situation and try to bail out.' ) )
         
         #
         
@@ -98,7 +104,8 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
         self._disallow_media_drags_on_duration_media.setChecked( self._new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ) )
-        self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
+        self._anchor_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_canvas_drags' ) )
+        self._hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'hide_canvas_drags' ) )
         self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
         
         slideshow_durations = self._new_options.GetSlideshowDurations()
@@ -128,8 +135,9 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
         rows.append( ( 'Do not allow mouse media drag-panning when the media has duration:', self._disallow_media_drags_on_duration_media ) )
-        rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
-        rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
+        rows.append( ( 'Anchor mouse cursor during media viewer drags:', self._anchor_canvas_drags ) )
+        rows.append( ( 'Hide mouse cursor during media viewer drags:', self._hide_canvas_drags ) )
+        rows.append( ( 'If set to anchor drags, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
         
         mouse_gridbox = ClientGUICommon.WrapInGrid( mouse_panel, rows )
         
@@ -202,7 +210,8 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
         
         self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
-        self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
+        self._new_options.SetBoolean( 'anchor_canvas_drags', self._anchor_canvas_drags.isChecked() )
+        self._new_options.SetBoolean( 'hide_canvas_drags', self._hide_canvas_drags.isChecked() )
         self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
         
         self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )

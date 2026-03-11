@@ -10,25 +10,39 @@ class ListBook( QW.QWidget ):
     
     currentChanged = QC.Signal( int )
     
-    def __init__( self, parent: QW.QWidget, list_chars_width = 28 ):
+    def __init__( self, parent: QW.QWidget, list_chars_width = 28, list_chars_height = 6, orientation = QC.Qt.Orientation.Horizontal ):
         
         super().__init__( parent )
         
         self._page_list = ClientGUIListBoxes.BetterQListWidget( self )
         self._page_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
-        self._page_list.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._page_list, list_chars_width ) )
-        
         self._widget_stack = QW.QStackedWidget( self )
         
         #
         
-        hbox = QP.HBoxLayout( margin = 0 )
+        if orientation == QC.Qt.Orientation.Horizontal:
+            
+            self._page_list.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._page_list, list_chars_width ) )
+            
+            layout = QP.HBoxLayout( margin = 0 )
+            
+            QP.AddToLayout( layout, self._page_list, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( layout, self._widget_stack, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+        else:
+            
+            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, list_chars_height )
+            
+            self._page_list.setFixedHeight( list_height_px )
+            
+            layout = QP.VBoxLayout( margin = 0 )
+            
+            QP.AddToLayout( layout, self._page_list, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( layout, self._widget_stack, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
         
-        QP.AddToLayout( hbox, self._page_list, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._widget_stack, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.setLayout( hbox )
+        self.setLayout( layout )
         
         #
         

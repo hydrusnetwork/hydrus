@@ -1212,6 +1212,11 @@ class ClientFilesManager( object ):
     
     def DoDeferredPhysicalDeletes( self ):
         
+        if not self._controller.CurrentlyIdle() and not self._controller.new_options.GetBoolean( 'deferred_file_deletes_in_normal_time' ):
+            
+            return
+            
+        
         wait_period = HydrusTime.SecondiseMSFloat( self._controller.new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' ) )
         
         num_files_deleted = 0

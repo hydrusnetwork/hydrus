@@ -393,6 +393,11 @@ class ContentUpdatePackage( object ):
         return self._service_keys_to_content_updates[ service_key ]
         
     
+    def GetWeight( self ):
+        
+        return sum( ( content_update.GetWeight() for content_updates in self._service_keys_to_content_updates.values() for content_update in content_updates ) )
+        
+    
     def HasContent( self ) -> bool:
         
         return sum( [ len( content_updates ) for content_updates in self._service_keys_to_content_updates.values() ] ) > 0

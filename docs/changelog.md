@@ -7,6 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 663](https://github.com/hydrusnetwork/hydrus/releases/tag/v663)
+
+### misc
+
+* the `hide and anchor mouse cursor during media viewer drags` setting under `options->media viewer` is now split into the 'hide' and 'anchor' parts, to add flexibility for trickier situations. some window managers aren't happy about mouse warping. the hide logic also now kicks in faster and sticks better
+* added checkboxes to `options->files and trash` to control whether trash maintenance and then deferred file delete can happen in 'normal' time
+* when you ok the 'manage tags' dialog, the commit to db now occurs in a thread and will no longer block the UI. if the job looks big or otherwise takes longer than a second, you'll get a progress popup, which is now cancellable. let me know how this feels on something big like the PTR (issue #1980)
+* a variety of videos that have silent audio channels were registered incorrectly in the database as 'unknown silence' and were not returning with `system:no audio` searches. the typo in the file parsing code that caused this is fixed, and all affected videos will be queued for a rescan on update to v663 (issue #1977)
+* fixed a recent typo that was causing the 'retry 403/404/blacklisted' choices to instead retry all ignored. sorry!
+
+### client api
+
+* added a link to `HydrusTools` at https://github.com/GiovanH/HydrusTools to the Client API help page. this is a toolset for a variety of metadata management and organisation tasks, actively being worked on
+
+### chardet build issue
+
+* changed `chardet>=3.0.4` to `chardet>=3.0.4,<6` in the pyproject.toml and requests.txts to rewind us to `5.2.0`, as we were a few weeks ago. this handles a `requests` version issue and I think also a PyInstaller incompatibility that was causing chardet to not load in the recent builds. this thing is 'character detection' and helps with website decoding
+
+### boring cleanup
+
+* fixed a harmless but spammy log error when the client booted with a session that included an OR predicate with certain service-based system predicates
+* used the same 'commit content updates and make a popup if it takes a while' routine I wrote for manage tags for media viewer delete files. I don't think this guy is going to spawn ten super slow popups any time, but if it does, they'll now be more visible if the user closes the viewer immediately after a delete during busy times etc..
+* when telling a 'file log' to 'retry these previously deleted entries, and yes clear the deleted record', the database clear action is now asynchronous. the panel disables while it works
+* archive/delete async commit block size is now 10 files, down from 64, to reduce latency as it works
+* all the multi-column lists in the program now have the ability to change height to exactly contain their contents (like the gallery downloader does), and almost all of them now have a defined range for this tech. most are in the 6-12 or 12-24 range, depending on the type of panel or dialog they sit in. almost all of them are happy to be a smaller minimum size, and the minimum size math here is less crazy. lists should just size vertically a bit better now
+* started a nicer and cleaner core layout call in the new `ClientGUILayout`. a years-old hack from the wx days is being replaced with nicer Qt code. the core idea is finished, and one real place uses it and nothing blew up, so the next few months will have more pushes on this and a bunch of long-term layout issues will be incrementally fixed
+* brushed up the error handling around stylesheet loading
+* brushed up the 'you don't need the server' help document
+* brushed up the 'running from source' help regarding venvs and different versions of python
+* updated some help/readmes about custom assets under your `db/static` folder. I now mean to recommend this in all cases--don't edit the install dir, make a custom folder under your db
+
+### boring import options work
+
+* moved some import options panel code around. the existing dialog and button are moved to `Legacy` files and will be deleted after the transition
+* fleshed out some of the options here to differentiate between subs, downloader pages, and all 'post file' work
+* reworked the options so specific url class options trigger at the correct layer in our stack of swiss cheese
+* added some tools to the main manager so he can give nice human descriptions on his inner workings during editing
+* 'full' import options containers can now describe where they got each import options (e.g. 'from subscriptions default')
+* wrote out failsafe url class type and name labelling into this
+* wrote most of a panel to edit a new `ImportOptionsContainer` object. I'm generally happy with it so far. it'll be a vertical listbook with the list of options types above switching edit panels below, and each line in the options list saying 'tag import options: does x' or 'tag import options: uses file posts default'. this is a complicated thing that I want to end up being clear and user-friendly, albeit sophisticated. I think we are getting there
+* next will be a dialog to handle the defaults, and some favourites management UI, and then updating the workflow. lots still to do
+
 ## [Version 662](https://github.com/hydrusnetwork/hydrus/releases/tag/v662)
 
 ### future build committed, clean install needed
@@ -459,26 +501,3 @@ title: Changelog
 * to stop new users missing it, the 'Wayland' warning box in the Linux install and source help now starts uncollapsed
 * added a note about `libxkbcommon` for X11 support on Fedora too
 * wrote a 'help I had a file identifier missing error.txt' document for the db dir to handle the 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa34bf0b9abf7683e3955781212d0d1899' emergency hash-recovery situation
-
-## [Version 653](https://github.com/hydrusnetwork/hydrus/releases/tag/v653)
-
-### misc
-
-* I hacked a simple date range (x axis) into the file history chart. it is clunky, but if you want to zoom in on one year, it'll work. this persists through search changes, and there's a 'refit x axis' button to recalc for the current data in view
-* reworked the naming and layout of the checkbox list in `options->media viewer hovers`
-* `options->media viewer hovers` and the top hover eye icon get a new `Hover-window pop-in requires window focus`, default on
-* `options->media viewer hovers` and the top hover eye icon get a new `Pop-in notes (right) hover window on mouseover`, default on, to handle the notes hover window
-* also added the new 'pin the duplicates filter hover window' checkbox to these guys (it is also still in the cog menu of the hover itself)
-* the `When finishing filtering, always delete from all possible domains` option is now simpler and more reliable. it had some old logic from the days when archive/delete allowed trashed files and sometimes not activate if there _were_ multiple domains (#1926)
-* the archive/delete commit dialog when the above option is _off_ is simplified and, if there _are_ multiple domains to delete from, always puts 'combined local file domains', which now has a clearer label, at the top
-* `system:duration` parsing now supports hours and minutes, and some funky stuff like '26000ms' works better (#1924)
-* the hydrus network engine has two new global http headers: `Accept: image/jpeg,image/png,image/*;q=0.9,*/*;q=0.8`, which preferences jpegs and pngs over webp, and `Cache-Control: no-transform`, which asks CDNs not to deliver "optimised" versions of files (often not honoured, though). all users who don't have a global header with those names already in place will get them on update. if you prefer something else, hit `network->data->manage http headers` to edit!
-* fixed the 'refresh all pages on current page of pages' shortcut action, which was accidentally nullified by a recent rewrite
-* fixed an issue with clientside services not deleting properly when editing services on a server and deleting more than one service at once
-
-### boring cleanup
-
-* the file history chart can now take new data and will regen its internal series and axes and stuff. previously I swapped in a whole new chart widget on every new search. also cleaned up the layout of the wider panel here
-* all `Typing.Optional` across the program (~300 instances I think) are replaced with `x | None`, which is python 3.10+ only. turns out we already had some of these, so no big worries, I hope, about lingering 3.9 users
-* all `Typing.Union` across the program (~50 instances) is similarly replaced
-* clarified some 'this message only shows one time per program boot' messages
