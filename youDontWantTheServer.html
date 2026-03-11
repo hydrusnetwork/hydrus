@@ -19,7 +19,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.4">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
     
     
       
@@ -2615,56 +2615,6 @@
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="The options">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#hydrus_web" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hydrus Web
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#hydroid" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Hydroid
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#animeboxes" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Animeboxes
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#database_migration" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Database migration
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
 </li>
       
     </ul>
@@ -2693,34 +2643,20 @@
 
 
 <h1 id="you_dont_want_the_server">You don't want the server<a class="headerlink" href="#you_dont_want_the_server" title="Permanent link">&para;</a></h1>
-<p>The hydrus_server.exe/hydrus_server.py is the victim of many a misconception. You don't need to use the server to use Hydrus. The vast majority of features are contained in the client itself so if you're new to Hydrus, just use that.</p>
+<p>The hydrus_server.exe/hydrus_server.py is the victim of many misconceptions. You don't need to use the server to use Hydrus. The vast majority of features are contained in the client itself. If you are new to Hydrus, just use that.</p>
 <p>The server is only really useful for a few specific cases which will not apply for the vast majority of users.</p>
 <h2 id="the_server">The server<a class="headerlink" href="#the_server" title="Permanent link">&para;</a></h2>
-<p>The Hydrus server doesn't really work as most people envision a server working. Rather than on-demand viewing, when you link with a Hydrus server, you synchronise a complete copy of all its data. For the tag repository, you download every single tag it has ever been told about. For the file repository, you download the whole file list, related file info, and every single thumbnail, which lets you browse the whole repository in your client in a regular search page--to view files in the media viewer, you need to download and import them specifically.</p>
+<p>The Hydrus server doesn't really work as most people envision a server working. Rather than on-demand viewing, when you link with a Hydrus server, you synchronise a complete copy of all its data. It stores a lot of information very efficiently with a slow update latency. For the tag repository, you download every single tag it has ever been told about. For the file repository, you download the whole file list, related file info, and every single thumbnail, which lets you browse the whole repository in your client in a regular search page--to view files in the media viewer, you need to download and import them specifically.</p>
 <h2 id="you_dont_want_the_server_probably">You don't want the server (probably)<a class="headerlink" href="#you_dont_want_the_server_probably" title="Permanent link">&para;</a></h2>
 <p>Do you want to remotely view your files? You don't want the server.</p>
-<p>Do you want to host your files on another computer since your daily driver don't have a lot of storage space? You don't want the server.</p>
+<p>Do you want to host your files on another computer since your daily machine doesn't have a lot of storage space? You don't want the server.</p>
 <p>Do you want to use multiple clients and have everything synced between them? You don't want the server.</p>
 <p>Do you want to expose API for Hydrus Web, Hydroid, or some other third-party tool? You don't want the server.</p>
 <p>Do you want to share some files and/or tags in a small group of friends? You might actually want the server.</p>
 <h2 id="the_options">The options<a class="headerlink" href="#the_options" title="Permanent link">&para;</a></h2>
-<p>Now, you're not the first person to have any of the above ideas and some of the thinkers even had enough programming know-how to make something for it. Below is a list of some options, see <a href="client_api.html">this page</a> for a few more.</p>
-<h3 id="hydrus_web"><a href="https://github.com/floogulinc/hydrus-web">Hydrus Web</a><a class="headerlink" href="#hydrus_web" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Lets you browse and manage your collection.</li>
-</ul>
-<h3 id="hydroid"><a href="https://github.com/thatfuckingbird/hydroid">Hydroid</a><a class="headerlink" href="#hydroid" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Lets you browse and manage your collection.</li>
-</ul>
-<h3 id="animeboxes"><a href="https://www.animebox.es/">Animeboxes</a><a class="headerlink" href="#animeboxes" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Lets you browse your collection.</li>
-</ul>
-<h3 id="database_migration"><a href="https://hydrusnetwork.github.io/hydrus/help/database_migration.html">Database migration</a><a class="headerlink" href="#database_migration" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Lets you host your files on another drive, even on another computer in the network.</li>
-</ul>
+<p>You are not the first person to have any of the above ideas. Some of them are possible with the Client API. Check out the most popular projects to see what is possible <a href="client_api.html">here</a>.</p>
+<p>Maintaining a database across multiple computers is particularly tricky, and there is no good solution yet. Each database only entertains one client. Some users have figured out <code>rsync</code> solutions that simply copy a whole install around, which is annoying but works for small databases. If you want to dial into a big database with multiple thin clients, this is simply not yet possible. One day, perhaps, and with the Client API, not the server.</p>
+<p>Related info on the database structure: <a href="https://hydrusnetwork.github.io/hydrus/help/database_migration.html">Database migration</a></p>
 
 
 
@@ -2741,7 +2677,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 9, 2023 21:56:03 UTC">May 9, 2023</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 11, 2026 20:27:32 UTC">March 11, 2026</span>
   </span>
 
     

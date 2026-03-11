@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_663"><a href="#version_663">version 663</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the `hide and anchor mouse cursor during media viewer drags` setting under `options-&gt;media viewer` is now split into the 'hide' and 'anchor' parts, to add flexibility for trickier situations. some window managers aren't happy about mouse warping. the hide logic also now kicks in faster and sticks better</li>
+                        <li>added checkboxes to `options-&gt;files and trash` to control whether trash maintenance and then deferred file delete can happen in 'normal' time</li>
+                        <li>when you ok the 'manage tags' dialog, the commit to db now occurs in a thread and will no longer block the UI. if the job looks big or otherwise takes longer than a second, you'll get a progress popup, which is now cancellable. let me know how this feels on something big like the PTR (issue #1980)</li>
+                        <li>a variety of videos that have silent audio channels were registered incorrectly in the database as 'unknown silence' and were not returning with `system:no audio` searches. the typo in the file parsing code that caused this is fixed, and all affected videos will be queued for a rescan on update to v663 (issue #1977)</li>
+                        <li>fixed a recent typo that was causing the 'retry 403/404/blacklisted' choices to instead retry all ignored. sorry!</li>
+                        <li><h3>client api</h3></li>
+                        <li>added a link to `HydrusTools` at https://github.com/GiovanH/HydrusTools to the Client API help page. this is a toolset for a variety of metadata management and organisation tasks, actively being worked on</li>
+                        <li><h3>chardet build issue</h3></li>
+                        <li>changed `chardet&gt;=3.0.4` to `chardet&gt;=3.0.4,&lt;6` in the pyproject.toml and requests.txts to rewind us to `5.2.0`, as we were a few weeks ago. this handles a `requests` version issue and I think also a PyInstaller incompatibility that was causing chardet to not load in the recent builds. this thing is 'character detection' and helps with website decoding</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>fixed a harmless but spammy log error when the client booted with a session that included an OR predicate with certain service-based system predicates</li>
+                        <li>used the same 'commit content updates and make a popup if it takes a while' routine I wrote for manage tags for media viewer delete files. I don't think this guy is going to spawn ten super slow popups any time, but if it does, they'll now be more visible if the user closes the viewer immediately after a delete during busy times etc..</li>
+                        <li>when telling a 'file log' to 'retry these previously deleted entries, and yes clear the deleted record', the database clear action is now asynchronous. the panel disables while it works</li>
+                        <li>archive/delete async commit block size is now 10 files, down from 64, to reduce latency as it works</li>
+                        <li>all the multi-column lists in the program now have the ability to change height to exactly contain their contents (like the gallery downloader does), and almost all of them now have a defined range for this tech. most are in the 6-12 or 12-24 range, depending on the type of panel or dialog they sit in. almost all of them are happy to be a smaller minimum size, and the minimum size math here is less crazy. lists should just size vertically a bit better now</li>
+                        <li>started a nicer and cleaner core layout call in the new `ClientGUILayout`. a years-old hack from the wx days is being replaced with nicer Qt code. the core idea is finished, and one real place uses it and nothing blew up, so the next few months will have more pushes on this and a bunch of long-term layout issues will be incrementally fixed</li>
+                        <li>brushed up the error handling around stylesheet loading</li>
+                        <li>brushed up the 'you don't need the server' help document</li>
+                        <li>brushed up the 'running from source' help regarding venvs and different versions of python</li>
+                        <li>updated some help/readmes about custom assets under your `db/static` folder. I now mean to recommend this in all cases--don't edit the install dir, make a custom folder under your db</li>
+                        <li><h3>boring import options work</h3></li>
+                        <li>moved some import options panel code around. the existing dialog and button are moved to `Legacy` files and will be deleted after the transition</li>
+                        <li>fleshed out some of the options here to differentiate between subs, downloader pages, and all 'post file' work</li>
+                        <li>reworked the options so specific url class options trigger at the correct layer in our stack of swiss cheese</li>
+                        <li>added some tools to the main manager so he can give nice human descriptions on his inner workings during editing</li>
+                        <li>'full' import options containers can now describe where they got each import options (e.g. 'from subscriptions default')</li>
+                        <li>wrote out failsafe url class type and name labelling into this</li>
+                        <li>wrote most of a panel to edit a new `ImportOptionsContainer` object. I'm generally happy with it so far. it'll be a vertical listbook with the list of options types above switching edit panels below, and each line in the options list saying 'tag import options: does x' or 'tag import options: uses file posts default'. this is a complicated thing that I want to end up being clear and user-friendly, albeit sophisticated. I think we are getting there</li>
+                        <li>next will be a dialog to handle the defaults, and some favourites management UI, and then updating the workflow. lots still to do</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_662"><a href="#version_662">version 662</a></h2>
                     <ul>
                         <li><h3>future build committed, clean install needed</h3></li>
