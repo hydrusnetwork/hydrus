@@ -86,7 +86,7 @@ class TagFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSummary( self, show_downloader_options ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         statements = []
         

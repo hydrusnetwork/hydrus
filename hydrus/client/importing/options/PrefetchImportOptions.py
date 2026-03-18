@@ -56,6 +56,32 @@ class PrefetchImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._preimport_url_check_type
         
     
+    def GetSummary( self, show_downloader_options: bool = True ):
+        
+        statements = []
+        
+        if not show_downloader_options:
+            
+            return ''
+            
+        
+        if self._preimport_hash_check_type == DO_NOT_CHECK:
+            
+            statements.append( 'ignoring hashes' )
+            
+        
+        if self._preimport_hash_check_type == DO_NOT_CHECK:
+            
+            statements.append( 'ignoring urls' )
+            
+        
+        #
+        
+        summary = '\n'.join( statements )
+        
+        return summary
+        
+    
     def PreImportURLCheckLooksForNeighbourSpam( self ) -> bool:
         
         return self._preimport_url_check_looks_for_neighbour_spam

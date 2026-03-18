@@ -1555,9 +1555,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         #
         
-        e = HydrusExceptions.DataMissing( 'This is a test exception' )
-        
-        HydrusData.ShowException( e, do_wait = False )
+        try:
+            
+            raise HydrusExceptions.DataMissing( 'This is a test exception' )
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e, do_wait = False )
+            
         
         #
         
@@ -4796,14 +4801,14 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     service.SetAccountRefreshDueNow()
                     
                 
-                def errback_ui_cleanup_callable():
+                def errback_callable( etype, value, tb ):
                     
-                    job_status.SetStatusText( 'error!' )
+                    job_status.SetExceptionTuple( etype, value, tb )
                     
                     job_status.Finish()
                     
                 
-                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
                 
                 job.start()
                 
@@ -4853,14 +4858,14 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     service.SetAccountRefreshDueNow()
                     
                 
-                def errback_ui_cleanup_callable():
+                def errback_callable( etype, value, tb ):
                     
-                    job_status.SetStatusText( 'error!' )
+                    job_status.SetExceptionTuple( etype, value, tb )
                     
                     job_status.Finish()
                     
                 
-                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
                 
                 job.start()
                 
@@ -4923,14 +4928,14 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     service.SetAccountRefreshDueNow()
                     
                 
-                def errback_ui_cleanup_callable():
+                def errback_callable( etype, value, tb ):
                     
-                    job_status.SetStatusText( 'error!' )
+                    job_status.SetExceptionTuple( etype, value, tb )
                     
                     job_status.Finish()
                     
                 
-                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
                 
                 job.start()
                 

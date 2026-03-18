@@ -42,7 +42,36 @@ except Exception as e_mpv:
     MPV_IMPORT_ERROR = traceback.format_exc()
     
 
+LOCALE_IS_SET = False
+
 damaged_file_hashes = set()
+
+def GetAudioDeviceTuples() -> list[ tuple[ str, str ] ]:
+    
+    if not MPV_IS_AVAILABLE:
+        
+        return []
+        
+    
+    global LOCALE_IS_SET
+    
+    if not LOCALE_IS_SET:
+        
+        # This is necessary since pyqt stomps over the locale settings needed by libmpv.
+        # This needs to happen after importing pyqt before creating the first mpv.MPV instance.
+        locale.setlocale( locale.LC_NUMERIC, 'C' )
+        
+        LOCALE_IS_SET = True
+        
+    
+    m = mpv.MPV()
+    
+    result = m.audio_device_list
+    
+    m.terminate()
+    
+    return [ (item[ 'name' ], item[ 'description' ] ) for item in result ] + [ ( 'null', 'DEBUG: Do not use any audio output device' ) ]
+    
 
 def GetClientAPIVersionString():
     
@@ -226,8 +255,6 @@ class MPVPlaybackRestarted( QC.QEvent ):
         
     
 
-LOCALE_IS_SET = False
-
 class MPVMediator( object ):
     
     def __init__( self, mpv_player: "mpv.MPV" ):
@@ -317,6 +344,13 @@ class MPVMediatorRude( MPVMediator ):
         
         # Disable mpv key event capture, might also need to set input_x11_keyboard
         self._mpv_player.input_vo_keyboard = False
+        
+        mpv_preferred_audio_device = CG.client_controller.new_options.GetNoneableString( 'mpv_preferred_audio_device' )
+        
+        if mpv_preferred_audio_device is not None:
+            
+            self._mpv_player.audio_device = mpv_preferred_audio_device
+            
         
     
     def LoadFile( self, path ):
@@ -437,6 +471,13 @@ class MPVMediatorPolite( MPVMediator ):
         
         # Disable mpv key event capture, might also need to set input_x11_keyboard
         self._mpv_player.command_async( 'set', 'input-vo-keyboard', False )
+        
+        mpv_preferred_audio_device = CG.client_controller.new_options.GetNoneableString( 'mpv_preferred_audio_device' )
+        
+        if mpv_preferred_audio_device is not None:
+            
+            self._mpv_player.command_async( 'set', 'audio-device', mpv_preferred_audio_device )
+            
         
         self._mpv_player.observe_property( 'pause', self._Catcher )
         self._mpv_player.observe_property( 'playback-time', self._Catcher )
@@ -652,8 +693,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if not LOCALE_IS_SET:
             
-            # This is necessary since PyQT stomps over the locale settings needed by libmpv.
-            # This needs to happen after importing PyQT before creating the first mpv.MPV instance.
+            # This is necessary since pyqt stomps over the locale settings needed by libmpv.
+            # This needs to happen after importing pyqt before creating the first mpv.MPV instance.
             locale.setlocale( locale.LC_NUMERIC, 'C' )
             
             LOCALE_IS_SET = True

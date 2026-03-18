@@ -32,7 +32,7 @@ class ListBook( QW.QWidget ):
             
         else:
             
-            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, list_chars_height )
+            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, ( 20, list_chars_height ) )
             
             self._page_list.setFixedHeight( list_height_px )
             

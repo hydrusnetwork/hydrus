@@ -1808,14 +1808,30 @@ class CanvasPanel( Canvas ):
             
             local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = CG.client_controller.services_manager.GetName )
             
-            for file_service_key in local_file_service_keys_we_are_in:
+            if len( local_file_service_keys_we_are_in ) > 0:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                if len( local_file_service_keys_we_are_in ) == 1:
+                    
+                    file_service_key = local_file_service_keys_we_are_in[0]
+                    
+                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    
+                else:
+                    
+                    delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                    
+                    for file_service_key in local_file_service_keys_we_are_in:
+                        
+                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )
+                    
                 
             
             if locations_manager.IsTrashed():
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete completely', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete physically now', 'Physically delete this file from disk.', self._Delete, file_service_key = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                 ClientGUIMenus.AppendMenuItem( menu, 'undelete', 'Take this file out of the trash.', self._Undelete )
                 
             
@@ -1856,11 +1872,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            player_menu = ClientGUIMenus.GenerateMenu( menu )
-            
-            ClientGUIMenus.AppendMenuLabel( player_menu, f'This is a {self._media_container.GetCurrentMediaPlayerLabel()}.' )
-            
-            ClientGUIMenus.AppendMenu( menu, player_menu, 'player' )
+            self._media_container.AddPlayerMenus( menu )
             
         
         CGC.core().PopupMenu( self, menu )
@@ -4492,14 +4504,23 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if len( local_file_service_keys_we_are_in ) > 0:
                 
-                delete_menu = ClientGUIMenus.GenerateMenu( menu )
-                
-                for file_service_key in local_file_service_keys_we_are_in:
+                if len( local_file_service_keys_we_are_in ) == 1:
                     
-                    ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    file_service_key = local_file_service_keys_we_are_in[0]
                     
-                
-                ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )
+                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    
+                else:
+                    
+                    delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                    
+                    for file_service_key in local_file_service_keys_we_are_in:
+                        
+                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                        
+                    
+                    ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )
+                    
                 
             
             #
@@ -4562,11 +4583,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            player_menu = ClientGUIMenus.GenerateMenu( menu )
-            
-            ClientGUIMenus.AppendMenuLabel( player_menu, f'This is a {self._media_container.GetCurrentMediaPlayerLabel()}.' )
-            
-            ClientGUIMenus.AppendMenu( menu, player_menu, 'player' )
+            self._media_container.AddPlayerMenus( menu )
             
             CGC.core().PopupMenu( self, menu )
             

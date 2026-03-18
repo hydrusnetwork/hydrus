@@ -68,14 +68,14 @@ def ManageServiceOptionsTagFilter(
                 service.SetAccountRefreshDueNow()
                 
             
-            def errback_ui_cleanup_callable():
+            def errback_callable( etype, value, tb ):
                 
-                job_status.SetStatusText( 'error!' )
+                job_status.SetExceptionTuple( etype, value, tb )
                 
                 job_status.Finish()
                 
             
-            job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+            job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable, errback_callable = errback_callable )
             
             job.start()
             

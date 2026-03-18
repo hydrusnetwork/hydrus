@@ -1648,16 +1648,23 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         if len( local_file_service_keys_we_are_in ) > 0:
             
-            delete_menu = ClientGUIMenus.GenerateMenu( menu )
-            
-            for file_service_key in local_file_service_keys_we_are_in:
+            if len( local_file_service_keys_we_are_in ) == 1:
                 
-                service_name = CG.client_controller.services_manager.GetName( file_service_key )
+                file_service_key = local_file_service_keys_we_are_in[0]
                 
-                ClientGUIMenus.AppendMenuItem( delete_menu, f'from {service_name}', f'Delete the selected files from {service_name}.', self._Delete, file_service_key )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                 
-            
-            ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
+            else:
+                
+                delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                
+                for file_service_key in local_file_service_keys_we_are_in:
+                    
+                    ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
+                
             
         
         if selection_has_trash:

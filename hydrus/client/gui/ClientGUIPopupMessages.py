@@ -345,18 +345,19 @@ class PopupMessage( PopupWindow ):
                     CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
                     
                 
-                self._show_files_button.setEnabled( True )
-                
             
             def errback_callable( etype, value, tb ):
                 
                 HydrusData.ShowText( 'Sorry, unable to show those files:' )
                 HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
                 
+            
+            def ui_restoration_callable():
+                
                 self._show_files_button.setEnabled( True )
                 
             
-            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable, ui_restoration_callable = ui_restoration_callable )
             
             job.start()
             

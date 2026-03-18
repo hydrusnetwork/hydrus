@@ -351,6 +351,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'persist_media_window_mpv' : False,
             'maintain_trash_in_normal_time' : True,
             'deferred_file_deletes_in_normal_time' : True,
+            'qt_media_player_no_audio_device' : False,
         }
         
         #
@@ -450,6 +451,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         from hydrus.core.files.images import HydrusImageHandling
         from hydrus.core.files.images import HydrusImageColours
         from hydrus.client.metadata import ClientTags
+        from hydrus.client.importing.options import ImportOptionsContainer
         
         self._dictionary[ 'integers' ] = {
             'notebook_tab_alignment' : CC.DIRECTION_UP,
@@ -570,6 +572,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'tag_list_tag_display_type_sidebar' : ClientTags.TAG_DISPLAY_SELECTION_LIST,
             'tag_list_tag_display_type_media_viewer_hover' : ClientTags.TAG_DISPLAY_SINGLE_MEDIA,
             'command_palette_num_chars_for_results_threshold' : 1,
+            'last_selected_import_options_container_panel_options_type' : ImportOptionsContainer.IMPORT_OPTIONS_TYPE_TAGS
         }
         
         self._dictionary[ 'floats' ] = {
@@ -651,7 +654,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'last_advanced_file_deletion_reason' : None,
             'last_advanced_file_deletion_special_action' : None,
             'sibling_connector_custom_namespace_colour' : 'system',
-            'or_connector_custom_namespace_colour' : 'system'
+            'or_connector_custom_namespace_colour' : 'system',
+            'qt_media_player_preferred_audio_device_name' : None,
+            'qt_media_player_preferred_audio_device_id_hex' : None,
+            'mpv_preferred_audio_device' : None,
         }
         
         self._dictionary[ 'strings' ] = {

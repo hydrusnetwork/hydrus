@@ -199,7 +199,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._presentation_status
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         if self._presentation_status == PRESENTATION_STATUS_NONE:
             

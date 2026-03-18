@@ -328,6 +328,8 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
         
         numpy_image = GenerateNumPyImageFromPILImage( pil_image )
         
+        pil_image.close()
+        
     else:
         
         if HG.media_load_report_mode:
@@ -361,6 +363,8 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
             
             numpy_image = GenerateNumPyImageFromPILImage( pil_image )
             
+            pil_image.close()
+            
         else:
             
             numpy_image = HydrusImageNormalisation.DequantizeFreshlyLoadedNumPyImage( numpy_image )
@@ -371,6 +375,7 @@ def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = 
     
     return numpy_image
     
+
 def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alpha = True ) -> numpy.ndarray:
     
     try:
@@ -418,7 +423,11 @@ def GeneratePILImage( path: str | typing.BinaryIO, dequantize = True, human_file
                 
                 numpy_image = HydrusImageNormalisation.NormaliseNumPyImageToUInt8( numpy_image )
                 
+                pil_image.close()
+                
                 pil_image = GeneratePILImageFromNumPyImage( numpy_image )
+                
+                del numpy_image
                 
             
             # note this destroys animated gifs atm, it collapses down to one frame
@@ -817,5 +826,10 @@ def GenerateDefaultThumbnailNumPyFromPath( path: str, target_resolution: tuple[ 
     
     pil_image = PILImageOps.pad( thumb_image, target_resolution, PILImage.Resampling.LANCZOS )
     
-    return GenerateNumPyImageFromPILImage( pil_image, strip_useless_alpha = False )
+    result = GenerateNumPyImageFromPILImage( pil_image, strip_useless_alpha = False )
+    
+    thumb_image.close()
+    pil_image.close()
+    
+    return result
     

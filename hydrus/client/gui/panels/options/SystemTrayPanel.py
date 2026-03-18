@@ -3,7 +3,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -52,26 +51,9 @@ class SystemTrayPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             self._close_client_to_system_tray.setEnabled( False )
             self._start_client_in_system_tray.setEnabled( False )
             
-            self._always_show_system_tray_icon.setChecked( False )
-            self._minimise_client_to_system_tray.setChecked( False )
-            self._close_client_to_system_tray.setChecked( False )
-            self._start_client_in_system_tray.setChecked( False )
-            
         elif not HC.PLATFORM_WINDOWS:
             
-            if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
-                
-                label = 'This is turned off for non-advanced non-Windows users for now.'
-                
-                self._always_show_system_tray_icon.setEnabled( False )
-                self._minimise_client_to_system_tray.setEnabled( False )
-                self._close_client_to_system_tray.setEnabled( False )
-                self._start_client_in_system_tray.setEnabled( False )
-                
-            else:
-                
-                label = 'This can be buggy/crashy on non-Windows, hydev will keep working on this.'
-                
+            label = 'This can be buggy/crashy on non-Windows, so test things out carefully.'
             
             QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, label ), CC.FLAGS_EXPAND_PERPENDICULAR )
             

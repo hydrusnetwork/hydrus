@@ -21,6 +21,7 @@ from hydrus.client import ClientRendering
 from hydrus.client import ClientUgoiraHandling
 from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
@@ -2106,6 +2107,20 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def AddPlayerMenus( self, menu: QW.QMenu ):
+        
+        player_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuLabel( player_menu, f'This is a {self.GetCurrentMediaPlayerLabel()}.' )
+        
+        ClientGUIMenus.AppendMenu( menu, player_menu, 'player' )
+        
+        if isinstance( self._media_window, ClientGUIQtMediaPlayer.QtMediaPlayer ):
+            
+            self._media_window.AddPlayerMenus( menu )
+            
+        
+    
     def BeginDrag( self ):
         
         self.parentWidget().BeginDrag()
@@ -2217,11 +2232,6 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def GetCanvasZoom( self ) -> float:
-        
-        return self._zoom_types_to_zooms[ MEDIA_VIEWER_ZOOM_TYPE_CANVAS ]
-        
-    
     def GetCurrentMediaPlayerLabel( self ) -> str:
         
         class_to_desc_dict = {
@@ -2242,6 +2252,11 @@ class MediaContainer( QW.QWidget ):
             
         
         return 'Unknown Media Player - let hydev know please'
+        
+    
+    def GetCanvasZoom( self ) -> float:
+        
+        return self._zoom_types_to_zooms[ MEDIA_VIEWER_ZOOM_TYPE_CANVAS ]
         
     
     def GetCurrentZoom( self ) -> float:

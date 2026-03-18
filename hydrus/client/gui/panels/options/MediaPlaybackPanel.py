@@ -15,6 +15,8 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
@@ -89,6 +91,11 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._mpv_conf_path = ClientGUIPathWidgets.FilePickerCtrl( mpv_panel, starting_directory = HydrusStaticDir.GetStaticPath( 'mpv-conf' ) )
         
+        self._mpv_preferred_audio_device = ClientGUICommon.NoneableTextCtrl( mpv_panel, '', none_phrase = 'use default' )
+        self._mpv_preferred_audio_device.setToolTip( ClientGUIFunctions.WrapToolTip( 'Write in the audio device id exactly as mpv understands it. Hit the button to see live examples. Use "null" for "no audio device at all". Only works on new players, so restart the client if you re-use mpv players.' ) )
+        self._mpv_preferred_audio_device_fetch_button = ClientGUICommon.BetterButton( mpv_panel, 'fetch mpv audio devices', self._FetchMPVAudioDevices )
+        self._mpv_preferred_audio_device_fetch_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will try to spin up a new MPV instance in the background and query it for the available audio devices. I do not see any way it could fail to work :^)' ) )
+        
         self._use_legacy_mpv_mediator = QW.QCheckBox( mpv_panel )
         self._use_legacy_mpv_mediator.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave this off it you can. You can try it if mpv errors out or does not show seekbar progress on any load (probably because of an older mpv version). If you have opened any mpv windows, restart the client to take effect.' ) )
         
@@ -108,7 +115,19 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         qt_media_panel = ClientGUICommon.StaticBox( self, 'QtMediaPlayer' )
         
-        self._persist_media_window_qt_media_player = QW.QCheckBox( mpv_panel )
+        self._qt_media_player_preferred_audio_device = ClientGUICommon.BetterChoice( qt_media_panel )
+        self._qt_media_player_preferred_audio_device.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only works on new players, so restart the client if you re-use QtMediaPlayers.' ) )
+        
+        self._qt_media_player_preferred_audio_device.addItem( 'default', None )
+        
+        for audio_device in ClientGUIQtMediaPlayer.GetAvailableAudioDevices():
+            
+            self._qt_media_player_preferred_audio_device.addItem( audio_device.description(), bytes( audio_device.id() ).hex() )
+            
+        
+        self._qt_media_player_preferred_audio_device.addItem( 'null - DEBUG: Do not use any audio output device', -1 )
+        
+        self._persist_media_window_qt_media_player = QW.QCheckBox( qt_media_panel )
         self._persist_media_window_qt_media_player.setToolTip( ClientGUIFunctions.WrapToolTip( 'When moving from video to video, should we re-use the same Qt player or create/swap to a different one? This can sometimes be flickery.' ) )
         
         self._qt_media_player_opengl_test = QW.QCheckBox( qt_media_panel )
@@ -184,6 +203,20 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._persist_media_window_mpv.setChecked( self._new_options.GetBoolean( 'persist_media_window_mpv' ) )
         self._mpv_destruction_test.setChecked( self._new_options.GetBoolean( 'mpv_destruction_test' ) )
         self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
+        
+        self._mpv_preferred_audio_device.SetValue( self._new_options.GetNoneableString( 'mpv_preferred_audio_device' ) )
+        
+        qt_media_player_no_audio_device = self._new_options.GetBoolean( 'qt_media_player_no_audio_device' )
+        
+        if qt_media_player_no_audio_device:
+            
+            self._qt_media_player_preferred_audio_device.SetValue( -1 )
+            
+        else:
+            
+            self._qt_media_player_preferred_audio_device.SetValue( self._new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_id_hex' ) )
+            
+        
         self._qt_media_player_opengl_test.setChecked( self._new_options.GetBoolean( 'qt_media_player_opengl_test' ) )
         self._persist_media_window_qt_media_player.setChecked( self._new_options.GetBoolean( 'persist_media_window_qt_media_player' ) )
         self._file_has_transparency_strictness.SetValue( self._new_options.GetInteger( 'file_has_transparency_strictness' ) )
@@ -250,6 +283,8 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
+        rows.append( ( 'Preferred audio output device:', self._mpv_preferred_audio_device ) )
+        rows.append( ( '--Fetch list of mpv audio device strings:', self._mpv_preferred_audio_device_fetch_button ) )
         rows.append( ( 'DEBUG: Use legacy mpv communication method:', self._use_legacy_mpv_mediator ) )
         rows.append( ( 'DEBUG: Loop Playlist instead of Loop File in mpv:', self._mpv_loop_playlist_instead_of_file ) )
         rows.append( ( 'TEST: Use the same mpv player through media transitions:', self._persist_media_window_mpv ) )
@@ -268,6 +303,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
+        rows.append( ( 'Preferred audio output device:', self._qt_media_player_preferred_audio_device ) )
         rows.append( ( 'DEBUG: Use the same QtMediaPlayer through media transitions:', self._persist_media_window_qt_media_player ) )
         rows.append( ( 'TEST: Use OpenGL Window in QtMediaPlayer:', self._qt_media_player_opengl_test ) )
         
@@ -335,6 +371,40 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         all_selected_are_deletable = selected_mimes.issubset( deletable_mimes )
         
         return all_selected_are_deletable
+        
+    
+    def _FetchMPVAudioDevices( self ):
+        
+        if not ClientGUIMPV.MPV_IS_AVAILABLE:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Sorry, MPV is not available!' )
+            
+            return
+            
+        
+        audio_device_tuples = ClientGUIMPV.GetAudioDeviceTuples()
+        
+        choice_tuples = [ ( f'{name} - {description}', name, name ) for ( name, description ) in audio_device_tuples ]
+        
+        try:
+            
+            result = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Select mpv audio device', choice_tuples = choice_tuples, message = 'Populate the option with a value that mpv reports it can see.' )
+            
+            if result == 'auto':
+                
+                value = None
+                
+            else:
+                
+                value = result
+                
+            
+            self._mpv_preferred_audio_device.SetValue( value )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
         
     
     def _GetCopyOfGeneralMediaViewOptions( self, desired_mime ):
@@ -523,6 +593,31 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'mpv_destruction_test', self._mpv_destruction_test.isChecked() )
         self._new_options.SetBoolean( 'do_not_setgeometry_on_an_mpv', self._do_not_setgeometry_on_an_mpv.isChecked() )
         self._new_options.SetBoolean( 'persist_media_window_qt_media_player', self._persist_media_window_qt_media_player.isChecked() )
+        
+        self._new_options.SetNoneableString( 'mpv_preferred_audio_device', self._mpv_preferred_audio_device.GetValue() )
+        
+        qt_media_player_preferred_audio_device_id_hex = self._qt_media_player_preferred_audio_device.GetValue()
+        
+        if qt_media_player_preferred_audio_device_id_hex == -1:
+            
+            self._new_options.SetBoolean( 'qt_media_player_no_audio_device', True )
+            
+        else:
+            
+            self._new_options.SetBoolean( 'qt_media_player_no_audio_device', False )
+            
+            if qt_media_player_preferred_audio_device_id_hex is None:
+                
+                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', None )
+                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', None )
+                
+            else:
+                
+                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', qt_media_player_preferred_audio_device_id_hex )
+                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', self._qt_media_player_preferred_audio_device.currentText() )
+                
+            
+        
         self._new_options.SetBoolean( 'qt_media_player_opengl_test', self._qt_media_player_opengl_test.isChecked() )
         self._new_options.SetInteger( 'file_has_transparency_strictness', self._file_has_transparency_strictness.GetValue() )
         self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )

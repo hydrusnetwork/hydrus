@@ -183,7 +183,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def _GiveChildFileSeedMyInfo( self, file_seed, url_for_child_referral: str ):
         
-        file_seed.SetReferralURL( url_for_child_referral )
+        file_seed.SetReferralURLIfNotNone( url_for_child_referral )
         
         file_seed.AddPrimaryURLs( ( self.url, ) )
         

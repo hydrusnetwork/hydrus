@@ -110,7 +110,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return content_update_package
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         if self._is_default:
             

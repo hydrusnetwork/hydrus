@@ -755,19 +755,17 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def publish_callable( account_types ):
             
-            self._EnableDisableButtons( True )
-            
             self._SelectAccountTypeForAutoAccountCreation( account_types )
             
         
-        def errback_ui_cleanup_callable():
+        def ui_restoration_callable():
             
             self._EnableDisableButtons( True )
             
         
         self._EnableDisableButtons( False )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -847,20 +845,18 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def publish_callable( registration_key ):
             
-            self._EnableDisableButtons( True )
-            
             # break this up into the 'yep, now I have the key' and call that
             self._STARTGetAccessKeyFromRegistrationKey( registration_key )
             
         
-        def errback_ui_cleanup_callable():
+        def ui_restoration_callable():
             
             self._EnableDisableButtons( True )
             
         
         self._EnableDisableButtons( False )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -901,19 +897,17 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             self._access_key.setText( access_key_encoded )
             
-            self._EnableDisableButtons( True )
-            
             ClientGUIDialogsMessage.ShowInformation( self, 'Looks good!' )
             
         
-        def errback_ui_cleanup_callable():
+        def ui_restoration_callable():
             
             self._EnableDisableButtons( True )
             
         
         self._EnableDisableButtons( False )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -1029,19 +1023,17 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         def publish_callable( message ):
             
-            self._EnableDisableButtons( True )
-            
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
-        def errback_ui_cleanup_callable():
+        def ui_restoration_callable():
             
             self._EnableDisableButtons( True )
             
         
         self._EnableDisableButtons( False )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -2762,9 +2754,9 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             return 1
             
         
-        def publish_callable( result ):
+        def publish_callable( _ ):
             
-            self._my_updater.Update()
+            pass
             
         
         def errback_callable( etype, value, tb ):
@@ -2775,6 +2767,9 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', str( value ) )
+            
+        
+        def ui_restoration_callable():
             
             self._my_updater.Update()
             
@@ -2796,7 +2791,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         self._refresh_account_button.setEnabled( False )
         self._refresh_account_button.setText( 'fetching' + HC.UNICODE_ELLIPSIS )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -3120,8 +3115,6 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
-            self._my_updater.Update()
-            
         
         def errback_callable( etype, value, tb ):
             
@@ -3132,13 +3125,16 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', str( value ) )
             
+        
+        def ui_restoration_callable():
+            
             self._my_updater.Update()
             
         
         self._service_info_button.setEnabled( False )
         self._service_info_button.setText( 'fetching' + HC.UNICODE_ELLIPSIS )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         

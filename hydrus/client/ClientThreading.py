@@ -331,6 +331,49 @@ class JobStatus( object ):
         self.Cancel()
         
     
+    def SetExceptionTuple( self, etype, value, tb ):
+        
+        try:
+            
+            try:
+                
+                self.SetStatusTitle( str( etype.__name__ ) )
+                
+            except Exception as e:
+                
+                self.SetStatusTitle( str( etype ) )
+                
+            
+            if value is None:
+                
+                value = 'Unknown error'
+                
+            
+            pretty_value = f'{value}'
+            
+            all_lines = pretty_value.splitlines()
+            
+            first_line = 'Exception'
+            
+            if len( all_lines ) > 0:
+                
+                first_line = all_lines[0]
+                
+            
+            self.SetStatusText( first_line )
+            
+            nice_trace = HydrusData.ConvertExceptionTupleToNiceTrace( etype, value, tb )
+            
+            self.SetVariable( 'traceback', nice_trace )
+            
+        except Exception as e:
+            
+            HydrusData.PrintExceptionTuple( etype, value, tb )
+            
+            self.SetStatusText( 'Encountered exception I could not parse!' )
+            
+        
+    
     def SetFiles( self, hashes: list[ bytes ], label: str ):
         
         if len( hashes ) == 0:
@@ -363,11 +406,6 @@ class JobStatus( object ):
     def SetStatusTitle( self, title: str ):
         
         self.SetVariable( 'status_title', title )
-        
-    
-    def SetTraceback( self, trace: str ):
-        
-        self.SetVariable( 'traceback', trace )
         
     
     def SetUserCallable( self, call: HydrusData.Call ):

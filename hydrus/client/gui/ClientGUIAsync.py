@@ -12,22 +12,22 @@ from hydrus.client.gui import QtPorting as QP
 # this does one thing neatly
 class AsyncQtJob( object ):
     
-    def __init__( self, win, work_callable, publish_callable, errback_callable = None, errback_ui_cleanup_callable = None ):
+    def __init__( self, win, work_callable, publish_callable, ui_restoration_callable = None, errback_callable = None ):
         
         # ultimate improvement here is to move to QObject/QThread and do the notifications through signals and slots (which will disconnect on object deletion)
         
         self._win = win
         self._work_callable = work_callable
         self._publish_callable = publish_callable
+        self._ui_restoration_callable = ui_restoration_callable
         self._errback_callable = errback_callable
-        self._errback_ui_cleanup_callable = errback_ui_cleanup_callable
         
     
     def _DefaultErrback( self, etype, value, tb ):
         
         HydrusData.ShowExceptionTuple( etype, value, tb )
         
-        message = 'An error occured in a background task. If you had UI waiting on a fetch job, the dialog/panel may need to be closed and re-opened.'
+        message = 'An error occured in a background task. If you have UI waiting on an update, the dialog/panel may need to be closed and re-opened.'
         message += '\n' * 2
         message += 'The error info will show as a popup and also be printed to log. Hydev may want to know about this error, at least to improve error handling.'
         message += '\n' * 2
@@ -44,43 +44,52 @@ class AsyncQtJob( object ):
         
         ClientGUIDialogsMessage.ShowCritical( win_to_use, 'Error', message )
         
-        if self._errback_ui_cleanup_callable is not None:
-            
-            self._errback_ui_cleanup_callable()
-            
-        
     
     def _doWork( self ):
         
-        def qt_deliver_result( result ):
-            
-            self._publish_callable( result )
-            
-        
         try:
             
-            result = self._work_callable()
+            try:
+                
+                result = self._work_callable()
+                
+            except Exception as e:
+                
+                self._HandleErrback( e )
+                
+                return
+                
             
-        except Exception as e:
+            try:
+                
+                CG.client_controller.CallBlockingToQt( self._win, self._publish_callable, result )
+                
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                
+                pass
+                
+            except Exception as e:
+                
+                self._HandleErrback( e )
+                
+                return
+                
             
-            self._HandleErrback( e )
+        finally:
             
-            return
-            
-        
-        try:
-            
-            CG.client_controller.CallBlockingToQt( self._win, qt_deliver_result, result )
-            
-        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
-            
-            pass
-            
-        except Exception as e:
-            
-            self._HandleErrback( e )
-            
-            return
+            if self._ui_restoration_callable is not None:
+                
+                try:
+                    
+                    CG.client_controller.CallBlockingToQt( self._win, self._ui_restoration_callable )
+                    
+                except Exception as e:
+                    
+                    self._HandleErrback( e )
+                    
+                    return
+                    
+                
             
         
     
@@ -104,7 +113,7 @@ class AsyncQtJob( object ):
                 
             except Exception as e_reporting:
                 
-                HydrusData.ShowText( 'Trying to show an async error using a custom callable caused a problem:' )
+                HydrusData.ShowText( 'Trying to show an async error using a custom errback caused a problem:' )
                 HydrusData.ShowException( e_reporting )
                 
             

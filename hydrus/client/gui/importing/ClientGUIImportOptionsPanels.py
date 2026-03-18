@@ -485,6 +485,7 @@ class EditLocationImportOptionsPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, self._destination_location_context_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         

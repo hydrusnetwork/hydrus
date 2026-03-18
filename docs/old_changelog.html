@@ -35,6 +35,38 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_664"><a href="#version_664">version 664</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the media 'delete' menu is no longer a flyout if there is only one deletion option (you should see 'delete from my files' more often)</li>
+                        <li>the preview viewer now has the same style of delete menu as the canvas and thumbnail</li>
+                        <li>the system tray options are no longer disabled on non-advanced non-Windows. this stuff works better these days</li>
+                        <li><h3>audio devices and tracks</h3></li>
+                        <li>you can now select the output audio device for QtMediaPlayers under `options-&gt;media playback`. default is 'default' (issue #1985)</li>
+                        <li>there's also a "DEBUG: null" choice to say 'never load any audio output device to QtMediaPlayer'. I know we've had some users who have had trouble with this</li>
+                        <li>I then did the same for mpv. it works a little different, so you hit a button to fetch the available options and then select from there, or type in manually if you know otherwise. similarly, you can select a 'DEBUG: null' option</li>
+                        <li>QtMediaPlayers now show their audio tracks in the player right-click menu. it says title, language, and codec, depending on what is available. you can select another track and it changes instantly!</li>
+                        <li>QtMediaPlayers also now show their video track(s)! I added the same 'switch video track' call as the audio stuff. if anyone has a multi-video-track example vid, I'd love to see it for my testing purposes, but the audio side was a dream so I assume it just werkz</li>
+                        <li>some this stuff is very slightly hacky, so let me know how this works for you</li>
+                        <li><h3>file import object inheritance cleanup</h3></li>
+                        <li>_tl;dr: some downloaders save modified time better_</li>
+                        <li>when a gallery parse or a file post parse creates multiple child file import objects, I have cleaned up how the parent gives the children data--</li>
+                        <li>source time is now only propagated if the parent source time is A) sensible and B) the child doesn't already have an older timestamp. all instances of file import object source-time-setting now follow this rule, which is how modified times are generally updated elsewhere in hydrus. 'older is generally more useful and trustworthy, unless it is new year's day 1970 etc..' also, file import objects now clip to thirty seconds ago when given a timestamp from the future (happens with timezone fun sometimes). thanks, particularly, to the user who identified and chased this down (issue #1984)</li>
+                        <li>referral url is similarly now propagated more softly; only inherited if it isn't set beforehand (was previously a forced overwrite in all cases. not sure it actually matters, but it might in future)</li>
+                        <li><h3>some boring cleanup</h3></li>
+                        <li>some critical image rendering sections now clean up their memory quickly and explicitly rather than waiting for the garbage collector to handle it later. more to come here in future</li>
+                        <li>cleaned up how `AsyncQtJob`s do UI restoration after an error, harmonising how the callback and errback restore the UI</li>
+                        <li>decoupled how some exception stuff is caught and processed and rendered for the user, and fixed some error-reporting pathways that were not rendering nicely</li>
+                        <li><h3>boring import options overhaul</h3></li>
+                        <li>I juggled some more pending import options stuff around, giving the wilder stuff a KISS pass</li>
+                        <li>wrote a panel to handle editing the new defaults. I simplified things a good bit and moved it all to the options dialog. it is hidden for now but I feel fairly good about it all</li>
+                        <li>filled in a bunch of holes and fixed some display bugs as I stitched it all together</li>
+                        <li>improved how import options and their containers present for network vs local imports</li>
+                        <li>got the import options editing dialog to remember the last selected options type</li>
+                        <li>I've now got to write some favourites UI, polish this all, write some migration tech, and then update the import pipeline to handle it all. feels doable</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_663"><a href="#version_663">version 663</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

@@ -328,7 +328,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         file_seed.AddRequestHeaders( self._request_headers )
         
-        file_seed.SetReferralURL( url_for_child_referral )
+        file_seed.SetReferralURLIfNotNone( url_for_child_referral )
         
         if self._referral_url is not None:
             
@@ -351,7 +351,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         file_seed.AddNamesAndNotes( sorted( self._names_and_notes_dict.items() ) )
         
-        file_seed.source_time = self.source_time
+        file_seed.SetSourceTimeIfSensible( self.source_time )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -694,12 +694,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         source_timestamp = parsed_post.GetTimestamp( HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN )
         
-        if source_timestamp is not None and ClientTime.TimestampIsSensible( source_timestamp ):
-            
-            source_timestamp = min( HydrusTime.GetNow() - 30, source_timestamp )
-            
-            self.source_time = ClientTime.MergeModifiedTimes( self.source_time, source_timestamp )
-            
+        self.SetSourceTimeIfSensible( source_timestamp )
         
         self._UpdateModified()
         
@@ -863,10 +858,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            if ClientTime.TimestampIsSensible( last_modified_time ):
-                
-                self.source_time = ClientTime.MergeModifiedTimes( self.source_time, last_modified_time )
-                
+            self.SetSourceTimeIfSensible( last_modified_time )
             
             status_hook( 'importing file' )
             
@@ -1393,6 +1385,24 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     def SetReferralURL( self, referral_url: str ):
         
         self._referral_url = referral_url
+        
+    
+    def SetReferralURLIfNotNone( self, referral_url: str ):
+        
+        if self._referral_url is not None:
+            
+            self._referral_url = referral_url
+            
+        
+    
+    def SetSourceTimeIfSensible( self, new_source_time: int | None ):
+        
+        if ClientTime.TimestampIsSensible( new_source_time ):
+            
+            new_source_time = min( HydrusTime.GetNow() - 30, new_source_time )
+            
+            self.source_time = ClientTime.MergeModifiedTimes( self.source_time, new_source_time )
+            
         
     
     def SetStatus( self, status: int, note: str = '', exception = None ):

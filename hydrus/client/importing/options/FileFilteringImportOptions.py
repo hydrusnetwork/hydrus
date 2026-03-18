@@ -186,7 +186,7 @@ class FileFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._min_size
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         statements = []
         

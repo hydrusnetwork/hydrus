@@ -7,6 +7,45 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 664](https://github.com/hydrusnetwork/hydrus/releases/tag/v664)
+
+### misc
+
+* the media 'delete' menu is no longer a flyout if there is only one deletion option (you should see 'delete from my files' more often)
+* the preview viewer now has the same style of delete menu as the canvas and thumbnail
+* the system tray options are no longer disabled on non-advanced non-Windows. this stuff works better these days
+
+### audio devices and tracks
+
+* you can now select the output audio device for QtMediaPlayers under `options->media playback`. default is 'default' (issue #1985)
+* there's also a "DEBUG: null" choice to say 'never load any audio output device to QtMediaPlayer'. I know we've had some users who have had trouble with this
+* I then did the same for mpv. it works a little different, so you hit a button to fetch the available options and then select from there, or type in manually if you know otherwise. similarly, you can select a 'DEBUG: null' option
+* QtMediaPlayers now show their audio tracks in the player right-click menu. it says title, language, and codec, depending on what is available. you can select another track and it changes instantly!
+* QtMediaPlayers also now show their video track(s)! I added the same 'switch video track' call as the audio stuff. if anyone has a multi-video-track example vid, I'd love to see it for my testing purposes, but the audio side was a dream so I assume it just werkz
+* some this stuff is very slightly hacky, so let me know how this works for you
+
+### file import object inheritance cleanup
+
+* _tl;dr: some downloaders save modified time better_
+* when a gallery parse or a file post parse creates multiple child file import objects, I have cleaned up how the parent gives the children data--
+* source time is now only propagated if the parent source time is A) sensible and B) the child doesn't already have an older timestamp. all instances of file import object source-time-setting now follow this rule, which is how modified times are generally updated elsewhere in hydrus. 'older is generally more useful and trustworthy, unless it is new year's day 1970 etc..' also, file import objects now clip to thirty seconds ago when given a timestamp from the future (happens with timezone fun sometimes). thanks, particularly, to the user who identified and chased this down (issue #1984)
+* referral url is similarly now propagated more softly; only inherited if it isn't set beforehand (was previously a forced overwrite in all cases. not sure it actually matters, but it might in future)
+
+### some boring cleanup
+
+* some critical image rendering sections now clean up their memory quickly and explicitly rather than waiting for the garbage collector to handle it later. more to come here in future
+* cleaned up how `AsyncQtJob`s do UI restoration after an error, harmonising how the callback and errback restore the UI
+* decoupled how some exception stuff is caught and processed and rendered for the user, and fixed some error-reporting pathways that were not rendering nicely
+
+### boring import options overhaul
+
+* I juggled some more pending import options stuff around, giving the wilder stuff a KISS pass
+* wrote a panel to handle editing the new defaults. I simplified things a good bit and moved it all to the options dialog. it is hidden for now but I feel fairly good about it all
+* filled in a bunch of holes and fixed some display bugs as I stitched it all together
+* improved how import options and their containers present for network vs local imports
+* got the import options editing dialog to remember the last selected options type
+* I've now got to write some favourites UI, polish this all, write some migration tech, and then update the import pipeline to handle it all. feels doable
+
 ## [Version 663](https://github.com/hydrusnetwork/hydrus/releases/tag/v663)
 
 ### misc
@@ -463,41 +502,3 @@ title: Changelog
 * `mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`
 * `PySide6` (Qt) normal `6.8.3` to `6.9.3`
 * `PySide6` (Qt) test `6.9.3` to `6.10.1`
-
-## [Version 654](https://github.com/hydrusnetwork/hydrus/releases/tag/v654)
-
-### command palette
-
-* reorganised the command palette options panel and updated how the character search threshold works. you can now say 'show all my x initially' for a particular search result type and then set a character limit for the general searches. the default and min value for the character search threshold is now 1
-
-### slideshow
-
-* the slideshow menu in the media viewer has been shuffled a bit to tuck everything together
-* the slideshow menu now also appears in the top hover of the normal 'browser' media viewer, in a new icon button beside the 'move randomly' button
-* the sildeshow menu now has a 'slideshows move randomly' option. this thing is a global setting, mostly a test. let me know how it works out
-
-### misc
-
-* the manage subscription dialog now nags you with red text if you set a downloader that appears to fetch from multiple sites (i.e. it is an NGUG that has multiple domains in its example urls). although it sounds temptingly convenient to set up a sub with a multi-site NGUG, they don't work so great like this, so the panel now says so and tells you what to do instead
-* added a `When finishing archive/delete filtering, delay activation of multiple deletion choice buttons` checkbox, default True, to `options->files and trash`, so you can now disable the 1.2 second delay on the delete/commit buttons when there are multiple deletion choices
-* made new svg icons for 'image', (which turns up when hydrus can't find a thumb for an image file), 'images' which turns up in the command palette as a 'media' proxy for media menu results, and the new 'slideshow' icon button. I like how these look at high res, but the smaller ones look bleh tbh. we'll have a review of all my new svgs when I finally add icon button sizing options and boost the default up a bit
-* `options->media viewer` now has split up mouse and seek bar settings. the seek bar panel has a new `Seek bar full-height pop-in requires window focus` checkbox, which is now default **True**
-* fixed svg resolution fetching (and probably all sorts of related svg gubbins) in PyQt6 (this is an alternate version of Qt some source users may be running)
-
-### boring and cleanup
-
-* overhauled how the command palette does some search string handling and cleaned up a couple of logic things like whitespace no longer counts as a new char, etc..
-* the code behind the slideshow is all cleaner and decoupled application command stuff
-* I went through and renamed some 'scanbar' labels to the more canonical 'seek bar'
-* the 'eye' icon button in the media viewer top hover is recollected into window/hovers/rendering submenu categories
-* fixed the vacuum command to no longer check the temp dir for free space in the lower-db call--the newer 'vacuum into' command we use no longer needs a temp copy
-* might have fixed a bad 'Go!' confirmation dialog string generation in `migrate tags` that hits users for whom Mercury is in retrograde
-* improved the error handling for when my new async subprocess reader tries to read from a process that terminates early
-* fixed some unit test 'call after' job scheduling stuff with the same anti-deadlock handling I added to the main client a while ago
-
-### admin and docs
-
-* created a hydrus_dev@proton.me email address and added it to all my contact lists. please feel free to email me there if you prefer--I'll check it as often as my gmail
-* to stop new users missing it, the 'Wayland' warning box in the Linux install and source help now starts uncollapsed
-* added a note about `libxkbcommon` for X11 support on Fedora too
-* wrote a 'help I had a file identifier missing error.txt' document for the db dir to handle the 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa34bf0b9abf7683e3955781212d0d1899' emergency hash-recovery situation

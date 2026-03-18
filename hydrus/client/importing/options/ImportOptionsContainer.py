@@ -11,62 +11,149 @@ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS = 1
 IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION = 2
 IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS = 3
 IMPORT_OPTIONS_CALLER_TYPE_GLOBAL = 4
-IMPORT_OPTIONS_CALLER_TYPE_GALLERY_DOWNLOAD_PAGES = 6
 IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS = 7
 IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER = 8
-IMPORT_OPTIONS_CALLER_TYPE_WATCHER_PAGES = 9
 
 import_options_caller_type_str_lookup = {
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT : 'local hard drive import',
-    IMPORT_OPTIONS_CALLER_TYPE_POST_URLS : 'post/gallery urls',
+    IMPORT_OPTIONS_CALLER_TYPE_POST_URLS : 'gallery downloads',
     IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION : 'subscription',
-    IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS : 'watcher urls',
-    IMPORT_OPTIONS_CALLER_TYPE_GALLERY_DOWNLOAD_PAGES : 'gallery download pages',
+    IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS : 'watchers',
     IMPORT_OPTIONS_CALLER_TYPE_GLOBAL : 'global',
     IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS : 'url class',
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER : 'specific importer',
-    IMPORT_OPTIONS_CALLER_TYPE_WATCHER_PAGES : 'watcher pages',
 }
+
+# TODO: a longer description here yeah
 
 IMPORT_OPTIONS_CALLER_TYPES_CANONICAL_ORDER = [
     IMPORT_OPTIONS_CALLER_TYPE_GLOBAL,
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT,
     IMPORT_OPTIONS_CALLER_TYPE_POST_URLS,
     IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS,
-    IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS,
-    IMPORT_OPTIONS_CALLER_TYPE_WATCHER_PAGES,
-    IMPORT_OPTIONS_CALLER_TYPE_GALLERY_DOWNLOAD_PAGES,
     IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION,
+    IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS,
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER,
 ]
 
 IMPORT_OPTIONS_TYPE_PREFETCH = 0
 IMPORT_OPTIONS_TYPE_FILE_FILTERING = 1
 IMPORT_OPTIONS_TYPE_TAG_FILTERING = 2
-IMPORT_OPTIONS_TYPE_LOCATION_IMPORT_OPTIONS = 3
-IMPORT_OPTIONS_TYPE_TAG_IMPORT_OPTIONS = 4
-IMPORT_OPTIONS_TYPE_NOTE_IMPORT_OPTIONS = 5
-IMPORT_OPTIONS_TYPE_PRESENTATION_IMPORT_OPTIONS = 6
+IMPORT_OPTIONS_TYPE_LOCATIONS = 3
+IMPORT_OPTIONS_TYPE_TAGS = 4
+IMPORT_OPTIONS_TYPE_NOTES = 5
+IMPORT_OPTIONS_TYPE_PRESENTATION = 6
 
 import_options_type_str_lookup = {    
     IMPORT_OPTIONS_TYPE_PREFETCH : 'prefetch logic',
     IMPORT_OPTIONS_TYPE_FILE_FILTERING : 'file filtering',
     IMPORT_OPTIONS_TYPE_TAG_FILTERING : 'tag filtering',
-    IMPORT_OPTIONS_TYPE_LOCATION_IMPORT_OPTIONS : 'locations',
-    IMPORT_OPTIONS_TYPE_TAG_IMPORT_OPTIONS : 'tags',
-    IMPORT_OPTIONS_TYPE_NOTE_IMPORT_OPTIONS : 'notes',
-    IMPORT_OPTIONS_TYPE_PRESENTATION_IMPORT_OPTIONS : 'presentation',
+    IMPORT_OPTIONS_TYPE_LOCATIONS : 'locations',
+    IMPORT_OPTIONS_TYPE_TAGS : 'tags',
+    IMPORT_OPTIONS_TYPE_NOTES : 'notes',
+    IMPORT_OPTIONS_TYPE_PRESENTATION : 'presentation',
 }
 
 IMPORT_OPTIONS_TYPES_CANONICAL_ORDER = [
     IMPORT_OPTIONS_TYPE_PREFETCH,
     IMPORT_OPTIONS_TYPE_FILE_FILTERING,
     IMPORT_OPTIONS_TYPE_TAG_FILTERING,
-    IMPORT_OPTIONS_TYPE_LOCATION_IMPORT_OPTIONS,
-    IMPORT_OPTIONS_TYPE_TAG_IMPORT_OPTIONS,
-    IMPORT_OPTIONS_TYPE_NOTE_IMPORT_OPTIONS,
-    IMPORT_OPTIONS_TYPE_PRESENTATION_IMPORT_OPTIONS,
+    IMPORT_OPTIONS_TYPE_LOCATIONS,
+    IMPORT_OPTIONS_TYPE_TAGS,
+    IMPORT_OPTIONS_TYPE_NOTES,
+    IMPORT_OPTIONS_TYPE_PRESENTATION,
 ]
+
+def GetImportOptionsCallerTypesPreferenceOrderFull( import_options_caller_type: int, url_class_key: bytes | None = None ):
+    """
+    The types of caller we should examine, from most to least specific, to layer our swiss cheese model.
+    """
+    
+    preference_stack = [ IMPORT_OPTIONS_CALLER_TYPE_GLOBAL ]
+    
+    if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION:
+        
+        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
+        preference_stack.append( import_options_caller_type )
+        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
+        
+    elif import_options_caller_type in ( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS, IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS ):
+        
+        preference_stack.append( import_options_caller_type )
+        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
+        
+    else:
+        
+        preference_stack.append( import_options_caller_type )
+        
+    
+    preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER )
+    
+    preference_stack.reverse()
+    
+    return preference_stack
+    
+
+def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller_type: int, url_class_key: bytes | None = None ) -> str:
+    """
+    Given this type of caller in the options UI, what are we showing to the user to say about what is consulted?
+    """
+    
+    if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_GLOBAL:
+        
+        return 'the global type is the base. everything else defaults to this'
+        
+    
+    preference_stack = [ import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_GLOBAL ] ]
+    
+    if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION:
+        
+        preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS ] )
+        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
+        preference_stack.append( 'any matching URL Class' )
+        
+    elif import_options_caller_type in ( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS, IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS ):
+        
+        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
+        preference_stack.append( 'any matching URL Class' )
+        
+    elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS:
+        
+        it_is_watchable = False
+        
+        if url_class_key is not None:
+            
+            try:
+                
+                url_class = CG.client_controller.network_engine.domain_manager.GetURLClassFromKey( url_class_key )
+                
+                if url_class.GetURLType() == HC.URL_TYPE_WATCHABLE:
+                    
+                    it_is_watchable = True
+                    
+                
+            except HydrusExceptions.DataMissing:
+                
+                pass
+                
+            
+        
+        preference_stack.append( 'a gallery downloader or a watcher' )
+        preference_stack.append( 'maybe a subscription, if it is a gallery downloader' )
+        
+        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
+        
+    else:
+        
+        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
+        
+    
+    preference_stack.append( 'specific import options for the particular importer' )
+    
+    preference_stack.reverse()
+    
+    return '\n'.join( preference_stack )
+    
 
 class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     
@@ -86,62 +173,9 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         self._lock = threading.Lock()
         
     
-    def _GetImportOptionsCallerTypesPreferenceOrder( self, import_options_caller_type: int, url_class_key: bytes | None = None ):
-        """
-        The types of caller we should examine, from most to least specific, to layer our swiss cheese model.
-        """
-        
-        preference_stack = [ IMPORT_OPTIONS_CALLER_TYPE_GLOBAL ]
-        
-        if import_options_caller_type in ( IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION, IMPORT_OPTIONS_CALLER_TYPE_GALLERY_DOWNLOAD_PAGES ):
-            
-            preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
-            preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
-            
-        elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_WATCHER_PAGES:
-            
-            preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS )
-            preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
-            
-        elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS:
-            
-            if url_class_key is not None:
-                
-                try:
-                    
-                    url_class = CG.client_controller.network_engine.domain_manager.GetURLClassFromKey( url_class_key )
-                    
-                    if url_class.GetURLType() == HC.URL_TYPE_WATCHABLE:
-                        
-                        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS )
-                        
-                    else:
-                        
-                        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
-                        
-                    
-                except HydrusExceptions.DataMissing:
-                    
-                    preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
-                    
-                
-            else:
-                
-                preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
-                
-            
-        
-        preference_stack.append( import_options_caller_type )
-        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER )
-        
-        preference_stack.reverse()
-        
-        return preference_stack
-        
-    
     def _GetImportOptionsContainerSlicesInPreferenceOrderWithSourceLabels( self, import_options_caller_type: int, url_class_key: bytes | None = None, specific_import_options_container: "ImportOptionsContainer | None" = None ) -> "list[ ImportOptionsContainer ]":
         
-        preference_stack = self._GetImportOptionsCallerTypesPreferenceOrder( import_options_caller_type, url_class_key = url_class_key )
+        preference_stack = GetImportOptionsCallerTypesPreferenceOrderFull( import_options_caller_type, url_class_key = url_class_key )
         
         import_options_container_slices_in_preference_order_with_source_labels = []
         
@@ -205,7 +239,6 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             serialisable_import_options_caller_types_to_default_import_options_containers,
             serialisable_url_class_keys_to_default_import_options_containers,
             serialisable_names_to_favourite_import_options_containers,
-            serialisable_names_to_favourite_import_options,
         ) = serialisable_info
         
         self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_caller_types_to_default_import_options_containers )
@@ -231,6 +264,22 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
             # this guy is now ready to answer any import question the caller has
             return import_options_container_result
+            
+        
+    
+    def GetDefaultImportOptionsContainerForCallerType( self, import_options_caller_type: int ) -> "ImportOptionsContainer":
+        
+        with self._lock:
+            
+            return self._import_options_caller_types_to_default_import_options_containers[ import_options_caller_type ]
+            
+        
+    
+    def GetDefaultImportOptionsContainerForURLClass( self, url_class_key: bytes ) -> "ImportOptionsContainer | None":
+        
+        with self._lock:
+            
+            return self._url_class_keys_to_default_import_options_containers.get( url_class_key, None )
             
         
     
@@ -266,19 +315,34 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportOptionsCallerTypesToDefaultImportOptionsContainers( self, import_options_caller_types_to_default_import_options_containers ):
+    def SetDefaultImportOptionsContainerForCallerType( self, import_options_caller_type: int, import_options_container: "ImportOptionsContainer" ):
+        
+        if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_GLOBAL:
+            
+            import_options_container.SetAndCheckFull()
+            
         
         with self._lock:
             
-            self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.SerialisableDictionary( import_options_caller_types_to_default_import_options_containers )
+            self._import_options_caller_types_to_default_import_options_containers[ import_options_caller_type ] = import_options_container
             
         
     
-    def SetURLClassKeysToDefaultImportOptionsContainers( self, url_class_keys_to_default_import_options_containers ):
+    def SetDefaultImportOptionsContainerForURLClass( self, url_class_key: bytes, import_options_container: "ImportOptionsContainer" ):
         
         with self._lock:
             
-            self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.SerialisableDictionary( url_class_keys_to_default_import_options_containers )
+            if import_options_container.IsEmpty():
+                
+                if url_class_key in self._url_class_keys_to_default_import_options_containers:
+                    
+                    del self._url_class_keys_to_default_import_options_containers[ url_class_key ]
+                    
+                
+            else:
+                
+                self._url_class_keys_to_default_import_options_containers[ url_class_key ] = import_options_container
+                
             
         
     
@@ -295,7 +359,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        self._import_options = HydrusSerialisable.SerialisableDictionary()
+        self._import_options_types_to_import_options = HydrusSerialisable.SerialisableDictionary()
         self._should_be_full = False
         
         self._import_option_types_to_source_labels = {}
@@ -305,7 +369,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     
     def _GetImportOptions( self, import_options_type: int ):
         
-        result = self._import_options.get( import_options_type, None )
+        result = self._import_options_types_to_import_options.get( import_options_type, None )
         
         if result is None and self._should_be_full:
             
@@ -317,7 +381,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_import_options = self._import_options.GetSerialisableTuple()
+        serialisable_import_options = self._import_options_types_to_import_options.GetSerialisableTuple()
         
         return serialisable_import_options
         
@@ -326,17 +390,22 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         
         serialisable_import_options = serialisable_info
         
-        self._import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options )
+        self._import_options_types_to_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options )
         
     
     def _SetImportOptions( self, import_options_type: int, import_options: HydrusSerialisable.SerialisableBase ):
         
-        self._import_options[ import_options_type ] = import_options
+        self._import_options_types_to_import_options[ import_options_type ] = import_options
         
     
     def FillInWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer", source_label: str ):
         
         with self._lock:
+            
+            if import_options_container_slice.IsEmpty():
+                
+                return
+                
             
             for import_options_type in IMPORT_OPTIONS_TYPES_CANONICAL_ORDER:
                 
@@ -350,6 +419,29 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
                         
                         self._import_option_types_to_source_labels[ import_options_type ] = source_label
                         
+                    
+                
+            
+        
+    
+    def OverwriteWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer" ):
+        
+        if import_options_container_slice.IsEmpty():
+            
+            return
+            
+        
+        for import_options_type in IMPORT_OPTIONS_TYPES_CANONICAL_ORDER:
+            
+            import_options = import_options_container_slice.GetImportOptions( import_options_type )
+            
+            if import_options is not None:
+                
+                self._SetImportOptions( import_options_type, import_options )
+                
+                if import_options_type in self._import_option_types_to_source_labels:
+                    
+                    del self._import_option_types_to_source_labels[ import_options_type ]
                     
                 
             
@@ -377,11 +469,46 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetSummary( self, show_downloader_options: bool = True ):
+        
+        with self._lock:
+            
+            short_summary_components = []
+            long_summary_components = []
+            
+            for import_options_type in IMPORT_OPTIONS_TYPES_CANONICAL_ORDER:
+                
+                if import_options_type in self._import_options_types_to_import_options:
+                    
+                    short_summary_components.append( import_options_type_str_lookup[ import_options_type ] )
+                    long_summary_components.append( self._import_options_types_to_import_options[ import_options_type ].GetSummary( show_downloader_options ) )
+                    
+                
+            
+        
+        if len( short_summary_components ) == 0:
+            
+            return 'empty'
+            
+        else:
+            
+            return ', '.join( short_summary_components ) + ' | ' + ', '.join( long_summary_components )
+            
+        
+    
     def HasImportOptions( self, import_options_type: int ):
         
         with self._lock:
             
-            return import_options_type in self._import_options
+            return import_options_type in self._import_options_types_to_import_options
+            
+        
+    
+    def IsEmpty( self ):
+        
+        with self._lock:
+            
+            return len( self._import_options_types_to_import_options ) == 0
             
         
     

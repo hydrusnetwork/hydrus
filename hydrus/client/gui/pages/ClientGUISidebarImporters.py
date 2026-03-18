@@ -52,6 +52,8 @@ from hydrus.client.parsing import ClientParsing
 
 def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_presentation_import_options: PresentationImportOptions.PresentationImportOptions | None, callable ):
     
+    show_downloader_options = True
+    
     submenu = ClientGUIMenus.GenerateMenu( menu )
     
     # inbox only
@@ -65,7 +67,7 @@ def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_
         
     else:
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'default presented files ({})'.format( single_selected_presentation_import_options.GetSummary() ), description, callable )
+        ClientGUIMenus.AppendMenuItem( submenu, 'default presented files ({})'.format( single_selected_presentation_import_options.GetSummary( show_downloader_options ) ), description, callable )
         
     
     sets_of_options = []
@@ -99,7 +101,7 @@ def AddPresentationSubmenu( menu: QW.QMenu, importer_name: str, single_selected_
             continue
             
         
-        ClientGUIMenus.AppendMenuItem( submenu, presentation_import_options.GetSummary(), description, callable, presentation_import_options = presentation_import_options )
+        ClientGUIMenus.AppendMenuItem( submenu, presentation_import_options.GetSummary( show_downloader_options ), description, callable, presentation_import_options = presentation_import_options )
         
     
     ClientGUIMenus.AppendMenu( menu, submenu, 'show files' )

@@ -135,7 +135,7 @@ class LocationImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._import_destination_location_context
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         statements = []
         

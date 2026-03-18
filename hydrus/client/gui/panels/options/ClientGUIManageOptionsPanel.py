@@ -31,6 +31,7 @@ from hydrus.client.gui.panels.options import GUIPagesPanel
 from hydrus.client.gui.panels.options import GUIPanel
 from hydrus.client.gui.panels.options import GUISessionsPanel
 from hydrus.client.gui.panels.options import ImportingPanel
+from hydrus.client.gui.panels.options import ImportOptionsPanel
 from hydrus.client.gui.panels.options import MaintenanceAndProcessingPanel
 from hydrus.client.gui.panels.options import MediaPlaybackPanel
 from hydrus.client.gui.panels.options import MediaViewerHoversPanel
@@ -78,6 +79,42 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'file viewing statistics', FileViewingStatisticsPanel.FileViewingStatisticsPanel( self._listbook ) )
         self._listbook.AddPage( 'gui pages', GUIPagesPanel.GUIPagesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'gui sessions', GUISessionsPanel.GUISessionsPanel( self._listbook, self._new_options ) )
+        
+        we_out_here = False
+        
+        if we_out_here:
+            
+            from hydrus.client.importing.options import ImportOptionsContainer
+            from hydrus.client.importing.options.FileFilteringImportOptions import FileFilteringImportOptions
+            from hydrus.client.importing.options.LocationImportOptions import LocationImportOptions
+            from hydrus.client.importing.options.NoteImportOptions import NoteImportOptions
+            from hydrus.client.importing.options.PrefetchImportOptions import PrefetchImportOptions
+            from hydrus.client.importing.options.PresentationImportOptions import PresentationImportOptions
+            from hydrus.client.importing.options.TagFilteringImportOptions import TagFilteringImportOptions
+            from hydrus.client.importing.options.TagImportOptions import TagImportOptions
+            
+            # TODO: Populate this with the actual defaults or insneed with defaults plus the user's current options migrated
+            
+            manager = ImportOptionsContainer.ImportOptionsManager()
+            
+            for import_options_caller_type in ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPES_CANONICAL_ORDER:
+                
+                import_options_container = ImportOptionsContainer.ImportOptionsContainer()
+                
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_FILE_FILTERING, FileFilteringImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_LOCATIONS, LocationImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_NOTES, NoteImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_PREFETCH, PrefetchImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_PRESENTATION, PresentationImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_TAG_FILTERING, TagFilteringImportOptions() )
+                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_TAGS, TagImportOptions() )
+                
+                manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, import_options_container )
+                
+            
+            self._listbook.AddPage( 'import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, manager ) )
+            
+        
         self._listbook.AddPage( 'maintenance and processing', MaintenanceAndProcessingPanel.MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media viewer', MediaViewerPanel.MediaViewerPanel( self._listbook ) )
         self._listbook.AddPage( 'media viewer hovers', MediaViewerHoversPanel.MediaViewerHoversPanel( self._listbook ) )

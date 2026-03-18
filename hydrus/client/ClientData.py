@@ -1,7 +1,6 @@
 import sqlite3
 import sys
 import time
-import traceback
 import yaml
 
 from hydrus.core import HydrusConstants as HC
@@ -21,78 +20,22 @@ def AddPaddingToDimensions( dimensions, padding ):
 
 def CatchExceptionClient( etype, value, tb ):
     
-    try:
+    if etype == HydrusExceptions.ShutdownException:
         
-        if etype == HydrusExceptions.ShutdownException:
-            
-            return
-            
+        return
         
-        trace_list = traceback.format_tb( tb )
-        
-        trace = ''.join( trace_list )
-        
-        pretty_value = f'{value}'
-        
-        all_lines = pretty_value.splitlines()
-        
-        if len( all_lines ) > 0:
-            
-            first_line = all_lines[0]
-            
-            if len( all_lines ) > 1:
-                
-                the_rest = all_lines[1:]
-                
-                trace = trace + '\n' + '\n'.join( the_rest )
-                
-            
-        else:
-            
-            first_line = 'textless exception!'
-            
-        
-        job_status = ClientThreading.JobStatus()
-        
-        try:
-            
-            job_status.SetStatusTitle( str( etype.__name__ ) )
-            
-        except Exception as e:
-            
-            job_status.SetStatusTitle( str( etype ) )
-            
-        
-        job_status.SetStatusText( first_line )
-        job_status.SetTraceback( trace )
-        
-        text = job_status.ToString()
-        
-        HydrusData.Print( 'Uncaught exception:' )
-        
-        HydrusData.DebugPrint( text )
-        
-        CG.client_controller.pub( 'message', job_status )
-        
-    except Exception as e:
-        
-        text = 'Encountered an error I could not parse:'
-        
-        text += '\n'
-        
-        text += str( ( etype, value, tb ) )
-        
-        try:
-            
-            text += traceback.format_exc()
-            
-        except Exception as e:
-            
-            pass
-            
-        
-        HydrusData.ShowText( text )
-        
+    
+    job_status = ClientThreading.JobStatus()
+    
+    job_status.SetExceptionTuple( etype, value, tb )
+    
+    text = job_status.ToString()
+    
+    HydrusData.Print( 'Uncaught exception:' )
+    
+    HydrusData.DebugPrint( text )
+    
+    CG.client_controller.pub( 'message', job_status )
     
     time.sleep( 1 )
     
@@ -188,49 +131,16 @@ def ShowExceptionClient( e, do_wait = True ):
 
 def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
-    if etype is None:
-        
-        etype = HydrusExceptions.UnknownException
-        
-    
     if etype == HydrusExceptions.ShutdownException:
         
         return
         
     
-    pretty_value = f'{value}'
-    
-    if value is None or len( pretty_value.splitlines() ) == 0:
-        
-        value = 'Unknown error'
-        pretty_value = value
-        
-    
-    all_lines = pretty_value.splitlines()
-    
-    first_line = 'Exception'
-    
-    if len( all_lines ) > 0:
-        
-        first_line = all_lines[0]
-        
+    HydrusData.PrintExceptionTuple( etype, value, tb, do_wait = False )
     
     job_status = ClientThreading.JobStatus()
     
-    try:
-        
-        job_status.SetStatusTitle( str( etype.__name__ ) )
-        
-    except Exception as e:
-        
-        job_status.SetStatusTitle( str( etype ) )
-        
-    
-    job_status.SetStatusText( first_line )
-    
-    message = HydrusData.PrintExceptionTuple( etype, value, tb, do_wait = False )
-    
-    job_status.SetTraceback( message )
+    job_status.SetExceptionTuple( etype, value, tb )
     
     CG.client_controller.pub( 'message', job_status )
     
@@ -239,6 +149,7 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         time.sleep( 1 )
         
     
+
 def ShowTextClient( text ):
     
     job_status = ClientThreading.JobStatus()

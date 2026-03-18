@@ -394,7 +394,7 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return self._presentation_import_options
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         if self._is_default:
             
@@ -405,15 +405,15 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        statements.append( self._file_filtering_import_options.GetSummary() )
+        statements.append( self._file_filtering_import_options.GetSummary( show_downloader_options ) )
         
         #
         
-        statements.append( self._location_import_options.GetSummary() )
+        statements.append( self._location_import_options.GetSummary( show_downloader_options ) )
         
         #
         
-        statements.append( self._presentation_import_options.GetSummary() )
+        statements.append( self._presentation_import_options.GetSummary( show_downloader_options ) )
         
         #
         

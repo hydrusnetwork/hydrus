@@ -297,14 +297,7 @@ def Print( text ):
 
 ShowText = Print
 
-def PrintException( e, do_wait = True ):
-    
-    ( etype, value, tb ) = sys.exc_info()
-    
-    PrintExceptionTuple( etype, value, tb, do_wait = do_wait )
-    
-
-def PrintExceptionTuple( etype, value, tb, do_wait = True ):
+def ConvertExceptionTupleToNiceTrace( etype, value, tb ):
     
     if etype is None:
         
@@ -345,6 +338,35 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
 ================== Stack ==================
 {stack}
 =================== End ==================='''
+    
+    return message
+    
+
+def ConvertExceptionTupleToSummary( etype, value, tb ):
+    
+    if value is None:
+        
+        value = 'Unknown error'
+        
+    
+    return f'{etype.__name__}: {value}'
+    
+
+def PrintException( e, do_wait = True ):
+    
+    ( etype, value, tb ) = sys.exc_info()
+    
+    PrintExceptionTuple( etype, value, tb, do_wait = do_wait )
+    
+
+def PrintExceptionTuple( etype, value, tb, do_wait = True ):
+    
+    if etype == HydrusExceptions.ShutdownException:
+        
+        return 'shutting down'
+        
+    
+    message = ConvertExceptionTupleToNiceTrace( etype, value, tb )
     
     DebugPrint( '\n' + message )
     

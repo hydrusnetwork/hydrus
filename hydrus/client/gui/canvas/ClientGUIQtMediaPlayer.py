@@ -4,10 +4,14 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+QT_MULTIMEDIA_OK = False
+
 try:
     
     from qtpy import QtMultimediaWidgets as QMW
     from qtpy import QtMultimedia as QM
+    
+    QT_MULTIMEDIA_OK = True
     
 except Exception as e:
     
@@ -20,6 +24,7 @@ from hydrus.core import HydrusData
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.media import ClientGUIMediaVolume
@@ -28,6 +33,16 @@ from hydrus.client.media import ClientMedia
 if typing.TYPE_CHECKING:
     
     from hydrus.client.gui.canvas import ClientGUICanvas
+    
+
+def GetAvailableAudioDevices() -> list[ QM.QAudioDevice ]:
+    
+    if not QT_MULTIMEDIA_OK:
+        
+        return []
+        
+    
+    return sorted( QM.QMediaDevices.audioOutputs(), key = lambda a_o: a_o.description().casefold() )
     
 
 class GraphicsViewViewportMouseMoveCatcher( QC.QObject ):
@@ -107,7 +122,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._canvas = canvas
         self._background_colour_generator = background_colour_generator
         
-        self._my_audio_output = QM.QAudioOutput( self )
+        self._my_audio_output = self._GenerateAudioDevice()
         self._my_audio_placeholder = QW.QWidget( self )
         
         # 2026-01: this is the first time hydev has done GraphicsView stuff, and thus all this was divined via haruspex
@@ -162,6 +177,51 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
         
     
+    def _GenerateAudioDevice( self ) -> QM.QAudioOutput | None:
+        
+        if CG.client_controller.new_options.GetBoolean( 'qt_media_player_no_audio_device' ):
+            
+            return None
+            
+        
+        qt_media_player_preferred_audio_device_id_hex = CG.client_controller.new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_id_hex' )
+        
+        if qt_media_player_preferred_audio_device_id_hex is not None:
+            
+            qt_media_player_preferred_audio_device_id = bytes.fromhex( qt_media_player_preferred_audio_device_id_hex )
+            
+        else:
+            
+            qt_media_player_preferred_audio_device_id = None
+            
+        
+        qt_media_player_preferred_audio_device_name = CG.client_controller.new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_name' )
+        
+        if qt_media_player_preferred_audio_device_id is not None and qt_media_player_preferred_audio_device_name is not None:
+            
+            audio_devices = GetAvailableAudioDevices()
+            
+            for audio_device in audio_devices:
+                
+                if bytes( audio_device.id() ) == qt_media_player_preferred_audio_device_id:
+                    
+                    return QM.QAudioOutput( audio_device )
+                    
+                
+            
+            for audio_device in audio_devices:
+                
+                if audio_device.description() == qt_media_player_preferred_audio_device_name:
+                    
+                    return QM.QAudioOutput( audio_device )
+                    
+                
+            
+        
+        # default system output
+        return QM.QAudioOutput( self )
+        
+    
     def _RefitVideo( self ):
         
         # ok this is megaslop but it works
@@ -201,6 +261,105 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             self._my_graphics_view.fitInView( rect, QC.Qt.AspectRatioMode.KeepAspectRatio )
             
         '''
+    
+    def _SetAudioTrack( self, i ):
+        
+        self._media_player.setActiveAudioTrack( i )
+        
+    
+    def _SetVideoTrack( self, i ):
+        
+        self._media_player.setActiveVideoTrack( i )
+        
+    
+    def AddPlayerMenus( self, menu: QW.QMenu ):
+        
+        audio_tracks = self._media_player.audioTracks()
+        
+        if len( audio_tracks ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'no audio tracks', 'There are no audio tracks in this media.' )
+            
+        else:
+            
+            active_audio_track = self._media_player.activeAudioTrack()
+            
+            audio_tracks_menu = QW.QMenu( menu )
+            
+            keys_in_nice_order = [ QM.QMediaMetaData.Key.Title, QM.QMediaMetaData.Key.Language, QM.QMediaMetaData.Key.AudioCodec ]
+            
+            for ( i, audio_track ) in enumerate( audio_tracks ):
+                
+                label_components = []
+                
+                for key in keys_in_nice_order:
+                    
+                    value = audio_track.stringValue( key )
+                    
+                    if value is not None and value != '':
+                        
+                        label_components.append( value )
+                        
+                    
+                
+                if len( label_components ) == 0:
+                    
+                    label_components = [ 'unknown' ]
+                    
+                
+                label = ' - ' .join( label_components )
+                
+                ClientGUIMenus.AppendMenuCheckItem( audio_tracks_menu, label, 'Set this audio track.', i == active_audio_track, self._SetAudioTrack, i )
+                
+            
+            menu_label = 'audio tracks' if len( audio_tracks ) > 1 else 'audio track'
+            
+            ClientGUIMenus.AppendMenu( menu, audio_tracks_menu, menu_label )
+            
+        
+        video_tracks = self._media_player.videoTracks()
+        
+        if len( video_tracks ) == 0:
+            
+            ClientGUIMenus.AppendMenuLabel( menu, 'no video tracks', 'There are no video tracks in this media.' )
+            
+        else:
+            
+            active_video_track = self._media_player.activeVideoTrack()
+            
+            video_tracks_menu = QW.QMenu( menu )
+            
+            keys_in_nice_order = [ QM.QMediaMetaData.Key.Title, QM.QMediaMetaData.Key.VideoCodec ]
+            
+            for ( i, video_track ) in enumerate( video_tracks ):
+                
+                label_components = []
+                
+                for key in keys_in_nice_order:
+                    
+                    value = video_track.stringValue( key )
+                    
+                    if value is not None and value != '':
+                        
+                        label_components.append( value )
+                        
+                    
+                
+                if len( label_components ) == 0:
+                    
+                    label_components = [ 'unknown' ]
+                    
+                
+                label = ' - ' .join( label_components )
+                
+                ClientGUIMenus.AppendMenuCheckItem( video_tracks_menu, label, 'Set this video track.', i == active_video_track, self._SetVideoTrack, i )
+                
+            
+            menu_label = 'video tracks' if len( video_tracks ) > 1 else 'video track'
+            
+            ClientGUIMenus.AppendMenu( menu, video_tracks_menu, menu_label )
+            
+        
     
     def ClearMedia( self ):
         
@@ -400,7 +559,9 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         has_audio = self._media.HasAudio()
         is_audio = self._media.GetMime() in HC.AUDIO
         
-        if has_audio:
+        # this doesn't have the ability to un-set once set. docs say you can send on a null pointer, but qtpy disagrees
+        # edge case so we'll swallow it for now
+        if has_audio and self._my_audio_output is not None:
             
             self._media_player.setAudioOutput( self._my_audio_output )
             
@@ -422,8 +583,11 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             self._media_player.play()
             
         
-        self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) / 100 )
-        self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+        if self._my_audio_output is not None:
+            
+            self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) / 100 )
+            self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+            
         
     
     def showEvent( self, event ):
@@ -449,11 +613,17 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def UpdateAudioMute( self ):
         
-        self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+        if self._my_audio_output is not None:
+            
+            self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+            
         
 
     def UpdateAudioVolume( self ):
         
-        self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) / 100 )
+        if self._my_audio_output is not None:
+            
+            self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) / 100 )
+            
         
     

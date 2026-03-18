@@ -358,7 +358,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._service_keys_to_service_tag_import_options[ service_key ]
         
     
-    def GetSummary( self ):
+    def GetSummary( self, show_downloader_options: bool = True ):
         
         statements = []
         

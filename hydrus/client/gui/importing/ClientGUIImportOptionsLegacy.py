@@ -598,7 +598,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             single_label = 'file import options'
             
-            summaries.append( self._file_import_options.GetSummary() )
+            summaries.append( self._file_import_options.GetSummary( self._show_downloader_options ) )
             
         
         if self._tag_import_options is not None:
