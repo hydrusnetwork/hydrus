@@ -23,7 +23,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.5">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -3097,7 +3097,7 @@
 
 <h1 id="intro">duplicates<a class="headerlink" href="#intro" title="Permanent link">&para;</a></h1>
 <p><strong>This is not a simple topic. If you only just started hydrus, this is the checkpoint where you stop, spend a couple weeks getting more comfortable with stuff, and come back later. I recommend you take it slow and set time aside to read this whole document.</strong></p>
-<p>As files are shared on the internet, they are often resized, cropped, or converted to a new file format. They can also be edited to a new file, whether than is just a small alteration or correction, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <strong>duplicates</strong>. We would like to keep the interesting similar-looking <strong>alternates</strong>, like costume changes or work-in-progress transitions, while deleting the lower-quality duplicates where the only notable difference is some muddy jpeg artifacting. Along the way, it would be nice to merge the metadata from the worse files to the better so we do preserve what is useful.</p>
+<p>As files are shared on the internet, they are often resized, cropped, or converted to a new file format. They can also be edited to a new file, whether that is just a small alteration or correction, or turned into a template and reinterpreted over and over and over. Even if you have a very restrictive importing workflow, your client is almost certainly going to get some <strong>duplicates</strong>. We would like to keep the interesting similar-looking <strong>alternates</strong>, like costume changes or work-in-progress transitions, while deleting the lower-quality duplicates where the only notable difference is some muddy jpeg artifacting. Along the way, it would be nice to merge the metadata from the worse files to the better so we do preserve what is useful.</p>
 <p>Finding and processing duplicates within a large collection is impossible to do by hand, so I have written a system to do the heavy lifting for you. It works on still images like jpegs and pngs, but advanced users have some ways to inject animation and video matches into the system.</p>
 <p>Hydrus finds pairs of <em>potential</em> duplicates using a search algorithm that compares images by their shape. It is sensitive enough to recognise two images of the same character in the exact same pose, but it will not recognise smaller differences like a hair or finger placement correction by the artist, a tear or sweat drops, or basic colour swaps.</p>
 <p>Once it discovers potential duplicate pairs, they are presented to you through a filter like the archive/delete filter so you can tell the client their true relationship and if you would like to delete any 'worse' duplicate. All of your decisions build up in the database to form logically consistent groups of duplicates and 'alternate' relationships that can be used to infer future information. For instance, if you say that file A is a duplicate of B and B is a duplicate of C, A and C are automatically recognised as duplicates as well.</p>
@@ -3313,7 +3313,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="December 10, 2025 21:30:48 UTC">December 10, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 25, 2026 20:09:21 UTC">March 25, 2026</span>
   </span>
 
     
