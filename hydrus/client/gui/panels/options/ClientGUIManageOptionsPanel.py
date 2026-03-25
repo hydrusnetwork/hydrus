@@ -84,35 +84,24 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         if we_out_here:
             
-            from hydrus.client.importing.options import ImportOptionsContainer
-            from hydrus.client.importing.options.FileFilteringImportOptions import FileFilteringImportOptions
-            from hydrus.client.importing.options.LocationImportOptions import LocationImportOptions
-            from hydrus.client.importing.options.NoteImportOptions import NoteImportOptions
-            from hydrus.client.importing.options.PrefetchImportOptions import PrefetchImportOptions
-            from hydrus.client.importing.options.PresentationImportOptions import PresentationImportOptions
-            from hydrus.client.importing.options.TagFilteringImportOptions import TagFilteringImportOptions
-            from hydrus.client.importing.options.TagImportOptions import TagImportOptions
+            from hydrus.client.importing.options import FileImportOptionsLegacy
+            from hydrus.client.importing.options import ImportOptionsContainerMigration
             
-            # TODO: Populate this with the actual defaults or insneed with defaults plus the user's current options migrated
+            ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_default_tag_import_options ) = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptions()
+            ( file_post_default_note_import_options, watchable_default_note_import_options, url_class_keys_to_default_note_import_options ) = CG.client_controller.network_engine.domain_manager.GetDefaultNoteImportOptions()
             
-            manager = ImportOptionsContainer.ImportOptionsManager()
+            import_options_manager = ImportOptionsContainerMigration.GenerateImportOptionsManagerFromOldSystem(
+                file_post_default_tag_import_options,
+                watchable_default_tag_import_options,
+                url_class_keys_to_default_tag_import_options,
+                file_post_default_note_import_options,
+                watchable_default_note_import_options,
+                url_class_keys_to_default_note_import_options,
+                self._new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_QUIET ),
+                self._new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_LOUD ),
+            )
             
-            for import_options_caller_type in ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPES_CANONICAL_ORDER:
-                
-                import_options_container = ImportOptionsContainer.ImportOptionsContainer()
-                
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_FILE_FILTERING, FileFilteringImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_LOCATIONS, LocationImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_NOTES, NoteImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_PREFETCH, PrefetchImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_PRESENTATION, PresentationImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_TAG_FILTERING, TagFilteringImportOptions() )
-                import_options_container.SetImportOptions( ImportOptionsContainer.IMPORT_OPTIONS_TYPE_TAGS, TagImportOptions() )
-                
-                manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, import_options_container )
-                
-            
-            self._listbook.AddPage( 'import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, manager ) )
+            self._listbook.AddPage( 'import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, self._new_options, import_options_manager ) )
             
         
         self._listbook.AddPage( 'maintenance and processing', MaintenanceAndProcessingPanel.MaintenanceAndProcessingPanel( self._listbook ) )

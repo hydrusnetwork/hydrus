@@ -18,7 +18,7 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.networking import ClientNetworkingJobs
 
@@ -73,7 +73,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        self._note_import_options = NoteImportOptions.NoteImportOptions()
+        self._note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         self._note_import_options.SetIsDefault( True )
         
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
@@ -233,7 +233,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gallery_import_key, creation_time, query, source_name, current_page_index, num_urls_found, num_new_urls_found, file_limit, gallery_paused, files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache, no_work_until, no_work_until_reason ) = old_serialisable_info
             
-            note_import_options = NoteImportOptions.NoteImportOptions()
+            note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
             note_import_options.SetIsDefault( True )
             
             serialisable_note_import_options = note_import_options.GetSerialisableTuple()
@@ -848,7 +848,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def SetNoteImportOptions( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         with self._lock:
             
@@ -1102,7 +1102,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        self._note_import_options = NoteImportOptions.NoteImportOptions()
+        self._note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         self._note_import_options.SetIsDefault( True )
         
         self._gallery_imports = HydrusSerialisable.SerialisableList()
@@ -1357,7 +1357,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, file_limit, pend_options, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports ) = old_serialisable_info
             
-            note_import_options = NoteImportOptions.NoteImportOptions()
+            note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
             note_import_options.SetIsDefault( True )
             
             serialisable_note_import_options = note_import_options.GetSerialisableTuple()

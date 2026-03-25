@@ -141,14 +141,30 @@ class LocationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
+        try:
+            
+            destination_names = sorted( CG.client_controller.services_manager.GetName( service_key ) for service_key in self._import_destination_location_context.current_service_keys )
+            
+            statements.append( 'imports to ' + ', '.join( destination_names ) )
+            
+        except:
+            
+            statements.append( 'problem with destination: wants to import to a location that no longer exists?' )
+            
+        
         if self._automatically_archives:
             
-            statements.append( 'automatically archiving' )
+            statements.append( 'automatically archives' )
+            
+        
+        if self._do_import_destinations_on_already_in_db_files:
+            
+            statements.append( 'puts files in destinations even if they are already in db' )
             
         
         #
         
-        summary = '\n'.join( statements )
+        summary = ', '.join( statements )
         
         return summary
         

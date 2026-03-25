@@ -583,11 +583,18 @@ def populate_jpeg_quality_storage( jpeg_hash ):
             
             raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
             
-            subsampling = HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image )
-            
-            quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
-            
-            progressive = 'progression' in raw_pil_image.info
+            try:
+                
+                subsampling = HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image )
+                
+                quality_result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                
+                progressive = 'progression' in raw_pil_image.info
+                
+            finally:
+                
+                raw_pil_image.close()
+                
             
         except Exception as e:
             

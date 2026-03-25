@@ -8,8 +8,6 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 
-from hydrus.client.gui import QtInit
-
 DEFAULT_HYDRUS_STYLESHEET = ''
 ORIGINAL_STYLE_NAME = None
 CURRENT_STYLE_NAME = None
@@ -74,14 +72,7 @@ def InitialiseDefaults():
     
     app_instance = typing.cast( QW.QApplication, QW.QApplication.instance() )
     
-    if QtInit.WE_ARE_QT5:
-        
-        ORIGINAL_STYLE_NAME  = app_instance.style().objectName()
-        
-    else:
-        
-        ORIGINAL_STYLE_NAME  = app_instance.style().name()
-        
+    ORIGINAL_STYLE_NAME  = app_instance.style().name()
     
     BETTER_SUPPORT_FOR_NOW = 'windowsvista'
     
@@ -117,14 +108,7 @@ def SetStyleFromName( name: str ):
     
     app_instance = typing.cast( QW.QApplication, QW.QApplication.instance() )
     
-    if QtInit.WE_ARE_QT5:
-        
-        current_style_name  = app_instance.style().objectName()
-        
-    else:
-        
-        current_style_name  = app_instance.style().name()
-        
+    current_style_name  = app_instance.style().name()
     
     if name.casefold() == current_style_name.casefold():
         

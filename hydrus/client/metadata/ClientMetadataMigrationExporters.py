@@ -120,7 +120,6 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         
         note_import_options = NoteImportOptions.NoteImportOptions()
         
-        note_import_options.SetIsDefault( False )
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
         

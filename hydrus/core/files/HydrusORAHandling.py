@@ -12,8 +12,6 @@ ORA_FILE_MERGED = "mergedimage.png"
 
 def MergedPILImageFromOra( path: str ):
     
-    print( "Merging PIL image from ora" )
-    
     try:
         
         zip_path_file_obj = HydrusArchiveHandling.GetZipAsPath( path, ORA_FILE_MERGED ).open( 'rb' )
@@ -51,9 +49,23 @@ def GenerateThumbnailNumPyFromOraPath( path: str, target_resolution: tuple[ int,
         pil_image = ThumbnailPILImageFromOra( path )
         
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
+    try:
+        
+        thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
+        
+    finally:
+        
+        pil_image.close()
+        
     
-    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+    try:
+        
+        numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+        
+    finally:
+        
+        thumbnail_pil_image.close()
+        
     
     return numpy_image
     
@@ -73,8 +85,6 @@ def GetOraProperties( path: str ):
         width = int( root.get( 'w' ) )
         
         height = int( root.get( 'h' ) )
-        
-        print( width, height )
         
         return ( width, height )
         

@@ -3387,7 +3387,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            edit_notes_widget = ClientGUIImportOptionsPanels.EditNoteImportOptionsPanel( panel, note_import_options, allow_default_selection )
+            edit_notes_widget = ClientGUIImportOptionsPanels.EditNoteImportOptionsLegacyPanel( panel, note_import_options, allow_default_selection )
             
             panel.SetControl( edit_notes_widget )
             

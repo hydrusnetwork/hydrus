@@ -73,10 +73,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         self._url_class_keys_to_default_tag_import_options = {}
         
-        from hydrus.client.importing.options import NoteImportOptions
+        from hydrus.client.importing.options import NoteImportOptionsLegacy
         
-        self._file_post_default_note_import_options = NoteImportOptions.NoteImportOptions()
-        self._watchable_default_note_import_options = NoteImportOptions.NoteImportOptions()
+        self._file_post_default_note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+        self._watchable_default_note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         
         self._url_class_keys_to_default_note_import_options = {}
         
@@ -642,10 +642,10 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            from hydrus.client.importing.options import NoteImportOptions
+            from hydrus.client.importing.options import NoteImportOptionsLegacy
             
-            file_post_default_note_import_options = NoteImportOptions.NoteImportOptions()
-            watchable_default_note_import_options = NoteImportOptions.NoteImportOptions()
+            file_post_default_note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+            watchable_default_note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
             
             url_class_keys_to_default_note_import_options = {}
             

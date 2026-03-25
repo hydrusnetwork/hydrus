@@ -2358,17 +2358,16 @@ class Thumbnail( Selectable ):
             
             raw_thumbnail_qt_image.setDevicePixelRatio( thumbnail_dpr )
             
-            # qt_image.deviceIndepedentSize isn't supported in Qt5 lmao
-            device_independent_thumb_size = raw_thumbnail_qt_image.size() / thumbnail_dpr
+            device_independent_thumb_size = raw_thumbnail_qt_image.deviceIndependentSize()
             
         else:
             
             device_independent_thumb_size = raw_thumbnail_qt_image.size()
             
         
-        x_offset = ( width - device_independent_thumb_size.width() ) // 2
+        x_offset = int( ( width - device_independent_thumb_size.width() ) // 2 )
         
-        y_offset = ( height - device_independent_thumb_size.height() ) // 2
+        y_offset = int( ( height - device_independent_thumb_size.height() ) // 2 )
         
         painter.drawImage( x_offset, y_offset, raw_thumbnail_qt_image )
         

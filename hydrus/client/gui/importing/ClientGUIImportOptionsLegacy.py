@@ -18,7 +18,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptionsPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 
 class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -53,7 +53,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._file_import_options_panel.GetValue()
         
     
-    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+    def GetNoteImportOptions( self ) -> NoteImportOptionsLegacy.NoteImportOptionsLegacy:
         
         if self._note_import_options_panel is None:
             
@@ -167,7 +167,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._file_import_options_panel.isDefaultChanged.connect( self._UpdateFileImportOptionsTabName )
         
     
-    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def SetNoteImportOptions( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         note_import_options = note_import_options.Duplicate()
         
@@ -176,7 +176,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             raise Exception( 'This Import Options Panel already has Note Import Options set!' )
             
         
-        self._note_import_options_panel = ClientGUIImportOptionsPanels.EditNoteImportOptionsPanel( self._notebook, note_import_options, self._allow_default_selection )
+        self._note_import_options_panel = ClientGUIImportOptionsPanels.EditNoteImportOptionsLegacyPanel( self._notebook, note_import_options, self._allow_default_selection )
         
         self._notebook.addTab( self._note_import_options_panel, 'note' )
         
@@ -208,7 +208,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     importOptionsChanged = QC.Signal()
     fileImportOptionsChanged = QC.Signal( FileImportOptionsLegacy.FileImportOptionsLegacy )
-    noteImportOptionsChanged = QC.Signal( NoteImportOptions.NoteImportOptions )
+    noteImportOptionsChanged = QC.Signal( NoteImportOptionsLegacy.NoteImportOptionsLegacy )
     tagImportOptionsChanged = QC.Signal( TagImportOptionsLegacy.TagImportOptionsLegacy )
     
     def __init__( self, parent, show_downloader_options: bool, allow_default_selection: bool ):
@@ -360,7 +360,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             note_import_options = HydrusSerialisable.CreateFromString( raw_text )
             
-            if not isinstance( note_import_options, NoteImportOptions.NoteImportOptions ):
+            if not isinstance( note_import_options, NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
                 
                 raise Exception( 'Not a Note Import Options!' )
                 
@@ -558,7 +558,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
         self._SetNoteImportOptions( note_import_options )
@@ -687,7 +687,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self.fileImportOptionsChanged.emit( self._file_import_options )
         
     
-    def _SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def _SetNoteImportOptions( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         self._note_import_options = note_import_options
         
@@ -715,7 +715,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         return self._file_import_options
         
     
-    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+    def GetNoteImportOptions( self ) -> NoteImportOptionsLegacy.NoteImportOptionsLegacy:
         
         if self._note_import_options is None:
             
@@ -740,7 +740,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self._SetFileImportOptions( file_import_options )
         
     
-    def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def SetNoteImportOptions( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         self._SetNoteImportOptions( note_import_options )
         

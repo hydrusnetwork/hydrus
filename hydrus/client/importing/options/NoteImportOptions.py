@@ -36,7 +36,6 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._name_whitelist = set()
         self._all_name_override = None
         self._names_to_name_overrides = dict()
-        self._is_default = False
         
     
     def _GetSerialisableInfo( self ):
@@ -44,12 +43,12 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         name_whitelist = list( self._name_whitelist )
         names_and_name_overrides = list( self._names_to_name_overrides.items() )
         
-        return ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides, self._is_default )
+        return ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides, self._is_default ) = serialisable_info
+        ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides ) = serialisable_info
         
         self._name_whitelist = set( name_whitelist )
         self._names_to_name_overrides = dict( names_and_name_overrides )
@@ -112,20 +111,15 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetSummary( self, show_downloader_options: bool = True ):
         
-        if self._is_default:
-            
-            return 'Using whatever the default note import options is at at time of import.'
-            
-        
         statements = []
         
         if self._get_notes:
             
             statements.append( 'adding notes' )
             
-            if self._extend_existing_note_if_possible:
+            if not self._extend_existing_note_if_possible:
                 
-                statements.append( 'extending where possible' )
+                statements.append( 'duplicating rather than extending' )
                 
             
             statements.append( 'with conflict resolution: {}'.format( note_import_conflict_str_lookup[ self._conflict_resolution ] ) )
@@ -305,11 +299,6 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return updatee_names_to_notes
         
     
-    def IsDefault( self ):
-        
-        return self._is_default
-        
-    
     def SetAllNameOverride( self, all_name_override: str | None ):
         
         self._all_name_override = all_name_override
@@ -330,11 +319,6 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._get_notes = get_notes
         
     
-    def SetIsDefault( self, value: bool ):
-        
-        self._is_default = value
-        
-    
     def SetNamesToNameOverrides( self, names_to_name_overrides: dict[ str, str ] ):
         
         self._names_to_name_overrides = names_to_name_overrides
@@ -345,4 +329,5 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         self._name_whitelist = set( name_whitelist )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS ] = NoteImportOptions

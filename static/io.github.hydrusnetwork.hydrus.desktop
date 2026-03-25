@@ -1,9 +1,25 @@
 [Desktop Entry]
-Version=1.0
+
+# Edit this file to your liking and then you are probably saving it to ~/.local/share/applications/io.github.hydrusnetwork.hydrus.desktop
+
 Name=Hydrus Client
 Comment=Booru-like media management application
-Exec=hydrus-client
-Icon=/usr/lib/hydrus/static/hydrus_non-transparent.png
-Terminal=false
-Type=Application
 Categories=Application;FileTools;Graphics;Network;
+
+# This needs to point to your executable, which is probably /path/to/install_dir/hydrus_client.sh. "Wrap in quotes" if the path has spaces.
+Exec=/usr/lib/hydrus/hydrus_client.sh
+
+# This can be whatever, but /path/to/install_dir/static/hydrus_non-transparent.png works well. "Wrap in quotes" if the path has spaces.
+Icon=/usr/lib/hydrus/static/hydrus_non-transparent.png
+
+# no ugly terminal when you boot up
+Terminal=false
+
+# DO NOT EDIT ZONE
+
+# This defines us as an Application and triggers the Exec line to fire; do not change it
+Type=Application
+
+# This is the official 'name' of the program and helps your Window Manager group the taskbar; do not change it
+# Similarly, hydrus sets a flag for 'io.github.hydrusnetwork.hydrus', so if you leave this file as 'io.github.hydrusnetwork.hydrus.desktop', that helps
+StartupWMClass=Hydrus Client

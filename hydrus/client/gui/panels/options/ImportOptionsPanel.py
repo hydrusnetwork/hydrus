@@ -11,6 +11,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingURLClass
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImportOptionsContainer
@@ -21,12 +22,12 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import ImportOptionsContainer
 
-
 class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
-    def __init__( self, parent, import_options_manager: ImportOptionsContainer.ImportOptionsManager ):
+    def __init__( self, parent, new_options, import_options_manager: ImportOptionsContainer.ImportOptionsManager ):
         super().__init__( parent )
         
+        self._new_options = new_options
         self._import_options_container_manager: ImportOptionsContainer.ImportOptionsManager = import_options_manager.Duplicate()
         
         menu_template_items = [ ]
@@ -36,6 +37,13 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
+        self._simple_mode = QW.QCheckBox( self )
+        self._simple_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'The options system allows you to set any options type anywhere. You can make a particular URL Class "present" differently to other Post URLs or set up subscription-only note parsing if you really want, but by default, I hide options that are crazy and a waste of time. Uncheck this to see everything and implement your options mind palace.' ) )
+        
+        self._simple_mode.setChecked( self._new_options.GetBoolean( 'import_options_simple_mode' ) )
+        
+        simple_mode_hbox = ClientGUICommon.WrapInText( self._simple_mode, self, 'keep this panel simple to use' )
         
         #
         
@@ -55,8 +63,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'clear-and-replace paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'overwrite-merge paste', 'Overwrite what is selected with what you have in the clipboard.', self._PasteDefaultMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: delete what is selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteDefaultMerge ) )
         
         default_import_options_list_panel.AddMenuButton( 'paste', menu_template_items, enabled_only_on_selection = True )
         default_import_options_list_panel.AddButton( 'edit', self._EditDefault, enabled_only_on_single_selection = True )
@@ -74,12 +82,14 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         url_class_import_options_list_panel.SetListCtrl( self._url_class_import_options_list )
         
+        url_class_import_options_list_panel.AddButton( 'show stack', self._SeeURLClassStack, enabled_only_on_single_selection = True )
+        url_class_import_options_list_panel.AddSeparator()
         url_class_import_options_list_panel.AddButton( 'copy', self._CopyURLClass, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'clear-and-replace paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'overwrite-merge paste', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: delete what is selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
         
         url_class_import_options_list_panel.AddMenuButton( 'paste', menu_template_items, enabled_only_on_selection = True )
         url_class_import_options_list_panel.AddButton( 'edit', self._EditURLClass, enabled_only_on_single_selection = True )
@@ -87,7 +97,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        self._default_import_options_list.AddDatas( ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPES_CANONICAL_ORDER )
+        self._default_import_options_list.AddDatas( ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPES_EDITABLE_CANONICAL_ORDER )
         
         self._default_import_options_list.Sort()
         
@@ -107,6 +117,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, simple_mode_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, default_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, url_class_import_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -184,7 +195,9 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             import_options_container = self._import_options_container_manager.GetDefaultImportOptionsContainerForCallerType( import_options_caller_type )
             
-            pretty_defaults = import_options_container.GetSummary( show_downloader_options = import_options_caller_type != ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT )
+            show_downloader_options = not import_options_caller_type in ImportOptionsContainer.NON_DOWNLOADER_IMPORT_OPTION_CALLER_TYPES
+            
+            pretty_defaults = import_options_container.GetSummary( show_downloader_options = show_downloader_options )
             
         except Exception as e:
             
@@ -293,7 +306,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import options' ) as dlg:
             
-            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel( dlg, self._import_options_container_manager, import_options_container, import_options_caller_type )
+            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel( dlg, self._import_options_container_manager, import_options_container, import_options_caller_type, simple_mode = self._simple_mode.isChecked() )
             
             dlg.SetPanel( panel )
             
@@ -328,7 +341,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import options' ) as dlg:
             
-            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel( dlg, self._import_options_container_manager, import_options_container, ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS, url_class_key = url_class_key )
+            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel( dlg, self._import_options_container_manager, import_options_container, ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS, url_class_key = url_class_key, simple_mode = self._simple_mode.isChecked() )
             
             dlg.SetPanel( panel )
             
@@ -410,7 +423,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                         
                     except:
                         
-                        ClientGUIDialogsMessage.ShowInformation( self, 'Hey, you tried to paste a non-full import options container into the "global" entry. The "global" entry cannot have any gaps--please edit it manually, in more detail.' )
+                        ClientGUIDialogsMessage.ShowInformation( self, 'Hey, you tried to paste a non-full import options container into the "global" entry. Did you mean to do a merge-paste instead?' )
                         
                         continue
                         
@@ -489,9 +502,9 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         import_options_caller_type = selected
         
-        if import_options_caller_type == ImportOptionsContainer:
+        if import_options_caller_type == ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL:
             
-            message = 'The "global" set is the fallback default that all the other options will eventually use as the options-of-last-resort.'
+            message = 'The "global" set is the fallback default that all the other options will eventually use as the options-of-last-resort. No importer uses "global" as its primary import context.'
             
         else:
             
@@ -505,43 +518,47 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
+    def _SeeURLClassStack( self ):
+        
+        selected = self._url_class_import_options_list.GetTopSelectedData()
+        
+        if selected is None:
+            
+            return
+            
+        
+        import_options_caller_type = ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS
+        url_class = selected
+        
+        preference_stack_description = ImportOptionsContainer.GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller_type, url_class_key = url_class.GetClassKey() )
+        
+        message = f'The stack for when this url class is encountered, from first- to last-checked, is:'
+        message += '\n\n'
+        message += preference_stack_description
+        
+        ClientGUIDialogsMessage.ShowInformation( self, message )
+        
+    
     def _ShowHelp( self ):
-        message = '''Every importer in hydrus has an "import options" button where you can set how that importer should behave.
+        message = '''tl;dr: Go into "global" and set every panel how you want. Never touch this again, and rarely set a "specific" import options override on a specific downloader.
 
-MOST OF THE TIME, YOU SHOULD NOT SET SPECIFIC IMPORT OPTIONS FOR EVERY DOWNLOADER
+Hydrus can import files in different ways. Sometimes it is something you are watching and interacting with, sometimes it happens in the background, without any UI at all. You can customise the various "import options" extensively.
 
-It is better to set up careful defaults here and allow any new downloader or sub to work off all this.
+There are options governing how files pre-screened, where they are imported to, and what metadata is added with them. Each of these is separated to let you mix and match.
 
-When hydrus imports files:
+There is a "global" options structure that represents a basic default for all imports. If nothing else has anything set, your imports will use whatever is in the global set.
 
-1) Several different types of options are required and consulted separately.
-2) When a particular type of options is required, the importer looks down a stack of increasingly generic possibilities until it finds something set.
+Atop the global set sits a stack of increasingly specific contexts, for instance, for a local hard drive import, you would have:
 
-Importers look down through a stack of options sets, from the most specific (the "import options" button on the downloader's edit panel) to the most generic default set here ("global"), until one has something set.
+- the specific page's import options, which you set with a button in the UI
+- the general "local hard drive import" import options
+- the global import options
 
-If you want all "file posts" to generally parse tags a certain way, then set "tag import options" in the "file posts" default. If you want all "subscriptions" to publish a certain way, similarly set that. If you then need an exception to those general rules, make a specific entry for a particular url class or another more specific place.
+When the import engine needs to check the "file filtering" options, it checks the top-most layer to see if it has anything set. If that layer has those options, that is what is used. If the layer is set to "use the default", the import engine goes down a layer and checks again. This is how the specific import options you might set on a particular page will override anything else while global will act as the final backstop.
 
-As an example, a gallery downloader page will look for "tag import options" when it parses tags. The full stack it examines is:
+Most of the time, just set what sounds correct. If you want subscriptions to only publish "new inbox files" to their buttons/pages, then set up "presentation" options for your subs, easy as that. Every edit panel has a short description of the context being edited and which options are appropriate to edit for it. The one wrinkle to watch out for is the "url class" settings, which generally override the other layers, which allows you to set a specific tag blacklist for a particular domain. Click "show stack" to see exactly how a particular import context stacks up.
 
-- the specific downloader page's import options
-- any matching url class setting
-- gallery download pages
-- post urls
-- global
-
-The system works like a stack of swiss cheese slices, with "global" on the bottom. The top-most slice to not have a hole for a particular options is selected such that a matching specific URL Class setting will override the default for all generic "file posts" and so on. For instance:
-
-If the "global" and "post urls" entries both have "tag import options", then the "tag import options" from "post urls" will be used.
-
-If "global" and "gallery download pages" both have "presentation import options", then "presentation import options" from "gallery download pages" will be used.
-
-If "global" has a "tag filtering options" and you create a "tag filtering options" blacklist for a particular URL Class, then if the downloader processes a URL matching that URL Class, it will use that "tag filtering options". If it processes a different type of URL, it will fall back to using the "global".
-
-In this way, you can shape what happens according to the situation. Keep it simple and deliberate.  
-
-"global" always has specific settings for each import options type. It is the backstop, the final default that everything can fall back on. 
-
-Click on the "show stack" button to see the stack for each entry. When you set a particular import options to use its "default", the edit UI will say which further up the stack it then expects to use, so have a look around to get a feel for things.'''
+Keep things simple and deliberate!'''
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
@@ -549,6 +566,8 @@ Click on the "show stack" button to see the stack for each entry. When you set a
     def UpdateOptions( self ):
         # set our updated manager to be the main manager of the controller
         # don't do it yet though obviously, only once we actually have one
+        
+        self._new_options.SetBoolean( 'import_options_simple_mode', self._simple_mode.isChecked() )
         
         pass
         

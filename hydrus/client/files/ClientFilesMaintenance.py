@@ -724,7 +724,14 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                 
-                has_exif = HydrusImageMetadata.HasEXIF( raw_pil_image )
+                try:
+                    
+                    has_exif = HydrusImageMetadata.HasEXIF( raw_pil_image )
+                    
+                finally:
+                    
+                    raw_pil_image.close()
+                    
                 
             except Exception as e:
                 
@@ -797,12 +804,19 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                     
+                    try:
+                        
+                        has_icc_profile = HydrusImageMetadata.HasICCProfile( raw_pil_image )
+                        
+                    finally:
+                        
+                        raw_pil_image.close()
+                        
+                    
                 except Exception as e:
                     
                     return None
                     
-                
-                has_icc_profile = HydrusImageMetadata.HasICCProfile( raw_pil_image )
                 
             
             additional_data = has_icc_profile

@@ -7,6 +7,68 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 665](https://github.com/hydrusnetwork/hydrus/releases/tag/v665)
+
+### misc
+
+* fixed an issue where a duplicates page would not re-enable the 'launch the filter' button sometimes when it previously had a count of 0 but got a pair-discovery update in the background that added new pairs (issue #1988)
+* the 'help: random 403 errors' entry is now moved down in the 'retry' buttonlist. it will disappear in a few weeks, leaving just the `network->downloaders` menu item, once people hitting this menu have had more chance to see it
+* fixed an issue where if you selected some files with a subset of trash and then said 'move/copy n files to blah local file domain', it would try and move the trashed files and throw an error. it now filters those files out of the actual operation as you'd expect
+* fixed an issue in numerical rating rendering after deleting a numerical rating service (bad error handling on the missing service)
+* added a section to the 'contact' help page about how to send broken files to hydev (zipping them up explanation etc..)
+* updated the `io.github.hydrusnetwork.hydrus.desktop` file with easy mode help comments on how to edit things and added `StartupWMClass` to help taskbar grouping
+
+### more audio device stuff
+
+* applying the options dialog now updates all open mpv players to use the specified audio device
+* applying the options dialog now updates all open QtMediaPlayers to use the specified audio device
+* the `ao/xxxxxx: There are no playback devices available` mpv error, which until now has sparked the 'hey things are looking unstable with this file, so unloading it' response, now triggers a new 'hey, set all mpv windows to `null` audio device'. if you get this stuff when you unplug your headphones or something, let me know how it goes
+* when a new QtMediaPlayer initialises, if the desired audio device is invalid, it falls back to auto. if the auto device is invalid, it resets to null
+* new DEBUG checkboxes in `options->media playback` allow you to auto-set mpv or the QtMediaPlayer to 'null' audio device when playing silent media like animated gifs. I know we've had some issues around this over the years with mpv on Linux in particular, so let's see how it goes. this used to be default behaviour for the QtMediaPlayer btw; now it isn't
+
+### some boring cleanup
+
+* improved how media objects determine if they are in 'combined local file domains'
+* a database routine used in repository sync and 'are we mostly caught up to this repo?' that fetches missing update hashes is now significantly faster
+* the QtMediaPlayer no longer leaves the video output disconnected until the first non-audio file is loaded. things are more KISS
+* the mpv and QtMediaPlayers recognise better their current audio device and can trigger update calls only on changes
+* cleaned up some more QtMediaPlayer output setting generally
+* updated some critical error text when trying to boot into a database that was created--and failed to initialise--on the last program boot
+* removed some OpenRaster debug statements
+
+### removed Qt5 gubbins
+
+* Qt5 (which for us means PySide2 or PyQt5) is well behind us now, so any lingering support is just getting in the way. I removed it all this week. if you are struggling on a hyperpatched Win7 machine, forgive me but it is time to move to Linux
+* removed Qt5 initialisation code
+* removed debug code that tests for Qt5 support
+* removed old thumbnail UI scaling Qt5 hack
+* removed Qt5 stylesheet hacks
+* removed Qt5 media panel swap hacks
+* removed About Window Qt5 stuff
+* removed an old Qt5 qtpy init hack
+* removed Qt5 patches for mouse and drop events
+* removed Qt5 QPDF check
+* removed Qt5 QKeySequence conversion
+
+### nicer PIL memory cleanup
+
+* PIL images are now closed promptly (freeing up memory better and faster) in more locations: the visual tuning suite; jpeg quality estimation; icc profile inspection; embedded metadata inspection; exif inspection; decompression bomb testing; 'show file metadata' window; import metadata gen; icc profile inspection on load; on forced PIL loads that error out on conversion to numpy; on another standard method to load images; variable frame duration fetching, 'get number of times to play animation'; 'animation has valid duration'; serialisable object import; ugoira rendering; ugoira API rendering; ugoira property fetch; ugoira json property fetch; Ugoira thumb gen; PSD rendering; PSD thumb gen; the native PIL animation renderer; on EXIF rotation conversion; some weird dequantization; resolution fetch; when some thumbnail stuff errors out; some animation property fetch; OpenXML thumbnail gen; Paint.NET thumb gen; Krita thumb gen; Krita rendering; openraster thumb gen; openraster rendering
+* I went overkill here and yet there are still some gaps. I got all the file loads though, I think, which is the main stuff here that I thtink was lagging. some of it is also a little ugly. we'll see if this improves some lazy memory cleanup during heavy import. if it helps, I may revisit to clean up
+
+### import options overhaul
+
+* wrote migration code that takes the old file/tag/note import options and produces a new populated `ImportOptionsContainer`
+* updated the prefetch import options to track the 'fetch metadata even...' checkboxes, although they will do nothing until migration
+* updated 'note import options' to a legacy object that can deliver a trivially shucked 'note import options' that has no 'is default' properly and works in the new system. the edit notes dialog, Client API add-notes call, duplicate content merge options, notes sidecar exporter, and unit tests now use the new object
+* wrote an edit panel for the new note import options
+* the legacy note import options now holds its shucked version inside it, now only taking responsibility for the 'is default' property otherwise, and all import contexts now consult the new object for work
+* juggled around my options stack preference again for simplicity and added 'import folder' and 'client api' options import contexts
+* brushed up the UI significantly with new labels, better options summaries, better help, a KISSer workflow that filters out overengineered options by default, a little description label for each import type, and another for each options type
+* made the stack description and display clearer and added it to the url class section
+* fixed some default options display
+* brushed up all the import options summary statements and rearranged them all into single-line
+* updated some tag filter label grammar. in some cases it was saying 'tags taken: allowing all tags', which comes from internal permissions language, when just a 'tags taken: all tags' was a better fit
+
 ## [Version 664](https://github.com/hydrusnetwork/hydrus/releases/tag/v664)
 
 ### misc
@@ -453,52 +515,3 @@ title: Changelog
 * - `mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`
 * - `PySide6` (Qt) normal `6.8.3` to `6.9.3`
 * - `PySide6` (Qt) test, for source users, `6.9.3` to `6.10.1`
-
-## [Version 655](https://github.com/hydrusnetwork/hydrus/releases/tag/v655)
-
-### misc
-
-* for all the normal page sidebars, the sections above the taglist (e.g. 'search' on a search page, or 'gallery downloader' and 'highlighted query' on a gallery download page) are now collapsible (there's a little up/down arrow button in the corner). if you want to do some taglist work, you can now make it really big. this is just a hacky test though, so let me know how it feels
-* the 'eye' icon in the media viewer now has 'always start new media viewers always on top' (which works nice generally) and 'always start new media viewers without titlebar/frame' (which is a little flickery since I schedule it to happen 100ms after window init because of technical gubbins). neither plays very well with start-fullscreen mode. I also reworded the titlebar option logical grammar from 'show titlebar (default on)' to 'hide titlebar/frame (default off)'
-* the 'pause network/subs' menu items in the system tray icon are now checkbox items. the ugly 'unpause x' grammar is gone!
-* if you do not have a file, the file info lines that appear in the thumbnail flyout menu and the main gui status, which normally say stuff like 'imported 3 days ago' now explicitly say "you do not have this file, (but you did once|but your client has heard a bit about it|and you have never had it)". I hope this will forestall some confusion these advanced media results cause (usually under a 'all known files' search)
-* the unhelpful and incorrect 'archived: unknown time' statement no longer appears for non-local files
-* if a site delivers `451: Unavailable For Legal Reasons`, the file and gallery download objects now catch this and assign an 'ignored' state with an appropriate note. previously this was counting as an ugly uncaught error and causing subs to break and so on (this caused my 'do not use NGUGs here' 'edit subscription' warning label last week). if you have been hit by this (seems like danbooru is doing it?), I don't know if it is because of your region or certain queries (e.g. 'do not post' artists); let me know how the workflow is with these results now being ignored--maybe we want this to be an outright errorthat will auto-pause subs and such, just with the now-nicer error description? I've been thinking about making subs cleverer about region-based captcha blocks, recognising that this is a temporary block that should cause hydrus to stop talking to the domain entirely, but not considering it an error _per se_ and backing out of the current job non-destructively so it can try resuming where it left off again later, so if this is part of that, we'll want to throw it in the mix
-
-### Client API
-
-* with thanks to a user for the skeleton, I fleshed out and added `/manage_pages/get_media_viewers` to the Client API. this thing fetches all the current open media viewers, tells you an id and type for each, and says what media is currently in view. this also clears issue #1583
-* wrote a (bad) unit test for this and some documentation
-* Client API version is now 84
-
-### Client API deprecation
-
-* I am formalising my Client API deprecation schedule since I have been procrastinating on this cleanup yet don't want to suddenly delete something mysteriously two years after the fact
-* if you send `hide_service_keys_tags=false` to a `file_metadata` Client API call, the user now gets a `FutureWarning` deprecation log entry. the behaviour this parameter supports will be deleted on v668 (three months from now)
-* same for the `set_user_agent` command. you'll get a `FutureWarning` if a script calls it, and it will be deleted in v668
-* `hide_x=true` is ugly logic, so we'll go with `use_deprecated_x=false` default going forward
-* I am going to add a `use_deprecated_services_structure=false` default to the `services` call in v668, to hide the old service structure. it will similarly get a warning and a three month timeout, to be deleted in v681
-
-### boring file storage cleanup
-
-* an early 'umbrella' experiment for dynamic file storage prefix-length is removed and some validity checking is simplified
-* in prep for the move to a storage system with three-character prefix (4096 folders), moved a bunch of prefix-handling to a central location and made it length-agnostic
-* KISSed some of this code. it is still a bit of a mess though tbh
-* wrote a method to 'granularise' a file storage structure, moving a base location from subfolders in the form '/f83' to '/f83/0' - '/f83/f', with file migration and handling weird files and stuff. when we move to three-character storage, we'll not only be granularising our main storage, but we'll want to do this one-time manually on our backups as well
-
-### other boring stuff
-
-* the 'edit default duplicate metadata merge options' button in the duplicates page is shuffled down to the 'duplicate filter' box
-* fixed a quiet layout sizing warning in the petition processing page when the checkboxlists have no content
-* added a note to 'help my db is broke.txt' about a clone crashing
-
-### future build
-
-* I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
-* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
-* special notes for this time: nothing crazy, we'll see if the new Qt kicks up a fuss anywhere strange
-* the specific changes this week are--
-* `requests` `2.32.4` to `2.32.5`
-* `mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`
-* `PySide6` (Qt) normal `6.8.3` to `6.9.3`
-* `PySide6` (Qt) test `6.9.3` to `6.10.1`

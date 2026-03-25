@@ -230,7 +230,7 @@ class HydrusResourceClientAPIRestrictedAddFilesMigrateFiles( HydrusResourceClien
         
         for media_result in media_results:
             
-            if not CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+            if not media_result.GetLocationsManager().IsInCombinedLocalFileDomains():
                 
                 raise HydrusExceptions.BadRequestException( f'The file "{media_result.GetHash().hex()} is not in any local file domains, so I cannot copy!' )
                 

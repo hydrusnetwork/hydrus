@@ -787,6 +787,125 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def ToFilterString( self ):
+        
+        with self._lock:
+            
+            blacklist = []
+            whitelist = []
+            
+            for ( tag_slice, rule ) in self._tag_slices_to_rules.items():
+                
+                if rule == HC.FILTER_BLACKLIST:
+                    
+                    blacklist.append( tag_slice )
+                    
+                elif rule == HC.FILTER_WHITELIST:
+                    
+                    whitelist.append( tag_slice )
+                    
+                
+            
+            blacklist_set = set( blacklist )
+            functional_blacklist_set = blacklist_set.difference( { '', ':' } )
+            
+            whitelist_set = set( whitelist )
+            functional_whitelist_set = whitelist_set.difference( { '', ':' } )
+            
+            if len( blacklist ) == 0:
+                
+                return 'all tags'
+                
+            else:
+                
+                if blacklist_set.issuperset( { '', ':' } ):
+                    
+                    if len( whitelist ) == 0:
+                        
+                        text = 'no tags!'
+                        
+                    else:
+                        
+                        if len( whitelist ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                            
+                            text = 'only adding on {} rules'.format( HydrusNumbers.ToHumanInt( len( whitelist ) ) )
+                            
+                        else:
+                            
+                            text = 'only adding ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( whitelist ) ) )
+                            
+                        
+                        if len( functional_blacklist_set ) > 0:
+                            
+                            if len( functional_blacklist_set ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                                
+                                text += ' while still filtering on {} rules'.format( HydrusNumbers.ToHumanInt( len( functional_blacklist_set ) ) )
+                                
+                            else:
+                                
+                                text += ' while still filtering out ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( functional_blacklist_set ) ) )
+                                
+                            
+                        
+                    
+                elif '' in blacklist_set or ':' in blacklist_set:
+                    
+                    if '' in blacklist_set:
+                        
+                        text = 'all namespaced tags'
+                        
+                    else:
+                        
+                        text = 'all unnamespaced tags'
+                        
+                    
+                    if len( whitelist ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                        
+                        text += ' and {} other rules'.format( HydrusNumbers.ToHumanInt( len( functional_whitelist_set ) ) )
+                        
+                    elif len( whitelist ) > 0:
+                        
+                        text += ' and ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( functional_whitelist_set ) ) )
+                        
+                    
+                    if len( functional_blacklist_set ) > 0:
+                        
+                        if len( functional_blacklist_set ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                            
+                            text += ' while still filtering on {} rules'.format( HydrusNumbers.ToHumanInt( len( functional_blacklist_set ) ) )
+                            
+                        else:
+                            
+                            text += ' while still filtering out ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( functional_blacklist_set ) ) )
+                            
+                        
+                    
+                else:
+                    
+                    if len( blacklist ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                        
+                        text = 'all tags except on {} rules'.format( HydrusNumbers.ToHumanInt( len( blacklist ) ) )
+                        
+                    else:
+                        
+                        text = 'all tags except ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( blacklist ) ) )
+                        
+                    
+                    if len( functional_whitelist_set ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
+                        
+                        text += ' while still allowing on {} rules'.format( HydrusNumbers.ToHumanInt( len( functional_whitelist_set ) ) )
+                        
+                    elif len( functional_whitelist_set ) > 0:
+                        
+                        text += ' while still allowing ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in sorted( functional_whitelist_set ) ) )
+                        
+                    
+                
+            
+            return text
+            
+        
+    
     def ToPermittedString( self ):
         
         # TODO: Could make use of a modified version of the new `HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine()` here, rather than WOAH_TOO_MANY_RULES_THRESHOLD
@@ -908,5 +1027,6 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER ] = TagFilter
 

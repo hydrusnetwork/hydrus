@@ -29,7 +29,7 @@ from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagFilteringImportOptions
@@ -392,7 +392,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._hashes = { hash_type : bytes.fromhex( encoded_hash ) for ( hash_type, encoded_hash ) in serialisable_hashes if encoded_hash is not None }
         
     
-    def _SetupNoteImportOptions( self, given_note_import_options: NoteImportOptions.NoteImportOptions ) -> NoteImportOptions.NoteImportOptions:
+    def _SetupNoteImportOptions( self, given_note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ) -> NoteImportOptionsLegacy.NoteImportOptionsLegacy:
         
         if given_note_import_options.IsDefault():
             
@@ -1279,7 +1279,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PredictPreImportStatus( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, tag_import_options_legacy: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options: NoteImportOptions.NoteImportOptions, file_url = None ):
+    def PredictPreImportStatus( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, tag_import_options_legacy: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options_legacy: NoteImportOptionsLegacy.NoteImportOptionsLegacy, file_url = None ):
         
         ( hash_match_found, hash_matches_are_dispositive, hash_file_import_status ) = self.GetPreImportStatusPredictionHash( file_import_options )
         ( url_match_found, url_matches_are_dispositive, url_file_import_status ) = self.GetPreImportStatusPredictionURL( file_import_options, file_url = file_url )
@@ -1326,6 +1326,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 should_download_metadata = True
                 
             
+        
+        note_import_options = note_import_options_legacy.GetNoteImportOptions()
         
         if not should_download_metadata and note_import_options.GetGetNotes():
             
@@ -1474,7 +1476,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, file_seed_cache: "FileSeedCache", status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, loud_or_quiet: int, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def WorkOnURL( self, file_seed_cache: "FileSeedCache", status_hook, network_job_factory, network_job_presentation_context_factory, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, loud_or_quiet: int, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         did_substantial_work = False
         
@@ -1823,7 +1825,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return did_substantial_work
         
     
-    def WriteContentUpdates( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy | None = None, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy | None = None, note_import_options: NoteImportOptions.NoteImportOptions | None = None ):
+    def WriteContentUpdates( self, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy | None = None, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy | None = None, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy | None = None ):
         
         did_work = False
         
@@ -1955,7 +1957,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             names_and_notes = sorted( self._names_and_notes_dict.items() )
             
-            for ( service_key, content_updates ) in note_import_options.GetContentUpdatePackage( media_result, names_and_notes ).IterateContentUpdates():
+            for ( service_key, content_updates ) in note_import_options.GetNoteImportOptions().GetContentUpdatePackage( media_result, names_and_notes ).IterateContentUpdates():
                 
                 content_update_package.AddContentUpdates( service_key, content_updates )
                 

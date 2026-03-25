@@ -51,11 +51,11 @@ def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.File
 def GetRetryIgnoredParam( window ):
     
     choice_tuples = [
-        ( 'help: random 403 errors', 'help_403', 'show help regarding 403 errors' ),
         ( 'retry all', None, 'retry all' ),
         ( 'retry 403s', '^403', 'retry all 403s' ),
         ( 'retry 404s', '^404', 'retry all 404s' ),
-        ( 'retry blacklisted', 'blacklisted!$', 'retry all blacklisted' )
+        ( 'retry blacklisted', 'blacklisted!$', 'retry all blacklisted' ),
+        ( 'help: random 403 errors', 'help_403', 'show help regarding 403 errors' ),
     ]
     
     result = ClientGUIDialogsQuick.SelectFromListButtons( window, 'select what to retry', choice_tuples )

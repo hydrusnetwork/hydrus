@@ -190,50 +190,50 @@ class FileFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
         
         statements = []
         
-        statements.append( 'allowing {}'.format( ClientSearchPredicate.ConvertSummaryFiletypesToString( self._filetype_filter_predicate.GetValue() ) ) )
+        statements.append( 'allows {}'.format( ClientSearchPredicate.ConvertSummaryFiletypesToString( self._filetype_filter_predicate.GetValue() ) ) )
         
         if self._exclude_deleted:
             
-            statements.append( 'excluding previously deleted' )
+            statements.append( 'excludes previously deleted' )
             
         
         if not self._allow_decompression_bombs:
             
-            statements.append( 'excluding decompression bombs' )
+            statements.append( 'excludes decompression bombs' )
             
         
         if self._min_size is not None:
             
-            statements.append( 'excluding < ' + HydrusData.ToHumanBytes( self._min_size ) )
+            statements.append( 'excludes < ' + HydrusData.ToHumanBytes( self._min_size ) )
             
         
         if self._max_size is not None:
             
-            statements.append( 'excluding > ' + HydrusData.ToHumanBytes( self._max_size ) )
+            statements.append( 'excludes > ' + HydrusData.ToHumanBytes( self._max_size ) )
             
         
         if self._max_gif_size is not None:
             
-            statements.append( 'excluding gifs > ' + HydrusData.ToHumanBytes( self._max_gif_size ) )
+            statements.append( 'excludes gifs > ' + HydrusData.ToHumanBytes( self._max_gif_size ) )
             
         
         if self._min_resolution is not None:
             
             ( width, height ) = self._min_resolution
             
-            statements.append( 'excluding < ( ' + HydrusNumbers.ToHumanInt( width ) + ' x ' + HydrusNumbers.ToHumanInt( height ) + ' )' )
+            statements.append( 'excludes < ( ' + HydrusNumbers.ToHumanInt( width ) + ' x ' + HydrusNumbers.ToHumanInt( height ) + ' )' )
             
         
         if self._max_resolution is not None:
             
             ( width, height ) = self._max_resolution
             
-            statements.append( 'excluding > ( ' + HydrusNumbers.ToHumanInt( width ) + ' x ' + HydrusNumbers.ToHumanInt( height ) + ' )' )
+            statements.append( 'excludes > ( ' + HydrusNumbers.ToHumanInt( width ) + ' x ' + HydrusNumbers.ToHumanInt( height ) + ' )' )
             
         
         #
         
-        summary = '\n'.join( statements )
+        summary = ', '.join( statements )
         
         return summary
         

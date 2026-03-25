@@ -332,7 +332,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
             
         
         pretty_action = HC.content_merge_string_lookup[ action ]
-        pretty_tag_filter = tag_filter.ToPermittedString()
+        pretty_tag_filter = tag_filter.ToFilterString()
         
         display_tuple = ( service_name, pretty_action, pretty_tag_filter )
         
@@ -373,13 +373,11 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
     
     def _EditNoteImportOptions( self ):
         
-        allow_default_selection = False
-        
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit note merge options' ) as dlg:
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            edit_notes_widget = ClientGUIImportOptionsPanels.EditNoteImportOptionsPanel( panel, self._sync_note_import_options, allow_default_selection, simple_mode = True )
+            edit_notes_widget = ClientGUIImportOptionsPanels.EditNoteImportOptionsPanel( panel, self._sync_note_import_options, simple_mode = True )
             
             panel.SetControl( edit_notes_widget )
             

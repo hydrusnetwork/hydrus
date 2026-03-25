@@ -295,7 +295,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 for media_result in deletee_media_results:
                     
-                    if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+                    if media_result.GetLocationsManager().IsInCombinedLocalFileDomains():
                         
                         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { media_result.GetHash() }, reason = file_deletion_reason )
                         

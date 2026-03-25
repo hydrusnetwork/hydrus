@@ -739,7 +739,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
                     message += '\n\n'
                     message += 'If you have used this database many times before, then you have probably had a hard drive failure. Hydrus will now close. Check the "help my db is broke.txt" document in the install_dir/db directory.'
                     message += '\n\n'
-                    message += 'If you are trying over and over to get a fresh client or server booting for the first time, I suspect your database is in an odd half-initialised condition. You should fix your hard drive permissions and delete everything and try over again. If it seems complicated, hydev can help you figure it all out, so do not be afraid of contacting him.'
+                    message += 'If you recently tried to start hydrus for the first time but got an error and are now trying again, your database files failed to initialise that first time and are now in the way. Go to your database folder (probably install_dir/db) and look at the .db files. Are they very small? Delete them and any .db-shm or .db-wal files with them and then try booting the program again. If you get the same problem over and over, you probably have a hard drive permission problem where hydrus can create the database files but not write to them. If the issue seems complicated, hydev can help you figure it all out.'
                     
                     raise HydrusExceptions.DBAccessException( 'missing critical database table!', message )
                     

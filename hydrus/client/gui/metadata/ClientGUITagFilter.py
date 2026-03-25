@@ -1360,7 +1360,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, message, tag_filter, only_show_blacklist = False, label_prefix = None ):
+    def __init__( self, parent, message, tag_filter: HydrusTags.TagFilter, only_show_blacklist = False, label_prefix = None, use_filter_language = False ):
         
         super().__init__( parent, 'tag filter', self._EditTagFilter )
         
@@ -1368,6 +1368,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
         self._tag_filter = tag_filter
         self._only_show_blacklist = only_show_blacklist
         self._label_prefix = label_prefix
+        self._use_filter_language = use_filter_language
         
         self._UpdateLabel()
         
@@ -1410,7 +1411,14 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
             
         else:
             
-            tt = self._tag_filter.ToPermittedString()
+            if self._use_filter_language:
+                
+                tt = self._tag_filter.ToFilterString()
+                
+            else:
+                
+                tt = self._tag_filter.ToPermittedString()
+                
             
         
         if self._label_prefix is not None:

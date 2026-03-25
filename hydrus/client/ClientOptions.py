@@ -352,6 +352,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'maintain_trash_in_normal_time' : True,
             'deferred_file_deletes_in_normal_time' : True,
             'qt_media_player_no_audio_device' : False,
+            'import_options_simple_mode' : True,
+            'qt_media_player_null_audio_on_silent_media' : False,
+            'mpv_null_audio_on_silent_media' : False,
         }
         
         #
@@ -411,7 +414,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         note_import_options = NoteImportOptions.NoteImportOptions()
         
-        note_import_options.SetIsDefault( False )
         note_import_options.SetGetNotes( True )
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
@@ -431,7 +433,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         note_import_options = NoteImportOptions.NoteImportOptions()
         
-        note_import_options.SetIsDefault( False )
         note_import_options.SetGetNotes( True )
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )

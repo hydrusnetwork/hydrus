@@ -158,7 +158,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._get_tags:
             
-            statements.append( self._get_tags_filter.ToPermittedString() )
+            statements.append( self._get_tags_filter.ToFilterString() )
             
         
         if len( self._additional_tags ) > 0:
@@ -385,7 +385,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( statements ) > 0:
             
-            summary = '\n'.join( statements )
+            summary = ', '.join( statements )
             
         else:
             

@@ -10,12 +10,18 @@ class ListBook( QW.QWidget ):
     
     currentChanged = QC.Signal( int )
     
-    def __init__( self, parent: QW.QWidget, list_chars_width = 28, list_chars_height = 6, orientation = QC.Qt.Orientation.Horizontal ):
+    def __init__( self, parent: QW.QWidget, list_chars_width = 28, list_chars_height = 6, orientation = QC.Qt.Orientation.Horizontal, no_vertical_scrollbar = False ):
         
         super().__init__( parent )
         
         self._page_list = ClientGUIListBoxes.BetterQListWidget( self )
         self._page_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
+        
+        if no_vertical_scrollbar:
+            
+            self._page_list.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAlwaysOff )
+            self._page_list.verticalScrollBar().setEnabled( False ) # this disables mouse wheel too
+            
         
         self._widget_stack = QW.QStackedWidget( self )
         
@@ -32,7 +38,7 @@ class ListBook( QW.QWidget ):
             
         else:
             
-            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, ( 20, list_chars_height ) )
+            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, ( 20, list_chars_height + 1 ) )
             
             self._page_list.setFixedHeight( list_height_px )
             

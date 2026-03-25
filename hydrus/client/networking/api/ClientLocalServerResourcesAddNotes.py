@@ -51,7 +51,6 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
             
             note_import_options = NoteImportOptions.NoteImportOptions()
             
-            note_import_options.SetIsDefault( False )
             note_import_options.SetExtendExistingNoteIfPossible( extend_existing_note_if_possible )
             note_import_options.SetConflictResolution( conflict_resolution )
             

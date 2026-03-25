@@ -48,34 +48,6 @@ else:
             
         
     
-    if 'QT_API' not in os.environ:
-        
-        try:
-            
-            import PySide2 # Qt5
-            
-            os.environ[ 'QT_API' ] = 'pyside2'
-            
-        except ImportError as e:
-            
-            pass
-            
-        
-    
-    if 'QT_API' not in os.environ:
-        
-        try:
-            
-            import PyQt5 # Qt5
-            
-            os.environ[ 'QT_API' ] = 'pyqt5'
-            
-        except ImportError as e:
-            
-            pass
-            
-        
-    
 
 def get_qt_api_str_status():
     
@@ -151,10 +123,8 @@ except ModuleNotFoundError as e:
     
     try:
         
-        message += 'Of the different Qts, qtpy selected: PySide2 ({}), PySide6 ({}), PyQt5 ({}), PyQt6 ({}).'.format(
-            'selected' if qtpy.PYSIDE2 else 'not selected',
+        message += 'qtpy selected: PySide6 ({}), PyQt6 ({}).'.format(
             'selected' if qtpy.PYSIDE6 else 'not selected',
-            'selected' if qtpy.PYQT5 else 'not selected',
             'selected' if qtpy.PYQT6 else 'not selected'
         )
         
@@ -178,34 +148,12 @@ except ModuleNotFoundError as e:
     raise Exception( message )
     
 
-# 2022-07
-# an older version of qtpy, 1.9 or so, didn't actually have attribute qtpy.PYQT6, so we'll test and assign carefully
-
-WE_ARE_QT5 = False
 WE_ARE_QT6 = False
 
 WE_ARE_PYQT = False
 WE_ARE_PYSIDE = False
 
-if qtpy.PYQT5:
-    
-    WE_ARE_QT5 = True
-    WE_ARE_PYQT = True
-    
-    # noinspection PyUnresolvedReferences
-    from PyQt5 import sip # pylint: disable=E0401
-    
-    def isValid( obj ):
-        
-        if isinstance( obj, sip.simplewrapper ):
-            
-            return not sip.isdeleted( obj )
-            
-        
-        return True
-        
-    
-elif hasattr( qtpy, 'PYQT6' ) and qtpy.PYQT6:
+if qtpy.PYQT6:
     
     WE_ARE_QT6 = True
     WE_ARE_PYQT = True
@@ -223,16 +171,6 @@ elif hasattr( qtpy, 'PYQT6' ) and qtpy.PYQT6:
         return True
         
     
-elif qtpy.PYSIDE2:
-    
-    WE_ARE_QT5 = True
-    WE_ARE_PYSIDE = True
-    
-    # noinspection PyUnresolvedReferences
-    import shiboken2
-    
-    isValid = shiboken2.isValid
-    
 elif qtpy.PYSIDE6:
     
     WE_ARE_QT6 = True
@@ -244,7 +182,7 @@ elif qtpy.PYSIDE6:
     
 else:
     
-    raise RuntimeError( 'You need one of PySide2, PySide6, PyQt5, or PyQt6' )
+    raise RuntimeError( 'You need one of PySide6 or PyQt6!' )
     
 
 def DoWinDarkMode():
@@ -253,19 +191,6 @@ def DoWinDarkMode():
     
 
 def MonkeyPatchMissingMethods():
-    
-    if WE_ARE_QT5:
-        
-        print( 'Qt5 is no longer officially supported. It will simply break one day, sorry!' )
-        
-        QG.QMouseEvent.globalPosition = lambda self, *args, **kwargs: QC.QPointF( self.globalPos( *args, **kwargs ) )
-        
-        QG.QMouseEvent.position = lambda self, *args, **kwargs: QC.QPointF( self.pos( *args, **kwargs ) )
-        
-        QG.QDropEvent.position = lambda self, *args, **kwargs: QC.QPointF( self.pos( *args, **kwargs ) )
-        
-        QG.QDropEvent.modifiers = lambda self, *args, **kwargs: self.keyboardModifiers( *args, **kwargs )
-        
     
     if WE_ARE_PYQT:
         

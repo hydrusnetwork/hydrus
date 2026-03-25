@@ -10,6 +10,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -101,7 +102,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS
     SERIALISABLE_NAME = 'Duplicate Metadata Merge Options'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__( self ):
         
@@ -243,7 +244,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
             
             sync_notes_action = HC.CONTENT_MERGE_ACTION_NONE
-            sync_note_import_options = NoteImportOptions.NoteImportOptions()
+            sync_note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
             
             serialisable_sync_note_import_options = sync_note_import_options.GetSerialisableTuple()
             
@@ -276,6 +277,37 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             )
             
             return ( 7, new_serialisable_info )
+            
+        
+        if version == 7:
+            
+            (
+                serialisable_tag_service_actions,
+                serialisable_rating_service_actions,
+                sync_notes_action,
+                serialisable_sync_note_import_options,
+                sync_archive_action,
+                sync_urls_action,
+                sync_file_modified_date_action
+            ) = old_serialisable_info
+            
+            sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options )
+            
+            new_sync_note_import_options = sync_note_import_options.GetNoteImportOptions() # shucking the new out of the legacy
+            
+            serialisable_sync_note_import_options = new_sync_note_import_options.GetSerialisableTuple()
+            
+            new_serialisable_info = (
+                serialisable_tag_service_actions,
+                serialisable_rating_service_actions,
+                sync_notes_action,
+                serialisable_sync_note_import_options,
+                sync_archive_action,
+                sync_urls_action,
+                sync_file_modified_date_action
+            )
+            
+            return ( 8, new_serialisable_info )
             
         
     
@@ -788,7 +820,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+            if media_result.GetLocationsManager().IsInCombinedLocalFileDomains():
                 
                 delete_lock_applies = not media_result.GetLocationsManager().inbox and CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
                 

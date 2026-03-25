@@ -25,7 +25,6 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIReviewWindowsQuick
-from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.pages import ClientGUIPagesCore
@@ -353,29 +352,18 @@ class Page( QW.QWidget ):
         # note focus isn't on the thumb panel but some innerwidget scroll gubbins
         had_focus_before = ClientGUIFunctions.IsQtAncestor( QW.QApplication.focusWidget(), old_panel )
         
-        if QtInit.WE_ARE_QT5:
+        if new_panel.parentWidget() == self._management_media_split:
             
-            # this takes ownership of new_panel
-            self._management_media_split.insertWidget( 1, new_panel )
+            # ideally, this does not occur. we always want to replace and reduce flicker
             
             old_panel.setParent( None )
             old_panel.setVisible( False )
             
         else:
             
-            if new_panel.parentWidget() == self._management_media_split:
-                
-                # ideally, this does not occur. we always want to replace and reduce flicker
-                
-                old_panel.setParent( None )
-                old_panel.setVisible( False )
-                
-            else:
-                
-                # this sets parent of new panel to self and sets parent of old panel to None
-                # rumao, it doesn't work if new_panel is already our child
-                self._management_media_split.replaceWidget( 1, new_panel )
-                
+            # this sets parent of new panel to self and sets parent of old panel to None
+            # rumao, it doesn't work if new_panel is already our child
+            self._management_media_split.replaceWidget( 1, new_panel )
             
         
         self._media_panel.setMinimumWidth( 120 )

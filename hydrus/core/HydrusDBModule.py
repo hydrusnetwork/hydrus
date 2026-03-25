@@ -3,6 +3,7 @@ import sqlite3
 
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 
 class HydrusDBModule( HydrusDBBase.DBBase ):
     
@@ -236,7 +237,13 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
             if len( missing_critical_table_names ) > 0:
                 
-                message = 'Unfortunately, this database is missing one or more critical tables! This database is non functional and cannot be repaired. Please check out "install_dir/db/help my db is broke.txt" for the next steps. The table names are:\n\n' + '\n'.join( missing_critical_table_names )
+                message = 'Unfortunately, this database is missing one or more critical tables! This database is non functional and cannot be repaired.'
+                message += '\n\n'
+                message += 'If you have used this database many times before, please check out "install_dir/db/help my db is broke.txt" for the next steps.'
+                message += '\n\n'
+                message += 'If you are trying to initialise a new database and have yet to boot into it successfully, then the database files are damaged stubs. Go into your db dir (probably install_dir/db) and delete the small .db files and any .db-shm or .db-wal files with them, and then try booting the program again. If the problem keeps happening, you probably have a hard drive permission error to fix.'
+                message += '\n\n'
+                message += 'The critical missing table names are:\n\n' + '\n'.join( missing_critical_table_names )
                 
                 raise HydrusExceptions.DBAccessException( message )
                 

@@ -185,7 +185,7 @@ def ConvertSummaryFiletypesToString( summary_mimes: collections.abc.Collection[ 
     
     if set( summary_mimes ) == HC.GENERAL_FILETYPES:
         
-        mime_text = 'anything'
+        mime_text = 'all filetypes'
         
     else:
         

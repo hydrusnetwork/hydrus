@@ -31,6 +31,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
@@ -51,9 +52,9 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         file_post_default_tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy,
         watchable_default_tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy,
         url_class_keys_to_tag_import_options: dict[ bytes, TagImportOptionsLegacy.TagImportOptionsLegacy ],
-        file_post_default_note_import_options: NoteImportOptions.NoteImportOptions,
-        watchable_default_note_import_options: NoteImportOptions.NoteImportOptions,
-        url_class_keys_to_note_import_options: dict[ bytes, NoteImportOptions.NoteImportOptions ]
+        file_post_default_note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy,
+        watchable_default_note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy,
+        url_class_keys_to_note_import_options: dict[ bytes, NoteImportOptionsLegacy.NoteImportOptionsLegacy ]
     ):
         
         super().__init__( parent )
@@ -458,7 +459,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 insert_dict = self._url_class_keys_to_tag_import_options
                 
-            elif isinstance( unknown_import_options, NoteImportOptions.NoteImportOptions ):
+            elif isinstance( unknown_import_options, NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
                 
                 insert_dict = self._url_class_keys_to_note_import_options
                 
@@ -895,7 +896,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     deletee_file_service_key = CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY
                     
-                    h = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
+                    h = [ m.GetHash() for m in self._media if m.GetLocationsManager().IsInCombinedLocalFileDomains() ]
                     
                     content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes ) for chunk_of_hashes in HydrusLists.SplitListIntoChunks( h, 16 ) ]
                     
@@ -1543,7 +1544,6 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         note_import_options = NoteImportOptions.NoteImportOptions()
         
-        note_import_options.SetIsDefault( False )
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
         

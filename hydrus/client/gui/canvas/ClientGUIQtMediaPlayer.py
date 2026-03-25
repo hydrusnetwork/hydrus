@@ -42,7 +42,9 @@ def GetAvailableAudioDevices() -> list[ QM.QAudioDevice ]:
         return []
         
     
-    return sorted( QM.QMediaDevices.audioOutputs(), key = lambda a_o: a_o.description().casefold() )
+    audio_output_devices = [ audio_output_device for audio_output_device in QM.QMediaDevices.audioOutputs() ]
+    
+    return sorted( audio_output_devices, key = lambda a_o: a_o.description().casefold() )
     
 
 class GraphicsViewViewportMouseMoveCatcher( QC.QObject ):
@@ -122,7 +124,6 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._canvas = canvas
         self._background_colour_generator = background_colour_generator
         
-        self._my_audio_output = self._GenerateAudioDevice()
         self._my_audio_placeholder = QW.QWidget( self )
         
         # 2026-01: this is the first time hydev has done GraphicsView stuff, and thus all this was divined via haruspex
@@ -141,6 +142,12 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         QP.SetBackgroundColour( self._my_audio_placeholder, QG.QColor( 0, 0, 0 ) )
         
         self._media_player = QM.QMediaPlayer( self )
+        
+        self._my_audio_output: QM.QAudioOutput | None = None
+        
+        self._SetAudioDeviceFromOptions()
+        
+        self._media_player.setVideoOutput( self._my_video_output )
         
         self._media_player.setLoops( QM.QMediaPlayer.Loops.Infinite )
         
@@ -175,13 +182,25 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         CG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
         CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        CG.client_controller.sub( self, 'UpdateFromOptions', 'notify_new_options' )
         
     
-    def _GenerateAudioDevice( self ) -> QM.QAudioOutput | None:
+    def _EnsureAudioOutputIsGood( self ):
         
         if CG.client_controller.new_options.GetBoolean( 'qt_media_player_no_audio_device' ):
             
-            return None
+            self._my_audio_output = None
+            
+            return
+            
+        
+        if self._my_audio_output is not None:
+            
+            current_device = self._my_audio_output.device()
+            
+        else:
+            
+            current_device = None
             
         
         qt_media_player_preferred_audio_device_id_hex = CG.client_controller.new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_id_hex' )
@@ -199,13 +218,23 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if qt_media_player_preferred_audio_device_id is not None and qt_media_player_preferred_audio_device_name is not None:
             
-            audio_devices = GetAvailableAudioDevices()
+            if current_device is not None:
+                
+                if bytes( current_device.id() ) == qt_media_player_preferred_audio_device_id or current_device.description() == qt_media_player_preferred_audio_device_name:
+                    
+                    return
+                    
+                
+            
+            audio_devices = [ audio_device for audio_device in GetAvailableAudioDevices() if not audio_device.isNull() ]
             
             for audio_device in audio_devices:
                 
                 if bytes( audio_device.id() ) == qt_media_player_preferred_audio_device_id:
                     
-                    return QM.QAudioOutput( audio_device )
+                    self._my_audio_output = QM.QAudioOutput( audio_device )
+                    
+                    return
                     
                 
             
@@ -213,13 +242,22 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if audio_device.description() == qt_media_player_preferred_audio_device_name:
                     
-                    return QM.QAudioOutput( audio_device )
+                    self._my_audio_output = QM.QAudioOutput( audio_device )
+                    
+                    return
                     
                 
             
         
-        # default system output
-        return QM.QAudioOutput( self )
+        if self._my_audio_output is None or not self._my_audio_output.device().isDefault():
+            
+            self._my_audio_output = QM.QAudioOutput( self )
+            
+        
+        if self._my_audio_output.device().isNull():
+            
+            self._my_audio_output = None
+            
         
     
     def _RefitVideo( self ):
@@ -261,6 +299,24 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             self._my_graphics_view.fitInView( rect, QC.Qt.AspectRatioMode.KeepAspectRatio )
             
         '''
+    
+    def _SetAudioDeviceFromOptions( self ):
+        
+        self._EnsureAudioOutputIsGood()
+        
+        if self._media_player.audioOutput() != self._my_audio_output:
+            
+            try:
+                
+                # qtpy doesn't like sending None here, but it is documented and works
+                self._media_player.setAudioOutput( self._my_audio_output )
+                
+            except Exception as e:
+                
+                HydrusData.Print( f'Qt was not happy about me setting the audio device "{self._my_audio_output}" to QMediaPlayer. Base error was "{str(e)}". Please tell hydev.' )
+                
+            
+        
     
     def _SetAudioTrack( self, i ):
         
@@ -556,20 +612,23 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._stop_for_slideshow = False
         
-        has_audio = self._media.HasAudio()
+        if CG.client_controller.new_options.GetBoolean( 'qt_media_player_null_audio_on_silent_media' ):
+            
+            has_audio = self._media.HasAudio()
+            
+            if not has_audio:
+                
+                self._my_audio_output = None
+                
+                self._media_player.setAudioOutput( None )
+                
+            else:
+                
+                self._SetAudioDeviceFromOptions()
+                
+            
+        
         is_audio = self._media.GetMime() in HC.AUDIO
-        
-        # this doesn't have the ability to un-set once set. docs say you can send on a null pointer, but qtpy disagrees
-        # edge case so we'll swallow it for now
-        if has_audio and self._my_audio_output is not None:
-            
-            self._media_player.setAudioOutput( self._my_audio_output )
-            
-        
-        if not is_audio:
-            
-            self._media_player.setVideoOutput( self._my_video_output )
-            
         
         self._my_graphics_view.setVisible( not is_audio )
         self._my_audio_placeholder.setVisible( is_audio )
@@ -625,5 +684,10 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) / 100 )
             
+        
+    
+    def UpdateFromOptions( self ):
+        
+        self._SetAudioDeviceFromOptions()
         
     

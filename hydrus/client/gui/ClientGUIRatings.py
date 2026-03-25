@@ -403,13 +403,15 @@ def GetNumericalWidth( service_key, star_width, pad_px = None, draw_collapsed = 
                 pad_px = ClientGUIPainterShapes.PAD_PX
                 
             
+        
     except HydrusExceptions.DataMissing:
         
+        text_size = 0
         num_stars = 1
         
     
     return text_size + ( star_width * num_stars) + ( pad_px * ( num_stars - 1 ) ) + ( ClientGUIPainterShapes.PAD_PX )
-    ##return text_size + ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - pad_px
+    # return text_size + ( ( star_width + pad_px ) * num_stars - 1 ) + ( ClientGUIPainterShapes.PAD_PX ) - pad_px
     
     
 def GetPenAndBrushColours( service_key, rating_state ):

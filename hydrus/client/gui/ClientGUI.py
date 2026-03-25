@@ -1499,9 +1499,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        from hydrus.client.importing.options import NoteImportOptions
+        from hydrus.client.importing.options import NoteImportOptionsLegacy
         
-        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
         call = HydrusData.Call( CG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', file_import_options, tag_import_options, note_import_options, 2 )

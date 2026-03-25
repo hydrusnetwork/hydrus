@@ -6,7 +6,6 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 from hydrus.core.processes import HydrusThreading
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMediaResult
@@ -21,7 +20,7 @@ def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_res
     
     for media_result in media_results:
         
-        if not CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+        if not media_result.GetLocationsManager().IsInCombinedLocalFileDomains():
             
             raise Exception( f'The file "{media_result.GetHash().hex()} is not in any local file domains, so I cannot copy!' )
             

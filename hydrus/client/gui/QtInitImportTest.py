@@ -9,30 +9,6 @@ def get_qt_library_str_status():
     try:
         
         # noinspection PyUnresolvedReferences
-        import PyQt5
-        
-        infos.append( 'PyQt5 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PyQt5 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    try:
-        
-        # noinspection PyUnresolvedReferences
-        import PySide2
-        
-        infos.append( 'PySide2 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PySide2 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    try:
-        
-        # noinspection PyUnresolvedReferences
         import PyQt6
         
         infos.append( 'PyQt6 imported ok' )

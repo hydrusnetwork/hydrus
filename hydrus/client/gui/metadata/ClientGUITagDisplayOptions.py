@@ -304,11 +304,11 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'This filters which tags will show on \'single\' file views such as the media viewer and thumbnail banners.'
             
-            self._single_tag_filter_button = ClientGUITagFilter.TagFilterButton( self._display_box, message, single_tag_filter, label_prefix = 'tags shown: ' )
+            self._single_tag_filter_button = ClientGUITagFilter.TagFilterButton( self._display_box, message, single_tag_filter, label_prefix = 'tags shown: ', use_filter_language = True )
             
             message = 'This filters which tags will show on \'selection\' file views such as the \'selection tags\' list on regular search pages.'
             
-            self._selection_tag_filter_button = ClientGUITagFilter.TagFilterButton( self._display_box, message, selection_tag_filter, label_prefix = 'tags shown: ' )
+            self._selection_tag_filter_button = ClientGUITagFilter.TagFilterButton( self._display_box, message, selection_tag_filter, label_prefix = 'tags shown: ', use_filter_language = True )
             
             #
             

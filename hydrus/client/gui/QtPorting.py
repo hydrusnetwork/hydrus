@@ -1126,31 +1126,7 @@ def AdjustOpacity( image: QG.QImage, opacity_factor ):
 
 def ToKeySequence( modifiers, key ):
     
-    if QtInit.WE_ARE_QT5:
-        
-        # noinspection PyUnresolvedReferences
-        if isinstance( modifiers, QC.Qt.KeyboardModifiers ):
-            
-            seq_str = ''
-            
-            for modifier in [ QC.Qt.KeyboardModifier.ShiftModifier, QC.Qt.KeyboardModifier.ControlModifier, QC.Qt.KeyboardModifier.AltModifier, QC.Qt.KeyboardModifier.MetaModifier, QC.Qt.KeyboardModifier.KeypadModifier, QC.Qt.KeyboardModifier.GroupSwitchModifier ]:
-                
-                if modifiers & modifier: seq_str += QG.QKeySequence( modifier ).toString()
-                
-            
-            seq_str += QG.QKeySequence( key ).toString()
-            
-            return QG.QKeySequence( seq_str )
-            
-        else:
-            
-            return QG.QKeySequence( key + modifiers )
-            
-        
-    else:
-        
-        return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) ) # pylint: disable=E1101
-        
+    return QG.QKeySequence( QC.QKeyCombination( modifiers, key ) ) # pylint: disable=E1101
     
 
 def AddShortcut( widget, modifier, key, func: collections.abc.Callable, *args ):

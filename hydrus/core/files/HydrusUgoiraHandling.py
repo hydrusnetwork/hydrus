@@ -44,7 +44,14 @@ def GetUgoiraProperties( path_to_zip ):
         
         pil_image = GetUgoiraFramePIL( path_to_zip, 0 )
         
-        ( width, height ) = pil_image.size
+        try:
+            
+            ( width, height ) = pil_image.size
+            
+        finally:
+            
+            pil_image.close()
+            
         
     except Exception as e:
         
@@ -234,7 +241,16 @@ def GetUgoiraPropertiesFromJSON( path ):
     
     firstFrame = GetUgoiraFramePIL( path, 0 )
     
-    return ( firstFrame.size, duration_ms, num_frames )
+    try:
+        
+        size = firstFrame.size
+        
+    finally:
+        
+        firstFrame.close()
+        
+    
+    return ( size, duration_ms, num_frames )
     
 
 # Combined Ugoira functions:
@@ -273,9 +289,23 @@ def GenerateThumbnailNumPyFromUgoiraPath( path: str, target_resolution: tuple[in
     
     pil_image = GetUgoiraFramePIL( path, frame_index )
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
+    try:
+        
+        thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.Resampling.LANCZOS )
+        
+    finally:
+        
+        pil_image.close()
+        
     
-    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+    try:
+        
+        numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+        
+    finally:
+        
+        thumbnail_pil_image.close()
+        
     
     return numpy_image
     

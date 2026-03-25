@@ -1108,6 +1108,11 @@ class LocationsManager( object ):
         return CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in self._pending
         
     
+    def IsInCombinedLocalFileDomains( self ):
+        
+        return CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in self._current
+        
+    
     def IsInLocationContext( self, location_context: ClientLocation.LocationContext ):
         
         if location_context.IsAllKnownFiles():

@@ -92,15 +92,23 @@ class TagFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if show_downloader_options:
             
-            statements.append( self._tag_blacklist.ToBlacklistString() )
+            if not self._tag_blacklist.AllowsEverything():
+                
+                statements.append( self._tag_blacklist.ToBlacklistString() )
+                
             
             if len( self._tag_whitelist ) > 0:
                 
                 statements.append( 'tag whitelist: ' + ', '.join( self._tag_whitelist ) )
                 
             
+            if len( statements ) == 0:
+                
+                statements.append( 'allows everything' )
+                
+            
         
-        summary = '\n'.join( statements )
+        summary = ', '.join( statements )
         
         return summary
         

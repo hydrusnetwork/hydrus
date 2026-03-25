@@ -106,38 +106,18 @@ def ShowAboutWindow( win: QW.QWidget ):
     
     qt_string = 'Qt: Unknown'
     
-    if QtInit.WE_ARE_QT5:
+    if QtInit.WE_ARE_PYSIDE:
         
-        if QtInit.WE_ARE_PYSIDE:
-            
-            # noinspection PyUnresolvedReferences
-            import PySide2
-            
-            qt_string = 'Qt: PySide2 {}'.format( PySide2.__version__ )
-            
-        elif QtInit.WE_ARE_PYQT:
-            
-            # noinspection PyUnresolvedReferences
-            from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
-            
-            qt_string = 'Qt: PyQt5 {}'.format( PYQT_VERSION_STR )
-            
+        import PySide6
         
-    elif QtInit.WE_ARE_QT6:
+        qt_string = 'Qt: PySide6 {}'.format( PySide6.__version__ )
         
-        if QtInit.WE_ARE_PYSIDE:
-            
-            import PySide6
-            
-            qt_string = 'Qt: PySide6 {}'.format( PySide6.__version__ )
-            
-        elif QtInit.WE_ARE_PYQT:
-            
-            # noinspection PyUnresolvedReferences
-            from PyQt6.QtCore import PYQT_VERSION_STR
-            
-            qt_string = 'Qt: PyQt6 {}'.format( PYQT_VERSION_STR )
-            
+    elif QtInit.WE_ARE_PYQT:
+        
+        # noinspection PyUnresolvedReferences
+        from PyQt6.QtCore import PYQT_VERSION_STR
+        
+        qt_string = 'Qt: PyQt6 {}'.format( PYQT_VERSION_STR )
         
     
     try:
@@ -222,14 +202,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     
     availability_lines.append( render_availability_line( 'QtCharts', ClientGUICharts.QT_CHARTS_OK, ClientGUICharts.QT_CHARTS_MODULE_NOT_FOUND, ClientGUICharts.QT_CHARTS_IMPORT_ERROR ) )
     
-    if QtInit.WE_ARE_QT5:
-        
-        availability_lines.append( 'QtPdf not available on Qt5' )
-        
-    else:
-        
-        availability_lines.append( render_availability_line( 'QtPdf', ClientPDFHandling.PDF_OK, ClientPDFHandling.PDF_MODULE_NOT_FOUND, ClientPDFHandling.PDF_IMPORT_ERROR ) )
-        
+    availability_lines.append( render_availability_line( 'QtPdf', ClientPDFHandling.PDF_OK, ClientPDFHandling.PDF_MODULE_NOT_FOUND, ClientPDFHandling.PDF_IMPORT_ERROR ) )
     
     CBOR_AVAILABLE = False
     

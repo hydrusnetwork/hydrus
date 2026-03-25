@@ -148,7 +148,8 @@ class FilterPanel( QW.QWidget ):
         
         #
         
-        self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchStarted )
+        self._potential_duplicates_search_context.restartedSearch.connect( self._NotifyPotentialsSearchMayOrHasPairs )
+        self._potential_duplicates_search_context.thisSearchHasPairs.connect( self._NotifyPotentialsSearchMayOrHasPairs )
         self._potential_duplicates_search_context.thisSearchDefinitelyHasNoPairs.connect( self._NotifyPotentialsSearchDefinitelyHasNoPairs )
         
     
@@ -222,7 +223,7 @@ class FilterPanel( QW.QWidget ):
         canvas_frame.SetCanvas( canvas_window )
         
     
-    def _NotifyPotentialsSearchStarted( self ):
+    def _NotifyPotentialsSearchMayOrHasPairs( self ):
         
         self._launch_filter.setEnabled( True )
         self._show_some_dupes.setEnabled( True )

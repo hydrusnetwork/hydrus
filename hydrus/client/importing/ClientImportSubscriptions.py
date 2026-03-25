@@ -22,7 +22,7 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingGUG
@@ -70,7 +70,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        self._note_import_options = NoteImportOptions.NoteImportOptions()
+        self._note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         self._note_import_options.SetIsDefault( True )
         
         self._no_work_until = 0
@@ -895,7 +895,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 merge_query_publish_events
             ) = old_serialisable_info
             
-            note_import_options = NoteImportOptions.NoteImportOptions()
+            note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
             note_import_options.SetIsDefault( True )
             
             serialisable_note_import_options = note_import_options.GetSerialisableTuple()

@@ -438,6 +438,11 @@ class FileImportJob( object ):
         
         self._has_icc_profile = has_icc_profile
         
+        if raw_pil_image is not None:
+            
+            raw_pil_image.close()
+            
+        
         #
         
         if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and duration_ms is None:

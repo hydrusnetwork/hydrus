@@ -16,6 +16,8 @@ class AnimationRendererPIL( object ):
             HydrusData.ShowText( 'Loading animation: ' + path )
             
         
+        self._pil_image = None
+        
         self._path = path
         self._num_frames = num_frames
         self._target_resolution = target_resolution
@@ -193,7 +195,10 @@ class AnimationRendererPIL( object ):
     
     def close( self ):
         
-        pass
+        if self._pil_image is not None:
+            
+            self._pil_image.close()
+            
         
     
     def read_frame( self ):

@@ -116,7 +116,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_tag_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ' )
+        self._migration_source_tag_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ', use_filter_language = True )
         
         message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += '\n' * 2
@@ -124,7 +124,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_left_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ' )
+        self._migration_source_left_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ', use_filter_language = True )
         
         message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
         message += '\n' * 2
@@ -132,7 +132,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._migration_source_right_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ' )
+        self._migration_source_right_tag_pair_filter = ClientGUITagFilter.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'right: ', use_filter_language = True )
         
         #
         
@@ -377,7 +377,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             tag_filter = self._migration_source_tag_filter.GetValue()
             
-            extra_filter_info_strings.append( 'for tags "{}"'.format( HydrusText.ElideText( tag_filter.ToPermittedString(), 96 ) ) )
+            extra_filter_info_strings.append( 'for tags "{}"'.format( HydrusText.ElideText( tag_filter.ToFilterString(), 96 ) ) )
             
             if source_service_key == self.HTA_SERVICE_KEY:
                 
@@ -420,8 +420,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             left_tag_pair_filter = self._migration_source_left_tag_pair_filter.GetValue()
             right_tag_pair_filter = self._migration_source_right_tag_pair_filter.GetValue()
             
-            left_s = left_tag_pair_filter.ToPermittedString()
-            right_s = right_tag_pair_filter.ToPermittedString()
+            left_s = left_tag_pair_filter.ToFilterString()
+            right_s = right_tag_pair_filter.ToFilterString()
             
             if left_s == right_s:
                 

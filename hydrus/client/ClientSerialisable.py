@@ -268,7 +268,14 @@ def LoadFromPNG( path ):
                 
                 # leave strip_useless_alpha = True in here just to catch the very odd LA situation
                 
-                numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
+                try:
+                    
+                    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
+                    
+                finally:
+                    
+                    pil_image.close()
+                    
                 
             except Exception as e:
                 

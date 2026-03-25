@@ -26,6 +26,7 @@ from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import PrefetchImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagFilteringImportOptions
@@ -542,37 +543,13 @@ class EditLocationImportOptionsPanel( QW.QWidget ):
 
 class EditNoteImportOptionsPanel( QW.QWidget ):
     
-    isDefaultChanged = QC.Signal( bool )
-    
-    def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, allow_default_selection: bool, simple_mode = False ):
+    def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, simple_mode = False ):
         
         super().__init__( parent )
         
-        self._allow_default_selection = allow_default_selection
         self._simple_mode = simple_mode
         
         help_button = ClientGUICommon.IconButton( self, CC.global_icons().help, self._ShowHelp )
-        
-        #
-        
-        default_panel = ClientGUICommon.StaticBox( self, 'default options' )
-        
-        self._use_default_dropdown = ClientGUICommon.BetterChoice( default_panel )
-        
-        self._use_default_dropdown.addItem( 'use the default note import options at the time of import', True )
-        self._use_default_dropdown.addItem( 'set custom note import options just for this importer', False )
-        
-        tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default import options") at the time of import.'
-        tt += '\n' * 2
-        tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
-        tt += '\n' * 2
-        tt += 'But if you are doing a one-time import that has some unusual note merge rules, set them here.'
-        
-        self._use_default_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        #
-        
-        self._load_default_options = ClientGUICommon.BetterButton( self, 'load one of the default options', self._LoadDefaultOptions )
         
         #
         
@@ -630,23 +607,9 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
         
         #
         
-        self._use_default_dropdown.SetValue( note_import_options.IsDefault() )
-        
-        #
-        
         self._SetValue( note_import_options )
         
         #
-        
-        default_panel.Add( self._use_default_dropdown, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        if not self._allow_default_selection:
-            
-            default_panel.setVisible( False )
-            
-        
-        #
-        
         
         rows = []
         
@@ -658,16 +621,13 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
             
             help_button.setVisible( False )
             
-            default_panel.setVisible( False )
-            self._load_default_options.setVisible( False )
-            
             self._get_notes.setVisible( False )
             self._name_whitelist.setVisible( False )
             self._names_to_name_overrides.setVisible( False )
             self._all_name_override.setVisible( False )
             
             rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
-            rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
+            rows.append( ( 'if existing note-name conflict, what to do: ', self._conflict_resolution ) )
             
             
         else:
@@ -676,7 +636,7 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
             
             rows.append( ( 'get notes: ', self._get_notes ) )
             rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
-            rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
+            rows.append( ( 'if existing note-name conflict, what to do: ', self._conflict_resolution ) )
             rows.append( ( 'only allow these note names' + '\n' + '(leave blank for \'get all\'): ', self._name_whitelist ) )
             rows.append( ( 'rename these notes as they come in: ', self._names_to_name_overrides ) )
             rows.append( ( 'rename spare note(s) to this: ', self._all_name_override ) )
@@ -692,16 +652,10 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
-        
-        self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
-        
-        self._UpdateIsDefault()
         
     
     def _AddWhitelistItem( self ):
@@ -730,6 +684,148 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
             
         
         return edited_whitelist_name
+        
+    
+    def _SetValue( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        self._get_notes.setChecked( note_import_options.GetGetNotes() )
+        self._extend_existing_note_if_possible.setChecked( note_import_options.GetExtendExistingNoteIfPossible() )
+        self._conflict_resolution.SetValue( note_import_options.GetConflictResolution() )
+        
+        self._name_whitelist.Clear()
+        
+        self._name_whitelist.AddDatas( note_import_options.GetNameWhitelist() )
+        
+        self._names_to_name_overrides.SetValue( note_import_options.GetNamesToNameOverrides() )
+        
+        self._all_name_override.SetValue( note_import_options.GetAllNameOverride() )
+        
+    
+    def _ShowHelp( self ):
+        
+        help_message = '''A \'note\' exists in hydrus as the pair of ( name, text ). A file can only have one note for each name. If a downloader provides some notes, normally they will simply be added to your files. The main tricky part comes when a new note conflicts with an existing one.
+
+If a new note coming in has exactly the same text as any note the file already has, no change is made.
+
+If a new note coming in has the same name but different text, then two things can happen:
+
+1) If the new text is the same as the existing text but it has more appended (e.g. an artist comment that since had an extra paragraph added), then if you have \'extend existing notes\' checked, the new note will replace the existing one.
+
+- ADVANCED: Note this can also apply to 'name (1)' renames. If ( name, text ) comes in, and 'text' is an extension of 'name (1)' or 'name (3)', _that_ renamed note will be extended.
+
+2) If the new note is more complicated than an extension, or that checkbox is not checked, then the \'conflict\' action occurs. Think about what you want.
+
+Beyond that, you can filter and rename notes. Check the tooltips for more info.'''
+        
+        ClientGUIDialogsMessage.ShowInformation( self, help_message )
+        
+    
+    def GetValue( self ) -> NoteImportOptions.NoteImportOptions:
+        
+        note_import_options = NoteImportOptions.NoteImportOptions()
+        
+        note_import_options.SetGetNotes( self._get_notes.isChecked() )
+        note_import_options.SetExtendExistingNoteIfPossible( self._extend_existing_note_if_possible.isChecked() )
+        note_import_options.SetConflictResolution( self._conflict_resolution.GetValue() )
+        note_import_options.SetNameWhitelist( self._name_whitelist.GetValue() )
+        note_import_options.SetNamesToNameOverrides( self._names_to_name_overrides.GetValue() )
+        note_import_options.SetAllNameOverride( self._all_name_override.GetValue() )
+        
+        return note_import_options
+        
+    
+    def SetValue( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+        
+        self._SetValue( note_import_options )
+        
+    
+
+class EditNoteImportOptionsLegacyPanel( QW.QWidget ):
+    
+    isDefaultChanged = QC.Signal( bool )
+    
+    def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy, allow_default_selection: bool, simple_mode = False ):
+        
+        super().__init__( parent )
+        
+        self._allow_default_selection = allow_default_selection
+        self._simple_mode = simple_mode
+        
+        #
+        
+        default_panel = ClientGUICommon.StaticBox( self, 'default options' )
+        
+        self._use_default_dropdown = ClientGUICommon.BetterChoice( default_panel )
+        
+        self._use_default_dropdown.addItem( 'use the default note import options at the time of import', True )
+        self._use_default_dropdown.addItem( 'set custom note import options just for this importer', False )
+        
+        tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default import options") at the time of import.'
+        tt += '\n' * 2
+        tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
+        tt += '\n' * 2
+        tt += 'But if you are doing a one-time import that has some unusual note merge rules, set them here.'
+        
+        self._use_default_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        #
+        
+        self._load_default_options = ClientGUICommon.BetterButton( self, 'load one of the default options', self._LoadDefaultOptions )
+        
+        #
+        
+        self._specific_options_panel = QW.QWidget( self )
+        
+        #
+        
+        note_import_options_static_box = ClientGUICommon.StaticBox( self._specific_options_panel, 'note import options' )
+        
+        self._note_import_options = EditNoteImportOptionsPanel( note_import_options_static_box, note_import_options.GetNoteImportOptions() )
+        
+        #
+        
+        self._use_default_dropdown.SetValue( note_import_options.IsDefault() )
+        
+        #
+        
+        self._SetValue( note_import_options )
+        
+        #
+        
+        default_panel.Add( self._use_default_dropdown, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if not self._allow_default_selection:
+            
+            default_panel.setVisible( False )
+            
+        
+        #
+        
+        note_import_options_static_box.Add( self._note_import_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, note_import_options_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self._specific_options_panel.setLayout( vbox )
+        
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+        self._use_default_dropdown.currentIndexChanged.connect( self._UpdateIsDefault )
+        
+        self._UpdateIsDefault()
         
     
     def _LoadDefaultOptions( self ):
@@ -773,46 +869,15 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
         self._SetValue( default_note_import_options )
         
     
-    def _SetValue( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def _SetValue( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         self._use_default_dropdown.SetValue( note_import_options.IsDefault() )
         
-        #
-        
-        self._get_notes.setChecked( note_import_options.GetGetNotes() )
-        self._extend_existing_note_if_possible.setChecked( note_import_options.GetExtendExistingNoteIfPossible() )
-        self._conflict_resolution.SetValue( note_import_options.GetConflictResolution() )
-        
-        self._name_whitelist.Clear()
-        
-        self._name_whitelist.AddDatas( note_import_options.GetNameWhitelist() )
-        
-        self._names_to_name_overrides.SetValue( note_import_options.GetNamesToNameOverrides() )
-        
-        self._all_name_override.SetValue( note_import_options.GetAllNameOverride() )
+        self._note_import_options.SetValue( note_import_options.GetNoteImportOptions() )
         
         #
         
         self._UpdateIsDefault()
-        
-    
-    def _ShowHelp( self ):
-        
-        help_message = '''A \'note\' exists in hydrus as the pair of ( name, text ). A file can only have one note for each name. If a downloader provides some notes, normally they will simply be added to your files. The main tricky part comes when a new note conflicts with an existing one.
-
-If a new note coming in has exactly the same text as any note the file already has, no change is made.
-
-If a new note coming in has the same name but different text, then two things can happen:
-
-1) If the new text is the same as the existing text but it has more appended (e.g. an artist comment that since had an extra paragraph added), then if you have \'extend existing notes\' checked, the new note will replace the existing one.
-
-- ADVANCED: Note this can also apply to 'name (1)' renames. If ( name, text ) comes in, and 'text' is an extension of 'name (1)' or 'name (3)', _that_ renamed note will be extended.
-
-2) If the new note is more complicated than an extension, or that checkbox is not checked, then the \'conflict\' action occurs. Think about what you want.
-
-Beyond that, you can filter and rename notes. Check the tooltips for more info.'''
-        
-        ClientGUIDialogsMessage.ShowInformation( self, help_message )
         
     
     def _UpdateIsDefault( self ):
@@ -838,30 +903,27 @@ Beyond that, you can filter and rename notes. Check the tooltips for more info.'
         self.isDefaultChanged.emit( is_default )
         
     
-    def GetValue( self ) -> NoteImportOptions.NoteImportOptions:
+    def GetValue( self ) -> NoteImportOptionsLegacy.NoteImportOptionsLegacy:
         
         is_default = self._use_default_dropdown.GetValue()
         
-        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options_legacy = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         
         if is_default:
             
-            note_import_options.SetIsDefault( True )
+            note_import_options_legacy.SetIsDefault( True )
             
         else:
             
-            note_import_options.SetGetNotes( self._get_notes.isChecked() )
-            note_import_options.SetExtendExistingNoteIfPossible( self._extend_existing_note_if_possible.isChecked() )
-            note_import_options.SetConflictResolution( self._conflict_resolution.GetValue() )
-            note_import_options.SetNameWhitelist( self._name_whitelist.GetValue() )
-            note_import_options.SetNamesToNameOverrides( self._names_to_name_overrides.GetValue() )
-            note_import_options.SetAllNameOverride( self._all_name_override.GetValue() )
+            note_import_options = self._note_import_options.GetValue()
+            
+            note_import_options_legacy.SetNoteImportOptions( note_import_options )
             
         
-        return note_import_options
+        return note_import_options_legacy
         
     
-    def SetValue( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def SetValue( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         self._SetValue( note_import_options)
         
@@ -874,6 +936,21 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         super().__init__( parent )
         
         #
+        
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( self )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( self )
+        
+        tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
+        tt += '\n' * 2
+        tt += 'This will force the client to download the metadata for a file even if it thinks it has visited its page before. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
+        
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        tt = 'I strongly recommend you uncheck this for normal use.  When it is on, downloaders could be inefficent!'
+        tt += '\n' * 2
+        tt += 'This will force the client to download further metadata for a file even if an earlier parsing step has given a hash that the client thinks it recognises. Normally, hydrus will skip downloading an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
+        
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._preimport_hash_check_type = ClientGUICommon.BetterChoice( self )
         self._preimport_url_check_type = ClientGUICommon.BetterChoice( self )
@@ -928,8 +1005,13 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         
         rows = []
         
-        rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
-        rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setVisible( False )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setVisible( False )
+        
+        #rows.append( ( 'force metadata fetch even if hash recognised and file appears "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
+        #rows.append( ( 'force metadata fetch even if url recognised and file appears "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
+        rows.append( ( 'check hashes to determine "already in db/previously deleted" outcome?: ', self._preimport_hash_check_type ) )
+        rows.append( ( 'check URLs to determine "already in db/previously deleted" outcome?: ', self._preimport_url_check_type ) )
         rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -985,6 +1067,9 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         
     
     def SetValue( self, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
+        
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfURLKnownAndFileAlreadyInDB() )
         
         preimport_hash_check_type = prefetch_import_options.GetPreImportHashCheckType()
         preimport_url_check_type = prefetch_import_options.GetPreImportURLCheckType()
@@ -1202,7 +1287,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
-        self._get_tags_filter_button = ClientGUITagFilter.TagFilterButton( tag_parsing_panel, message, get_tags_filter, label_prefix = 'adding: ' )
+        self._get_tags_filter_button = ClientGUITagFilter.TagFilterButton( tag_parsing_panel, message, get_tags_filter, label_prefix = 'adding: ', use_filter_language = True )
         
         hbox = QP.HBoxLayout()
         

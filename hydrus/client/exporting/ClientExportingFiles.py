@@ -851,7 +851,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if not self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE and self._delete_from_client_after_export:
             
-            my_files_media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
+            my_files_media_results = [ media_result for media_result in media_results if media_result.GetLocationsManager().IsInCombinedLocalFileDomains() ]
             
             reason = 'Deleted after export to Export Folder "{}".'.format( self._path )
             

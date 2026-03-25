@@ -40,7 +40,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FilenameTaggingOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -1358,7 +1358,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
         show_downloader_options = True
@@ -1420,7 +1420,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
             
         
     
-    def _SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
+    def _SetNoteImportOptions( self, note_import_options: NoteImportOptionsLegacy.NoteImportOptionsLegacy ):
         
         if self._gallery_import is not None:
             
@@ -1794,7 +1794,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
         
-        note_import_options = NoteImportOptions.NoteImportOptions()
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
         show_downloader_options = True

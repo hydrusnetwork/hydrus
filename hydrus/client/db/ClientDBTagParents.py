@@ -79,8 +79,8 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         self._service_ids_to_display_application_status = {}
         
-        self._service_ids_to_applicable_service_ids = None
-        self._service_ids_to_interested_service_ids = None
+        self._service_ids_to_applicable_service_ids: collections.defaultdict[ int, list ] | None = None
+        self._service_ids_to_interested_service_ids: collections.defaultdict[ int, set ] | None = None
         
         super().__init__( 'client tag parents', cursor )
         

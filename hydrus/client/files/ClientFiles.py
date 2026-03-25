@@ -179,12 +179,19 @@ def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None 
             
             pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
             
+            try:
+                
+                has_human_readable_embedded_metadata = HydrusImageMetadata.HasHumanReadableEmbeddedMetadata( pil_image )
+                
+            finally:
+                
+                pil_image.close()
+                
+            
         except Exception as e:
             
             return False
             
-        
-        has_human_readable_embedded_metadata = HydrusImageMetadata.HasHumanReadableEmbeddedMetadata( pil_image )
         
     
     return has_human_readable_embedded_metadata

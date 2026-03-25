@@ -184,8 +184,15 @@ def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: tuple[int, 
         raise HydrusExceptions.NoThumbnailFileException( str( e ) )
         
     
-    # convert to numpy rather than doing pil_image.resize because psd previews sometimes have 100% alpha and the resize applies that
-    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
+    try:
+        
+        # convert to numpy rather than doing pil_image.resize because psd previews sometimes have 100% alpha and the resize applies that
+        numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
+        
+    finally:
+        
+        pil_image.close()
+        
     
     thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
     
