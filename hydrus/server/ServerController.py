@@ -1,4 +1,5 @@
 import os
+import signal
 import requests
 import time
 import traceback
@@ -390,6 +391,9 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusData.Print( 'Server is running. Press Ctrl+C to quit.' )
         
+        signal.signal( signal.SIGTERM, self.CatchSignal )
+        signal.signal( signal.SIGINT, self.CatchSignal )
+        
         try:
             
             while not HG.model_shutdown and not self._shutdown:
@@ -603,6 +607,14 @@ class Controller( HydrusController.HydrusController ):
             
         
         HydrusController.HydrusController.ShutdownView( self )
+        
+    
+    def CatchSignal( self, sig, frame ):
+        
+        if sig in ( signal.SIGTERM, signal.SIGINT ):
+            
+            self.ShutdownFromServer()
+            
         
     
     def ShutdownFromServer( self ):

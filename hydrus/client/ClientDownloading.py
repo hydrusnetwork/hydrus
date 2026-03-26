@@ -273,7 +273,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             
             try:
                 
-                errors_occured = []
+                errors_occurred = []
                 file_successful = False
                 
                 media_result = self._controller.Read( 'media_result', hash )
@@ -347,7 +347,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                         
                     except Exception as e:
                         
-                        errors_occured.append( e )
+                        errors_occurred.append( e )
                         
                     
                 
@@ -356,11 +356,11 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                     total_successful_hashes_in_this_run += 1
                     
                 
-                if len( errors_occured ) > 0:
+                if len( errors_occurred ) > 0:
                     
                     if not file_successful:
                         
-                        raise errors_occured[0]
+                        raise errors_occurred[0]
                         
                     
                 
