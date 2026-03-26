@@ -53,7 +53,7 @@ title: Changelog
 ### nicer PIL memory cleanup
 
 * PIL images are now closed promptly (freeing up memory better and faster) in more locations: the visual tuning suite; jpeg quality estimation; icc profile inspection; embedded metadata inspection; exif inspection; decompression bomb testing; 'show file metadata' window; import metadata gen; icc profile inspection on load; on forced PIL loads that error out on conversion to numpy; on another standard method to load images; variable frame duration fetching, 'get number of times to play animation'; 'animation has valid duration'; serialisable object import; ugoira rendering; ugoira API rendering; ugoira property fetch; ugoira json property fetch; Ugoira thumb gen; PSD rendering; PSD thumb gen; the native PIL animation renderer; on EXIF rotation conversion; some weird dequantization; resolution fetch; when some thumbnail stuff errors out; some animation property fetch; OpenXML thumbnail gen; Paint.NET thumb gen; Krita thumb gen; Krita rendering; openraster thumb gen; openraster rendering
-* I went overkill here and yet there are still some gaps. I got all the file loads though, I think, which is the main stuff here that I thtink was lagging. some of it is also a little ugly. we'll see if this improves some lazy memory cleanup during heavy import. if it helps, I may revisit to clean up
+* I went overkill here and yet there are still some gaps. I got all the file loads though, I think, which is the main stuff here that I think was lagging. some of it is also a little ugly. we'll see if this improves some lazy memory cleanup during heavy import. if it helps, I may revisit to clean up
 
 ### import options overhaul
 

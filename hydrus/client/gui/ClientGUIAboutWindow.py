@@ -24,7 +24,7 @@ def render_availability_line( name: str, is_ok: bool, is_module_not_found: bool,
         
     else:
         
-        HydrusData.ShowText( f'Module {name} failed to import because of the following:' )
+        HydrusData.ShowText( f'Hey, one of your optional modules, "{name}", did not load, and the error is more complicated than "you do not have it". The error was:' )
         HydrusData.ShowText( error_trace )
         
         if name == 'mpv' and 'sio_flush' in error_trace:
@@ -61,6 +61,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     from hydrus.client import ClientTime
     from hydrus.client.gui import ClientGUICharts
     from hydrus.client.gui.canvas import ClientGUIMPV
+    from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
     from hydrus.client.networking import ClientNetworkingDomainTLDExtract
     from hydrus.client.parsing import ClientParsing
 
@@ -225,6 +226,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'lxml', ClientParsing.LXML_IS_OK, not ClientParsing.LXML_IS_OK, '' ) )
     availability_lines.append( render_availability_line( 'lz4', HydrusCompression.LZ4_OK, not HydrusCompression.LZ4_OK, '' ) )
     availability_lines.append( render_availability_line( 'olefile', HydrusOLEHandling.OLEFILE_OK, not HydrusOLEHandling.OLEFILE_OK, '' ) )
+    availability_lines.append( render_availability_line( 'QtMultimedia', ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IS_AVAILABLE, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_MODULE_NOT_FOUND, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'tldextract (under testing)', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
     
     #

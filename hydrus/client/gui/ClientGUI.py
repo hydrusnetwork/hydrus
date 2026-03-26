@@ -8658,7 +8658,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._persistent_mpv_widgets.append( mpv_widget )
         
     
-    def _UnloadAndPurgeQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayer):
+    def _UnloadAndPurgeQtMediaPlayer( self, qt_media_player: ClientGUIQtMediaPlayer.QtMediaPlayer ):
         
         if qt_media_player.IsCompletelyUnloaded():
             

@@ -1696,6 +1696,12 @@ class MediaContainer( QW.QWidget ):
             
             HydrusData.ShowText( 'MPV is not available!' )
             
+        elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QTMEDIAPLAYER and not ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IS_AVAILABLE:
+            
+            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
+            
+            HydrusData.ShowText( 'QtMediaPlayer is not available!' )
+            
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             

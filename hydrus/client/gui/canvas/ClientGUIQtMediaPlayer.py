@@ -1,21 +1,24 @@
+import traceback
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
-QT_MULTIMEDIA_OK = False
+QT_MULTIMEDIA_IS_AVAILABLE = True
+QT_MULTIMEDIA_MODULE_NOT_FOUND = False
+QT_MULTIMEDIA_IMPORT_ERROR = 'QtMultimedia seems fine!'
 
 try:
     
     from qtpy import QtMultimediaWidgets as QMW
     from qtpy import QtMultimedia as QM
     
-    QT_MULTIMEDIA_OK = True
+except Exception as e_qt_m:
     
-except Exception as e:
-    
-    pass
+    QT_MULTIMEDIA_IS_AVAILABLE = False
+    QT_MULTIMEDIA_MODULE_NOT_FOUND = isinstance( e_qt_m, ModuleNotFoundError )
+    QT_MULTIMEDIA_IMPORT_ERROR = traceback.format_exc()
     
 
 from hydrus.core import HydrusConstants as HC
@@ -35,9 +38,9 @@ if typing.TYPE_CHECKING:
     from hydrus.client.gui.canvas import ClientGUICanvas
     
 
-def GetAvailableAudioDevices() -> list[ QM.QAudioDevice ]:
+def GetAvailableAudioDevices() -> "list[ QM.QAudioDevice ]":
     
-    if not QT_MULTIMEDIA_OK:
+    if not QT_MULTIMEDIA_IS_AVAILABLE:
         
         return []
         
