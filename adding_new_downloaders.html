@@ -1042,6 +1042,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        updates
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2672,6 +2683,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        updates
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -2699,13 +2721,22 @@
 
 <h1 id="adding_new_downloaders">adding new downloaders<a class="headerlink" href="#adding_new_downloaders" title="Permanent link">&para;</a></h1>
 <h2 id="anonymous">all downloaders are user-creatable and -shareable<a class="headerlink" href="#anonymous" title="Permanent link">&para;</a></h2>
-<p>Since the big downloader overhaul, all downloaders can be created, edited, and shared by any user. Creating one from scratch is not simple, and it takes a little technical knowledge, but importing what someone else has created is easy.</p>
-<p>Hydrus objects like downloaders can sometimes be shared as data encoded into png files, like this:</p>
-<p><img alt="" src="images/easy-import-realbooru.com-search-2018.09.21.png" /></p>
-<p>This contains all the information needed for a client to add a realbooru tag search entry to the list you select from when you start a new download or subscription.</p>
-<p>You can get these pngs from anyone who has experience in the downloader system. An archive is maintained <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders">here</a>.</p>
-<p>To 'add' the easy-import pngs to your client, hit <em>network-&gt;downloaders-&gt;import downloaders</em>. A little image-panel will appear onto which you can drag-and-drop these png files. The client will then decode and go through the png, looking for interesting new objects and automatically import and link them up without you having to do any more. Your only further input on your end is a 'does this look correct?' check right before the actual import, just to make sure there isn't some mistake or other glaring problem.</p>
-<p>Objects imported this way will take precedence over existing functionality, so if one of your downloaders breaks due to a site change, importing a fixed png here will overwrite the broken entries and become the new default.</p>
+<p>The client starts with no downloaders, but all downloaders can be created, edited, and shared by any user. Creating one from scratch is not simple, and it takes a little technical knowledge, but importing what someone else has created is easy.</p>
+<p>Many Hydrus objects can be shared as data encoded into png files, like this:</p>
+<p><img alt="" src="images/artbooru%202026-03-29.png" /></p>
+<p>This simple png is encoded with data that hydrus can read. It contains all the information needed for a client to add an <a href="https://artbooru.com">artbooru</a> tag search entry to the list you select from when you start a new download or subscription.</p>
+<p>You can get these pngs from anyone who has experience in the downloader system. An archive of more is maintained by users <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders">here</a>.</p>
+<p>To 'add' the easy-import pngs to your client, hit <em>network-&gt;downloaders-&gt;import downloaders</em>. A little image-panel will appear. You can:</p>
+<ul>
+<li>Drag and drop a png file from a folder</li>
+<li>Drag and drop a (full-size) png from your web browser</li>
+<li>Click the image to open a file selection dialog for the png</li>
+<li>Copy the png bitmap ('Copy image'), file path, or raw downloader JSON into your clipboard and then hit the paste button</li>
+</ul>
+<p>The client will then decode and go through the png, looking for interesting new objects. It gives you a 'does this look correct?' check, just to make sure there isn't some mistake or other glaring problem, and then automatically imports and links everything up.</p>
+<h2 id="updates">updates<a class="headerlink" href="#updates" title="Permanent link">&para;</a></h2>
+<p>Objects imported this way will try to take precedence over existing functionality, so if one of your downloaders breaks due to a site change, importing a fixed png here will generally overwrite the broken entries and become the new default.</p>
+<p>Behind the scenes, downloaders are actually several different objects that are loosely connected. If successive updates break something or you are left with duplicate entries because of a rename, have a look around <em>network-&gt;downloader components</em> and you will see what is actually imported by these pngs. The best solution is to delete any 'GUGs' and 'parsers' with names related to your downloader so you have a fresh slate and then try a fresh import once more.</p>
 
 
 
@@ -2726,7 +2757,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 7, 2022 21:16:25 UTC">September 7, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

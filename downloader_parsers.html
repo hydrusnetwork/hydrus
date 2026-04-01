@@ -2634,7 +2634,7 @@
 
 <h1 id="parsers">Parsers<a class="headerlink" href="#parsers" title="Permanent link">&para;</a></h1>
 <p>In hydrus, a parser is an object that takes a single block of HTML or JSON data and returns many kinds of hydrus-level metadata.</p>
-<p>Parsers are flexible and potentially quite complicated. You might like to open <em>network-&gt;downloader components-&gt;manage parsers</em> and explore the UI as you read these pages. Check out how the default parsers already in the client work, and if you want to write a new one, see if there is something already in there that is similar--it is usually easier to duplicate an existing parser and then alter it than to create a new one from scratch every time.</p>
+<p>Parsers are flexible and potentially quite complicated. I assume you have imported some downloaders already, for reference. You might like to open <em>network-&gt;downloader components-&gt;manage parsers</em> and explore the UI as you read these pages. If you want to write a new one, see if another like it already exists--it is usually easier to duplicate and edit an existing parser than create a new one from scratch every time.</p>
 <p>There are three main components in the parsing system (click to open each component's help page):</p>
 <ul>
 <li><a href="downloader_parsers_formulae.html"><strong>Formulae:</strong></a> Take parsable data, search it in some manner, and return 0 to n strings.</li>
@@ -2643,11 +2643,11 @@
 </ul>
 <p>Once you are comfortable with these objects, you might like to check out these walkthroughs, which create full parsers from nothing:</p>
 <ul>
-<li><a href="downloader_parsers_full_example_gallery_page.html">e621 HTML gallery page</a></li>
-<li><a href="downloader_parsers_full_example_file_page.html">Gelbooru HTML file page</a></li>
-<li><a href="downloader_parsers_full_example_api.html">Artstation JSON file page API</a></li>
+<li><a href="downloader_parsers_full_example_gallery_page.html">gallery page</a></li>
+<li><a href="downloader_parsers_full_example_file_page.html">file page</a></li>
+<li><a href="downloader_parsers_full_example_api.html">JSON file page</a></li>
 </ul>
-<p>Once you are comfortable with parsers, and if you are feeling brave, check out how the default imageboard and pixiv parsers work. These are complicated and use more experimental areas of the code to get their job done. If you are trying to get a new imageboard parser going and can't figure out subsidiary page parsers, send me a mail or something and I'll try to help you out!</p>
+<p>Some parsers are simple, others are complicated and use more unusual hydrus tech to get their job done. Older internet tech is easier, newer stuff is often too complicated and you may need to rely on a third-party downloader.</p>
 <p>When you are making a parser, consider this checklist (you might want to copy/have your own version of this somewhere):</p>
 <ul>
 <li>Do you get good URLs with good priority? Do you ever accidentally get favourite/popular/advert results you didn't mean to?</li>
@@ -2655,7 +2655,7 @@
 <li>Do you get nice namespaced tags? Are any unwanted single characters like -/+/? getting through?</li>
 <li>Is the file hash available anywhere?</li>
 <li>Is a source/post time available?</li>
-<li>Is a source URL available? Is it good quality, or does it often just point to an artist's base twitter profile? If you pull it from text or a tooltip, is it clipped for longer URLs?</li>
+<li>Is a source URL available? Is it good quality, or does it often just point to an artist's base social media profile URL rather than an actual file post URL?</li>
 </ul>
 
 
@@ -2677,7 +2677,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

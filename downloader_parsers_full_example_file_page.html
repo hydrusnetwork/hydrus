@@ -2812,64 +2812,55 @@
 
 
 <h1 id="file_page_example">file page example<a class="headerlink" href="#file_page_example" title="Permanent link">&para;</a></h1>
-<p>Let's look at this page: <a href="https://gelbooru.com/index.php?page=post&amp;s=view&amp;id=3837615">https://gelbooru.com/index.php?page=post&amp;s=view&amp;id=3837615</a>.</p>
+<p>This tutorial is very general. You might like to load up a parser you already have in this edit UI and follow along to see how it implements its specific solution.</p>
+<p>Load up a booru-style html 'post' page, where you'll typically have some tags on the left and a single image.</p>
 <p>What sorts of data are we interested in here?</p>
 <ul>
-<li>The image URL.</li>
+<li>The highest quality image URL.</li>
 <li>The different tags and their namespaces.</li>
-<li>The secret md5 hash buried in the HTML.</li>
+<li>Any hash (e.g. md5) buried in the HTML.</li>
 <li>The post time.</li>
-<li>The Deviant Art source URL.</li>
+<li>Any source URLs ("this originally came from").</li>
 </ul>
 <h2 id="the_file_url">the file url<a class="headerlink" href="#the_file_url" title="Permanent link">&para;</a></h2>
 <p>A tempting strategy for pulling the file URL is to just fetch the src of the embedded <code class="highlight"><span class="p">&lt;</span><span class="nt">img</span><span class="p">&gt;</span></code> tag, but:</p>
 <ul>
-<li>If the booru also supports videos or flash, you'll have to write separate and likely more complicated rules for <code class="highlight"><span class="p">&lt;</span><span class="nt">video</span><span class="p">&gt;</span></code> and <code class="highlight"><span class="p">&lt;</span><span class="nt">embed</span><span class="p">&gt;</span></code> tags.</li>
-<li>If the booru shows 'sample' sizes for large images--as this one does!--pulling the src of the image you see won't get the full-size original for large images.</li>
+<li>If the site also supports videos or flash, you'll have to write separate and likely more complicated rules for <code class="highlight"><span class="p">&lt;</span><span class="nt">video</span><span class="p">&gt;</span></code> and <code class="highlight"><span class="p">&lt;</span><span class="nt">embed</span><span class="p">&gt;</span></code> tags.</li>
+<li>If the site shows 'sample' sizes for large images, pulling the src of the image you see won't get the full-size original for large images.</li>
 </ul>
-<p>If you have an account with the site you are parsing and have clicked the appropriate 'Always view original' setting, you may not see these sorts of sample-size banners! I recommend you log out of/go incognito for sites you are inspecting for hydrus parsing (unless a log-in is required to see content, so the hydrus user will have to set up hydrus-side login to actually use the parser), or you can easily NSFW-gates and other logged-out hurdles.</p>
-<p>When trying to pin down the right link, if there are no good alternatives, you often have to write several File URL rules with different precedence, saying 'get the "Click Here to See Full Size" link at 75' and 'get the embed's "src" at 25' and so on to make sure you cover different situations, but as it happens Gelbooru always posts the actual File URL at:</p>
-<ul>
-<li><code class="highlight"><span class="p">&lt;</span><span class="nt">meta</span> <span class="na">property</span><span class="o">=</span><span class="s">&quot;og:image&quot;</span> <span class="na">content</span><span class="o">=</span><span class="s">&quot;https://gelbooru.com/images/38/6e/386e12e33726425dbd637e134c4c09b5.jpeg&quot;</span> <span class="p">/&gt;</span></code> under the <code class="highlight"><span class="p">&lt;</span><span class="nt">head</span><span class="p">&gt;</span></code></li>
-<li><code class="highlight"><span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;https://simg3.gelbooru.com//images/38/6e/386e12e33726425dbd637e134c4c09b5.jpeg&quot;</span> <span class="na">target</span><span class="o">=</span><span class="s">&quot;_blank&quot;</span> <span class="na">style</span><span class="o">=</span><span class="s">&quot;font-weight: bold;&quot;</span><span class="p">&gt;</span>Original image<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;</span></code> which can be found by putting a String Match in the html formula.</li>
-</ul>
-<p><code class="highlight"><span class="p">&lt;</span><span class="nt">meta</span><span class="p">&gt;</span></code> with <code>property="og:image"</code> is easy to search for (and they use the same tag for video links as well!). For the Original Image, you can use a String Match like so:</p>
-<p><a href="images/downloader_post_example_clean.png"><img alt="" src="images/downloader_post_example_clean.png" /></a></p>
-<p>Gelbooru uses "Original Image" even when they link to webm, which is helpful, but like "og:image", it could be changed to 'video' in future.</p>
-<p>I think I wrote my gelbooru parser before I added String Matches to individual HTML formulae tag rules, so I went with this, which is a bit more cheeky:</p>
-<p><img alt="" src="images/downloader_post_example_cheeky.png" /></p>
-<p>But it works. Sometimes, just regexing for links that fit the site's CDN is a good bet for finding difficult stuff.</p>
+<p>If you have an account with the site you are parsing and have clicked the appropriate 'Always view original' setting, you may not see these sorts of sample-size banners! I recommend you log out of/go incognito for sites you are inspecting for hydrus parsing (unless a log-in is required to see content, so the hydrus user will have to set up hydrus-side login to actually use the parser), or you can easily miss content gates and other logged-out surprises.</p>
+<p>When trying to pin down the right link, if there are no reliable single answers, you often have to write several File URL content parsers. Make sure you set different precedence based on how good/reliable they are, for instance setting the 'get the "Click Here to See Full Size" link' at 75 and 'get the embed's "src"' at 25 and so on to make sure you cover different situations with a good failsafe.</p>
 <h2 id="tags">tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h2>
-<p>Most boorus have a taglist on the left that has a nice id or class you can pull, and then each namespace gets its own class for CSS-colouring:</p>
+<p>Most boorus have a taglist on the left that has a nice id or class you can pull. Each namespace often gets its own class for CSS-colouring:</p>
 <p><img alt="" src="images/downloader_post_example_meta_tag.png" /></p>
-<p>Make sure you browse around the booru for a bit, so you can find all the different classes they use. character/artist/copyright are common, but some sneak in the odd meta/species/rating.</p>
-<p>Skipping ?/-/+ characters can be a pain if you are lacking a nice tag-text class, in which case you can add a regex String Match to the HTML formula (as I do here, since Gelb offers '?' links for tag definitions) like [^\?\-+\s], which means "the text includes something other than just '?' or '-' or '+' or whitespace".</p>
+<p>Make sure you browse around the booru for a bit, so you can find all the different classes they use.</p>
+<p>Skipping ?/-/+ characters can be a pain if you are lacking a nice tag-text class, in which case you can add a regex String Match to the HTML formula like this:</p>
+<p><code>^(?!(\?|\-|\+|\s)$).+$</code></p>
+<p>Which means "the text is something other than just '?' or '-' or '+' or ' '".</p>
+<p>Or</p>
+<p><code>^(?![\?\-\+\s]+$).+$</code></p>
+<p>Which means "the text is something other than just the '?-+ ' characters".</p>
 <h2 id="md5_hash">md5 hash<a class="headerlink" href="#md5_hash" title="Permanent link">&para;</a></h2>
-<p>If you look at the Gelbooru File URL, <a href="https://gelbooru.com/images/38/6e/386e12e33726425dbd637e134c4c09b5.jpeg"><strong>https://gelbooru.com/images/38/6e/386e12e33726425dbd637e134c4c09b5.jpeg</strong></a>, you may notice the filename is all hexadecimal. It looks like they store their files under a two-deep folder structure, using the first four characters--386e here--as the key. It sure looks like '386e12e33726425dbd637e134c4c09b5' is not random ephemeral garbage!</p>
-<p>In fact, Gelbooru use the MD5 of the file as the filename. Many storage systems do something like this (hydrus uses SHA256!), so if they don't offer a <code class="highlight"><span class="p">&lt;</span><span class="nt">meta</span><span class="p">&gt;</span></code> tag that explicitly states the md5 or sha1 or whatever, you can sometimes infer it from one of the file links. This screenshot is from the more recent version of hydrus, which has the more powerful 'string processing' system for string transformations. It has an intimidating number of nested dialogs, but we can stay simple for now, with only the one regex substitution step inside a string 'converter':</p>
-<p><img alt="" src="images/downloader_post_example_md5.png" /></p>
-<p>Here we are using the same property="og:image" rule to fetch the File URL, and then we are regexing the hex hash with <code>.*(\[0-9a-f\]{32}).*</code> (MD5s are 32 hex characters). We select 'hex' as the encoding type. Hashes require a tiny bit more data handling behind the scenes, but in the Content Parser test page it presents the hash again neatly in English: "md5 hash: 386e12e33726425dbd637e134c4c09b5"), meaning everything parsed correct. It presents the hash in hex even if you select the encoding type as base64.</p>
-<p>If you think you have found a hash string, you should obviously test your theory! The site might not be using the actual MD5 of file bytes, as hydrus does, but instead some proprietary scheme. Download the file and run it through a program like HxD (or hydrus!) to figure out its hashes, and then search the View Source for those hex strings--you might be surprised!</p>
-<p>Finding the hash is hugely beneficial for a parser--it lets hydrus skip downloading files without ever having seen them before!</p>
+<p>If you look at the file URL, you'll somettimes get something like '474509d5166b37344f999c68e4de70ed.jpeg', all hexadecimal. It might be stored under a path like <code>images/47/45/474509d5166b37344f999c68e4de70ed.jpeg</code>, with the <code>/47/45</code> prefix. It sure looks like '474509d5166b37344f999c68e4de70ed' is not random ephemeral garbage!</p>
+<p>Many boorus use the md5 hash of the file as the filename. Many storage systems do something like this, either md5 or another hash type--hydrus uses sha256!--so if they don't offer a <code class="highlight"><span class="p">&lt;</span><span class="nt">meta</span><span class="p">&gt;</span></code> tag that explicitly states the md5 or sha1 or whatever, you can sometimes infer it from one of the file links.</p>
+<p>You might like to check an existing parser to see how hash parsing works, but in general you just want that hex, as hex. A regex in the style of <code>.*(\[0-9a-f\]{32}).*</code> (MD5s are 32 hex characters) can be helpful. If the hash comes in base64 format, just select that in the content parser.</p>
+<p>If you think you have found a hash string, you should obviously test your theory! The site might not be using the actual MD5 of file bytes, as hydrus does, but instead some proprietary scheme. Download the file and run it through a program like HxD (or hydrus!) to figure out its hashes, and then search the View Source for those hex strings--you might be surprised! Some CDNs can also mess this up, where the file the site thinks it is hosting is optimised in a CloudFlare-style cache and actually differs. An incorrect hash is generally harmless, but a correct one is priceless, so if you can find a hash, even one only 80% reliable because of a flaky CDN, do it!</p>
 <h2 id="source_time">source time<a class="headerlink" href="#source_time" title="Permanent link">&para;</a></h2>
 <p>Post/source time lets subscriptions and watchers make more accurate guesses at current file velocity. It is neat to have if you can find it, but:</p>
-<p><b class="dealwithit">FUCK ALL TIMEZONES FOREVER</b></p>
-<p>Gelbooru offers--</p>
-<div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span>Posted: 2017-08-18 19:59:44<span class="p">&lt;</span><span class="nt">br</span> <span class="p">/&gt;</span> by <span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;index.php?page=account&amp;s=profile&amp;uname=jayage5ds&quot;</span><span class="p">&gt;</span>jayage5ds<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+<p><b class="dealwithit">TIMEZONES ARE A PAIN</b></p>
+<p>If your timestamp is in UTC, great. If it has a timezone attached, do not try overly strong to correct for it--there are so many unusual exceptions to IRL timezone data that trying to accomodate it often makes you crazy and causes more problems than it solves. Swallow the &plusmn; 12 hour imprecision and move on.</p>
+<p>We want to get something that looks like a UNIX integer timestamp. You might see something like--</p>
+<div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span>Posted: 2016-06-11 19:54:34<span class="p">&lt;</span><span class="nt">br</span> <span class="p">/&gt;</span> by <span class="p">&lt;</span><span class="nt">a</span> <span class="na">href</span><span class="o">=</span><span class="s">&quot;index.php?page=account&amp;s=profile&amp;uname=someuser&quot;</span><span class="p">&gt;</span>someuser<span class="p">&lt;/</span><span class="nt">a</span><span class="p">&gt;&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
 </code></pre></div>
-<p>--so let's see how we can turn that into a Unix timestamp:</p>
-<p><img alt="" src="images/downloader_post_example_source_time.png" /></p>
-<p>I find the <code class="highlight"><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span></code> that starts "Posted: " and then decode the date according to the hackery-dackery-doo format from <a href="https://docs.python.org/2/library/datetime.html#strftime-and-strptime-behavior">here</a>. <code>%c</code> and <code>%z</code> are unreliable, and attempting timezone adjustments is overall a supervoid that will kill your time for no real benefit--subs and watchers work fine with 12-hour imprecision, so if you have a +0300 or EST in your string, just cut those characters off with another String Transformation. As long as you are getting about the right day, you are fine.</p>
+<p>--so we would want to grab the string help by the <code class="highlight"><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span></code> and then use a regex substitution in String Processing to capture the <code>2016-06-11 19:54:34</code> string--something like <code>.*(\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d).* -&gt; \1</code> is nice and KISS--and then apply the special 'datestring to timestamp' conversion rule. There's an 'easy/automatic' mode that uses a datestring parsing library to figure it out for you, but you can do a <code>%d/%m/%y %H:%M:%S</code>-style fixed parse if you like with the 'advanced' rule. I recommend the easy rule in all cases--it can handle other locales and does a decent job when given timezone info. Here's the kind of thing you want:</p>
+<p><img alt="" src="images/downloader_post_example_timestamp_string_conversion.png" /></p>
 <h2 id="source_url">source url<a class="headerlink" href="#source_url" title="Permanent link">&para;</a></h2>
-<p>Source URLs are nice to have if they are high quality. Some boorus only ever offer artist profiles, like <code>https://twitter.com/artistname</code>, whereas we want singular Post URLs that point to other places that host this work. For Gelbooru, you could fetch the Source URL as we did source time, searching for "Source: ", but they also offer more easily in an edit form:</p>
-<div class="highlight"><pre><span></span><code><span class="p">&lt;</span><span class="nt">input</span> <span class="na">type</span><span class="o">=</span><span class="s">&quot;text&quot;</span> <span class="na">name</span><span class="o">=</span><span class="s">&quot;source&quot;</span> <span class="na">size</span><span class="o">=</span><span class="s">&quot;40&quot;</span> <span class="na">id</span><span class="o">=</span><span class="s">&quot;source&quot;</span> <span class="na">value</span><span class="o">=</span><span class="s">&quot;https://www.deviantart.com/art/Lara-Croft-Artifact-Dive-699335378&quot;</span> <span class="p">/&gt;</span>
-</code></pre></div>
-<p>This is a bit of a fragile location to parse from--Gelb could change or remove this form at any time, whereas the "Posted: " <code class="highlight"><span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span></code> is probably firmer, but I expect I wrote it before I had String Matches in. It works for now, which in this game is often Good Enough™.</p>
-<p>Also--be careful pulling from text or tooltips rather than an href-like attribute, as whatever is presented to the user may be clipped for longer URLs. Make sure you try your rules on a couple of different pages to make sure you aren't pulling "https://www.deviantart.com/art/Lara..." by accident anywhere!</p>
+<p>Source URLs are nice to have if they are high quality. Some boorus only ever offer artist social media profile landing pages, which are not so useful. We want singular Post URLs that point to other places that host this work.</p>
+<p>Be careful pulling from text or tooltips rather than an href-like attribute, as whatever is presented to the user may be clipped for longer URLs. Make sure you try your rules on a couple of different pages. Source URLs are often in fragile locations that are tricky to parse. In this game, 'it works for now' is often Good Enough™.</p>
 <h2 id="summary">summary<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h2>
-<p>Phew--all that for a bit of Lara Croft! Thankfully, most sites use similar schemes. Once you are familiar with the basic idea, the only real work is to duplicate an existing parser and edit for differences. Our final parser looks like this:</p>
+<p>Most sites use similar schemes, so remember to check against existing parsers and don't be afraid to duplicate and edit rather than start anew every time. A final parser usually looks like this:</p>
 <p><img alt="" src="images/downloader_post_example_final.png" /></p>
-<p>This is overall a decent parser. Some parts of it may fail when Gelbooru update to their next version, but that can be true of even very good parsers with multiple redundancy. For now, hydrus can use this to quickly and efficiently pull content from anything running Gelbooru 0.2.5., and the effort spent now can save millions of combined <em>right-click-&gt;save as</em> and manual tag copies in future. If you make something like this and share it about, you'll be doing a good service for those who could never figure it out.</p>
+<p>If you make something like this that works, you can be proud of yourself.</p>
 
 
 
@@ -2890,7 +2881,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 7, 2022 21:16:25 UTC">September 7, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

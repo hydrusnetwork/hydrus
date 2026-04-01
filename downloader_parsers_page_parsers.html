@@ -2747,50 +2747,18 @@
 
 <h1 id="page_parsers">Page Parsers<a class="headerlink" href="#page_parsers" title="Permanent link">&para;</a></h1>
 <p>We can now produce individual rows of rich metadata. To arrange them all into a useful structure, we will use Page Parsers.</p>
-<p>The Page Parser is the top level parsing object. It takes a single document and produces a list--or a list of lists--of metadata. Here's the main UI:</p>
-<p><img alt="" src="images/edit_page_parser_panel_e621_main.png" /></p>
-<p>Notice that the edit panel has three sub-pages.</p>
+<p>The Page Parser is the top level parsing object. It takes a single document and produces a list--or a list of lists--of metadata. Each Post/Gallery/Watchable URL Class should have a corresponding Page Parser linked to it under <code>network-&gt;downloader components-&gt;manage url class links</code>. </p>
+<p>Load up a parser you have imported into the system and look at the UI. Notice that the edit panel has three sub-pages--main, content parsers, and subsidiary page parsers.</p>
 <h2 id="main">main<a class="headerlink" href="#main" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>Name</strong>: Like for content parsers, I recommend you add good names for your parsers.</li>
-<li><strong>Pre-parsing conversion</strong>: If your API source encodes or wraps the data you want to parse, you can do some string transformations here. You won't need to use this very often, but if your source gives the JSON wrapped in javascript (like the old tumblr API), it can be invaluable.</li>
+<li><strong>Name</strong>: Like for content parsers, I recommend you add good names for your parsers. Something like "my_site file post parser - 2024-06-11" is great.</li>
+<li><strong>Pre-parsing conversion</strong>: If your API source encodes or wraps the data you want to parse, you can do some string transformations here. You almost certainly will not need this, but if the site is crazy and spits out an invalid response or wraps JSON inside a javascript variable, this is where to look.</li>
 <li><strong>Example URLs</strong>: Here you should add a list of example URLs the parser works for. This lets the client automatically link this parser up with URL classes for you and any users you share the parser with.</li>
 </ul>
 <h2 id="content_parsers">content parsers<a class="headerlink" href="#content_parsers" title="Permanent link">&para;</a></h2>
-<p>This page is just a simple list:</p>
-<p><img alt="" src="images/edit_page_parser_panel_e621_content_parsers.png" /></p>
-<p>Each content parser here will be applied to the document and returned in this page parser's results list. Like most boorus, e621's File Pages only ever present one file, and they have simple markup, so the solution here was simple. The full contents of that test window are:</p>
-<div class="highlight"><pre><span></span><code>*** 1 RESULTS BEGIN ***
-
-tag: character:krystal
-tag: creator:s mino930
-file url: https://static1.e621.net/data/fc/b6/fcb673ed89241a7b8d87a5dcb3a08af7.jpg
-tag: anthro
-tag: black nose
-tag: blue fur
-tag: blue hair
-tag: clothing
-tag: female
-tag: fur
-tag: green eyes
-tag: hair
-tag: hair ornament
-tag: jewelry
-tag: short hair
-tag: solo
-tag: video games
-tag: white fur
-tag: series:nintendo
-tag: series:star fox
-tag: species:canine
-tag: species:fox
-tag: species:mammal
-
-*** RESULTS END ***
-</code></pre></div>
-<p>When the client sees this in a downloader context, it will where to download the file and which tags to associate with it based on what the user has chosen in their 'tag import options'.</p>
+<p>We've seen this before in the content parser help. All these things are putting out different rows of interesting metadata. The test panel directly shows their merged output.</p>
 <h2 id="subsidiary_page_parsers">subsidiary page parsers<a class="headerlink" href="#subsidiary_page_parsers" title="Permanent link">&para;</a></h2>
-<p>Here be dragons. This was an attempt to make parsing more helpful in certain API situations, but it ended up ugly. I do not recommend you use it, as I will likely scratch the whole thing and replace it with something better one day. It basically splits the page up into pieces that can then be parsed by nested page parsers as separate objects, but the UI and workflow is hell. Afaik, the imageboard API parsers use it, but little/nothing else. If you are really interested, check out how those work and maybe duplicate to figure out your own imageboard parser and/or send me your thoughts on how to separate File URL/timestamp combos better.</p>
+<p>Here be dragons. This was an attempt to make parsing more helpful in certain API situations, but it ended up ugly. I do not recommend you use it unless you see another example use it and intuitively understand what is going on. It basically splits the page up into pieces that can then be parsed by nested page parsers as separate objects, but the UI and workflow is hell.</p>
 
 
 
@@ -2811,7 +2779,7 @@ tag: species:mammal
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 7, 2022 21:16:25 UTC">September 7, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

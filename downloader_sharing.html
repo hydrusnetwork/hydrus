@@ -2631,13 +2631,14 @@
 
 
 <h1 id="sharing_downloaders">Sharing Downloaders<a class="headerlink" href="#sharing_downloaders" title="Permanent link">&para;</a></h1>
-<p>If you are working with users who also understand the downloader system, you can swap your GUGs, URL Classes, and Parsers separately using the import/export buttons on the relevant dialogs, which work in pngs and clipboard text.</p>
-<p>But if you want to share conveniently, and with users who are not familiar with the different downloader objects, you can package everything into a single easy-import png as per <a href="adding_new_downloaders.html">here</a>.</p>
+<p>If you are working with users who also understand the components of the downloader system, you can swap your GUGs, URL Classes, and Parsers separately using the import/export buttons on the relevant dialogs, which work in pngs and clipboard text.</p>
+<p>If you want to share conveniently, and with users who are not familiar with the different downloader objects, you can package everything into a single easy-import png as per <a href="adding_new_downloaders.html">here</a>.</p>
 <p>The dialog to use is <em>network-&gt;downloader components-&gt;export downloaders</em>:</p>
 <p><img alt="" src="images/downloader_export_panel.png" /></p>
 <p>It isn't difficult. Essentially, you want to bundle enough objects to make one or more 'working' GUGs at the end. I recommend you start by just hitting 'add gug', which--using Example URLs--will attempt to figure out everything you need by itself.</p>
-<p>This all works on Example URLs and some domain guesswork, so make sure your url classes are good and the parsers have correct Example URLs as well. If they don't, they won't all link up neatly for the end user. If part of your downloader is on a different domain to the GUGs and Gallery URLs, then you'll have to add them manually. Just start with 'add gug' and see if it looks like enough.</p>
-<p>Once you have the necessary and sufficient objects added, you can export to png. You'll get a similar 'does this look right?' summary as what the end-user will see, just to check you have everything in order and the domains all correct. If that is good, then make sure to give the png a sensible filename and embellish the title and description if you need to. You can then send/post that png wherever, and any regular user will be able to use your work.</p>
+<p>This all works on Example URLs and some domain guesswork, so make sure your url classes are good and the parsers have correct Example URLs as well. If they don't, they won't all link up neatly for the end user. If part of your downloader is on a different domain to the GUGs and Gallery URLs, then you'll have to add them manually.</p>
+<p>Once you have the necessary and sufficient objects added, hit 'export to png'. You'll get a similar 'does this look right?' summary as what the end-user will see, just to check you have everything in order and the domains all correct. If that is good, then make sure to give the png a sensible filename and embellish the title and description if you need to. You can then send/post that png wherever, and any regular user will be able to use your work. All the data is embedded in the image, and PNG image content does not change even if an intermediary host strips header data or optimises the compression, so these have proven stable and reliable.</p>
+<p>One extra note, though--if your client is all updated and you use parsing tech that I only added two weeks ago, the end-user also needs to be updated to at least two weeks ago. If an older, non-updated client tries to import a downloader with new tech, it'll say something like 'this parser was made with new tech I do not understand' and bail out. Doesn't happen all that much, but it can.</p>
 
 
 
@@ -2658,7 +2659,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 30, 2022 22:06:58 UTC">November 30, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

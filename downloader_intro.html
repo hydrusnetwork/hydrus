@@ -2748,29 +2748,30 @@
 <p>Also this help is pretty old. The basics are unchanged, but the screenshots are out of date! Good luck!</p>
 </div>
 <h2 id="intro">this system<a class="headerlink" href="#intro" title="Permanent link">&para;</a></h2>
-<p>The first versions of hydrus's downloaders were all hardcoded and static--I wrote everything into the program itself and nothing was user-creatable or -fixable. After the maintenance burden of the entire messy system proved too large for me to keep up with and a semi-editable booru system proved successful, I decided to overhaul the entire thing to allow user creation and sharing of every component. It is designed to be very simple to the front-end user--they will typically handle a couple of png files and then select a new downloader from a list--but very flexible (and hence potentially complicated) on the back-end. These help pages describe the different compontents with the intention of making an HTML- or JSON- fluent user able to create and share a full new downloader on their own.</p>
-<p>As always, this is all under active development. Your feedback on the system would be appreciated, and if something is confusing or you discover something in here that is out of date, please <a href="contact.html">let me know</a>.</p>
+<p>The first versions of hydrus's downloaders were all hardcoded and static--I wrote everything into the program itself and nothing was user-creatable or -fixable. After the maintenance burden of the entire messy system proved too large for me to keep up with and a semi-editable template system proved successful, I decided to overhaul the entire thing to allow user creation and sharing of every component. It is designed to be simple to the front-end user--they will typically handle a couple of special png files and then select a new downloader from a list--but very flexible (and hence potentially complicated) on the back-end. These help pages describe the different compontents with the intention of making an HTML- or JSON- fluent user able to create and share a full new downloader on their own.</p>
+<p>Many years later, in 2026, I am now removing the default downloaders from the client entirely. I no longer maintain anything, and everything is managed by users. The tutorials here are similarly more generic. I only work on the tech, not the implementation! Your feedback on the system would be appreciated, and if something is confusing or simply way too out of date, please <a href="contact.html">let me know</a>.</p>
+<p>Because the client is now empty at start, if you want rich examples to look at, you'll need to find some. If you haven't yet, I strongly recommend you import some downloaders before you start on this. Have the UI open while you go through everything and don't be afraid to click around. If you break something, just hit cancel a bunch.</p>
 <h2 id="downloader">what is a downloader?<a class="headerlink" href="#downloader" title="Permanent link">&para;</a></h2>
 <p>In hydrus, a downloader is one of:</p>
 <dl>
 <dt><strong>Gallery Downloader</strong></dt>
 <dd>This takes a string like 'blue_eyes' to produce a series of thumbnail gallery page URLs that can be parsed for image page URLs which can ultimately be parsed for file URLs and metadata like tags. Boorus fall into this category.</dd>
 <dt><strong>URL Downloader</strong></dt>
-<dd>This does just the Gallery Downloader's back-end--instead of taking a string query, it takes the gallery or post URLs directly from the user, whether that is one from a drag-and-drop event or hundreds pasted from clipboard. For our purposes here, the URL Downloader is a subset of the Gallery Downloader.</dd>
+<dd>This does the non-search component of the Gallery Downloader--instead of taking a query text, it takes the gallery or post URLs directly from the user, whether that is one from a drag-and-drop event or pasted <em>en masse</em> from clipboard. For our purposes here, the URL Downloader is a technical subset of the Gallery Downloader and we won't talk about it.</dd>
 <dt><strong>Watcher</strong></dt>
 <dd>This takes a URL that it will check in timed intervals, parsing it for new URLs that it then queues up to be downloaded. It typically stops checking after the 'file velocity' (such as '1 new file per day') drops below a certain level. It is mostly for watching imageboard threads.</dd>
 <dt><strong>Simple Downloader</strong></dt>
-<dd>This takes a URL one-time and parses it for direct file URLs. This is a miscellaneous system for certain simple gallery types and some testing/'I just need the third <code>&lt;img&gt;</code> tag's <code>src</code> on this one page' jobs.</dd>
+<dd>This takes a URL one-time and parses it for direct file URLs to download. This is a miscellaneous system for certain simple gallery types and some testing/'I just need the third <code>&lt;img&gt;</code> tag's <code>src</code> on this one page' jobs.</dd>
 </dl>
 <p>The system currently supports HTML and JSON parsing. XML should be fine under the HTML parser--it isn't strict.</p>
 <h2 id="pipeline">what does a downloader do?<a class="headerlink" href="#pipeline" title="Permanent link">&para;</a></h2>
 <p>The Gallery Downloader is the most complicated downloader and uses all the possible components. In order for hydrus to convert our example 'blue_eyes' query into a bunch of files with tags, it needs to:</p>
 <ul>
-<li>Present some user interface named 'safebooru tag search' to the user that will convert their input of 'blue_eyes' into <a href="https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0">https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</a>.</li>
-<li>Recognise <a href="https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0">https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</a> as a Safebooru Gallery URL.</li>
-<li>Convert the HTML of a Safebooru Gallery URL into a list URLs like <a href="https://safebooru.org/index.php?page=post&amp;s=view&amp;id=2437965">https://safebooru.org/index.php?page=post&amp;s=view&amp;id=2437965</a> and possibly a 'next page' URL (e.g. <a href="https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=40">https://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=40</a>) that points to the next page of thumbnails.</li>
-<li>Recognise the <a href="https://safebooru.org/index.php?page=post&amp;s=view&amp;id=2437965">https://safebooru.org/index.php?page=post&amp;s=view&amp;id=2437965</a> URLs as Safebooru Post URLs.</li>
-<li>Convert the HTML of a Safebooru Post URL into a file URL like <a href="https://safebooru.org//images/2329/b6e8c263d691d1c39a2eeba5e00709849d8f864d.jpg">https://safebooru.org//images/2329/b6e8c263d691d1c39a2eeba5e00709849d8f864d.jpg</a> and some tags like: 1girl, bangs, black gloves, blonde hair, blue eyes, braid, closed mouth, day, fingerless gloves, fingernails, gloves, grass, hair ornament, hairclip, hands clasped, creator:hankuri, interlocked fingers, long hair, long sleeves, outdoors, own hands together, parted bangs, pointy ears, character:princess zelda, smile, solo, series:the legend of zelda, underbust.</li>
+<li>Present some user interface named 'somebooru tag search' to the user that will convert their input of 'blue_eyes' into <code>https://somebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</code>.</li>
+<li>Recognise <code>https://somebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</code> as a Somebooru Gallery URL.</li>
+<li>Download and convert the HTML of a Somebooru Gallery URL into a list URLs like <code>https://somebooru.org/index.php?page=post&amp;s=view&amp;id=123456</code> and possibly a 'next page' URL (e.g. <code>https://somebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=40</code>) that points to the next page of thumbnails.</li>
+<li>Recognise the list of <code>https://somebooru.org/index.php?page=post&amp;s=view&amp;id=123456</code>-like URLs as Somebooru Post URLs.</li>
+<li>Download and convert the HTML of a Somebooru Post URL into a file URL like <code>https://somebooru.org//images/abcd/0123456789abcdef0123456789abcdef.jpg</code> and some tags like: 1girl, bangs, black gloves, blonde hair, blue eyes, braid, closed mouth, day, fingerless gloves, fingernails, gloves, grass, hair ornament, hairclip, hands clasped, creator:hankuri, interlocked fingers, long hair, long sleeves, outdoors, own hands together, parted bangs, pointy ears, character:cool princess, smile, solo, series:cool princess adventure.</li>
 </ul>
 <p>So we have three components:</p>
 <ul>
@@ -2799,7 +2800,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 22, 2025 21:40:53 UTC">October 22, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

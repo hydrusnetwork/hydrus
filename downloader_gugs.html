@@ -2724,32 +2724,30 @@
 <ul>
 <li>blue_eyes</li>
 <li>blue_eyes blonde_hair</li>
-<li>InCase</li>
-<li>elsa dandon_fuga</li>
-<li>wlop</li>
-<li>goth* order:id_asc</li>
+<li>ArtistName</li>
+<li>user_name</li>
+<li>gothic* order:id_asc</li>
 </ul>
 <p>And convert them into an initialising Gallery URL, such as:</p>
 <ul>
-<li><a href="http://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0">http://safebooru.org/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</a></li>
-<li><a href="https://konachan.com/post?page=1&amp;tags=blonde_hair+blue_eyes">https://konachan.com/post?page=1&amp;tags=blonde_hair+blue_eyes</a></li>
-<li><a href="https://www.hentai-foundry.com/pictures/user/InCase/page/1">https://www.hentai-foundry.com/pictures/user/InCase/page/1</a></li>
-<li><a href="http://rule34.paheal.net/post/list/elsa dandon_fuga/1">http://rule34.paheal.net/post/list/elsa dandon_fuga/1</a></li>
-<li><a href="https://www.deviantart.com/wlop/favourites/?offset=0">https://www.deviantart.com/wlop/favourites/?offset=0</a></li>
-<li><a href="https://danbooru.donmai.us/posts?page=1&amp;tags=goth*+order:id_asc">https://danbooru.donmai.us/posts?page=1&amp;tags=goth*+order:id_asc</a></li>
+<li><code>http://somebooru.com/index.php?page=post&amp;s=list&amp;tags=blue_eyes&amp;pid=0</code></li>
+<li><code>https://anotherbooru.org/post?page=1&amp;tags=blonde_hair+blue_eyes</code></li>
+<li><code>https://gallerysite.net/gallery/ArtistName/page/1</code></li>
+<li><code>https://www.coolstuff.org/user_name/favourites/?offset=0</code></li>
+<li><code>https://mappainters.communityboorus.org/posts?page=1&amp;tags=gothic*+order:id_asc</code></li>
 </ul>
-<p>These are all the 'first page' of the results if you type or click-through to the same location on those sites. We are essentially emulating their own simple search-url generation inside the hydrus client.</p>
+<p>These would all be the 'first page' of the results if you type or click-through to the same location on those sites. We walking through their own simple search-url generation inside the hydrus client.</p>
 <h2 id="doing_it">actually doing it<a class="headerlink" href="#doing_it" title="Permanent link">&para;</a></h2>
-<p>Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Let's look at the ui under <em>network-&gt;downloader components-&gt;manage gugs</em>:</p>
+<p>Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Check out <em>network-&gt;downloader components-&gt;manage gallery url generators</em>:</p>
 <p><img alt="" src="images/downloader_edit_gug_panel.png" /></p>
-<p>The client will split whatever the user enters by whitespace, so <code>blue_eyes blonde_hair</code> becomes two search terms, <code>[ 'blue_eyes', 'blonde_hair' ]</code>, which are then joined back together with the given 'search terms separator', to make <code>blue_eyes+blonde_hair</code>. Different sites use different separators, although ' ', '+', and ',' are most common. The new string is substituted into the <code>%tags%</code> in the template phrase, and the URL is made.</p>
-<p>Note that you will not have to make %20 or %3A percent-encodings for reserved characters here--the network engine handles all that before the request is sent. For the most part, if you need to include or a user puts in ':' or ' ' or 'おっぱい', you can just pass it along straight into the final URL without worrying.</p>
-<p>This ui should update as you change it, so have a play and look at how the output example url changes to get a feel for things. Look at the other defaults to see different examples. Even if you break something, you can just cancel out.</p>
+<p>Edit a particular GUG and try typing some different things into the "example search text". See how the output changes. Note that the client will splits whatever the user enters by whitespace, so <code>tag_a tag_b</code> becomes two search terms, <code>[ 'tag_a', 'tag_b' ]</code>, which are then joined back together with the given 'search terms separator' <code>+</code> to make <code>tag_a+tag_b</code>. Different sites use different separators, although ' ', '+', and ',' are most common. The new string is substituted into the <code>%tags%</code> in the template phrase, and the URL is made.</p>
+<p>Play with the other edit fields and see how he output example url changes. Look at the other defaults to see different examples. Even if you break something, you can just cancel out.</p>
+<p>Note that you will not have to make %20 or %3A percent-encodings for reserved characters here--the network engine handles all that before the request is sent. For the most part, if you need to include or a user puts in ':' or ' ' or 'おっぱい', you can just pass it along straight into the final URL without worrying. If you are unsure, try pasting the example normalised URL into your browser and see if it works.</p>
 <p>The name of the GUG is important, as this is what will be listed when the user chooses what 'downloader' they want to use. Make sure it has a clear unambiguous name.</p>
-<p>The initial search text is also important. Most downloaders just take some text tags, but if your GUG expects a numerical artist id (like pixiv artist search does), you should specify that explicitly to the user. You can even put in a brief '(two tag maximum)' type of instruction if you like.</p>
-<p>Notice that the Deviart Art example above is actually the stream of wlop's <em>favourites</em>, not his works, and without an explicit notice of that, a user could easily mistake what they have selected. 'gelbooru' or 'newgrounds' are bad names, 'type here' is a bad initialising text.</p>
+<p>The initial search text is also important. Most downloaders just take some text tags, but if your GUG expects a numerical artist id, you should specify that explicitly to the user. You can even put in a brief '(two tag maximum)' type of instruction if you like.</p>
+<p>If you are searching a username's <em>favourites</em>, you should add an explicit notice that this searches favourites and not works.</p>
 <h2 id="nested_gugs">Nested GUGs<a class="headerlink" href="#nested_gugs" title="Permanent link">&para;</a></h2>
-<p>Nested Gallery URL Generators are GUGs that hold other GUGs. Some searches actually use more than one stream (such as a Hentai Foundry artist lookup, where you might want to get both their regular works and their scraps, which are two separate galleries under the site), so NGUGs allow you to generate multiple initialising URLs per input. You can experiment with this ui if you like--it isn't too complicated--but you might want to hold off doing anything for real until you are comfortable with everything and know how producing multiple initialising URLs is going to work in the actual downloader.</p>
+<p>Nested Gallery URL Generators are GUGs that hold other GUGs. Some sites provide multiple tabs of result types for a particular search, each their own gallery walk, so NGUGs allow you to generate multiple initialising URLs per input. You can experiment with this ui if you like--it isn't too complicated--but I strongly recommend holding off doing anything for real until you are comfortable with everything and know how producing multiple initialising URLs is going to work in the actual downloader.</p>
 
 
 
@@ -2770,7 +2768,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 30, 2022 22:06:58 UTC">November 30, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 1, 2026 21:28:13 UTC">April 1, 2026</span>
   </span>
 
     

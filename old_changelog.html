@@ -34,6 +34,65 @@
         <div class="content">
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
+			    <li>
+                    <h2 id="version_666"><a href="#version_666">☠⛤ version 666 ⛤☠</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>when you create a new subscription with 'add' button, it now asks you for the downloader up-front. this was easy to forget to set, previously; now you can't miss it</li>
+                        <li>the problem where media could sometimes not receive any content updates (rating changes, new tags, archive state, whatever) after a backup, lock, vacuum, or certain database transaction error recovery until a page was refreshed is fixed. a cache that the in-session pages refer to was held by a database module being reinitialised through these processes and thus, after cache reset, the connection to send the update signal on media changes wasn't getting through to UI</li>
+                        <li>added `^(?!...$).+$` to the regex input menu's quick selections for 'anything except this exact phrase'. I have to search stackexchange to figure this out every time I need it; now it is just there. also fixed a formatting typo in this menu for the 'any of these' entry</li>
+                        <li><h3>media players</h3></li>
+                        <li>improved the guard around the QtMultimedia module for those Qts where it is not available or otherwise fails to import</li>
+                        <li>if your options say to show something with QtMediaPlayer but the module isn't available, it now falls back to an 'open externally' button and does a little popup; the same handling for missing mpv</li>
+                        <li>improved the popup text when you boot `help-&gt;about` with an unusual module load error to report</li>
+                        <li>rejiggered the `help-&gt;about` 'Optional Libraries' list a little and moved mpv over there</li>
+                        <li>added another mpv 'null' audio error text, 'Could not open device', to our new cascade of 'calm down, but set the null audio device now' error handling</li>
+                        <li>added a `KDE and QtMediaPlayer` note to the 'installing - linux' help. installing `mit-krb5` may help</li>
+                        <li><h3>qss</h3></li>
+                        <li>the e621, e621_redux, and Paper_Dark qss stylesheets get 'built_release' alternates to handle the new 'lib' directory structure of the built release</li>
+                        <li>updated the guidance on external asset paths in `options-&gt;style`</li>
+                        <li><h3>import options test panel</h3></li>
+                        <li>booting the options dialog in 'advanced mode' now adds a 'PREVIEW: import options' panel. this is the new central place that we'll be customising import options after my rewrite here is done</li>
+                        <li>this panel saves nothing; it is only for playing around with. it takes your current settings and migrates them to the new system as the expected pending migration will</li>
+                        <li>I am happy with the technical side of things here, but this thing is complicated and I would like to throw advanced users in the deep end and get feedback on where the roughest parts are. I'll sand down the roughest corners with better UI and consider it all as I revise the help docs</li>
+                        <li>april fools this year is yet more hellish UI from hydev</li>
+                        <li><h3>removing the default downloaders</h3></li>
+                        <li>a fresh hydrus client database no longer starts with any downloader definitions! I am cleaning some legacy things and making the program more neutral from the start. users will now add whichever downloaders they want from third-party sources like the user-run downloader repo. not an april fools--sorry for the trouble!</li>
+                        <li>existing users keep what they have; this only affects new installs</li>
+                        <li>this also frees me from the maintenance burden, which I was failing at. several of the defaults were breaking and I was not keeping up with the issues</li>
+                        <li>so, the defaults are removed from the `static` dir and there are no 'add from defaults' buttons in the edit panels. the UI now supports and starts with a 'null' state of 'no downloader selected' everywhere</li>
+                        <li>users without any downloaders are pointed to the `network-&gt;downloaders` menu and the user-run repository</li>
+                        <li>I updated the help documentation all over regarding this change. it may need a revisit to make new-user onboarding smoother</li>
+                        <li><h3>import options boring work</h3></li>
+                        <li>added a 'paste-fill' paste type to the options panel, for filling in gaps without overwriting</li>
+                        <li>wrote paste buttons for individual options panels and the import options container panel</li>
+                        <li>wrote copy buttons for the container panel</li>
+                        <li>fleshed out the valueChanged signals for all the new options panels: prefetch; file filtering; tag filtering; locations; tags; notes; presentation</li>
+                        <li>wrote a favourites button and adjusted the UI to handle it in the appropriate locations</li>
+                        <li>wrote some basic default favourites</li>
+                        <li>polished the UI, swapping to icon buttons, bunch of stuff</li>
+                        <li>fixed some little logic and label bugs in the new import options stuff</li>
+                        <li><h3>little stuff and cleanup</h3></li>
+                        <li>the little `▲/▼` button you see across the program on static boxes and the popup toaster now uses a special shared class that uses nicer Qt tech to signal things and sets two new object names for QSS devs to hook into: `HydrusCollapseArrowCollapsed` and `HydrusCollapseArrowExpanded`. note that these guys use reversed labels depending on whether they expand up or down (I just realised this, working on it now), so if you want to put a new label or icon in, I think we might want to do some more here. let me know how it goes</li>
+                        <li>I think I fixed an issue where the 'hey your page is super mega tall, careful' message was showing more than once if the session includes multiple pages in this state</li>
+                        <li>updated some new async ui code, the stuff that does new unified callBack/errBack panel restoration after job reset, so that it better handles the error of its parent window being closed early, and a program shutdown call. this was causing some harmless error spam in some things like a delayed subscription popup files button press/dismiss</li>
+                        <li>fixed a stupid error in the updated Linux .desktop file deployment script that broke the Icon with quotes around the path</li>
+                        <li>made the various widgets, options, and importers ok with having no downloaders available. the first time a GUG comes in via the drag and drop system, it is set as the default</li>
+                        <li>amidst the downloader work, cleaned up how subscriptions do some edit panel `Set` stuff, removing some legacy jank</li>
+                        <li>fixed up an old hardcoded 'downloader updated' callable with a nicer Qt Signal</li>
+                        <li>improved the error messages around invalid/missing/null GUGs at different stages</li>
+                        <li>I also removed some legacy downloader db update code that would have fallen to bitrot here</li>
+                        <li>fixed a couple `finally/return` syntax issues</li>
+                        <li>'manage login scripts' now has some red text up top warning that it is an ancient system that does not work well</li>
+                        <li>updated the 'adding new downloaders' help to be more clear about what is going on with the png files. it now has an example png for artbooru.com</li>
+                        <li>updated a bunch of ancient screenshots in the help, particularly the parsing system</li>
+                        <li>fixed duplicated 'index to fetch' label in html parsing formula panel</li>
+                        <li>replaced some whackadoodle ListBook fixed sizing with a proper `sizeHint` and some live rowheight checking and framewidth correction</li>
+                        <li>cleaned up some subscription unit tests</li>
+                        <li>the media result cache is now a singleton instance that persists through a database restart, and the unit tests now do some careful clearing on test database resetting here</li>
+                        <li>fixed a missing definition typo in the filetype labels</li>
+                    </ul>
+                </li>
                 <li>
                     <h2 id="version_665"><a href="#version_665">version 665</a></h2>
                     <ul>
