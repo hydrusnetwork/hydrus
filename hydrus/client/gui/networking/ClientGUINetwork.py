@@ -1418,7 +1418,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. Also, if you accidentally download too much at once, or a site suddenly changes their policies, a linked account can get banned. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
+        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. You can also lose an account if the site suddenly changes their policies and bonks it. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )

@@ -306,9 +306,9 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
-        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. Also, if you accidentally download too much at once, or a site suddenly changes their policies, a linked account can get banned. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
+        warning = 'WARNING: Never use important accounts with hydrus. Hydrus does not store credentials securely. You can also lose an account if the site suddenly changes their policies and bonks it. If you link an account to hydrus, always use a throwaway account you don\'t care much about.'
         warning += '\n' * 2
-        warning += 'This system is old and only works for simple sites. If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv now requires this! If you do set up HC for an external login, I recommend you set the respective domain(s) you are logging into to "not active" here (hit "flip active" on them), so hydrus knows it is not supposed to be taking responsibility.'
+        warning += 'This system is very old and only works for simple sites. If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! If you do set up HC for an external login, delete any login scripts here that may apply to the same site.'
         warning += '\n' * 2
         warning += 'If you are looking for your login cookies, go to _network->data->review session cookies_.'
         
@@ -1982,8 +1982,6 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         login_scripts_panel.AddDeleteButton()
         login_scripts_panel.AddSeparator()
         login_scripts_panel.AddImportExportButtons( ( ClientNetworkingLogin.LoginScriptDomain, ), self._AddLoginScript )
-        login_scripts_panel.AddSeparator()
-        login_scripts_panel.AddDefaultsButton( ClientDefaults.GetDefaultLoginScripts, self._AddLoginScript )
         
         #
         
@@ -1995,6 +1993,11 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
+        warning_st = ClientGUICommon.BetterStaticText( self, 'This system is very old and does not work well! Better to use a program like Hydrus Companion to sync cookies these days!' )
+        warning_st.setObjectName( 'HydrusWarning' )
+        warning_st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, login_scripts_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )

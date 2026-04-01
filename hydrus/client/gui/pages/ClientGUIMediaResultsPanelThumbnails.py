@@ -680,6 +680,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 if not WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING:
                     
+                    # set true before showing the dialog, or the new event loop will allow more pages in session I think to spam the error
+                    WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = True
+                    
                     if self.isVisible():
                         
                         message = 'Hey, it looks like this thumbnail view'
@@ -696,8 +699,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                     message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
                     
                     ClientGUIDialogsMessage.ShowWarning( self, message )
-                    
-                    WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = True
                     
                 
             

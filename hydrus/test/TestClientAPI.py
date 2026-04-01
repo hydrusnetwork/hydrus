@@ -270,8 +270,8 @@ class TestClientAPI( unittest.TestCase ):
         cbor_headers = dict( headers )
         cbor_headers[ 'Accept' ] = 'application/cbor'
         
-        url = 'http://safebooru.org/index.php?page=post&s=view&id=2753608'
-        normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
+        url = 'http://otherbooru.org/index.php?page=post&s=view&id=123456'
+        normalised_url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         expected_result = {}
         
@@ -279,8 +279,9 @@ class TestClientAPI( unittest.TestCase ):
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_POST
         expected_result[ 'url_type_string' ] = 'post url'
-        expected_result[ 'match_name' ] = 'safebooru file page'
-        expected_result[ 'can_parse' ] = True
+        expected_result[ 'match_name' ] = 'otherbooru file page'
+        expected_result[ 'can_parse' ] = False
+        expected_result[ 'cannot_parse_reason' ] = 'Could not find a parser for otherbooru file page URL Class!'
         
         cbor_expected_result = dict( expected_result )
         
@@ -3182,7 +3183,7 @@ class TestClientAPI( unittest.TestCase ):
         
         # clean tags
         
-        tags = [ " bikini ", "blue    eyes", " character : samus aran ", ":)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]
+        tags = [ " bikini ", "blue    eyes", " character : space bounty hunter ", ":)", "   ", "", "10", "11", "9", "system:wew", "-flower" ]
         
         json_tags = json.dumps( tags )
         
@@ -3202,7 +3203,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = {}
         
-        clean_tags = [ "bikini", "blue eyes", "character:samus aran", "::)", "10", "11", "9", "wew", "flower" ]
+        clean_tags = [ "bikini", "blue eyes", "character:space bounty hunter", "::)", "10", "11", "9", "wew", "flower" ]
         
         clean_tags = HydrusTags.SortNumericTags( clean_tags )
         
@@ -3603,29 +3604,29 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
-        db_data[ 'samus aran' ] = {
+        db_data[ 'space bounty hunter' ] = {
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : [
                 {
-                    "samus aran",
-                    "samus_aran",
-                    "character:samus aran"
+                    "space bounty hunter",
+                    "space_bounty_hunter",
+                    "character:space bounty hunter"
                 },
-                'character:samus aran',
+                'character:space bounty hunter',
                 {
-                    "character:samus aran (zero suit)"
-                    "cosplay:samus aran"
+                    "character:space bounty hunter (zero suit)"
+                    "cosplay:space bounty hunter"
                 },
                 {
-                    "series:metroid",
-                    "studio:nintendo"
+                    "series:bountyvania",
+                    "studio:cool project house"
                 }
             ],
             TG.test_controller.example_tag_repo_service_key : [
-                { 'samus aran' },
-                'samus aran',
+                { 'space bounty hunter' },
+                'space bounty hunter',
                 {
-                    "zero suit samus",
-                    "samus_aran_(cosplay)"
+                    "zero suit space bounty hunter",
+                    "space_bounty_hunter_(cosplay)"
                 },
                 set()
             ]
@@ -3643,7 +3644,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'samus aran' ] ) ) )
+        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'space bounty hunter' ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -3665,7 +3666,7 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
-        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'samus aran' ] ) ) )
+        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'space bounty hunter' ] ) ) )
         
         connection.request( 'GET', path, headers = headers )
         
@@ -4032,8 +4033,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # some
         
-        url = 'http://safebooru.org/index.php?s=view&page=post&id=2753608'
-        normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
+        url = 'http://otherbooru.org/index.php?s=view&page=post&id=123456'
+        normalised_url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         hash = os.urandom( 32 )
         
@@ -4107,9 +4108,9 @@ class TestClientAPI( unittest.TestCase ):
         
         # known
         
-        url = 'http://boards.holotower.org/hlgg/res/123456.html'
-        request_url = 'https://boards.holotower.org/hlgg/res/123456.json'
-        normalised_url = 'https://boards.holotower.org/hlgg/res/123456.html'
+        url = 'http://boards.someimageboard.org/diy/res/123456.html'
+        request_url = 'https://boards.someimageboard.org/diy/res/123456.json'
+        normalised_url = 'https://boards.someimageboard.org/diy/res/123456.html'
         # http so we can test normalised is https
         
         path = '/add_urls/get_url_info?url={}'.format( urllib.parse.quote( url, safe = '' ) )
@@ -4132,8 +4133,9 @@ class TestClientAPI( unittest.TestCase ):
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_WATCHABLE
         expected_result[ 'url_type_string' ] = 'watchable url'
-        expected_result[ 'match_name' ] = 'holotower thread'
-        expected_result[ 'can_parse' ] = True
+        expected_result[ 'match_name' ] = 'some imageboard thread'
+        expected_result[ 'can_parse' ] = False
+        expected_result[ 'cannot_parse_reason' ] = 'Could not find a parser for some imageboard thread api URL Class!'
         
         wash_example_json_response( expected_result )
         
@@ -4141,8 +4143,8 @@ class TestClientAPI( unittest.TestCase ):
         
         # known post url
         
-        url = 'http://safebooru.org/index.php?page=post&s=view&id=2753608'
-        normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
+        url = 'http://otherbooru.org/index.php?page=post&s=view&id=123456'
+        normalised_url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         hash = os.urandom( 32 )
         
@@ -4166,8 +4168,9 @@ class TestClientAPI( unittest.TestCase ):
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_POST
         expected_result[ 'url_type_string' ] = 'post url'
-        expected_result[ 'match_name' ] = 'safebooru file page'
-        expected_result[ 'can_parse' ] = True
+        expected_result[ 'match_name' ] = 'otherbooru file page'
+        expected_result[ 'can_parse' ] = False
+        expected_result[ 'cannot_parse_reason' ] = 'Could not find a parser for otherbooru file page URL Class!'
         
         wash_example_json_response( expected_result )
         
@@ -4179,7 +4182,7 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
-        url = 'http://boards.holotower.org/hlgg/res/123456.html'
+        url = 'http://boards.someimageboard.org/diy/res/123456.html'
         
         request_dict = { 'url' : url }
         
@@ -4197,8 +4200,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, None ), {} ) ] )
         
@@ -4208,7 +4211,7 @@ class TestClientAPI( unittest.TestCase ):
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
-        url = 'http://boards.holotower.org/hlgg/res/123456.html'
+        url = 'http://boards.someimageboard.org/diy/res/123456.html'
         
         request_dict = { 'url' : url, 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
         
@@ -4226,8 +4229,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) ), {} ) ] )
         
@@ -4251,8 +4254,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False, None ), {} ) ] )
         
@@ -4279,8 +4282,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         self.assertEqual( TG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False, None ), {} ) ] )
         
@@ -4304,8 +4307,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )
@@ -4332,8 +4335,8 @@ class TestClientAPI( unittest.TestCase ):
         
         response_json = json.loads( text )
         
-        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.holotower.org/hlgg/res/123456.html" URL added successfully.' )
-        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.holotower.org/hlgg/res/123456.html' )
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://boards.someimageboard.org/diy/res/123456.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://boards.someimageboard.org/diy/res/123456.html' )
         
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { '/tv/ thread' } } )
@@ -4354,7 +4357,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         request_dict = { 'url_to_add' : url, 'hash' : hash.hex() }
         
@@ -4379,7 +4382,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         request_dict = { 'urls_to_add' : [ url ], 'hashes' : [ hash.hex() ] }
         
@@ -4406,7 +4409,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        url = 'http://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         request_dict = { 'url_to_delete' : url, 'hash' : hash.hex() }
         
@@ -4431,7 +4434,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        url = 'http://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        url = 'http://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         request_dict = { 'urls_to_delete' : [ url ], 'hashes' : [ hash.hex() ] }
         
@@ -4456,8 +4459,8 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
-        normalised_url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        unnormalised_url = 'https://otherbooru.org/index.php?page=post&id=123456&s=view'
+        normalised_url = 'https://otherbooru.org/index.php?id=123456&page=post&s=view'
         
         request_dict = { 'urls_to_add' : [ unnormalised_url ], 'hashes' : [ hash.hex() ] }
         
@@ -4482,7 +4485,7 @@ class TestClientAPI( unittest.TestCase ):
         TG.test_controller.ClearWrites( 'content_updates' )
         
         hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
-        unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
+        unnormalised_url = 'https://otherbooru.org/index.php?page=post&id=123456&s=view'
         
         request_dict = { 'urls_to_add' : [ unnormalised_url ], 'hashes' : [ hash.hex() ], 'normalise_urls' : False }
         
@@ -7242,7 +7245,7 @@ class TestClientAPI( unittest.TestCase ):
         media_results = []
         file_info_managers = []
         
-        urls = { "https://gelbooru.com/index.php?page=post&s=view&id=4841557", "https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg" }
+        urls = { "https://otherbooru.org/index.php?page=post&s=view&id=123456", "https://img.weirdbooru.com/images/ab/cd/abcdblahblahblah.jpg" }
         
         sorted_urls = sorted( urls )
         
@@ -7544,8 +7547,8 @@ class TestClientAPI( unittest.TestCase ):
             detailed_known_urls_metadata_row = dict( metadata_row )
             
             detailed_known_urls_metadata_row[ 'detailed_known_urls' ] = [
-                {'normalised_url' : 'https://gelbooru.com/index.php?id=4841557&page=post&s=view', 'url_type' : 0, 'url_type_string' : 'post url', 'match_name' : 'gelbooru file page', 'can_parse' : True},
-                {'normalised_url' : 'https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg', 'url_type' : 5, 'url_type_string' : 'unknown url', 'match_name' : 'unknown url', 'can_parse' : False, 'cannot_parse_reason' : 'unknown url class'}
+                {'normalised_url' : 'https://img.weirdbooru.com/images/ab/cd/abcdblahblahblah.jpg', 'url_type' : 5, 'url_type_string' : 'unknown url', 'match_name' : 'unknown url', 'can_parse' : False, 'cannot_parse_reason' : 'unknown url class'},
+                {'normalised_url' : 'https://otherbooru.org/index.php?id=123456&page=post&s=view', 'url_type' : 0, 'url_type_string' : 'post url', 'match_name' : 'otherbooru file page', 'can_parse' : False, 'cannot_parse_reason' : 'Could not find a parser for otherbooru file page URL Class!' },
             ]
             
             detailed_known_urls_metadata.append( detailed_known_urls_metadata_row )

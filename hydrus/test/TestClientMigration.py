@@ -20,34 +20,33 @@ from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptionsLegacy
-from hydrus.client.media import ClientMediaResultCache
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 from hydrus.test import TestGlobals as TG
 
-current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:samus aran', 'series:metroid', 'studio:nintendo' ]
+current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:space bounty hunter', 'series:bountyvania', 'studio:cool project house' ]
 pending_tag_pool = [ 'favourites', 'kino', 'brown shirt', 'huge knees' ]
-deleted_tag_pool = [ 'trash', 'ugly', 'character:smaus aran', 'red hair' ]
+deleted_tag_pool = [ 'trash', 'ugly', 'character:jnae redar', 'red hair' ]
 
 to_be_pended_tag_pool = [ 'clothing:high heels', 'firearm', 'puffy armpit' ]
 
 current_parents_pool = []
 
-current_parents_pool.append( ( 'character:princess peach', 'series:super mario bros' ) )
-current_parents_pool.append( ( 'character:princess peach', 'gender:female' ) )
-current_parents_pool.append( ( 'mario_(mario)', 'series:super mario bros' ) )
-current_parents_pool.append( ( 'meta:explicit', 'nsfw' ) )
-current_parents_pool.append( ( 'bepis', 'genidalia' ) )
-current_parents_pool.append( ( 'bagina', 'genidalia' ) )
+current_parents_pool.append( ( 'character:princess tuna', 'series:ultra sisters' ) )
+current_parents_pool.append( ( 'character:princess tuna', 'gender:female' ) )
+current_parents_pool.append( ( 'some_guy_(ultra_sisters)', 'series:ultra sisters' ) )
+current_parents_pool.append( ( 'meta:safe', 'sfw' ) )
+current_parents_pool.append( ( 'hup', 'huphap' ) )
+current_parents_pool.append( ( 'hap', 'huphap' ) )
 
 pending_parents_pool = []
 
-pending_parents_pool.append( ( 'character:princess daisy', 'series:super mario bros' ) )
-pending_parents_pool.append( ( 'character:princess daisy', 'gender:female' ) )
-pending_parents_pool.append( ( 'mario_(mario)', 'series:super mario bros' ) )
-pending_parents_pool.append( ( 'bepis', 'genidalia' ) )
-pending_parents_pool.append( ( 'bagina', 'genidalia' ) )
+pending_parents_pool.append( ( 'character:princess lavendar', 'series:ultra sisters' ) )
+pending_parents_pool.append( ( 'character:princess lavendar', 'gender:female' ) )
+pending_parents_pool.append( ( 'some_guy_(ultra_sisters)', 'series:ultra sisters' ) )
+pending_parents_pool.append( ( 'hup', 'huphap' ) )
+pending_parents_pool.append( ( 'hap', 'huphap' ) )
 
 to_be_pended_parents_pool = []
 
@@ -62,12 +61,12 @@ deleted_parents_pool.append( ( 'character:iron man', 'studio:dc' ) )
 
 current_siblings_pool = []
 
-current_siblings_pool.append( ( 'lara_croft', 'character:lara croft' ) )
-current_siblings_pool.append( ( 'lara croft', 'character:lara croft' ) )
-current_siblings_pool.append( ( 'series:tomb raider (series)', 'series:tomb raider' ) )
+current_siblings_pool.append( ( 'jane_raider', 'character:jane raider' ) )
+current_siblings_pool.append( ( 'jane raider', 'character:jane raider' ) )
+current_siblings_pool.append( ( 'series:tomb charted (series)', 'series:tomb charted' ) )
 current_siblings_pool.append( ( 'general:lamp', 'lamp' ) )
-current_siblings_pool.append( ( 'bog', 'bepis' ) )
-current_siblings_pool.append( ( 'buggy', 'bagina' ) )
+current_siblings_pool.append( ( 'bog', 'hup' ) )
+current_siblings_pool.append( ( 'buggy', 'hap' ) )
 
 pending_siblings_pool = []
 
@@ -146,6 +145,8 @@ class TestMigration( unittest.TestCase ):
             
         
         del cls._db
+        
+        TG.test_controller.ClearTestDB()
         
     
     @classmethod
@@ -626,7 +627,7 @@ class TestMigration( unittest.TestCase ):
             
             job.Run()
             
-            self._db.modules_media_results._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
+            self._db.modules_media_results._weakref_media_result_cache.Clear()
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in self.Read( 'media_results', list( self._hashes_to_current_tags.keys() ) ) }
             

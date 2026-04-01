@@ -139,9 +139,16 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         script_names = sorted( CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ) )
         
-        for name in script_names:
+        if len( script_names ) == 0:
             
-            self._favourite_file_lookup_script.addItem( name, name )
+            self._favourite_file_lookup_script.addItem( 'no file lookup scripts in this client', None )
+            
+        else:
+            
+            for name in script_names:
+                
+                self._favourite_file_lookup_script.addItem( name, name )
+                
             
         
         #

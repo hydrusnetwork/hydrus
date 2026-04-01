@@ -14,91 +14,6 @@ from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import PrefetchImportOptions
 
-def ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier ):
-    
-    gug_name = ConvertGalleryIdentifierToGUGName( gallery_identifier )
-    
-    from hydrus.client import ClientDefaults
-    
-    gugs = ClientDefaults.GetDefaultGUGs()
-    
-    for gug in gugs:
-        
-        if gug.GetName() == gug_name:
-            
-            return gug.GetGUGKeyAndName()
-            
-        
-    
-    return ( HydrusData.GenerateKey(), gug_name )
-    
-def ConvertGalleryIdentifierToGUGName( gallery_identifier ):
-    
-    site_type = gallery_identifier.GetSiteType()
-    
-    if site_type == HC.SITE_TYPE_DEVIANT_ART:
-        
-        return 'deviant art artist lookup'
-        
-    elif site_type == HC.SITE_TYPE_TUMBLR:
-        
-        return 'tumblr username lookup'
-        
-    elif site_type == HC.SITE_TYPE_NEWGROUNDS:
-        
-        return 'newgrounds artist lookup'
-        
-    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_ARTIST:
-        
-        return 'hentai foundry artist lookup'
-        
-    elif site_type == HC.SITE_TYPE_HENTAI_FOUNDRY_TAGS:
-        
-        return 'hentai foundry tag search'
-        
-    elif site_type == HC.SITE_TYPE_PIXIV_ARTIST_ID:
-        
-        return 'pixiv artist lookup'
-        
-    elif site_type == HC.SITE_TYPE_PIXIV_TAG:
-        
-        return 'pixiv tag search'
-        
-    elif site_type == HC.SITE_TYPE_BOORU:
-        
-        booru_name_converter = {}
-        
-        booru_name_converter[ 'gelbooru' ] = 'gelbooru tag search'
-        booru_name_converter[ 'safebooru' ] = 'safebooru tag search'
-        booru_name_converter[ 'e621' ] = 'e621 tag search'
-        booru_name_converter[ 'rule34@paheal' ] = 'rule34.paheal tag search'
-        booru_name_converter[ 'danbooru' ] = 'danbooru tag search'
-        booru_name_converter[ 'rule34@booru.org' ] = 'rule34.xxx tag search'
-        booru_name_converter[ 'furry@booru.org' ] = 'furry.booru.org tag search'
-        booru_name_converter[ 'xbooru' ] = 'xbooru tag search'
-        booru_name_converter[ 'konachan' ] = 'konachan tag search'
-        booru_name_converter[ 'yande.re' ] = 'yande.re tag search'
-        booru_name_converter[ 'tbib' ] = 'tbib tag search'
-        booru_name_converter[ 'sankaku chan' ] = 'sankaku channel tag search'
-        booru_name_converter[ 'sankaku idol' ] = 'sankaku idol tag search'
-        booru_name_converter[ 'rule34hentai' ] = 'rule34hentai tag search'
-        
-        booru_name = gallery_identifier.GetAdditionalInfo()
-        
-        if booru_name in booru_name_converter:
-            
-            return booru_name_converter[ booru_name ]
-            
-        else:
-            
-            return booru_name
-            
-        
-    else:
-        
-        return 'unknown site'
-        
-    
 class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER
@@ -135,12 +50,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
     def __repr__( self ):
         
-        text = 'Gallery Identifier: ' + HC.site_type_string_lookup[ self._site_type ]
-        
-        if self._site_type == HC.SITE_TYPE_BOORU:
-            
-            text += ': ' + str( self._additional_info )
-            
+        text = 'Gallery Identifier: Unknown'
         
         return text
         
@@ -167,18 +77,10 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
     def ToString( self ):
         
-        text = HC.site_type_string_lookup[ self._site_type ]
-        
-        if self._site_type == HC.SITE_TYPE_BOORU and self._additional_info is not None:
-            
-            booru_name = self._additional_info
-            
-            text = booru_name
-            
-        
-        return text
+        return 'unknown downloader'
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER ] = GalleryIdentifier
 
 class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):

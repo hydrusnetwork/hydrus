@@ -303,7 +303,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self._gallery_downloader_panel, self._GetCogIconMenuTemplateItems() )
         
-        self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
+        self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName() )
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 2000, message = 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.valueChanged.connect( self.EventFileLimit )
@@ -383,6 +383,8 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._import_options_button.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
         self._highlighted_gallery_import_panel.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
         self._gallery_importers_listctrl.selectionModel().selectionChanged.connect( self._UpdateImportOptionsSetButton )
+        
+        self._gug_key_and_name.valueChanged.connect( self._NotifyNewGUGKeyAndName )
         
     
     def _CanClearHighlight( self ):
@@ -816,6 +818,28 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             
         
     
+    def _NotifyNewGUGKeyAndName( self ):
+        
+        gug_key_and_name = self._gug_key_and_name.GetValue()
+        
+        current_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
+        
+        current_input_value = self._query_input.GetValue()
+        
+        should_initialise_new_text = current_input_value in ( current_initial_search_text, '' )
+        
+        self._multiple_gallery_import.SetGUGKeyAndName( gug_key_and_name )
+        
+        if should_initialise_new_text:
+            
+            new_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
+            
+            self._query_input.setPlaceholderText( new_initial_search_text )
+            
+        
+        self._query_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
+        
+    
     def _PausePlayFiles( self ):
         
         for gallery_import in self._gallery_importers_listctrl.GetData( only_selected = True ):
@@ -837,6 +861,24 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
     
     def _PendQueries( self, queries ):
+        
+        if not self._multiple_gallery_import.IsGUGSet():
+            
+            gugs = list( CG.client_controller.network_engine.domain_manager.GetGUGs() )
+            
+            if len( gugs ) == 0:
+                
+                message = 'Hey, you do not have any downloaders in this client! Check out the _network->downloaders_ menu to find downloaders made by users.'
+                
+            else:
+                
+                message = 'Hey, you do not have a downloader set here! Click the downloader selector and choose somewhere to download from.'
+                
+            
+            ClientGUIDialogsMessage.ShowWarning( self, message )
+            
+            return
+            
         
         results = self._multiple_gallery_import.PendQueries( queries )
         
@@ -935,26 +977,6 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
             
         
         self._gallery_importers_listctrl.UpdateDatas()
-        
-    
-    def _SetGUGKeyAndName( self, gug_key_and_name ):
-        
-        current_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
-        
-        current_input_value = self._query_input.GetValue()
-        
-        should_initialise_new_text = current_input_value in ( current_initial_search_text, '' )
-        
-        self._multiple_gallery_import.SetGUGKeyAndName( gug_key_and_name )
-        
-        if should_initialise_new_text:
-            
-            new_initial_search_text = self._multiple_gallery_import.GetInitialSearchText()
-            
-            self._query_input.setPlaceholderText( new_initial_search_text )
-            
-        
-        self._query_input.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
     def _SetOptionsToGalleryImports( self ):

@@ -32,9 +32,9 @@ Let's look at the tag autocomplete dropdown:
     
 *   **file/tag domains**
     
-    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:samus aran`, then you will get file results from your 'my files' domain that have `character:samus aran` in any known tag service. For most purposes, this combination is fine, but as you use the client more, you will sometimes want to access different search domains.
+    By default, you will search in 'my files' and 'all known tags' domain. This is the intersection of your local media files (on your hard disk) and the union of all known tag searches. If you search for `character:my cool character`, then you will get file results from your 'my files' domain that have `character:my cool character` in any known tag service. For most purposes, this combination is fine, but as you use the client more, you will sometimes want to access different search domains.
     
-    For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a `system:num_tags` or a `character:samus aran` will only look 'my tags'.
+    For instance, if you change the file domain to 'trash', then you will instead get files that are in your trash. Setting the tag domain to 'my tags' will ignore other tag services (e.g. the PTR) for all tag search predicates, so a `system:num_tags` or a `character:my cool character` will only look 'my tags'.
     
     Turning on 'advanced mode' gives access to more search domains. Some of them are subtly complicated, run extremely slowly, and only useful for clever jobs--most of the time, you still want 'my files' and 'all known tags'.
     
@@ -43,7 +43,7 @@ Let's look at the tag autocomplete dropdown:
     Once you are more experienced, have a play with this. It lets you save your common searches for future, so you don't have to either keep re-entering them or keep them open all the time. If you close big things down when you aren't using them, you will keep your client lightweight and save time.
     
 
-When you type a tag in a search page, Hydrus will treat a space the same way as an underscore. Searching `character:samus aran` will find files tagged with `character:samus aran` and `character:samus_aran`. This is true of some other syntax characters, `[](){}/\"'-`, too.
+When you type a tag in a search page, Hydrus will treat a space the same way as an underscore. Searching `character:my cool character` will find files tagged with `character:my cool character` and `character:my_cool_character`. This is true of some other syntax characters, `[](){}/\"'-`, too.
 
 Tags will be searchable by all their [siblings](advanced_siblings.md). If there's a sibling for `large` -> `huge` then typing `large` will provide `huge` as a suggestion. This goes for the whole sibling chain, no matter how deep or a tag's position in it.
 

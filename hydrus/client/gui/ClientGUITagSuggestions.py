@@ -623,34 +623,44 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
             def qt_code():
                 
-                script_names_to_scripts = { script.GetName() : script for script in scripts }
-                
-                for ( name, script ) in list(script_names_to_scripts.items()):
+                if len( scripts ) == 0:
                     
-                    self._script_choice.addItem( script.GetName(), script )
-                    
-                
-                new_options = CG.client_controller.new_options
-                
-                favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
-                
-                if favourite_file_lookup_script in script_names_to_scripts:
-                    
-                    self._script_choice.SetValue( script_names_to_scripts[ favourite_file_lookup_script ] )
+                    self._script_choice.addItem( 'no lookup scripts in this client', None )
                     
                 else:
                     
-                    self._script_choice.setCurrentIndex( 0 )
+                    script_names_to_scripts = { script.GetName() : script for script in scripts }
                     
-                
-                self._script_choice.setEnabled( True )
-                self._fetch_button.setEnabled( True )
+                    for ( name, script ) in list(script_names_to_scripts.items()):
+                        
+                        self._script_choice.addItem( script.GetName(), script )
+                        
+                    
+                    new_options = CG.client_controller.new_options
+                    
+                    favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
+                    
+                    if favourite_file_lookup_script in script_names_to_scripts:
+                        
+                        self._script_choice.SetValue( script_names_to_scripts[ favourite_file_lookup_script ] )
+                        
+                    elif len( script_names_to_scripts ) > 0:
+                        
+                        self._script_choice.setCurrentIndex( 0 )
+                        
+                    
+                    self._script_choice.setEnabled( True )
+                    self._fetch_button.setEnabled( True )
+                    
                 
             
             scripts = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
             CG.client_controller.CallAfterQtSafe( self, qt_code )
             
+        
+        self._script_choice.setEnabled( False )
+        self._fetch_button.setEnabled( False )
         
         CG.client_controller.CallToThread( do_it )
         
@@ -681,6 +691,11 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     def FetchTags( self ):
         
         script = self._script_choice.GetValue()
+        
+        if script is None:
+            
+            return
+            
         
         if script.UsesUserInput():
             

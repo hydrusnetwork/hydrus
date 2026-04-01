@@ -999,7 +999,7 @@ class TestTagFilteringImportOptions( unittest.TestCase ):
         
         default_tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions()
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         
         blacklist = default_tag_filtering_import_options.GetTagBlacklist()
         
@@ -1020,12 +1020,12 @@ class TestTagFilteringImportOptions( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.VetoException ):
             
-            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
+            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:bountyvania' }, set() )
             
         
         with self.assertRaises( HydrusExceptions.VetoException ):
             
-            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit' }, { 'series:metroid' } )
+            tag_filtering_import_options.CheckTagsVeto( { 'bodysuit' }, { 'series:bountyvania' } )
             
         
         tag_filtering_import_options.CheckTagsVeto( { 'bodysuit' }, set() )
@@ -1041,11 +1041,11 @@ class TestTagFilteringImportOptions( unittest.TestCase ):
         
         with self.assertRaises( HydrusExceptions.VetoException ):
             
-            tag_filtering_import_options.CheckTagsVeto( { 'series:metroid' }, set() )
+            tag_filtering_import_options.CheckTagsVeto( { 'series:bountyvania' }, set() )
             
         
-        tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:metroid' }, set() )
-        tag_filtering_import_options.CheckTagsVeto( { 'series:metroid' }, { 'bodysuit' } )
+        tag_filtering_import_options.CheckTagsVeto( { 'bodysuit', 'series:bountyvania' }, set() )
+        tag_filtering_import_options.CheckTagsVeto( { 'series:bountyvania' }, { 'bodysuit' } )
         
     
 
@@ -1053,7 +1053,7 @@ class TestTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = TG.test_controller.example_tag_repo_service_key
         
@@ -1072,7 +1072,7 @@ class TestTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = TG.test_controller.example_tag_repo_service_key
         
-        external_filterable_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        external_filterable_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         external_additional_service_keys_to_tags = { example_service_key : { 'series:evangelion' } }
         
         media_result = GetTagsMediaResult( example_hash, True, example_service_key, set() )
@@ -1091,7 +1091,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid', 'series:evangelion' }
+        filtered_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania', 'series:evangelion' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1114,7 +1114,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:evangelion' }
+        filtered_tags = { 'bodysuit', 'character:space bounty hunter', 'series:evangelion' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1122,7 +1122,7 @@ class TestTagImportOptions( unittest.TestCase ):
     
     def test_services( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
         example_service_key_2 = TG.test_controller.example_tag_repo_service_key
@@ -1147,17 +1147,17 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates_1 = dict( result.IterateContentUpdates() )[ example_service_key_1 ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:evangelion' }
+        filtered_tags = { 'bodysuit', 'character:space bounty hunter', 'series:evangelion' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates_1 }
         
     
     def test_overwrite_deleted_filterable( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = TG.test_controller.example_tag_repo_service_key
         
-        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:bountyvania' } )
         
         #
         
@@ -1173,7 +1173,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'character:samus aran' }
+        filtered_tags = { 'character:space bounty hunter' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1192,7 +1192,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        filtered_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1200,11 +1200,11 @@ class TestTagImportOptions( unittest.TestCase ):
     
     def test_overwrite_deleted_additional( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = TG.test_controller.example_tag_repo_service_key
         
-        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:bountyvania' } )
         
         #
         
@@ -1220,7 +1220,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'character:samus aran' }
+        filtered_tags = { 'character:space bounty hunter' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1239,7 +1239,7 @@ class TestTagImportOptions( unittest.TestCase ):
         
         content_updates = dict( result.IterateContentUpdates() )[ example_service_key ]
         
-        filtered_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        filtered_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         result_tags = { c_u.GetRow()[0] for c_u in content_updates }
         
         self.assertEqual( result_tags, filtered_tags )
@@ -1280,7 +1280,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_basics( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
@@ -1302,7 +1302,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_get_tags_filtering( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
@@ -1322,24 +1322,24 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_namespaced )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter', 'series:bountyvania' } )
         
         #
         
-        only_samus = HydrusTags.TagFilter()
+        only_sbh = HydrusTags.TagFilter()
         
-        only_samus.SetRule( '', HC.FILTER_BLACKLIST )
-        only_samus.SetRule( ':', HC.FILTER_BLACKLIST )
-        only_samus.SetRule( 'character:samus aran', HC.FILTER_WHITELIST )
+        only_sbh.SetRule( '', HC.FILTER_BLACKLIST )
+        only_sbh.SetRule( ':', HC.FILTER_BLACKLIST )
+        only_sbh.SetRule( 'character:space bounty hunter', HC.FILTER_WHITELIST )
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_samus )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_filter = only_sbh )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter' } )
         
     
     def test_additional( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
@@ -1354,17 +1354,17 @@ class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_overwrite_deleted_get_tags_filtering( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:bountyvania' } )
         
         #
         
         service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, get_tags_overwrite_deleted = False )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter' } )
         
         #
         
@@ -1376,7 +1376,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags_overwrite_deleted = True )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter' } )
         
     
     def test_overwrite_deleted_additional( self ):
@@ -1385,30 +1385,30 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
-        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:metroid' } )
+        media_result = GetTagsMediaResult( example_hash, True, example_service_key, { 'bodysuit', 'series:bountyvania' } )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = False )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }, additional_tags_overwrite_deleted = False )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
-        
-        #
-        
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, additional_tags_overwrite_deleted = True )
-        
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter' } )
         
         #
         
-        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }, get_tags_overwrite_deleted = True )
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }, additional_tags_overwrite_deleted = True )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:samus aran' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' } )
+        
+        #
+        
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, additional_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }, get_tags_overwrite_deleted = True )
+        
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'character:space bounty hunter' } )
         
     
     def test_application( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
@@ -1442,8 +1442,8 @@ class TestServiceTagImportOptions( unittest.TestCase ):
     
     def test_existing( self ):
         
-        some_tags = { 'bodysuit', 'character:samus aran', 'series:metroid' }
-        existing_tags = { 'character:samus aran', 'series:metroid' }
+        some_tags = { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
+        existing_tags = { 'character:space bounty hunter', 'series:bountyvania' }
         example_hash = HydrusData.GenerateKey()
         example_service_key = HydrusData.GenerateKey()
         
@@ -1459,7 +1459,7 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         #
         
-        some_tags = { 'explicit', 'bodysuit', 'character:samus aran', 'series:metroid' }
+        some_tags = { 'explicit', 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' }
         existing_tags = { 'bodysuit' }
         
         only_unnamespaced = HydrusTags.TagFilter()
@@ -1470,6 +1470,6 @@ class TestServiceTagImportOptions( unittest.TestCase ):
         
         service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True, only_add_existing_tags = True, only_add_existing_tags_filter = only_unnamespaced )
         
-        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( service_tag_import_options.GetTags( example_service_key, CC.STATUS_SUCCESSFUL_AND_NEW, media_result, some_tags ), { 'bodysuit', 'character:space bounty hunter', 'series:bountyvania' } )
         
     

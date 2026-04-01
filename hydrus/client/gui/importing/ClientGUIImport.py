@@ -1587,7 +1587,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
     
 
-def SelectGUGKeyAndName( win: QW.QWidget, gug_key_and_name ):
+def SelectGUGKeyAndName( win: QW.QWidget, gug_key_and_name, for_new_sub = False ):
     
     domain_manager = CG.client_controller.network_engine.domain_manager
     
@@ -1598,6 +1598,25 @@ def SelectGUGKeyAndName( win: QW.QWidget, gug_key_and_name ):
     
     gugs = list( domain_manager.GetGUGs() )
     gug_keys_to_display = domain_manager.GetGUGKeysToDisplay()
+    
+    if len( gugs ) == 0:
+        
+        if for_new_sub:
+            
+            message = 'Hey, you do not have any downloaders set up in this client, so you cannot create a new subscription yet!'
+            
+        else:
+            
+            message = 'Hey, you do not have any downloaders set up in this client, so there is nothing to select!'
+            
+        
+        message += '\n\n'
+        message += 'Check the _network->downloaders_ menu to find downloaders made by users.'
+        
+        ClientGUIDialogsMessage.ShowWarning( win, message )
+        
+        raise HydrusExceptions.CancelledException()
+        
     
     gugs.sort( key = lambda g: g.GetName() )
     
@@ -1669,15 +1688,18 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, gug_key_and_name, update_callable = None ):
+    def __init__( self, parent, gug_key_and_name: tuple[ bytes, str ] | None = None, update_callable = None ):
         
         super().__init__( parent, 'gallery selector', self._Edit )
         
-        gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
-        
-        if gug is not None:
+        if gug_key_and_name is not None:
             
-            gug_key_and_name = gug.GetGUGKeyAndName()
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            
+            if gug is not None:
+                
+                gug_key_and_name = gug.GetGUGKeyAndName()
+                
             
         
         self._gug_key_and_name = gug_key_and_name
@@ -1702,19 +1724,26 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     def _SetLabel( self ):
         
-        label = self._gug_key_and_name[1]
-        
-        gug = CG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
-        
-        if gug is None:
+        if self._gug_key_and_name is None or self._gug_key_and_name[1] == '':
             
-            label = 'not found: ' + label
+            label = 'no downloader set'
+            
+        else:
+            
+            label = self._gug_key_and_name[1]
+            
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+            
+            if gug is None:
+                
+                label = 'not found: ' + label
+                
             
         
         self.setText( label )
         
     
-    def _SetValue( self, gug_key_and_name ):
+    def _SetValue( self, gug_key_and_name: tuple[ bytes, str ] | None ):
         
         self._gug_key_and_name = gug_key_and_name
         
@@ -1730,14 +1759,22 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     def GetValue( self ):
         
-        return self._gug_key_and_name
+        if self._gug_key_and_name is None or self._gug_key_and_name[1] == '':
+            
+            return None
+            
+        else:
+            
+            return self._gug_key_and_name
+            
         
     
-    def SetValue( self, gug_key_and_name ):
+    def SetValue( self, gug_key_and_name: tuple[ bytes, str ] | None ):
         
         self._SetValue( gug_key_and_name )
         
     
+
 class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
     importOptionsChanged = QC.Signal()

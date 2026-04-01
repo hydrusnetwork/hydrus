@@ -82,6 +82,12 @@ def GenerateImportOptionsManagerFromOldSystem(
     
     import_options_manager = ImportOptionsContainer.ImportOptionsManager.STATICGetEmptyButValidManager()
     
+    #
+    
+    ImportOptionsContainer.ImportOptionsManager.STATICPopulateManagerWithDefaultFavourites( import_options_manager )
+    
+    #
+    
     global_import_options_container = ConvertLegacyOptionsToContainer( file_import_options = loud_file_import_options, tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy(), note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy() )
     quiet_import_options_container = ConvertLegacyOptionsToContainer( file_import_options = quiet_file_import_options, optional_parent_container = global_import_options_container )
     

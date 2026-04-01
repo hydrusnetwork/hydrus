@@ -1329,8 +1329,6 @@ class DB( HydrusDB.HydrusDB ):
         
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
-        ClientDefaults.SetDefaultLoginManagerScripts( login_manager )
-        
         self.modules_serialisable.SetJSONDump( login_manager )
         
         favourite_search_manager = ClientSearchFavouriteSearches.FavouriteSearchManager()
@@ -1348,8 +1346,6 @@ class DB( HydrusDB.HydrusDB ):
         column_list_manager = ClientGUIListManager.ColumnListManager()
         
         self.modules_serialisable.SetJSONDump( column_list_manager )
-        
-        self._ExecuteMany( 'INSERT INTO json_dumps_named VALUES ( ?, ?, ?, ?, ? );', ClientDefaults.GetDefaultScriptRows() )
         
     
     def _DeletePending( self, service_key ):
@@ -6096,8 +6092,6 @@ class DB( HydrusDB.HydrusDB ):
         
         HydrusDB.HydrusDB._RepairDB( self, version )
         
-        self.modules_media_results.ClearMediaResultCache()
-        
         # caches
         
         tag_service_ids_we_have_regenned_storage_for = set()
@@ -7076,58 +7070,6 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'shimmie file page parser - simple tags'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                login_manager: ClientNetworkingLogin.NetworkLoginManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
-                
-                login_manager.Initialise()
-                
-                login_manager.OverwriteDefaultLoginScripts( [
-                    'e621.net login'
-                ] )
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( login_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
                 all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
@@ -7141,38 +7083,6 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'A file maintenance job failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 604:
-            
-            try:
-                
-                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'e621 file page parser with contributor tags'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 
@@ -7376,103 +7286,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            #
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultGUGs( [
-                    'e6ai tag search',
-                    'e621 tag search',
-                    'e926 tag search'
-                ] )
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'e621 file page api parser',
-                    'e621 gallery page api parser',
-                    'e621 pool api parser'
-                ] )
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'e6ai file page api',
-                    'e6ai file page',
-                    'e6ai gallery page api',
-                    'e6ai gallery page',
-                    'e6ai pools page api',
-                    'e6ai pools page',
-                    'e621 file page api',
-                    'e621 file page',
-                    'e621 gallery page api',
-                    'e621 gallery page',
-                    'e621 pools page api',
-                    'e621 pools page',
-                    'e926 file page api',
-                    'e926 file page',
-                    'e926 gallery page api',
-                    'e926 gallery page',
-                    'e926 pools page api',
-                    'e926 pools page'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            message = 'Hey, if you have any e621 subscriptions, the downloader is fixed this week--it recently stopped getting tags. You do not have to do anything.\n\nYour e621 subs will seem to find ~100 files the next time they run and then work through them real quick. There is nothing wrong--they are adapting, one time, to a new URL format. If you changed your e621 subscription to have a very high "normal checks" file limit, go edit them right now! 100 is proper.'
-            
-            self.pub_initial_message( message )
-            
-        
-        if version == 616:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'e621 file page api parser',
-                    'e621 gallery page api parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 617:
             
@@ -7522,41 +7335,6 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to scan and fix bad tags in the database failed! You can re-attempt this job under _database->check and repair->fix invalid tags_. Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'holotower thread json api',
-                    'holotower thread'
-                ] )
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'holotower thread api parser',
-                    'safebooru file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 
@@ -7766,35 +7544,6 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'derpibooru.org file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
                 new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
                 
                 new_options.SetBoolean( 'allow_remove_on_manage_tags_input', False )
@@ -7863,39 +7612,6 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to schedule avif files for some maintenance failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 629:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'pixiv file page api parser',
-                    'pixiv file page api parser (gets lower quality image if not logged in)'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 
@@ -8112,40 +7828,6 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'pixiv artist gallery page api',
-                    'pixiv artist page (new format)',
-                    'pixiv artist page',
-                    'pixiv file page api',
-                    'pixiv file page',
-                    'pixiv search api'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 638:
             
@@ -8298,36 +7980,6 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'pixiv file page api parser',
-                    'pixiv file page api parser (gets lower quality image if not logged in)'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
         
         if version == 648:
             
@@ -8378,38 +8030,6 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to resync your auto-resolution rules to their file domains failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.\n\nAlso, you might want to pause duplicates auto-resolution work right after the client boots, since it sounds like they have a file storage issue.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 651:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'danbooru gallery page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

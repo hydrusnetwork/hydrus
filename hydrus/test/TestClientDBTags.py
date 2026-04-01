@@ -563,6 +563,8 @@ class TestClientDBTags( unittest.TestCase ):
         
         del cls._db
         
+        TG.test_controller.ClearTestDB()
+        
     
     @classmethod
     def setUpClass( cls ):
@@ -601,31 +603,31 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self._samus_bad = bytes.fromhex( '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444' )
-        self._samus_both = bytes.fromhex( 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49' )
-        self._samus_good = bytes.fromhex( '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' )
+        self._sbh_bad = bytes.fromhex( '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444' )
+        self._sbh_both = bytes.fromhex( 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49' )
+        self._sbh_good = bytes.fromhex( '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' )
         
-        self._hashes = { self._samus_bad, self._samus_both, self._samus_good }
+        self._hashes = { self._sbh_bad, self._sbh_both, self._sbh_good }
         
         media_results = self._read( 'media_results', self._hashes )
         
         for media_result in media_results:
             
-            if media_result.GetHash() == self._samus_bad:
+            if media_result.GetHash() == self._sbh_bad:
                 
-                self._samus_bad_hash_id = media_result.GetHashId()
+                self._sbh_bad_hash_id = media_result.GetHashId()
                 
-            elif media_result.GetHash() == self._samus_both:
+            elif media_result.GetHash() == self._sbh_both:
                 
-                self._samus_both_hash_id = media_result.GetHashId()
+                self._sbh_both_hash_id = media_result.GetHashId()
                 
-            elif media_result.GetHash() == self._samus_good:
+            elif media_result.GetHash() == self._sbh_good:
                 
-                self._samus_good_hash_id = media_result.GetHashId()
+                self._sbh_good_hash_id = media_result.GetHashId()
                 
             
         
-        self._hash_ids = ( self._samus_bad_hash_id, self._samus_both_hash_id, self._samus_good_hash_id )
+        self._hash_ids = ( self._sbh_bad_hash_id, self._sbh_both_hash_id, self._sbh_good_hash_id )
         
     
     def _sync_display( self ):
@@ -683,13 +685,13 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_2 = []
         content_updates_3 = []
         
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'bodysuit' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'space bounty hunter', 'bountyvania' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'sbh bodysuit', 'bodysuit' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'sbh bodysuit', 'space bounty hunter' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
         
         # this last one should trigger a full on chain regen and rebuild the bodysuit pairs, despite not caring directly about them--does it?
-        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'nintendo' ) ) )
+        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'bountyvania', 'cool project house' ) ) )
         
         self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_1 ) )
         self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_2 ) )
@@ -703,7 +705,7 @@ class TestClientDBTags( unittest.TestCase ):
             'bodysuit',
             'clothing:bodysuit'
             }, 'clothing:bodysuit', {
-                'samus bodysuit'
+                'sbh bodysuit'
             }, set() ) )
         
     
@@ -729,14 +731,14 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_2 = []
         content_updates_3 = []
         
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', 'studio:nintendo' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran armour', 'character:samus aran' ) ) )
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'series:metroid' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'space bounty hunter', 'bountyvania' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'series:bountyvania', 'studio:cool project house' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'sbh armour', 'character:space bounty hunter' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bountyvania', 'series:bountyvania' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'space bounty hunter', 'character:space bounty hunter' ) ) )
         
         # this last one should trigger a full on chain regen including the difficult to find link--do we find that link on regenning?
-        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'studio:nintendo', 'game studio' ) ) )
+        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'studio:cool project house', 'game studio' ) ) )
         
         self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_1 ) )
         self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_2 ) )
@@ -746,14 +748,14 @@ class TestClientDBTags( unittest.TestCase ):
         
         #
         
-        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'samus aran', ) )[ 'samus aran' ][ self._my_service_key ], ( {
-            'character:samus aran',
-            'samus aran'
-            }, 'character:samus aran', {
-                'samus aran armour'
+        self.assertEqual( self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ( 'space bounty hunter', ) )[ 'space bounty hunter' ][ self._my_service_key ], ( {
+            'character:space bounty hunter',
+            'space bounty hunter'
+            }, 'character:space bounty hunter', {
+                'sbh armour'
             }, {
-            'series:metroid',
-            'studio:nintendo',
+            'series:bountyvania',
+            'studio:cool project house',
             'game studio'
             } ) )
         
@@ -771,12 +773,12 @@ class TestClientDBTags( unittest.TestCase ):
         post_combined_file_2 = os.urandom( 32 )
         post_combined_file_3 = os.urandom( 32 )
         
-        child_tag_1 = 'samus_aran'
-        child_tag_2 = 'samus aran'
-        child_tag_3 = 'character:samus aran'
+        child_tag_1 = 'space_bounty_hunter'
+        child_tag_2 = 'space bounty hunter'
+        child_tag_3 = 'character:space bounty hunter'
         
-        parent_1 = 'series:metroid'
-        parent_2 = 'series:nintendo'
+        parent_1 = 'series:bountyvania'
+        parent_2 = 'series:cool project house'
         
         def do_specific_imports():
             
@@ -1078,18 +1080,18 @@ class TestClientDBTags( unittest.TestCase ):
         
         self._clear_db()
         
-        # add samus
+        # add the tag
         
-        bad_samus_tag_1 = 'samus_aran_(character)'
-        bad_samus_tag_2 = 'samus aran'
-        good_samus_tag = 'character:samus aran'
+        bad_sbh_tag_1 = 'space_bounty_hunter_(character)'
+        bad_sbh_tag_2 = 'space bounty hunter'
+        good_sbh_tag = 'character:space bounty hunter'
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, good_sbh_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1116,13 +1118,13 @@ class TestClientDBTags( unittest.TestCase ):
         
         muh_jpg_hash = file_import_job.GetHash()
         
-        # pend samus to it in one action
+        # pend the tag to it in one action
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_sbh_tag_1, bad_sbh_tag_2 ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1134,14 +1136,14 @@ class TestClientDBTags( unittest.TestCase ):
         
         tags_manager = media_result.GetTagsManager()
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, bad_sbh_tag_2 } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1149,7 +1151,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_sbh_tag_1, bad_sbh_tag_2 ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1162,15 +1164,15 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, bad_sbh_tag_2 } )
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_bug_non_ideal_and_ideal( self ):
@@ -1179,18 +1181,18 @@ class TestClientDBTags( unittest.TestCase ):
         
         self._clear_db()
         
-        # add samus
+        # add the tag
         
-        bad_samus_tag_1 = 'samus_aran_(character)'
-        bad_samus_tag_2 = 'samus aran'
-        good_samus_tag = 'character:samus aran'
+        bad_sbh_tag_1 = 'space_bounty_hunter_(character)'
+        bad_sbh_tag_2 = 'space bounty hunter'
+        good_sbh_tag = 'character:space bounty hunter'
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, good_sbh_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1217,13 +1219,13 @@ class TestClientDBTags( unittest.TestCase ):
         
         muh_jpg_hash = file_import_job.GetHash()
         
-        # pend samus to it in one action
+        # pend the tag to it in one action
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_sbh_tag_1, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1235,14 +1237,14 @@ class TestClientDBTags( unittest.TestCase ):
         
         tags_manager = media_result.GetTagsManager()
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, good_sbh_tag } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1250,7 +1252,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_sbh_tag_1, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1263,15 +1265,15 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, good_sbh_tag } )
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_merge_bug_both_non_ideal( self ):
@@ -1281,18 +1283,18 @@ class TestClientDBTags( unittest.TestCase ):
         
         self._clear_db()
         
-        # add samus
+        # add the tag
         
-        bad_samus_tag_1 = 'samus_aran_(character)'
-        bad_samus_tag_2 = 'samus aran'
-        good_samus_tag = 'character:samus aran'
+        bad_sbh_tag_1 = 'space_bounty_hunter_(character)'
+        bad_sbh_tag_2 = 'space bounty hunter'
+        good_sbh_tag = 'character:space bounty hunter'
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, good_sbh_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1319,14 +1321,14 @@ class TestClientDBTags( unittest.TestCase ):
         
         muh_jpg_hash = file_import_job.GetHash()
         
-        # pend samus to it in one action
+        # pend the tag to it in one action
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_sbh_tag_2, ( muh_jpg_hash, ) ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1338,16 +1340,16 @@ class TestClientDBTags( unittest.TestCase ):
         
         tags_manager = media_result.GetTagsManager()
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1 } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1 } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_2 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1355,7 +1357,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, ( muh_jpg_hash, ) ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1368,15 +1370,15 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, bad_sbh_tag_2 } )
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_to_current_merge_bug_non_ideal_and_ideal( self ):
@@ -1385,18 +1387,18 @@ class TestClientDBTags( unittest.TestCase ):
         
         self._clear_db()
         
-        # add samus
+        # add the tag
         
-        bad_samus_tag_1 = 'samus_aran_(character)'
-        bad_samus_tag_2 = 'samus aran'
-        good_samus_tag = 'character:samus aran'
+        bad_sbh_tag_1 = 'space_bounty_hunter_(character)'
+        bad_sbh_tag_2 = 'space bounty hunter'
+        good_sbh_tag = 'character:space bounty hunter'
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, good_sbh_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1423,14 +1425,14 @@ class TestClientDBTags( unittest.TestCase ):
         
         muh_jpg_hash = file_import_job.GetHash()
         
-        # pend samus to it in one action
+        # pend the tag to it in one action
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( good_samus_tag, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( good_sbh_tag, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_sbh_tag_1, ( muh_jpg_hash, ) ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1442,16 +1444,16 @@ class TestClientDBTags( unittest.TestCase ):
         
         tags_manager = media_result.GetTagsManager()
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { good_samus_tag } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1 } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { good_sbh_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1459,7 +1461,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, ( muh_jpg_hash, ) ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1472,34 +1474,34 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_sbh_tag_1, good_sbh_tag } )
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
         
     
     def test_display_pending_regen( self ):
         
         self._clear_db()
         
-        # add samus
+        # add the tag
         
-        lara_tag = 'character:lara croft'
-        bad_samus_tag_1 = 'samus_aran_(character)'
-        bad_samus_tag_2 = 'samus aran'
-        good_samus_tag = 'character:samus aran'
+        jr_tag = 'character:jane raider'
+        bad_sbh_tag_1 = 'space_bounty_hunter_(character)'
+        bad_sbh_tag_2 = 'space bounty hunter'
+        good_sbh_tag = 'character:space bounty hunter'
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_1, good_sbh_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_sbh_tag_2, good_sbh_tag ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1526,15 +1528,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         muh_jpg_hash = file_import_job.GetHash()
         
-        # pend samus to it in one action
+        # pend the tag to it in one action
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( lara_tag, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( jr_tag, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_sbh_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_sbh_tag_2, ( muh_jpg_hash, ) ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -1547,18 +1549,18 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { lara_tag, bad_samus_tag_1, bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { jr_tag, bad_sbh_tag_1, bad_sbh_tag_2 } )
         
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { jr_tag, good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
-        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'jane*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'jane*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
         # now we'll currentify the tags in one action
         
@@ -1571,18 +1573,18 @@ class TestClientDBTags( unittest.TestCase ):
         tags_manager = media_result.GetTagsManager()
         
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { lara_tag, bad_samus_tag_1, bad_samus_tag_2 } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { jr_tag, bad_sbh_tag_1, bad_sbh_tag_2 } )
         
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { jr_tag, good_sbh_tag } )
         
         # and a/c results, both specific and combined
         
-        self._test_ac( 'samu*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'samu*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_samus_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_samus_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_samus_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'spac*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { bad_sbh_tag_1 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ), bad_sbh_tag_2 : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { good_sbh_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
-        self._test_ac( 'lara*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
-        self._test_ac( 'lara*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { lara_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'jane*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+        self._test_ac( 'jane*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { jr_tag : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
         
     
     def test_parents_pairs_lookup( self ):
@@ -1609,7 +1611,7 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'cute blonde' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'space bounty hunter', 'cute blonde' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'elf princess', 'cute blonde' ) ) )
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'cute' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'blonde' ) ) )
@@ -1625,13 +1627,13 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'nice' ) ) )
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'clothing' ) ) )
         
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'sci-fi' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'bountyvania', 'sci-fi' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'star trek', 'sci-fi' ) ) )
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'sci' ) ) )
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'fi' ) ) )
         
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush', 'an artist' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'an artist' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'drippen', 'an artist' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'outoption', 'an artist' ) ) )
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'an artist', 'an' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'an artist', 'artist' ) ) )
         
@@ -1648,7 +1650,7 @@ class TestClientDBTags( unittest.TestCase ):
         result = self._read( 'tag_parents', self._my_service_key )
         
         self.assertEqual( set( result[ HC.CONTENT_STATUS_CURRENT ] ), {
-            ( 'samus aran', 'cute blonde' ),
+            ( 'space bounty hunter', 'cute blonde' ),
             ( 'elf princess', 'cute blonde' ),
             ( 'cute blonde', 'cute' ),
             ( 'cute blonde', 'blonde' )
@@ -1661,23 +1663,23 @@ class TestClientDBTags( unittest.TestCase ):
             ( 'bikini', 'nice clothing' ),
             ( 'nice clothing', 'nice' ),
             ( 'nice clothing', 'clothing' ),
-            ( 'splashbrush', 'an artist' ),
+            ( 'drippen', 'an artist' ),
             ( 'an artist', 'an')
         } )
         
         self.assertEqual( set( result[ HC.CONTENT_STATUS_PENDING ] ), {
-            ( 'metroid', 'sci-fi' ),
+            ( 'bountyvania', 'sci-fi' ),
             ( 'star trek', 'sci-fi' ),
             ( 'sci-fi', 'sci' ),
             ( 'sci-fi', 'fi' ),
-            ( 'incase', 'an artist' ),
+            ( 'outoption', 'an artist' ),
             ( 'an artist', 'artist' )
         } )
         
         # are lookups working right?
         
         all_tags = {
-            'samus aran',
+            'space bounty hunter',
             'elf princess',
             'cute blonde',
             'cute',
@@ -1688,7 +1690,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
-                'samus aran',
+                'space bounty hunter',
                 set(),
                 { 'cute blonde', 'cute', 'blonde' }
             ),
@@ -1699,17 +1701,17 @@ class TestClientDBTags( unittest.TestCase ):
             ),
             (
                 'cute blonde',
-                { 'samus aran', 'elf princess' },
+                { 'space bounty hunter', 'elf princess' },
                 { 'cute', 'blonde' }
             ),
             (
                 'cute',
-                { 'cute blonde', 'samus aran', 'elf princess' },
+                { 'cute blonde', 'space bounty hunter', 'elf princess' },
                 set()
             ),
             (
                 'blonde',
-                { 'cute blonde', 'samus aran', 'elf princess' },
+                { 'cute blonde', 'space bounty hunter', 'elf princess' },
                 set()
             )
         ):
@@ -1729,13 +1731,13 @@ class TestClientDBTags( unittest.TestCase ):
             'nice clothing',
             'nice',
             'clothing',
-            'metroid',
+            'bountyvania',
             'star trek',
             'sci-fi',
             'sci',
             'fi',
-            'splashbrush',
-            'incase',
+            'drippen',
+            'outoption',
             'an artist',
             'an',
             'artist'
@@ -1770,7 +1772,7 @@ class TestClientDBTags( unittest.TestCase ):
                 set()
             ),
             (
-                'metroid',
+                'bountyvania',
                 set(),
                 { 'sci-fi', 'sci', 'fi' }
             ),
@@ -1781,42 +1783,42 @@ class TestClientDBTags( unittest.TestCase ):
             ),
             (
                 'sci-fi',
-                { 'metroid', 'star trek' },
+                { 'bountyvania', 'star trek' },
                 { 'sci', 'fi' }
             ),
             (
                 'sci',
-                { 'sci-fi', 'metroid', 'star trek' },
+                { 'sci-fi', 'bountyvania', 'star trek' },
                 set()
             ),
             (
                 'fi',
-                { 'sci-fi', 'metroid', 'star trek' },
+                { 'sci-fi', 'bountyvania', 'star trek' },
                 set()
             ),
             (
-                'splashbrush',
+                'drippen',
                 set(),
                 { 'an artist', 'an', 'artist' }
             ),
             (
-                'incase',
+                'outoption',
                 set(),
                 { 'an artist', 'an', 'artist' }
             ),
             (
                 'an artist',
-                { 'splashbrush', 'incase' },
+                { 'drippen', 'outoption' },
                 { 'an', 'artist' }
             ),
             (
                 'an',
-                { 'an artist', 'splashbrush', 'incase' },
+                { 'an artist', 'drippen', 'outoption' },
                 set()
             ),
             (
                 'artist',
-                { 'an artist', 'splashbrush', 'incase' },
+                { 'an artist', 'drippen', 'outoption' },
                 set()
             )
         ):
@@ -1836,7 +1838,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'cute blonde' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'jane raider', 'cute blonde' ) ) )
         
         content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
@@ -1857,14 +1859,14 @@ class TestClientDBTags( unittest.TestCase ):
         # added right?
         
         all_tags = {
-            'lara croft'
+            'jane raider'
         }
         
         selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
-                'lara croft',
+                'jane raider',
                 set(),
                 { 'cute blonde', 'cute', 'blonde' }
             ),
@@ -1920,7 +1922,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'cute blonde' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'jane raider', 'cute blonde' ) ) )
         
         content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
@@ -1941,19 +1943,19 @@ class TestClientDBTags( unittest.TestCase ):
         # and they went, right?
         
         all_tags = {
-            'samus aran',
+            'space bounty hunter',
             'elf princess',
             'cute blonde',
             'cute',
             'blonde',
-            'lara croft'
+            'jane raider'
         }
         
         selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for ( tag, expected_descendants, expected_ancestors ) in (
             (
-                'samus aran',
+                'space bounty hunter',
                 set(),
                 { 'cute blonde', 'cute', 'blonde' }
             ),
@@ -1964,21 +1966,21 @@ class TestClientDBTags( unittest.TestCase ):
             ),
             (
                 'cute blonde',
-                { 'samus aran', 'elf princess' },
+                { 'space bounty hunter', 'elf princess' },
                 { 'cute', 'blonde' }
             ),
             (
                 'cute',
-                { 'cute blonde', 'samus aran', 'elf princess' },
+                { 'cute blonde', 'space bounty hunter', 'elf princess' },
                 set()
             ),
             (
                 'blonde',
-                { 'cute blonde', 'samus aran', 'elf princess' },
+                { 'cute blonde', 'space bounty hunter', 'elf princess' },
                 set()
             ),
             (
-                'lara croft',
+                'jane raider',
                 set(),
                 set()
             )
@@ -1999,13 +2001,13 @@ class TestClientDBTags( unittest.TestCase ):
             'nice clothing',
             'nice',
             'clothing',
-            'metroid',
+            'bountyvania',
             'star trek',
             'sci-fi',
             'sci',
             'fi',
-            'splashbrush',
-            'incase',
+            'drippen',
+            'outoption',
             'an artist',
             'an',
             'artist',
@@ -2043,7 +2045,7 @@ class TestClientDBTags( unittest.TestCase ):
                 set()
             ),
             (
-                'metroid',
+                'bountyvania',
                 set(),
                 { 'sci-fi', 'sci', 'fi' }
             ),
@@ -2054,42 +2056,42 @@ class TestClientDBTags( unittest.TestCase ):
             ),
             (
                 'sci-fi',
-                { 'metroid', 'star trek' },
+                { 'bountyvania', 'star trek' },
                 { 'sci', 'fi' }
             ),
             (
                 'sci',
-                { 'sci-fi', 'metroid', 'star trek' },
+                { 'sci-fi', 'bountyvania', 'star trek' },
                 set()
             ),
             (
                 'fi',
-                { 'sci-fi', 'metroid', 'star trek' },
+                { 'sci-fi', 'bountyvania', 'star trek' },
                 set()
             ),
             (
-                'splashbrush',
+                'drippen',
                 set(),
                 { 'an artist', 'an', 'artist' }
             ),
             (
-                'incase',
+                'outoption',
                 set(),
                 { 'an artist', 'an', 'artist' }
             ),
             (
                 'an artist',
-                { 'splashbrush', 'incase' },
+                { 'drippen', 'outoption' },
                 { 'an', 'artist' }
             ),
             (
                 'an',
-                { 'an artist', 'splashbrush', 'incase' },
+                { 'an artist', 'drippen', 'outoption' },
                 set()
             ),
             (
                 'artist',
-                { 'an artist', 'splashbrush', 'incase' },
+                { 'an artist', 'drippen', 'outoption' },
                 set()
             ),
             (
@@ -2136,9 +2138,9 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus aran' ) ) )
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus_aran_(character)', 'character:samus aran' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'speace_bounty_hunter', 'space bounty hunter' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'space_bounty_hunter_(character)', 'character:space bounty hunter' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'space bounty hunter', 'character:space bounty hunter' ) ) )
         
         content_update_package_1.AddContentUpdates( self._my_service_key, content_updates_1 )
         content_update_package_2.AddContentUpdates( self._my_service_key, content_updates_2 )
@@ -2150,13 +2152,13 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit_(clothing)', 'clothing:bodysuit' ) ) )
         content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
         
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metrod', 'metroid' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid_(series)', 'series:metroid' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'series:metroid' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'bountyvinia', 'bountyvania' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'bountyvania_(series)', 'series:bountyvania' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'bountyvania', 'series:bountyvania' ) ) )
         
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbush', 'splashbrush' ) ) )
-        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush_(artist)', 'creator:splashbrush' ) ) )
-        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'splashbrush', 'creator:splashbrush' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'drippin', 'drippen' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'drippen_(artist)', 'creator:drippen' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'drippen', 'creator:drippen' ) ) )
         
         content_update_package_1.AddContentUpdates( self._public_service_key, content_updates_1 )
         content_update_package_2.AddContentUpdates( self._public_service_key, content_updates_2 )
@@ -2171,9 +2173,9 @@ class TestClientDBTags( unittest.TestCase ):
         result = self._read( 'tag_siblings', self._my_service_key )
         
         self.assertEqual( set( result[ HC.CONTENT_STATUS_CURRENT ] ), {
-            ( 'sameus aran', 'samus aran' ),
-            ( 'samus_aran_(character)', 'character:samus aran' ),
-            ( 'samus aran', 'character:samus aran' )
+            ( 'speace_bounty_hunter', 'space bounty hunter' ),
+            ( 'space_bounty_hunter_(character)', 'character:space bounty hunter' ),
+            ( 'space bounty hunter', 'character:space bounty hunter' )
         } )
         
         result = self._read( 'tag_siblings', self._public_service_key )
@@ -2182,65 +2184,65 @@ class TestClientDBTags( unittest.TestCase ):
             ( 'bodysut', 'bodysuit' ),
             ( 'bodysuit_(clothing)', 'clothing:bodysuit' ),
             ( 'bodysuit', 'clothing:bodysuit' ),
-            ( 'splashbush', 'splashbrush' ),
-            ( 'splashbrush_(artist)', 'creator:splashbrush' )
+            ( 'drippin', 'drippen' ),
+            ( 'drippen_(artist)', 'creator:drippen' )
         } )
         
         self.assertEqual( set( result[ HC.CONTENT_STATUS_PENDING ] ), {
-            ( 'metrod', 'metroid' ),
-            ( 'metroid_(series)', 'series:metroid' ),
-            ( 'metroid', 'series:metroid' ),
-            ( 'splashbrush', 'creator:splashbrush' )
+            ( 'bountyvinia', 'bountyvania' ),
+            ( 'bountyvania_(series)', 'series:bountyvania' ),
+            ( 'bountyvania', 'series:bountyvania' ),
+            ( 'drippen', 'creator:drippen' )
         } )
         
         # did they get constructed correctly?
         
         self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), {
-            'sameus aran' : 'character:samus aran',
-            'samus_aran_(character)' : 'character:samus aran',
-            'samus aran' : 'character:samus aran'
+            'speace_bounty_hunter' : 'character:space bounty hunter',
+            'space_bounty_hunter_(character)' : 'character:space bounty hunter',
+            'space bounty hunter' : 'character:space bounty hunter'
         } )
         
         self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), {
             'bodysut' : 'clothing:bodysuit',
             'bodysuit_(clothing)' : 'clothing:bodysuit',
             'bodysuit' : 'clothing:bodysuit',
-            'metrod' : 'series:metroid',
-            'metroid_(series)' : 'series:metroid',
-            'metroid' : 'series:metroid',
-            'splashbush' : 'creator:splashbrush',
-            'splashbrush_(artist)' : 'creator:splashbrush',
-            'splashbrush' : 'creator:splashbrush'
+            'bountyvinia' : 'series:bountyvania',
+            'bountyvania_(series)' : 'series:bountyvania',
+            'bountyvania' : 'series:bountyvania',
+            'drippin' : 'creator:drippen',
+            'drippen_(artist)' : 'creator:drippen',
+            'drippen' : 'creator:drippen'
         } )
         
         # are lookups working right?
         
         all_tags = {
-            'sameus aran',
-            'samus aran',
-            'samus_aran_(character)',
-            'character:samus aran'
+            'speace_bounty_hunter',
+            'space bounty hunter',
+            'space_bounty_hunter_(character)',
+            'character:space bounty hunter'
         }
         
         selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
         
         for tag in {
-            'sameus aran',
-            'samus aran',
-            'samus_aran_(character)',
-            'character:samus aran'
+            'speace_bounty_hunter',
+            'space bounty hunter',
+            'space_bounty_hunter_(character)',
+            'character:space bounty hunter'
         }:
             
             ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._my_service_key ]
             
             self.assertEqual( sibling_chain_members, {
-                'sameus aran',
-                'samus aran',
-                'samus_aran_(character)',
-                'character:samus aran'
+                'speace_bounty_hunter',
+                'space bounty hunter',
+                'space_bounty_hunter_(character)',
+                'character:space bounty hunter'
             } )
             
-            self.assertEqual( ideal_tag, 'character:samus aran' )
+            self.assertEqual( ideal_tag, 'character:space bounty hunter' )
             self.assertEqual( descendants, set() )
             self.assertEqual( ancestors, set() )
             
@@ -2250,14 +2252,14 @@ class TestClientDBTags( unittest.TestCase ):
             'bodysuit_(clothing)',
             'bodysuit',
             'clothing:bodysuit',
-            'metrod',
-            'metroid_(series)',
-            'metroid',
-            'series:metroid',
-            'splashbush',
-            'splashbrush_(artist)',
-            'splashbrush',
-            'creator:splashbrush'
+            'bountyvinia',
+            'bountyvania_(series)',
+            'bountyvania',
+            'series:bountyvania',
+            'drippin',
+            'drippen_(artist)',
+            'drippen',
+            'creator:drippen'
         }
         
         selected_tag_to_service_keys_to_siblings_and_parents = self._read( 'tag_siblings_and_parents_lookup', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, all_tags )
@@ -2284,43 +2286,43 @@ class TestClientDBTags( unittest.TestCase ):
             
         
         for tag in {
-            'metrod',
-            'metroid_(series)',
-            'metroid',
-            'series:metroid',
+            'bountyvinia',
+            'bountyvania_(series)',
+            'bountyvania',
+            'series:bountyvania',
         }:
             
             ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, {
-                'metrod',
-                'metroid_(series)',
-                'metroid',
-                'series:metroid',
+                'bountyvinia',
+                'bountyvania_(series)',
+                'bountyvania',
+                'series:bountyvania',
             } )
             
-            self.assertEqual( ideal_tag, 'series:metroid' )
+            self.assertEqual( ideal_tag, 'series:bountyvania' )
             self.assertEqual( descendants, set() )
             self.assertEqual( ancestors, set() )
             
         
         for tag in {
-            'splashbush',
-            'splashbrush_(artist)',
-            'splashbrush',
-            'creator:splashbrush'
+            'drippin',
+            'drippen_(artist)',
+            'drippen',
+            'creator:drippen'
         }:
             
             ( sibling_chain_members, ideal_tag, descendants, ancestors ) = selected_tag_to_service_keys_to_siblings_and_parents[ tag ][ self._public_service_key ]
             
             self.assertEqual( sibling_chain_members, {
-                'splashbush',
-                'splashbrush_(artist)',
-                'splashbrush',
-                'creator:splashbrush'
+                'drippin',
+                'drippen_(artist)',
+                'drippen',
+                'creator:drippen'
             } )
             
-            self.assertEqual( ideal_tag, 'creator:splashbrush' )
+            self.assertEqual( ideal_tag, 'creator:drippen' )
             self.assertEqual( descendants, set() )
             self.assertEqual( ancestors, set() )
             
@@ -2331,7 +2333,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'character:samus aran' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'jane raider', 'character:space bounty hunter' ) ) )
         
         content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
@@ -2339,9 +2341,9 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'shorts', 'clothing:bodysuit' ) ) )
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'tomb raider', 'series:metroid' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'tomb charted', 'series:bountyvania' ) ) )
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'creator:splashbrush' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'outoption', 'creator:drippen' ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -2353,17 +2355,17 @@ class TestClientDBTags( unittest.TestCase ):
         
         result = self._read( 'tag_siblings_all_ideals', self._my_service_key )
         
-        self.assertIn( 'lara croft', result )
-        self.assertEqual( result[ 'lara croft' ], 'character:samus aran' )
+        self.assertIn( 'jane raider', result )
+        self.assertEqual( result[ 'jane raider' ], 'character:space bounty hunter' )
         
         result = self._read( 'tag_siblings_all_ideals', self._public_service_key )
         
         self.assertIn( 'shorts', result )
-        self.assertIn( 'tomb raider', result )
-        self.assertIn( 'incase', result )
+        self.assertIn( 'tomb charted', result )
+        self.assertIn( 'outoption', result )
         self.assertEqual( result[ 'shorts' ], 'clothing:bodysuit' )
-        self.assertEqual( result[ 'tomb raider' ], 'series:metroid' )
-        self.assertEqual( result[ 'incase' ], 'creator:splashbrush' )
+        self.assertEqual( result[ 'tomb charted' ], 'series:bountyvania' )
+        self.assertEqual( result[ 'outoption' ], 'creator:drippen' )
         
         # now remove them
         
@@ -2371,7 +2373,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'character:samus aran' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'jane raider', 'character:space bounty hunter' ) ) )
         
         content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
@@ -2379,9 +2381,9 @@ class TestClientDBTags( unittest.TestCase ):
         
         content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'shorts', 'clothing:bodysuit' ) ) )
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'tomb raider', 'series:metroid' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'tomb charted', 'series:bountyvania' ) ) )
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'incase', 'creator:splashbrush' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'outoption', 'creator:drippen' ) ) )
         
         content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
@@ -2392,21 +2394,21 @@ class TestClientDBTags( unittest.TestCase ):
         # and they went, right?
         
         self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), {
-            'sameus aran' : 'character:samus aran',
-            'samus_aran_(character)' : 'character:samus aran',
-            'samus aran' : 'character:samus aran'
+            'speace_bounty_hunter' : 'character:space bounty hunter',
+            'space_bounty_hunter_(character)' : 'character:space bounty hunter',
+            'space bounty hunter' : 'character:space bounty hunter'
         } )
         
         self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), {
             'bodysut' : 'clothing:bodysuit',
             'bodysuit_(clothing)' : 'clothing:bodysuit',
             'bodysuit' : 'clothing:bodysuit',
-            'metrod' : 'series:metroid',
-            'metroid_(series)' : 'series:metroid',
-            'metroid' : 'series:metroid',
-            'splashbush' : 'creator:splashbrush',
-            'splashbrush_(artist)' : 'creator:splashbrush',
-            'splashbrush' : 'creator:splashbrush'
+            'bountyvinia' : 'series:bountyvania',
+            'bountyvania_(series)' : 'series:bountyvania',
+            'bountyvania' : 'series:bountyvania',
+            'drippin' : 'creator:drippen',
+            'drippen_(artist)' : 'creator:drippen',
+            'drippen' : 'creator:drippen'
         } )
         
     
@@ -2524,65 +2526,65 @@ class TestClientDBTags( unittest.TestCase ):
                         
                         hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'speace_bounty_hunter' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran', 'process these', 'pc bad', 'pp bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'speace_bounty_hunter', 'process these', 'pc bad', 'pp bad' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad', 'pc good', 'samus metroid' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad', 'pp good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad', 'pc good', 'sbh bountyvania' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad', 'pp good' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good', 'process these', 'pc bad', 'pc good', 'samus metroid', 'pp bad', 'pp good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good', 'process these', 'pc bad', 'pc good', 'sbh bountyvania', 'pp bad', 'pp good' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:space bounty hunter' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:space bounty hunter' } )
                         
                         self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                         self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                        self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'space bounty hunter*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                         
                         if on_local_files and not force_no_local_files:
                             
                             self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                             self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                             self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                            self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                            self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                             
                             self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                             self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                             self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) } )
-                            self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                            self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
+                            self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                            self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) } )
                             
                         else:
                             
                             self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             
                             self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                            self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                            self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                             
                         
                     
@@ -2594,27 +2596,27 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'mc bad', 'sameus aran' ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'mc bad', 'mc good', ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'mc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_bad, ) ) ) for tag in ( 'mc bad', 'speace_bounty_hunter' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_both, ) ) ) for tag in ( 'mc bad', 'mc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_good, ) ) ) for tag in ( 'mc good', ) ) )
             
             content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, self._samus_both, self._samus_good ) ) ) for tag in ( 'process these', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_bad, self._sbh_both, self._sbh_good ) ) ) for tag in ( 'process these', ) ) )
             
             content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pc bad', ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pc bad', 'pc good', 'samus metroid' ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_bad, ) ) ) for tag in ( 'pc bad', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_both, ) ) ) for tag in ( 'pc bad', 'pc good', 'sbh bountyvania' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._sbh_good, ) ) ) for tag in ( 'pc good', ) ) )
             
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pp bad', ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pp bad', 'pp good' ) ) )
-            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pp good', 'character:samus aran' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._sbh_bad, ) ) ) for tag in ( 'pp bad', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._sbh_both, ) ) ) for tag in ( 'pp bad', 'pp good' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._sbh_good, ) ) ) for tag in ( 'pp good', 'character:space bounty hunter' ) ) )
             
             content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             
@@ -2668,8 +2670,8 @@ class TestClientDBTags( unittest.TestCase ):
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc wrong' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc wrong' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp wrong' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'link' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'link', 'zelda' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'speace_bounty_hunter', 'well excuse me' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'well excuse me', 'cool princess' ) ) )
             
             content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
@@ -2678,7 +2680,7 @@ class TestClientDBTags( unittest.TestCase ):
             self._sync_display()
             
             self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), { 'process these' : 'nope' } )
-            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._processing_service_key ), { 'mc bad' : 'mc wrong', 'pc bad' : 'pc wrong', 'pp bad' : 'pp wrong', 'sameus aran' : 'zelda', 'link' : 'zelda' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._processing_service_key ), { 'mc bad' : 'mc wrong', 'pc bad' : 'pc wrong', 'pp bad' : 'pp wrong', 'speace_bounty_hunter' : 'cool princess', 'well excuse me' : 'cool princess' } )
             self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), {} )
             
             test_no_sibs()
@@ -2696,8 +2698,8 @@ class TestClientDBTags( unittest.TestCase ):
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc wrong' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pc bad', 'pc wrong' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pp bad', 'pp wrong' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'link' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'link', 'zelda' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'speace_bounty_hunter', 'well excuse me' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'well excuse me', 'cool princess' ) ) )
             
             content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
@@ -2716,7 +2718,7 @@ class TestClientDBTags( unittest.TestCase ):
             content_updates = []
             
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc good' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus metroid' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'speace_bounty_hunter', 'sbh bountyvania' ) ) )
             
             content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
@@ -2724,7 +2726,7 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc good' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp good' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus metroid', 'character:samus aran' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sbh bountyvania', 'character:space bounty hunter' ) ) )
             
             content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             
@@ -2732,9 +2734,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._sync_display()
             
-            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'samus metroid' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), { 'mc bad' : 'mc good', 'speace_bounty_hunter' : 'sbh bountyvania' } )
             self.assertEqual( self._read( 'tag_siblings_all_ideals', self._processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), { 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), { 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'sbh bountyvania' : 'character:space bounty hunter' } )
             
             for do_regen_sibs in ( False, True ):
                 
@@ -2756,34 +2758,34 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'sbh bountyvania' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid', 'process these', 'pc good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'sbh bountyvania', 'process these', 'pc good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:space bounty hunter' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:space bounty hunter', 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:space bounty hunter' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:space bounty hunter' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
                     self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                     self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                     self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                    self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'space bounty hunter*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                     
                     if on_local_files:
                         
@@ -2791,9 +2793,9 @@ class TestClientDBTags( unittest.TestCase ):
                         self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
                         self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
@@ -2801,25 +2803,25 @@ class TestClientDBTags( unittest.TestCase ):
                         # the storage/write a/c used to get funky here because it was tricky to do siblings over all known tags. it merged all sibling lookups for all fetched tags
                         # but now it is fixed I am pretty sure! each set of positive count tag results is siblinged in a service leaf silo
                         # I basically just fixed these tests to the new results. it seems good in UI. this is more reason that these unit tests are way too complicated and need to be redone
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ), 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
                     else:
                         
                         self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         
                         self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         
                     
                 
@@ -2848,9 +2850,9 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._sync_display()
             
-            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._my_service_key ), { 'mc bad' : 'mc good', 'speace_bounty_hunter' : 'character:space bounty hunter', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'sbh bountyvania' : 'character:space bounty hunter' } )
             self.assertEqual( self._read( 'tag_siblings_all_ideals', self._processing_service_key ), {} )
-            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), { 'mc bad' : 'mc good', 'sameus aran' : 'character:samus aran', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'samus metroid' : 'character:samus aran' } )
+            self.assertEqual( self._read( 'tag_siblings_all_ideals', self._public_service_key ), { 'mc bad' : 'mc good', 'speace_bounty_hunter' : 'character:space bounty hunter', 'pc bad' : 'pc good', 'pp bad' : 'pp good', 'sbh bountyvania' : 'character:space bounty hunter' } )
             
             for do_regen_sibs in ( False, True ):
                 
@@ -2872,34 +2874,34 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:space bounty hunter' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran', 'process these', 'pc good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:space bounty hunter', 'process these', 'pc good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:space bounty hunter' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:space bounty hunter', 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:space bounty hunter' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._sbh_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:space bounty hunter' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
                     self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                     self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                     self._test_ac( 'pp bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                    self._test_ac( 'sameus aran*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                    self._test_ac( 'samus metroid*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                    self._test_ac( 'samus aran*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                    self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                    self._test_ac( 'space bounty hunter*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                     
                     if on_local_files:
                         
@@ -2907,9 +2909,9 @@ class TestClientDBTags( unittest.TestCase ):
                         self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'pp bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ), 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 2 ) }, { 'pp good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 3 ) } )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ) } )
+                        self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
+                        self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, { 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 1 ) } )
                         
                         self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'mc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
                         self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'pc bad' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc good' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
@@ -2917,25 +2919,25 @@ class TestClientDBTags( unittest.TestCase ):
                         # the storage/write a/c used to get funky here because it was tricky to do siblings over all known tags. it merged all sibling lookups for all fetched tags
                         # but now it is fixed I am pretty sure! each set of positive count tag results is siblinged in a service leaf silo
                         # I basically just fixed these tests to the new results. it seems good in UI. this is more reason that these unit tests are way too complicated and need to be redone
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'sameus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'samus metroid' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:samus aran' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:samus aran' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
+                        self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, { 'speace_bounty_hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'sbh bountyvania' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 1, 0 ), 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount.STATICCreateStaticCount( 0, 1 ) }, { 'character:space bounty hunter' : ClientSearchPredicate.PredicateCount( 1, 1, 2, 1 ) } )
                         
                     else:
                         
                         self._test_ac( 'mc bad*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pp bad*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'sameus aran*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus metroid*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus aran*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'speace_bounty_hunter*', self._my_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'sbh bountyvania*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'space bounty hunter*', self._public_service_key, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         
                         self._test_ac( 'mc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pc bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         self._test_ac( 'pp bad*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'sameus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus metroid*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
-                        self._test_ac( 'samus aran*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'speace_bounty_hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'sbh bountyvania*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
+                        self._test_ac( 'space bounty hunter*', CC.COMBINED_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, {}, {} )
                         
                     
                 
@@ -2945,7 +2947,7 @@ class TestClientDBTags( unittest.TestCase ):
             content_updates = []
             
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc good' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'samus metroid' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'speace_bounty_hunter', 'sbh bountyvania' ) ) )
             
             content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
@@ -2953,7 +2955,7 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pc bad', 'pc good' ) ) )
             content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pp bad', 'pp good' ) ) )
-            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'samus metroid', 'character:samus aran' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'sbh bountyvania', 'character:space bounty hunter' ) ) )
             
             content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             

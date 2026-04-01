@@ -447,7 +447,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
             
             for file_service_key in file_service_keys:
                 
-                # just as a legacy note, this is where we used to do the "'samus aran' gets 'character:samus aran'" code. now, that stuff works through wildcards if user explicitly enters '*:samus aran'
+                # just as a legacy note, this is where we used to do the "'dave' gets 'character:dave'" code. now, that stuff works through wildcards if user explicitly enters '*:dave'
                 
                 tag_ids = ( ideal_tag_id, )
                 

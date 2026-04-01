@@ -68,7 +68,7 @@ When you upload, your account is temporarily linked to the rows of content you a
 [Privacy can be tricky](https://en.wikipedia.org/wiki/AOL_search_data_leak). Hydrus tech is obviously far, far better than anything normal consumers use, but here I believe are the remaining barriers to pure Anonymity, assuming someone with resources was willing to put a lot of work in to attack you:
 
 !!! note
-    I am using the PTR as the example since that is what most people are using. If you are uploading to a server run between friends, privacy is obviously more difficult to preserve--if there are only three users, it may not be too hard to figure out who is uploading the NarutoXSonichu diaperfur content! If you are talking to a server with a small group of users, don't upload anything crazy or personally identifying unless that's the point of the server.
+    I am using the PTR as the example since that is what most people are using. If you are uploading to a server run between friends, privacy is obviously more difficult to preserve--if there are only three users, it may not be too hard to figure out who is uploading the NarutoXSonichu yumejoshi content! If you are talking to a server with a small group of users, don't upload anything crazy or personally identifying unless that's the point of the server.
 
 *   #### IP Address Across Network
     

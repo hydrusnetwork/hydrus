@@ -53,6 +53,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
         
         Try `unset MANGOHUD` or `export MANGOHUD=0` to remove the MangoHUD environment variable in your hydrus launch script to fix this!
     
+    ??? warning "KDE and QtMediaPlayer"
+        A user notes that those on KDE may need the `mit-krb5` package to get QtMediaPlayer working. Hit up `help->about` and the "Optional Libraries" tab once you are up to see if QtMultimedia loaded ok.
+    
     !!! note "Qt compatibility"
         
         If `hydrus_client` fails to run, and from terminal it says something like this:
@@ -267,7 +270,7 @@ _All that said, and while updating is complex and every client is different, var
 
 !!! danger "I am not joking around: if you end up liking hydrus, you should back up your database"
 
-**Maintaining a regular backup is important for hydrus.** The program stores a lot of complicated data that you will put hours and hours of work into, and if you only have one copy and your hard drive breaks, you could lose everything. This has happened before--to people who thought it would never happen to them--and it sucks big time to go through. **Don't let it be you.**
+**Maintaining a regular backup is important for hydrus.** The program stores a lot of complicated data that you will put hours and hours of work into. If you only have one copy and your hard drive breaks, you could lose everything. This has happened before--to people who thought it would never happen to them--and it sucks big time to go through. **Don't let it be you.**
 
 Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cannot work in a faulty environment. Ways in which users of hydrus have damaged/lost their database:
 
@@ -284,7 +287,7 @@ Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cann
 * Network drive location not guaranteeing accurate file locks
 * Windows NVMe driver bugs necessitating a different SQLite journalling method
 
-Some of those you can mitigate (don't run the database over a network!) and some will always be a problem, but if you have a backup, none of them can kill you.
+Some of those you can mitigate (don't run the database over a network!) and some will always be a concern, but if you have a backup, none of them can kill you.
 
 !!! note "This mostly means your database, not your files"
     Note that nearly all the serious and difficult-to-fix problems occur to the _database_, which is four large .db files, not your media. All your images and movies are read-only in hydrus, and there's less worry if they are on a network share with bad locks or a machine that suddenly loses power. The database, however, maintains a live connection, with regular complex writes, and here a hardware failure can lead to corruption (basically the failure scrambles the data that is written, so when you try to boot back up, a small section of the database is incomprehensible garbage).

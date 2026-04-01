@@ -1,10 +1,9 @@
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -21,6 +20,10 @@ from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import ImportOptionsContainer
+
+PASTE_REPLACE = 0
+PASTE_MERGE = 1
+PASTE_FILL_IN = 2
 
 class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
@@ -43,7 +46,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._simple_mode.setChecked( self._new_options.GetBoolean( 'import_options_simple_mode' ) )
         
-        simple_mode_hbox = ClientGUICommon.WrapInText( self._simple_mode, self, 'keep this panel simple to use' )
+        simple_mode_hbox = ClientGUICommon.WrapInText( self._simple_mode, self, 'keep this panel simple :^)' )
         
         #
         
@@ -59,14 +62,19 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         default_import_options_list_panel.AddButton( 'show stack', self._SeeDefaultStack, enabled_only_on_single_selection = True )
         default_import_options_list_panel.AddSeparator()
-        default_import_options_list_panel.AddButton( 'copy', self._CopyDefault, enabled_only_on_single_selection = True )
+        default_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyDefault, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: delete what is selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: reset selected to default and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteDefaultMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste onto what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
         
-        default_import_options_list_panel.AddMenuButton( 'paste', menu_template_items, enabled_only_on_selection = True )
+        default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        
+        self._favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_container_manager, edit_allowed = True )
+        default_import_options_list_panel.AddWindow( self._favourites_button )
+        
         default_import_options_list_panel.AddButton( 'edit', self._EditDefault, enabled_only_on_single_selection = True )
         default_import_options_list_panel.AddButton( 'clear', self._ClearDefault, enabled_only_on_selection = True )
         
@@ -84,14 +92,15 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         url_class_import_options_list_panel.AddButton( 'show stack', self._SeeURLClassStack, enabled_only_on_single_selection = True )
         url_class_import_options_list_panel.AddSeparator()
-        url_class_import_options_list_panel.AddButton( 'copy', self._CopyURLClass, enabled_only_on_single_selection = True )
+        url_class_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyURLClass, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: delete what is selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: reset selected to default and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste only what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste only what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
         
-        url_class_import_options_list_panel.AddMenuButton( 'paste', menu_template_items, enabled_only_on_selection = True )
+        url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         url_class_import_options_list_panel.AddButton( 'edit', self._EditURLClass, enabled_only_on_single_selection = True )
         url_class_import_options_list_panel.AddButton( 'clear', self._ClearURLClass, enabled_only_on_selection = True )
         
@@ -116,6 +125,14 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         vbox = QP.VBoxLayout()
         
+        label = 'HEY YOU ONLY SEE THIS PANEL IF YOU BOOT THE OPTIONS DIALOG IN ADVANCED MODE. THIS DOES NOT CHANGE OR SAVE ANYTHING REAL BUT IT SHOWS PREVIEW OF WHAT THE NEW IMPORT OPTIONS SYSTEM WILL LOOK LIKE.\n\nIt loads up your current settings and migrates them to the new objects. Everything is edited in this one options panel, and we are moving from file/tag/note import options to a finer prefetch/file filtering/tag filtering/locations/tags/notes/presentation system. I, hydev, am happy with the technical side, but the onboarding is not there yet. I would like feedback on what is good/bad/confusing, thank you!'
+        
+        test_st = ClientGUICommon.BetterStaticText( self, label = label )
+        test_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        test_st.setObjectName( 'HydrusWarning' )
+        test_st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, test_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, simple_mode_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, default_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -184,7 +201,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             self._import_options_container_manager.SetDefaultImportOptionsContainerForURLClass( url_class.GetClassKey(), ImportOptionsContainer.ImportOptionsContainer() )
             
         
-        self._default_import_options_list.UpdateDatas( selected )
+        self._url_class_import_options_list.UpdateDatas( selected )
         
     
     def _ConvertDefaultDataToDisplayTuple( self, import_options_caller_type: int ):
@@ -356,45 +373,11 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
     
-    def _GetPasteObject( self ):
+    def _PasteDefault( self, paste_type = PASTE_REPLACE ):
         
         try:
             
-            raw_text = CG.client_controller.GetClipboardText()
-            
-        except HydrusExceptions.DataMissing as e:
-            
-            HydrusData.PrintException( e )
-            
-            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
-            
-            raise HydrusExceptions.CancelledException()
-            
-        
-        try:
-            
-            pasted_import_options_container = HydrusSerialisable.CreateFromString( raw_text )
-            
-            if not isinstance( pasted_import_options_container, ImportOptionsContainer.ImportOptionsContainer ):
-                
-                raise Exception( 'Not an Import options Container!' )
-                
-            
-        except Exception as e:
-            
-            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Import Options Container', e )
-            
-            raise HydrusExceptions.CancelledException()
-            
-        
-        return pasted_import_options_container
-        
-    
-    def _PasteDefault( self, do_merge = False ):
-        
-        try:
-            
-            pasted_import_options_container = self._GetPasteObject()
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
             
         except HydrusExceptions.CancelledException:
             
@@ -405,13 +388,20 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         for import_options_caller_type in import_options_caller_types:
             
-            if do_merge:
+            if paste_type in ( PASTE_MERGE, PASTE_FILL_IN ):
                 
                 existing_import_options_container = self._import_options_container_manager.GetDefaultImportOptionsContainerForCallerType( import_options_caller_type )
                 
                 edited_import_options_container = existing_import_options_container.Duplicate()
                 
-                edited_import_options_container.OverwriteWithThisSlice( pasted_import_options_container )
+                if paste_type == PASTE_MERGE:
+                    
+                    edited_import_options_container.OverwriteWithThisSlice( pasted_import_options_container )
+                    
+                else:
+                    
+                    edited_import_options_container.FillInWithThisSlice( pasted_import_options_container )
+                    
                 
             else:
                 
@@ -438,16 +428,21 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._default_import_options_list.UpdateDatas( import_options_caller_types )
         
     
-    def _PasteDefaultMerge( self ):
+    def _PasteDefaultFillIn( self ):
         
-        self._PasteDefault( do_merge = True )
+        self._PasteDefault( paste_type = PASTE_FILL_IN )
         
     
-    def _PasteURLClass( self, do_merge = False ):
+    def _PasteDefaultMerge( self ):
+        
+        self._PasteDefault( paste_type = PASTE_MERGE )
+        
+    
+    def _PasteURLClass( self, paste_type = PASTE_REPLACE ):
         
         try:
             
-            pasted_import_options_container = self._GetPasteObject()
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
             
         except HydrusExceptions.CancelledException:
             
@@ -460,7 +455,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             url_class_key = url_class.GetClassKey()
             
-            if do_merge:
+            if paste_type in ( PASTE_MERGE, PASTE_FILL_IN ):
                 
                 existing_import_options_container = self._import_options_container_manager.GetDefaultImportOptionsContainerForURLClass( url_class_key )
                 
@@ -472,7 +467,14 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                     
                     edited_import_options_container = existing_import_options_container.Duplicate()
                     
-                    edited_import_options_container.OverwriteWithThisSlice( pasted_import_options_container )
+                    if paste_type == PASTE_MERGE:
+                        
+                        edited_import_options_container.OverwriteWithThisSlice( pasted_import_options_container )
+                        
+                    else:
+                        
+                        edited_import_options_container.FillInWithThisSlice( pasted_import_options_container )
+                        
                     
                 
             else:
@@ -486,9 +488,14 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._url_class_import_options_list.UpdateDatas( url_classes )
         
     
+    def _PasteURLClassFillIn( self ):
+        
+        self._PasteURLClass( paste_type = PASTE_FILL_IN )
+        
+    
     def _PasteURLClassMerge( self ):
         
-        self._PasteURLClass( do_merge = True )
+        self._PasteURLClass( paste_type = PASTE_MERGE )
         
     
     def _SeeDefaultStack( self ):
@@ -540,23 +547,27 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
     
     def _ShowHelp( self ):
-        message = '''tl;dr: Go into "global" and set every panel how you want. Never touch this again, and rarely set a "specific" import options override on a specific downloader.
+        message = '''tl;dr: Go into "global" and set every panel how you want. Set "gallery/post urls" to parse tags where you want. Never touch this again, and rarely set a "specific" import options override on a specific downloader.
 
-Hydrus can import files in different ways. Sometimes it is something you are watching and interacting with, sometimes it happens in the background, without any UI at all. You can customise the various "import options" extensively.
+------
 
-There are options governing how files pre-screened, where they are imported to, and what metadata is added with them. Each of these is separated to let you mix and match.
+Hydrus can import files in different ways. Sometimes you are watching and interacting with the import, sometimes it happens in the background, without any UI at all. You can customise the various "import options" these different importers refer to extensively.
+
+There are options governing how files are pre-screened, where they are imported to, and what metadata is added with them. Each of these is separated to let you mix and match depending on the situation.
 
 There is a "global" options structure that represents a basic default for all imports. If nothing else has anything set, your imports will use whatever is in the global set.
 
-Atop the global set sits a stack of increasingly specific contexts, for instance, for a local hard drive import, you would have:
+Atop "global" sits a stack of increasingly specific contexts, for instance, for a local hard drive import, you would have:
 
 - the specific page's import options, which you set with a button in the UI
 - the general "local hard drive import" import options
 - the global import options
 
-When the import engine needs to check the "file filtering" options, it checks the top-most layer to see if it has anything set. If that layer has those options, that is what is used. If the layer is set to "use the default", the import engine goes down a layer and checks again. This is how the specific import options you might set on a particular page will override anything else while global will act as the final backstop.
+When the import engine needs to check the "file filtering" options, it checks the top-most layer to see if it has anything set. If that layer has those options, that is what is used. If the layer is set to "use the default", the import engine goes down a layer and checks again. This is how the specific import options on a particular page can override anything else while global will act as the final backstop.
 
-Most of the time, just set what sounds correct. If you want subscriptions to only publish "new inbox files" to their buttons/pages, then set up "presentation" options for your subs, easy as that. Every edit panel has a short description of the context being edited and which options are appropriate to edit for it. The one wrinkle to watch out for is the "url class" settings, which generally override the other layers, which allows you to set a specific tag blacklist for a particular domain. Click "show stack" to see exactly how a particular import context stacks up.
+Most of the time, just set what sounds correct. If you want subscriptions to generally only publish "new inbox files" to their buttons/pages, then set up "presentation" options for your subs, easy as that. If you want to override that setting on some specific sub, then set it so on that specific sub in the "edit subscriptions" dialog.
+
+Every edit panel has a short description of the context being edited and which options are appropriate to edit for it. The one wrinkle to watch out for is the "url class" settings, which generally override the other layers, which allows you to set a specific tag blacklist for a particular domain. Click "show stack" to see exactly how a particular import context stacks up.
 
 Keep things simple and deliberate!'''
         

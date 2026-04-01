@@ -32,7 +32,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         if query is None:
             
-            query = 'samus_aran'
+            query = 'unknown query'
             
         
         if source_name is None:
@@ -220,9 +220,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gallery_import_key, self._creation_time, self._query, serialisable_gallery_identifier, self._current_page_index, self._num_urls_found, self._num_new_urls_found, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache, self._no_work_until, self._no_work_until_reason ) = old_serialisable_info
             
-            gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
-            
-            source_name = ClientDownloading.ConvertGalleryIdentifierToGUGName( gallery_identifier )
+            source_name = 'unknown downloader'
             
             new_serialisable_info = ( serialisable_gallery_import_key, self._creation_time, self._query, source_name, self._current_page_index, self._num_urls_found, self._num_new_urls_found, self._file_limit, self._gallery_paused, self._files_paused, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_seed_log, serialisable_file_seed_cache, self._no_work_until, self._no_work_until_reason )
             
@@ -1077,7 +1075,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         if gug_key_and_name is None:
             
-            gug_key_and_name = ( HydrusData.GenerateKey(), 'unknown source' )
+            gug_key_and_name = ( HydrusData.GenerateKey(), '' )
             
         
         super().__init__()
@@ -1192,6 +1190,11 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         self._gallery_imports = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_imports )
         
         self._gallery_import_keys_to_gallery_imports = { gallery_import.GetGalleryImportKey() : gallery_import for gallery_import in self._gallery_imports }
+        
+    
+    def _IsGUGSet( self ):
+        
+        return self._gug_key_and_name is not None and self._gug_key_and_name[1] != ''
         
     
     def _RegenerateStatus( self ):
@@ -1317,11 +1320,19 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gallery_identifier, serialisable_highlighted_gallery_import_key, file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports ) = old_serialisable_info
             
-            gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
+            serialisable_gug_key_and_name = ( HydrusData.GenerateKey().hex(), 'unknown downloader' )
             
-            ( gug_key, gug_name ) = ClientDownloading.ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier )
+            gallery_imports = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_imports )
             
-            serialisable_gug_key_and_name = ( HydrusData.GenerateKey().hex(), gug_name )
+            for gallery_import in gallery_imports:
+                
+                if not gallery_import.GalleryPaused():
+                    
+                    gallery_import.PausePlayGallery()
+                    
+                
+            
+            serialisable_gallery_imports = gallery_imports.GetSerialisableTuple()
             
             new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_highlighted_gallery_import_key, file_limit, serialisable_file_import_options, serialisable_tag_import_options, serialisable_gallery_imports )
             
@@ -1648,6 +1659,14 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def IsGUGSet( self ):
+        
+        with self._lock:
+            
+            return self._IsGUGSet()
+            
+        
+    
     def PendSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit ) -> GalleryImport | None:
         
         with self._lock:
@@ -1656,7 +1675,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if gug is None:
                 
-                HydrusData.ShowText( 'Could not find a Gallery URL Generator for "{}"!'.format( self._gug_key_and_name[1] ) )
+                HydrusData.ShowText( 'Could not find a Gallery URL Generator (Downloader) for "{}"!'.format( self._gug_key_and_name[1] ) )
                 
                 return None
                 
@@ -1665,7 +1684,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
             if len( initial_search_urls ) == 0:
                 
-                HydrusData.ShowText( 'The Gallery URL Generator "{}" did not produce any URLs!'.format( self._gug_key_and_name[1] ) )
+                HydrusData.ShowText( 'The Gallery URL Generator (Downloader) "{}" did not produce any URLs!'.format( self._gug_key_and_name[1] ) )
                 
                 return None
                 
@@ -1703,11 +1722,18 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            if not self._IsGUGSet():
+                
+                HydrusData.ShowText( 'This page does not have a downloader set!' )
+                
+                return created_importers
+                
+            
             gug = CG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
             
             if gug is None:
                 
-                HydrusData.ShowText( 'Could not find a Gallery URL Generator for "{}"!'.format( self._gug_key_and_name[1] ) )
+                HydrusData.ShowText( 'Could not find a Gallery URL Generator (Downloader) for "{}"!'.format( self._gug_key_and_name[1] ) )
                 
                 return created_importers
                 
@@ -1843,9 +1869,14 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetGUGKeyAndName( self, gug_key_and_name ):
+    def SetGUGKeyAndName( self, gug_key_and_name: tuple[ bytes, str ] | None ):
         
         with self._lock:
+            
+            if gug_key_and_name is None:
+                
+                gug_key_and_name = ( HydrusData.GenerateKey(), '' )
+                
             
             if gug_key_and_name != self._gug_key_and_name:
                 

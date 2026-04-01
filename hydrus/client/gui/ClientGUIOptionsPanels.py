@@ -24,6 +24,8 @@ class OptionsPanel( QW.QWidget ):
 
 class OptionsPanelMimesTree( OptionsPanel ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, selectable_mimes ):
         
         super().__init__( parent )
@@ -84,6 +86,8 @@ class OptionsPanelMimesTree( OptionsPanel ):
         QP.AddToLayout( vbox, self._my_tree, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
+        
+        self._my_tree.clicked.connect( self.valueChanged )
         
     
     def _GetMimesForGeneralMimeType( self, general_mime_type ):

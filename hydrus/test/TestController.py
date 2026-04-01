@@ -29,6 +29,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
+from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCaches
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
@@ -39,12 +40,14 @@ from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.media import ClientMediaResultCache
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
+from hydrus.client.networking import ClientNetworkingURLClass
 
 from hydrus.server import ServerGlobals as SG
 
@@ -321,6 +324,71 @@ class Controller( object ):
         
         ClientDefaults.SetDefaultDomainManagerData( domain_manager )
         
+        post_default_param = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'page', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ) )
+        post_default_param.SetDefaultValue( 'post' )
+        
+        domain_manager.SetURLClasses(
+            [
+                ClientNetworkingURLClass.URLClass(
+                    'somebooru file page',
+                    url_type = HC.URL_TYPE_POST,
+                    url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'somebooru.com' ] ),
+                    path_components = [
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'posts', example_string = 'posts' ), None ),
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ), None )
+                    ],
+                    parameters = [],
+                    example_url = 'https://somebooru.com/posts/123456'
+                ),
+                ClientNetworkingURLClass.URLClass(
+                    'otherbooru file page',
+                    url_type = HC.URL_TYPE_POST,
+                    url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'otherbooru.org' ] ),
+                    path_components = [
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'index.php', example_string = 'index.php' ), None )
+                    ],
+                    parameters = [
+                        ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ),
+                        ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.FLEXIBLE_MATCH_NUMERIC, example_string = '123456' ) ),
+                        post_default_param,
+                    ],
+                    example_url = 'http://otherbooru.org/index.php?s=view&page=post&id=123456'
+                ),
+                ClientNetworkingURLClass.URLClass(
+                    'some imageboard thread',
+                    url_type = HC.URL_TYPE_WATCHABLE,
+                    url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'boards.someimageboard.org' ] ),
+                    path_components = [
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'diy' ), None ),
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'res', example_string = 'res' ), None ),
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_REGEX, match_value = r'\d+\.html', example_string = '123456.html' ), None ),
+                    ],
+                    parameters = [],
+                    api_lookup_converter = ClientStrings.StringConverter(
+                        conversions = [
+                            ( ClientStrings.STRING_CONVERSION_REGEX_SUB, ( r'\.html$', '.json' ) ),
+                        ],
+                        example_string = 'https://boards.someimageboard.org/diy/res/123456.html'
+                    ),
+                    example_url = 'https://boards.someimageboard.org/diy/res/123456.html'
+                ),
+                ClientNetworkingURLClass.URLClass(
+                    'some imageboard thread api',
+                    url_type = HC.URL_TYPE_WATCHABLE,
+                    url_domain_mask = ClientNetworkingURLClass.URLDomainMask( raw_domains = [ 'boards.someimageboard.org' ] ),
+                    path_components = [
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'diy' ), None ),
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'res', example_string = 'res' ), None ),
+                        ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_REGEX, match_value = r'\d+\.json', example_string = '123456.json' ), None ),
+                    ],
+                    parameters = [],
+                    example_url = 'https://boards.someimageboard.org/diy/res/123456.json'
+                ),
+            ]
+        )
+        
+        domain_manager.TryToLinkURLClassesAndParsers()
+        
         login_manager = ClientNetworkingLogin.NetworkLoginManager()
         
         self.network_engine = ClientNetworking.NetworkEngine( self, bandwidth_manager, session_manager, domain_manager, login_manager )
@@ -574,6 +642,8 @@ class Controller( object ):
     def ClearTestDB( self ):
         
         self._test_db = None
+        
+        ClientMediaResultCache.MediaResultCache.instance().Clear()
         
     
     def ClearWrites( self, name ):

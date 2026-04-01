@@ -492,7 +492,7 @@ class TestURLClasses( unittest.TestCase ):
         
         #
         
-        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        referral_url = 'https://testbooru.cx/gallery/tags=space_bounty_hunter'
         good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         unnormalised_good_url_1 = 'https://testbooru.cx/post/page.php?id=123456&s=view&additional_gumpf=stuff'
         unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
@@ -785,7 +785,7 @@ class TestURLClasses( unittest.TestCase ):
         
         #
         
-        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        referral_url = 'https://testbooru.cx/gallery/tags=space_bounty_hunter'
         good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         unnormalised_good_url_1 = 'https://testbooru.cx/post/page.php?id=123456&s=view&additional_gumpf=stuff'
         unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
@@ -839,7 +839,7 @@ class TestURLClasses( unittest.TestCase ):
         
         #
         
-        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        referral_url = 'https://testbooru.cx/gallery/tags=space_bounty_hunter'
         good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         
         #

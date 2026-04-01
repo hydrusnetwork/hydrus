@@ -148,7 +148,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetUserAgent( HydrusResource
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         warnings.warn(
-            'Hey, the the "set_user_agent" command is deprecated, but a Client API script you are using it just called it! That script may stop working in v668 if it is not updated to use the newer "set_headers" command!',
+            'Hey, the "set_user_agent" command is deprecated, but a Client API script you are using it just called it! That script may stop working in v668 if it is not updated to use the newer "set_headers" command!',
             FutureWarning,
             stacklevel = 1
         )

@@ -379,6 +379,101 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
         
     
 
+class ExpandCollapseArrowButton( BetterButton ):
+    
+    expanded = QC.Signal()
+    collapsed = QC.Signal()
+    expandCollapseFlipped = QC.Signal()
+    
+    UP_ARROW = '\u25B2'
+    DOWN_ARROW = '\u25BC'
+    
+    def __init__( self, parent: QW.QWidget, expands_downward: bool ):
+        
+        super().__init__( parent, label = self.UP_ARROW, func = self.ExpandCollapseFlip )
+        
+        self.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self, 4 ) )
+        
+        self._is_collapsed = True
+        self._expands_downward = expands_downward
+        
+        self._UpdateLabel()
+        
+    
+    def _SetIsCollapsed( self, value ):
+        
+        if self._is_collapsed == value:
+            
+            return
+            
+        
+        self._is_collapsed = value
+        
+        self._UpdateLabel()
+        
+        if self._is_collapsed:
+            
+            self.collapsed.emit()
+            
+        else:
+            
+            self.expanded.emit()
+            
+        
+        self.expandCollapseFlipped.emit()
+        
+    
+    def _UpdateLabel( self ):
+        
+        if self._is_collapsed:
+            
+            if self._expands_downward:
+                
+                label = self.DOWN_ARROW
+                
+            else:
+                
+                label = self.UP_ARROW
+                
+            
+            object_name = 'HydrusCollapseArrowCollapsed'
+            
+        else:
+            
+            if self._expands_downward:
+                
+                label = self.UP_ARROW
+                
+            else:
+                
+                label = self.DOWN_ARROW
+                
+            
+            object_name = 'HydrusCollapseArrowExpanded'
+            
+        
+        self.setText( label )
+        self.setObjectName( object_name )
+        
+        self.style().polish( self )
+        
+    
+    def Collapse( self ):
+        
+        self._SetIsCollapsed( True )
+        
+    
+    def Expand( self ):
+        
+        self._SetIsCollapsed( False )
+        
+    
+    def ExpandCollapseFlip( self ):
+        
+        self._SetIsCollapsed( not self._is_collapsed )
+        
+    
+
 class BetterCheckBoxList( QW.QListWidget ):
     
     checkBoxListChanged = QC.Signal()
@@ -1845,8 +1940,7 @@ class StaticBox( QW.QFrame ):
         
         self._expanded_size_vertical_policy = expanded_size_vertical_policy
         
-        self._expand_button = BetterButton( self, label = '\u25B2', func = self.ExpandCollapse )
-        self._expand_button.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._expand_button, 4 ) )
+        self._expand_button = ExpandCollapseArrowButton( self, True )
         
         self._content_panel = QW.QWidget( self )
         
@@ -1879,11 +1973,14 @@ class StaticBox( QW.QFrame ):
         
         self._sizer.addSpacerItem( self._spacer )
         
+        self._expand_button.Expand()
         self._expanded = True
+        
+        self._expand_button.expandCollapseFlipped.connect( self.ExpandCollapse )
         
         if not start_expanded:
             
-            self.ExpandCollapse()
+            self._expand_button.Collapse()
             
         
     
@@ -1900,8 +1997,6 @@ class StaticBox( QW.QFrame ):
         
         if self._expanded:
             
-            new_label = '\u25BC'
-            
             size_policy = self.sizePolicy()
             
             size_policy.setVerticalPolicy( QW.QSizePolicy.Policy.Fixed )
@@ -1910,16 +2005,12 @@ class StaticBox( QW.QFrame ):
             
         else:
             
-            new_label = '\u25B2'
-            
             size_policy = self.sizePolicy()
             
             size_policy.setVerticalPolicy( self._expanded_size_vertical_policy )
             
             self.setSizePolicy( size_policy )
             
-        
-        self._expand_button.setText( new_label )
         
         self._expanded = not self._expanded
         

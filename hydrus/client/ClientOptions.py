@@ -641,7 +641,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         #
         
         self._dictionary[ 'noneable_strings' ] = {
-            'favourite_file_lookup_script' : 'gelbooru md5',
+            'favourite_file_lookup_script' : None,
             'suggested_tags_layout' : 'notebook',
             'backup_path' : None,
             'web_browser_path' : None,
@@ -672,7 +672,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'thumbnail_scroll_rate' : '1.0',
             'pause_character' : '\u23F8',
             'stop_character' : '\u23F9',
-            'default_gug_name' : 'safebooru tag search',
+            'default_gug_name' : '',
             'has_audio_label' : '\U0001F50A',
             'has_duration_label' : ' \u23F5 ',
             'discord_dnd_filename_pattern' : '{hash}',

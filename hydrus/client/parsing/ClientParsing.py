@@ -2312,10 +2312,10 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 
                 def remove_pre_url_gubbins( u ):
                     
-                    # clears up when a source field starts with gubbins for some reason. e.g.:
-                    # (jap characters).avi | ranken [pixiv] http://www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    # clears up when a source field starts with descriptive human gubbins:
+                    # "filename | [sitename] URL"
                     # ->
-                    # http://www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    # URL
                     
                     gumpf_until_scheme = r'^.*\s(?P<scheme>https?://)'
                     

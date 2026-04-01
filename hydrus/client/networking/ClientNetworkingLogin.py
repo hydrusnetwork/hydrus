@@ -50,9 +50,6 @@ login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_NSFW ] = 'Login 
 login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_SPECIAL ] = 'Login required to access special content.'
 login_access_type_default_description_lookup[ LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ] = 'Login only required to access user preferences.'
 
-PIXIV_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'pixiv.net' )
-HENTAI_FOUNDRY_NETWORK_CONTEXT = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'hentai-foundry.com' )
-
 class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER
@@ -575,28 +572,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             return self._dirty
             
-        
-    
-    def OverwriteDefaultLoginScripts( self, login_script_names ):
-        
-        with self._lock:
-            
-            from hydrus.client import ClientDefaults
-            
-            default_login_scripts = ClientDefaults.GetDefaultLoginScripts()
-            
-            for login_script in default_login_scripts:
-                
-                login_script.RegenerateLoginScriptKey()
-                
-            
-            existing_login_scripts = list( self._login_scripts )
-            
-            new_login_scripts = [ login_script for login_script in existing_login_scripts if login_script.GetName() not in login_script_names ]
-            new_login_scripts.extend( [ login_script for login_script in default_login_scripts if login_script.GetName() in login_script_names ] )
-            
-        
-        self.SetLoginScripts( new_login_scripts, auto_link_these_names = login_script_names )
         
     
     def SetActive( self, login_domain, name, new_active ):
@@ -1750,7 +1725,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 p = ClientNetworkingFunctions.ParseURL( url )
                 
-                origin = urllib.parse.urlunparse( ( p.scheme, p.netloc, '', '', '', '' ) ) # https://accounts.pixiv.net
+                origin = urllib.parse.urlunparse( ( p.scheme, p.netloc, '', '', '', '' ) )
                 
                 network_job.AddAdditionalHeader( 'origin', origin ) # GET/POST forms are supposed to have this for CSRF. we'll try it just with POST for now
                 

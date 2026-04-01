@@ -1691,7 +1691,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         operator = True
         rule_type = 'url_class'
         rule = ClientNetworkingURLClass.URLClass(
-            name = 'safebooru post url'
+            name = 'booru post url'
         )
         description = ''
         

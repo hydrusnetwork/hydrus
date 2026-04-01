@@ -133,15 +133,24 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help -->', object_name = 'HydrusIndeterminate' )
         
-        self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
+        self._repo_link = ClientGUICommon.BetterHyperLink( self, 'the user-made downloader repository is here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
+        
+        self._repo_link.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste paths/bitmaps/JSON from clipboard!' ) )
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'To import, drag-and-drop hydrus\'s special downloader-encoded pngs onto Lain. Or click her to open a file selection dialog, or copy the png bitmap, file path, or raw downloader JSON to your clipboard and hit the paste button.' )
+        label = 'To import:'
+        label += '\n'
+        label += '- drag-and-drop hydrus\'s special downloader-encoded pngs onto Lain'
+        label += '\n'
+        label += '- or click her to open a file selection dialog and select from there'
+        label += '\n'
+        label += '- or copy the png bitmap, file path, or raw downloader JSON to your clipboard and hit the paste button'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
         
         st.setWordWrap( True )
-        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         lain_path = HydrusStaticDir.GetStaticPath( 'lain.jpg' )
         
@@ -160,10 +169,10 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, self._repo_link, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._repo_link, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._select_from_list, self, 'select objects from list' ), CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
@@ -585,6 +594,27 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         ClientGUIDialogsMessage.ShowInformation( self, final_message )
+        
+        try:
+            
+            if CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName() is None:
+                
+                all_gugs_now = sorted( CG.client_controller.network_engine.domain_manager.GetGUGs(), key = lambda gug: gug.GetName() )
+                
+                if len( all_gugs_now ) > 0:
+                    
+                    gug_key_and_name = all_gugs_now[0].GetGUGKeyAndName()
+                    
+                    CG.client_controller.network_engine.domain_manager.SetDefaultGUGKeyAndName( gug_key_and_name )
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'Hey, I was trying to set up a GUG (downloader) but the GUG store was messed up. Here is the error:' )
+            
+            HydrusData.PrintException( e, do_wait = False )
+            
         
     
     def _Paste( self ):

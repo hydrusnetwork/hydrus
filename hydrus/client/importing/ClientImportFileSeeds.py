@@ -1669,7 +1669,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                             elif url_type == HC.URL_TYPE_POST and can_parse:
                                 
-                                # a pixiv mode=medium page has spawned a mode=manga page, so we need a new file_seed to go pursue that
+                                # nested URL type, might be a subsequent 'zoomed in' view or a mini-album page type with n = 1 
                                 
                                 child_urls = [ desired_url ]
                                 
@@ -2718,19 +2718,11 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         if version in ( 2, 3 ):
             
-            # gelbooru replaced their thumbnail links with this redirect spam
-            # 'https://gelbooru.com/redirect.php?s=Ly9nZWxib29ydS5jb20vaW5kZXgucGhwP3BhZ2U9cG9zdCZzPXZpZXcmaWQ9MzY4ODA1OA=='
-            
-            # I missed some http ones here, so I've broadened the test and rescheduled it
+            # removed some old update code here
             
             new_serialisable_info = []
             
             for ( file_seed, file_seed_info ) in old_serialisable_info:
-                
-                if 'gelbooru.com/redirect.php' in file_seed:
-                    
-                    continue
-                    
                 
                 new_serialisable_info.append( ( file_seed, file_seed_info ) )
                 
@@ -2740,86 +2732,17 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         
         if version == 4:
             
-            def ConvertRegularToRawURL( regular_url ):
-                
-                # convert this:
-                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_500.jpg
-                # to this:
-                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
-                # the 500 part can be a bunch of stuff, including letters
-                
-                url_components = regular_url.split( '_' )
-                
-                last_component = url_components[ -1 ]
-                
-                ( number_gubbins, file_ext ) = last_component.split( '.' )
-                
-                raw_last_component = 'raw.{}'.format( file_ext )
-                
-                url_components[ -1 ] = raw_last_component
-                
-                raw_url = '_'.join( url_components )
-                
-                return raw_url
-                
-            
-            def Remove68Subdomain( long_url ):
-                
-                # sometimes the 68 subdomain gives a 404 on the raw url, so:
-                
-                # convert this:
-                # http://68.media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
-                # to this:
-                # http://media.tumblr.com/5af0d991f26ef9fdad5a0c743fb1eca2/tumblr_opl012ZBOu1tiyj7vo1_raw.jpg
-                
-                # I am not sure if it is always 68, but let's not assume
-                
-                ( scheme, rest ) = long_url.split( '://', 1 )
-                
-                if rest.startswith( 'media.tumblr.com' ):
-                    
-                    return long_url
-                    
-                
-                ( gumpf, shorter_rest ) = rest.split( '.', 1 )
-                
-                shorter_url = '{}://{}'.format( scheme, shorter_rest )
-                
-                return shorter_url
-                
-            
             new_serialisable_info = []
             
             good_file_seeds = set()
             
             for ( file_seed, file_seed_info ) in old_serialisable_info:
                 
-                try:
+                # removed some old update code here
+                
+                if file_seed in good_file_seeds: # we hit a dupe, so skip it
                     
-                    parse = urllib.parse.urlparse( file_seed )
-                    
-                    if 'media.tumblr.com' in parse.netloc:
-                        
-                        file_seed = Remove68Subdomain( file_seed )
-                        
-                        file_seed = ConvertRegularToRawURL( file_seed )
-                        
-                        file_seed = ClientNetworkingFunctions.ConvertHTTPToHTTPS( file_seed )
-                        
-                    
-                    if 'pixiv.net' in parse.netloc:
-                        
-                        file_seed = ClientNetworkingFunctions.ConvertHTTPToHTTPS( file_seed )
-                        
-                    
-                    if file_seed in good_file_seeds: # we hit a dupe, so skip it
-                        
-                        continue
-                        
-                    
-                except Exception as e:
-                    
-                    pass
+                    continue
                     
                 
                 good_file_seeds.add( file_seed )

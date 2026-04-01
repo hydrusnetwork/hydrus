@@ -1035,8 +1035,8 @@ class TestClientDB( unittest.TestCase ):
         
         content_updates = []
         
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:samus aran', ( hash, ) ) ) )
-        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:space bounty hunter', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:bountyvania', ( hash, ) ) ) )
         
         content_update_package.AddContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
@@ -1048,15 +1048,15 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'content_updates', content_update_package )
         
-        result = self._read( 'filter_existing_tags', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        result = self._read( 'filter_existing_tags', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, { 'character:space bounty hunter', 'series:bountyvania', 'clothing:bodysuit' } )
         
-        self.assertEqual( result, { 'character:samus aran', 'series:metroid' } )
+        self.assertEqual( result, { 'character:space bounty hunter', 'series:bountyvania' } )
         
-        result = self._read( 'filter_existing_tags', new_service_key, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        result = self._read( 'filter_existing_tags', new_service_key, { 'character:space bounty hunter', 'series:bountyvania', 'clothing:bodysuit' } )
         
         self.assertEqual( result, { 'clothing:bodysuit' } )
         
-        result = self._read( 'filter_existing_tags', empty_service_key, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
+        result = self._read( 'filter_existing_tags', empty_service_key, { 'character:space bounty hunter', 'series:bountyvania', 'clothing:bodysuit' } )
         
         self.assertEqual( result, set() )
         
@@ -1284,7 +1284,7 @@ class TestClientDB( unittest.TestCase ):
         test_files = []
         
         test_files.append( ( 'muh_swf.swf', 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf', 456774, HC.APPLICATION_FLASH, 400, 400, { 33 }, { 1 }, True, None ) )
-        test_files.append( ( 'muh_mp4.mp4', '2fa293907144a046d043d74e9570b1c792cbfd77ee3f5c93b2b1a1cb3e4c7383', 570534, HC.VIDEO_MP4, 480, 480, { 6266, 6290 }, { 151 }, True, None ) )
+        test_files.append( ( 'muh_mp4.mp4', '18497489f7b432d2bd635e33ba0b1f3e0bb01de3a4313b75e4fee4fb018acb89', 42822, HC.VIDEO_MP4, 410, 306, { 4640 }, { 58 }, False, None ) )
         test_files.append( ( 'muh_mpeg.mpeg', 'aebb10aaf3b27a5878fd2732ea28aaef7bbecef7449eaa759421c4ba4efff494', 772096, HC.VIDEO_MPEG, 657, 480, { 3490, 3500 }, { 105 }, False, None ) ) # not actually 720, as this has mickey-mouse SAR, it turns out
         test_files.append( ( 'muh_webm.webm', '55b6ce9d067326bf4b2fbe66b8f51f366bc6e5f776ba691b0351364383c43fcb', 84069, HC.VIDEO_WEBM, 640, 360, { 4010 }, { 120 }, True, None ) )
         test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444', 42296, HC.IMAGE_JPEG, 392, 498, { None }, { None }, False, None ) )
@@ -1673,11 +1673,11 @@ class TestClientDB( unittest.TestCase ):
             'num_inbox': 2,
             'size_archive': 0,
             'size_deleted': 0,
-            'size_inbox': 1027308,
+            'size_inbox': 499596,
             'total_alternate_files': 0,
             'total_alternate_groups': 0,
             'total_duplicate_files': 0,
-            'total_viewtime': (0, 0, 0, 0)
+            'total_viewtime': ( 0, 0.0, 0, 0.0 )
         }
         
         self.assertEqual( result, expected_result )
@@ -1804,8 +1804,8 @@ class TestClientDB( unittest.TestCase ):
         #
         
         pairs = [
-            ( 'samus aran', 'princess peach' ),
-            ( 'lara croft', 'princess peach' )
+            ( 'space bounty hunter', 'princess tuna' ),
+            ( 'jane raider', 'princess tuna' )
         ]
         
         content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
@@ -1837,7 +1837,7 @@ class TestClientDB( unittest.TestCase ):
         #
         
         pairs = [
-            ( 'ayanami rei', 'zelda' )
+            ( 'ayanami rei', 'cool princess' )
         ]
         
         content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
@@ -1997,22 +1997,6 @@ class TestClientDB( unittest.TestCase ):
         #
         
         TestClientDB._clear_db()
-        
-    
-    def test_pixiv_account( self ):
-        
-        result = self._read( 'serialisable_simple', 'pixiv_account' )
-        
-        self.assertEqual( result, None )
-        
-        pixiv_id = 123456
-        password = 'password'
-        
-        self._write( 'serialisable_simple', 'pixiv_account', ( pixiv_id, password ) )
-        
-        result = self._read( 'serialisable_simple', 'pixiv_account' )
-        
-        self.assertEqual( result, [ pixiv_id, password ] )
         
     
     def test_services( self ):

@@ -1504,7 +1504,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
-        call = HydrusData.Call( CG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'safebooru tag search' ), 'skirt', file_import_options, tag_import_options, note_import_options, 2 )
+        call = HydrusData.Call( CG.client_controller.pub, 'make_new_subscription_gap_downloader', ( b'', 'booru tag search' ), 'skirt', file_import_options, tag_import_options, note_import_options, 2 )
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
@@ -3819,7 +3819,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
         ClientGUIMenus.AppendMenuIconItem( submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
-        ClientGUIMenus.AppendMenuItem( submenu, 'help: random 403 errors', 'Open a short help window regarding 403 errors.', ClientGUIDownloaders.Show403Info, self )
         ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
         
         ClientGUIMenus.AppendSeparator( submenu )
@@ -6177,162 +6176,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     HydrusData.ShowText( 'version incorrect!: {}, {}'.format( j[ 'version' ], HC.CLIENT_API_VERSION ) )
                     
                 
-                #
-                
-                job_status.SetStatusText( 'add url test' )
-                
-                local_tag_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
-                
-                local_tag_service = random.choice( local_tag_services )
-                
-                local_tag_service_name = local_tag_service.GetName()
-                
-                samus_url = 'https://safebooru.org/index.php?page=post&s=view&id=3195917'
-                samus_hash_hex = '78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538'
-                samus_test_tag = 'client api test tag'
-                samus_test_tag_filterable = 'client api test tag filterable'
-                destination_page_name = 'client api test'
-                
-                request_args = {}
-                
-                request_args[ 'url' ] = samus_url
-                request_args[ 'destination_page_name' ] = destination_page_name
-                request_args[ 'service_names_to_additional_tags' ] = {
-                    local_tag_service_name : [ samus_test_tag ]
-                }
-                request_args[ 'filterable_tags' ] = [
-                    samus_test_tag_filterable
-                ]
-                
-                data = json.dumps( request_args )
-                
-                r = s.post( '{}/add_urls/add_url'.format( api_base ), data = data )
-                
-                time.sleep( 0.25 )
-                
-                #
-                
-                job_status.SetStatusText( 'get session test' )
-                
-                def get_client_api_page():
-                    
-                    r = s.get( '{}/manage_pages/get_pages'.format( api_base ) )
-                    
-                    pages_to_process = [ r.json()[ 'pages' ] ]
-                    pages = []
-                    
-                    while len( pages_to_process ) > 0:
-                        
-                        page_to_process = pages_to_process.pop()
-                        
-                        if page_to_process[ 'page_type' ] == ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES:
-                            
-                            pages_to_process.extend( page_to_process[ 'pages' ] )
-                            
-                        else:
-                            
-                            pages.append( page_to_process )
-                            
-                        
-                    
-                    for page in pages:
-                        
-                        if page[ 'name' ] == destination_page_name:
-                            
-                            return page
-                            
-                        
-                    
-                
-                client_api_page = get_client_api_page()
-                
-                if client_api_page is None:
-                    
-                    raise Exception( 'Could not find download page!' )
-                    
-                
-                destination_page_key_hex = client_api_page[ 'page_key' ]
-                
-                def get_hash_ids():
-                    
-                    r = s.get( '{}/manage_pages/get_page_info?page_key={}'.format( api_base, destination_page_key_hex ) )
-                    
-                    hash_ids = r.json()[ 'page_info' ][ 'media' ][ 'hash_ids' ]
-                    
-                    return hash_ids
-                    
-                
-                hash_ids = get_hash_ids()
-                
-                if len( hash_ids ) == 0:
-                    
-                    time.sleep( 3 )
-                    
-                
-                hash_ids = get_hash_ids()
-                
-                if len( hash_ids ) == 0:
-                    
-                    raise Exception( 'The download page had no hashes!' )
-                    
-                
-                #
-                
-                def get_hash_ids_to_hashes_and_tag_info():
-                    
-                    r = s.get( '{}/get_files/file_metadata?file_ids={}'.format( api_base, json.dumps( hash_ids ) ) )
-                    
-                    hash_ids_to_hashes_and_tag_info = {}
-                    
-                    for item in r.json()[ 'metadata' ]:
-                        
-                        hash_ids_to_hashes_and_tag_info[ item[ 'file_id' ] ] = ( item[ 'hash' ], item[ 'tags' ] )
-                        
-                    
-                    return hash_ids_to_hashes_and_tag_info
-                    
-                
-                hash_ids_to_hashes_and_tag_info = get_hash_ids_to_hashes_and_tag_info()
-                
-                samus_hash_id = None
-                
-                for ( hash_id, ( hash_hex, tag_info ) ) in hash_ids_to_hashes_and_tag_info.items():
-                    
-                    if hash_hex == samus_hash_hex:
-                        
-                        samus_hash_id = hash_id
-                        
-                    
-                
-                if samus_hash_id is None:
-                    
-                    raise Exception( 'Could not find the samus hash!' )
-                    
-                
-                samus_tag_info = hash_ids_to_hashes_and_tag_info[ samus_hash_id ][1]
-                
-                if samus_test_tag not in samus_tag_info[ local_tag_service.GetServiceKey().hex() ][ 'storage_tags' ][ str( HC.CONTENT_STATUS_CURRENT ) ]:
-                    
-                    raise Exception( 'Did not have the tag!' )
-                    
-                
-                #
-                
                 def qt_session_gubbins():
-                    
-                    self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
-                    
-                    page = self._notebook.GetPageFromPageKey( bytes.fromhex( destination_page_key_hex ) )
-                    
-                    self._notebook.ShowPage( page )
-                    
-                    self._notebook.CloseCurrentPage()
                     
                     self.ProposeSaveGUISession( CC.LAST_SESSION_SESSION_NAME )
                     
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
                     
-                    page = self._notebook.NewPageQuery( location_context )
+                    page = self._notebook.NewPageQuery( location_context, page_name = 'client api test' )
                     
                     return page.GetPageKey()
                     
@@ -6351,13 +6201,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 request_args = {}
                 
                 request_args[ 'page_key' ] = page_key.hex()
-                request_args[ 'hashes' ] = [ '78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538' ]
+                request_args[ 'hashes' ] = [ 'faeda0c91271408e09c364db5f0d83c11e2131191fee060a4a7e1f750d8d7bbd' ]
                 
                 data = json.dumps( request_args )
-                
-                r = s.post( '{}/manage_pages/add_files'.format( api_base ), data = data )
-                
-                time.sleep( 0.25 )
                 
                 r = s.post( '{}/manage_pages/add_files'.format( api_base ), data = data )
                 

@@ -80,9 +80,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'gui pages', GUIPagesPanel.GUIPagesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'gui sessions', GUISessionsPanel.GUISessionsPanel( self._listbook, self._new_options ) )
         
-        we_out_here = False
-        
-        if we_out_here:
+        if self._new_options.GetBoolean( 'advanced_mode' ):
             
             from hydrus.client.importing.options import FileImportOptionsLegacy
             from hydrus.client.importing.options import ImportOptionsContainerMigration
@@ -101,7 +99,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._new_options.GetDefaultFileImportOptions( FileImportOptionsLegacy.IMPORT_TYPE_LOUD ),
             )
             
-            self._listbook.AddPage( 'import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, self._new_options, import_options_manager ) )
+            self._listbook.AddPage( 'PREVIEW: import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, self._new_options, import_options_manager ) )
             
         
         self._listbook.AddPage( 'maintenance and processing', MaintenanceAndProcessingPanel.MaintenanceAndProcessingPanel( self._listbook ) )

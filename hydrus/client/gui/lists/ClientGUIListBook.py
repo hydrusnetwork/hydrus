@@ -6,6 +6,46 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 
+class ListBookList( ClientGUIListBoxes.BetterQListWidget ):
+    
+    def __init__( self, parent: QW.QWidget, list_chars_width: int | None = None, list_chars_height: int | None = None ):
+        
+        super().__init__( parent )
+        
+        self._list_chars_width = list_chars_width
+        self._list_chars_height = list_chars_height
+        
+    
+    def sizeHint( self ):
+        
+        size = super().sizeHint()
+        
+        if self._list_chars_width is not None:
+            
+            width = ClientGUIFunctions.ConvertTextToPixelWidth( self, self._list_chars_width )
+            
+            size.setWidth( width )
+            
+        elif self._list_chars_height is not None:
+            
+            if self.count() > 0:
+                
+                height = self.sizeHintForRow( 0 ) * self._list_chars_height
+                
+            else:
+                
+                ( _, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, self._list_chars_height ) )
+                
+            
+            size.setHeight( height + ( 2 * self.frameWidth() ) )
+            
+        
+        return size
+        
+    
+    minimumSizeHint = sizeHint
+    
+
 class ListBook( QW.QWidget ):
     
     currentChanged = QC.Signal( int )
@@ -14,7 +54,16 @@ class ListBook( QW.QWidget ):
         
         super().__init__( parent )
         
-        self._page_list = ClientGUIListBoxes.BetterQListWidget( self )
+        if orientation == QC.Qt.Orientation.Horizontal:
+            
+            list_chars_height = None
+            
+        else:
+            
+            list_chars_width = None
+            
+        
+        self._page_list = ListBookList( self, list_chars_width = list_chars_width, list_chars_height = list_chars_height )
         self._page_list.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
         if no_vertical_scrollbar:
@@ -27,9 +76,9 @@ class ListBook( QW.QWidget ):
         
         #
         
-        if orientation == QC.Qt.Orientation.Horizontal:
-            
-            self._page_list.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._page_list, list_chars_width ) )
+        self._orientation = orientation
+        
+        if self._orientation == QC.Qt.Orientation.Horizontal:
             
             layout = QP.HBoxLayout( margin = 0 )
             
@@ -37,10 +86,6 @@ class ListBook( QW.QWidget ):
             QP.AddToLayout( layout, self._widget_stack, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         else:
-            
-            ( _, list_height_px ) = ClientGUIFunctions.ConvertTextToPixels( self._page_list, ( 20, list_chars_height + 1 ) )
-            
-            self._page_list.setFixedHeight( list_height_px )
             
             layout = QP.VBoxLayout( margin = 0 )
             

@@ -439,7 +439,7 @@ class TestTagDisplayManager( unittest.TestCase ):
         
         tag_display_manager.SetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, CC.COMBINED_TAG_SERVICE_KEY, filter_pages )
         
-        tags = { 'character:samus aran', 'series:metroid', 'page:17' }
+        tags = { 'character:space bounty hunter', 'series:bountyvania', 'page:17' }
         
         #
         
@@ -480,11 +480,11 @@ class TestTagRendering( unittest.TestCase ):
         
         TG.test_controller.new_options.SetBoolean( 'replace_tag_emojis_with_boxes', False )
         
-        self.assertEqual( ClientTags.RenderTag( 'character:lara', True ), 'character:lara' )
+        self.assertEqual( ClientTags.RenderTag( 'character:jane', True ), 'character:jane' )
         
         TG.test_controller.new_options.SetBoolean( 'show_namespaces', False )
         
-        self.assertEqual( ClientTags.RenderTag( 'character:lara', True ), 'lara' )
+        self.assertEqual( ClientTags.RenderTag( 'character:jane', True ), 'jane' )
         
         TG.test_controller.new_options.SetBoolean( 'show_namespaces', True )
         

@@ -5,8 +5,9 @@ import threading
 import time
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
@@ -17,6 +18,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingURLClass
 
@@ -232,9 +234,19 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return self._file_post_default_tag_import_options
         
     
-    def _GetGUG( self, gug_key_and_name ):
+    def _GetGUG( self, gug_key_and_name: tuple[ bytes, str ] | None ):
+        
+        if gug_key_and_name is None:
+            
+            return None
+            
         
         ( gug_key, gug_name ) = gug_key_and_name
+        
+        if gug_name == '':
+            
+            return None
+            
         
         if gug_key in self._gug_keys_to_gugs:
             
@@ -1205,14 +1217,21 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultGUGKeyAndName( self ):
+    def GetDefaultGUGKeyAndName( self ) -> tuple[ bytes, str ] | None:
         
         with self._lock:
             
             gug_key = CG.client_controller.new_options.GetKey( 'default_gug_key' )
             gug_name = CG.client_controller.new_options.GetString( 'default_gug_name' )
             
-            return ( gug_key, gug_name )
+            if gug_name == '':
+                
+                return None
+                
+            else:
+                
+                return ( gug_key, gug_name )
+                
             
         
     
@@ -1261,7 +1280,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetGUG( self, gug_key_and_name ):
+    def GetGUG( self, gug_key_and_name: tuple[ bytes, str ] | None ) -> ClientNetworkingGUG.GalleryURLGenerator | ClientNetworkingGUG.NestedGalleryURLGenerator | None:
         
         with self._lock:
             
@@ -1687,157 +1706,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return normalised_urls
         
     
-    def OverwriteDefaultGUGs( self, gug_names ):
-        
-        with self._lock:
-            
-            from hydrus.client import ClientDefaults
-            
-            default_gugs = ClientDefaults.GetDefaultGUGs()
-            
-            existing_gug_names_to_keys = { gug.GetName() : gug.GetGUGKey() for gug in self._gugs }
-            
-            for gug in default_gugs:
-                
-                gug_name = gug.GetName()
-                
-                if gug_name in existing_gug_names_to_keys:
-                    
-                    gug.SetGUGKey( existing_gug_names_to_keys[ gug_name ] )
-                    
-                else:
-                    
-                    gug.RegenerateGUGKey()
-                    
-                
-            
-            existing_gugs = list( self._gugs )
-            
-            new_gugs = [ gug for gug in existing_gugs if gug.GetName() not in gug_names ]
-            new_gugs.extend( [ gug for gug in default_gugs if gug.GetName() in gug_names ] )
-            
-        
-        self.SetGUGs( new_gugs )
-        
-    
-    def OverwriteDefaultParsers( self, parser_names ):
-        
-        with self._lock:
-            
-            from hydrus.client import ClientDefaults
-            
-            default_parsers = ClientDefaults.GetDefaultParsers()
-            
-            existing_parser_names_to_keys = { parser.GetName() : parser.GetParserKey() for parser in self._parsers }
-            
-            for parser in default_parsers:
-                
-                name = parser.GetName()
-                
-                if name in existing_parser_names_to_keys:
-                    
-                    parser.SetParserKey( existing_parser_names_to_keys[ name ] )
-                    
-                else:
-                    
-                    parser.RegenerateParserKey()
-                    
-                
-            
-            existing_parsers = list( self._parsers )
-            
-            new_parsers = [ parser for parser in existing_parsers if parser.GetName() not in parser_names ]
-            new_parsers.extend( [ parser for parser in default_parsers if parser.GetName() in parser_names ] )
-            
-        
-        self.SetParsers( new_parsers )
-        
-    
-    def OverwriteDefaultURLClasses( self, url_class_names ):
-        
-        with self._lock:
-            
-            from hydrus.client import ClientDefaults
-            
-            default_url_classes = ClientDefaults.GetDefaultURLClasses()
-            
-            existing_class_names_to_keys = { url_class.GetName() : url_class.GetClassKey() for url_class in self._url_classes }
-            
-            for url_class in default_url_classes:
-                
-                name = url_class.GetName()
-                
-                if name in existing_class_names_to_keys:
-                    
-                    url_class.SetClassKey( existing_class_names_to_keys[ name ] )
-                    
-                else:
-                    
-                    url_class.RegenerateClassKey()
-                    
-                
-            
-            for url_class in default_url_classes:
-                
-                url_class.RegenerateClassKey()
-                
-            
-            existing_url_classes = list( self._url_classes )
-            
-            new_url_classes = [ url_class for url_class in existing_url_classes if url_class.GetName() not in url_class_names ]
-            new_url_classes.extend( [ url_class for url_class in default_url_classes if url_class.GetName() in url_class_names ] )
-            
-        
-        self.SetURLClasses( new_url_classes )
-        
-    
-    def OverwriteParserLink( self, url_class_name, parser_name ):
-        
-        with self._lock:
-            
-            url_class_to_link = None
-            
-            for url_class in self._url_classes:
-                
-                if url_class.GetName() == url_class_name:
-                    
-                    url_class_to_link = url_class
-                    
-                    break
-                    
-                
-            
-            if url_class_to_link is None:
-                
-                return False
-                
-            
-            parser_to_link = None
-            
-            for parser in self._parsers:
-                
-                if parser.GetName() == parser_name:
-                    
-                    parser_to_link = parser
-                    
-                    break
-                    
-                
-            
-            if parser_to_link is None:
-                
-                return False
-                
-            
-            url_class_key = url_class_to_link.GetClassKey()
-            parser_key = parser_to_link.GetParserKey()
-            
-            self._url_class_keys_to_parser_keys[ url_class_key ] = parser_key
-            
-            return True
-            
-        
-    
     def RenameGUG( self, original_name, new_name ):
         
         with self._lock:
@@ -1992,7 +1860,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            ( gug_key, gug_name ) = gug_key_and_name
+            if gug_key_and_name is None:
+                
+                ( gug_key, gug_name ) = ( HydrusData.GenerateKey(), '' )
+                
+            else:
+                
+                ( gug_key, gug_name ) = gug_key_and_name
+                
             
             CG.client_controller.new_options.SetKey( 'default_gug_key', gug_key )
             CG.client_controller.new_options.SetString( 'default_gug_name', gug_name )
@@ -2294,8 +2169,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         # I have to do this backwards, going through parsers and then url_classes, so I can do a proper url match lookup like the real domain manager does it
         # otherwise, if we iterate through url matches looking for parsers to match them, we have gallery url matches thinking they match parser post urls
         # e.g.
-        # The page parser might say it supports https://danbooru.donmai.us/posts/3198277
-        # But the gallery url class might think it recognises that as https://danbooru.donmai.us/posts
+        # The page parser might say it supports https://somebooru.com/posts/123456
+        # But the gallery url class might think it recognises that as https://somebooru.com/posts
         # 
         # So we have to do the normal lookup in the proper descending complexity order, not searching any further than the first, correct match
         

@@ -39,7 +39,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         if gug_key_and_name is None:
             
-            gug_key_and_name = ( HydrusData.GenerateKey(), 'unknown source' )
+            gug_key_and_name = ( HydrusData.GenerateKey(), '' )
             
         
         self._gug_key_and_name = gug_key_and_name
@@ -344,6 +344,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _SyncQueriesCanDoWork( self ):
         
+        if self._gug_key_and_name is None or self._gug_key_and_name[1] == '':
+            
+            return False
+            
+        
         result = True in ( query_header.IsSyncDue() for query_header in self._query_headers )
         
         if HG.subscription_report_mode:
@@ -622,7 +627,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             # if 'X' is new and get, 'A' is already in, and '-' is new and don't get, the page should be:
                             # XXXAAAAA----------------------------------
                             
-                            # EXAMPLE 2: the pixiv situation, where a single gallery page may have hundreds of results (and/or multi-file results that will pad out the file cache with more items)
+                            # EXAMPLE 2: where a single gallery page may have hundreds of results (and/or multi-file results that will pad out the file cache with more items)
                             
                             # XXXXAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                             # AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
@@ -630,8 +635,8 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             # -------------------------------------------------------
                             # ----------------------
                             
-                            # Note there's another thing to consider, with Pixiv and other multi-file-per-post sites, where the AAAAA 'already in db' are separated in the file log by child posts
-                            # I'm solving this with better culling tech
+                            # Note there's another thing to consider, with multi-file-per-post sites, where the AAAAA 'already in db' are separated in the file log by child posts
+                            # I'm solving this with better culling tech that reaps those child posts with the parents and counts cleverly
                             
                             num_already_in_urls_we_have_seen_so_far = total_already_in_urls_for_this_sync + num_urls_already_in_file_seed_cache_in_this_call
                             most_of_our_stuff = num_master_file_seeds_at_start * 0.95
@@ -1208,7 +1213,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if isinstance( e, HydrusExceptions.DataMissing ):
                         
-                        # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files in e621 (or any other booru)
+                        # DataMissing is a quick thing to avoid subscription abandons when lots of deleted files
                         # this should be richer in any case in the new system
                         
                         pass
@@ -1618,7 +1623,18 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._file_import_options = file_import_options.Duplicate()
         
     
-    def SetGUGKeyAndName( self, gug_key_and_name ):
+    def SetFileLimits( self, initial_file_limit, periodic_file_limit ):
+        
+        self._initial_file_limit = initial_file_limit
+        self._periodic_file_limit = periodic_file_limit
+        
+    
+    def SetGUGKeyAndName( self, gug_key_and_name: tuple[ bytes, str ] | None ):
+        
+        if gug_key_and_name is None:
+            
+            gug_key_and_name = ( HydrusData.GenerateKey(), '' )
+            
         
         self._gug_key_and_name = gug_key_and_name
         
@@ -1642,6 +1658,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         self._query_headers = list( query_headers )
         
     
+    def SetNoWorkUntil( self, no_work_until ):
+        
+        self._no_work_until = no_work_until
+        
+    
     def SetNoteImportOptions( self, note_import_options ):
         
         self._note_import_options = note_import_options.Duplicate()
@@ -1655,20 +1676,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def SetThisIsARandomSampleSubscription( self, value: bool ):
         
         self._this_is_a_random_sample_sub = value
-        
-    
-    def SetTuple( self, gug_key_and_name, checker_options: ClientImportOptions.CheckerOptions, initial_file_limit, periodic_file_limit, paused, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, tag_import_options: TagImportOptionsLegacy.TagImportOptionsLegacy, no_work_until ):
-        
-        self._gug_key_and_name = gug_key_and_name
-        self._checker_options = checker_options
-        self._initial_file_limit = initial_file_limit
-        self._periodic_file_limit = periodic_file_limit
-        self._paused = paused
-        
-        self._file_import_options = file_import_options
-        self._tag_import_options = tag_import_options
-        
-        self._no_work_until = no_work_until
         
     
     def ScrubDelay( self ):

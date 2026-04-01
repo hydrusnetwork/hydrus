@@ -543,7 +543,7 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
             
             if subtag_to_namespace_search:
                 
-                # if a user searches 'char*' and then later 'character:samus*', we may have the results
+                # if a user searches 'char*' and then later 'character:dave*', we may have the results
                 # namespace changed, so if we do not satisfy this slim case, we can't provide any results
                 we_searched_namespace_as_subtag = strict_search_text_namespace.startswith( self._strict_search_text_subtag )
                 
@@ -573,7 +573,7 @@ class PredicateResultsCacheTag( PredicateResultsCache ):
             
             #
             
-            # 'sam' will match 'samus', character:sam will match character:samus
+            # 'dav' will match 'dave', character:dav will match character:dave
             
             return strict_search_text_subtag.startswith( self._strict_search_text_subtag )
             

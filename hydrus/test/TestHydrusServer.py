@@ -539,7 +539,7 @@ class TestServer( unittest.TestCase ):
         
         # account from mapping
         
-        test_tag = 'character:samus aran'
+        test_tag = 'character:space bounty hunter'
         test_hash = HydrusData.GenerateKey()
         
         TG.test_controller.SetRead( 'account_key_from_content', self._account.GetAccountKey() )

@@ -1,6 +1,7 @@
 import threading
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
@@ -22,6 +23,7 @@ IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS = 7
 IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER = 8
 IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER = 9
 IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API = 10
+IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES = 11
 
 import_options_caller_type_str_lookup = {
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT : 'local hard drive import',
@@ -33,6 +35,7 @@ import_options_caller_type_str_lookup = {
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER : 'specific importer',
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER : 'import folder',
     IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API : 'client api',
+    IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES : 'favourites template',
 }
 
 import_options_caller_type_desc_lookup = {
@@ -45,6 +48,7 @@ import_options_caller_type_desc_lookup = {
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER : 'These import options are attached to this specific importer alone. If you set something here, it will only apply here, and it will definitely apply, overriding any other default.',
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER : 'This covers all import folders, if you want different behaviour to a regular local import. A good place to set up quieter presentation options.',
     IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API : 'This covers all files directly imported via the Client API, i.e. when an external program posts a raw file or a file path to be imported, with no downloader page involved. Only appropriate for file filtering and routing.',
+    IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES : 'This is a template you can load and paste wherever you need it.',
 }
 
 NON_DOWNLOADER_IMPORT_OPTION_CALLER_TYPES = {
@@ -58,9 +62,9 @@ IMPORT_OPTIONS_CALLER_TYPES_CANONICAL_ORDER = [
     IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API,
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT,
     IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER,
-    IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION,
-    IMPORT_OPTIONS_CALLER_TYPE_POST_URLS,
     IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS,
+    IMPORT_OPTIONS_CALLER_TYPE_POST_URLS,
+    IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION,
     IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS,
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER,
 ]
@@ -122,6 +126,7 @@ IMPORT_OPTIONS_TYPES_SIMPLE_MODE_LOOKUP = {
     IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS : [ IMPORT_OPTIONS_TYPE_PREFETCH, IMPORT_OPTIONS_TYPE_FILE_FILTERING, IMPORT_OPTIONS_TYPE_TAG_FILTERING, IMPORT_OPTIONS_TYPE_LOCATIONS, IMPORT_OPTIONS_TYPE_TAGS, IMPORT_OPTIONS_TYPE_NOTES ],
     IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API : [ IMPORT_OPTIONS_TYPE_FILE_FILTERING, IMPORT_OPTIONS_TYPE_LOCATIONS ],
     IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER : IMPORT_OPTIONS_TYPES_CANONICAL_ORDER,
+    IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES : IMPORT_OPTIONS_TYPES_CANONICAL_ORDER,
 }
 
 def GetImportOptionsCallerTypesPreferenceOrderFull( import_options_caller_type: int, url_class_key: bytes | None = None ):
@@ -134,8 +139,8 @@ def GetImportOptionsCallerTypesPreferenceOrderFull( import_options_caller_type: 
     if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION:
         
         preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS )
-        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
         preference_stack.append( import_options_caller_type )
+        preference_stack.append( IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS )
         
     elif import_options_caller_type in ( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS, IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS ):
         
@@ -219,16 +224,16 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
     
     if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION:
         
-        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
         preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS ] )
+        preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
         preference_stack.append( 'any matching URL Class' )
         preference_stack.append( 'specific import options for the particular subscription' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_POST_URLS:
         
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
-        preference_stack.append( 'any matching URL Class' )
         preference_stack.append( 'maybe "subscription"' )
+        preference_stack.append( 'any matching URL Class' )
         preference_stack.append( 'specific import options for the particular downloader page or subscription' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS:
@@ -275,16 +280,16 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
             else:
                 
                 preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS ] )
-                preference_stack.append( url_class_name )
                 preference_stack.append( 'maybe "subscription"' )
+                preference_stack.append( url_class_name )
                 preference_stack.append( 'specific import options for the particular downloader page or subscription' )
                 
             
         else:
             
             preference_stack.append( 'a gallery/post or watcher url' )
-            preference_stack.append( url_class_name )
             preference_stack.append( 'maybe "subscription", if it is a gallery/post url class' )
+            preference_stack.append( url_class_name )
             preference_stack.append( 'specific import options for the particular watcher page, downloader page, or subscription' )
             
         
@@ -400,6 +405,47 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         self._names_to_favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_names_to_favourite_import_options_containers )
         
     
+    def _AddFavourite( self, name: str, import_options_container: "ImportOptionsContainer" ):
+        
+        name = HydrusData.GetNonDupeName( name, set( self._names_to_favourite_import_options_containers.keys() ) )
+        
+        self._names_to_favourite_import_options_containers[ name ] = import_options_container
+        
+    
+    def _DeleteFavourite( self, name: str ):
+        
+        if name in self._names_to_favourite_import_options_containers:
+            
+            del self._names_to_favourite_import_options_containers[ name ]
+            
+        
+    
+    def AddFavourite( self, name: str, import_options_container: "ImportOptionsContainer" ):
+        
+        with self._lock:
+            
+            self._AddFavourite( name, import_options_container )
+            
+        
+    
+    def DeleteFavourite( self, name: str ):
+        
+        with self._lock:
+            
+            self._DeleteFavourite( name )
+            
+        
+    
+    def EditFavourite( self, original_name: str, name: str, import_options_container: "ImportOptionsContainer" ):
+        
+        with self._lock:
+            
+            self._DeleteFavourite( original_name )
+            
+            self._AddFavourite( name, import_options_container )
+            
+        
+    
     def GenerateFullImportOptionsContainer( self, caller_import_options_container_slice: "ImportOptionsContainer", import_options_caller_type: int, url_class_key: bytes | None = None ) -> "ImportOptionsContainer":
         
         with self._lock:
@@ -411,7 +457,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             # we have a bunch of slices, now we fill in all the holes
             for ( import_options_container_slice, source_label ) in import_options_container_slices_in_preference_order_with_source_labels:
                 
-                import_options_container_result.FillInWithThisSlice( import_options_container_slice, source_label )
+                import_options_container_result.FillInWithThisSlice( import_options_container_slice, source_label = source_label )
                 
             
             import_options_container_result.SetAndCheckFull()
@@ -437,7 +483,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetFavouriteImportOptionContainers( self ):
+    def GetFavouriteImportOptionContainers( self ) -> "dict[ str, ImportOptionsContainer ]":
         
         with self._lock:
             
@@ -445,7 +491,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetImportOptionsCallerTypesToDefaultImportOptionsContainers( self ):
+    def GetImportOptionsCallerTypesToDefaultImportOptionsContainers( self ) -> "dict[ int, ImportOptionsContainer ]":
         
         with self._lock:
             
@@ -453,7 +499,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetURLClassKeysToDefaultImportOptionsContainers( self ):
+    def GetURLClassKeysToDefaultImportOptionsContainers( self ) -> "dict[ bytes, ImportOptionsContainer ]":
         
         with self._lock:
             
@@ -461,7 +507,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetFavouriteImportOptionContainers( self, names_to_favourite_import_options_containers ):
+    def SetFavouriteImportOptionContainers( self, names_to_favourite_import_options_containers: "dict[ str, ImportOptionsContainer ]" ):
         
         with self._lock:
             
@@ -503,13 +549,15 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     @staticmethod
     def GetDefaultInitialisedManager() -> "ImportOptionsManager":
             
-            manager = ImportOptionsManager.STATICGetEmptyButValidManager()
+            import_options_manager = ImportOptionsManager.STATICGetEmptyButValidManager()
+            
+            ImportOptionsManager.STATICPopulateManagerWithDefaultFavourites( import_options_manager )
             
             # loud settings for global
             # quiet filters for the three others
             # post/watchable tag parsing
             
-            return manager
+            return import_options_manager
             
         
     
@@ -538,6 +586,38 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
             return manager
             
+        
+    
+    @staticmethod
+    def STATICPopulateManagerWithDefaultFavourites( import_options_manager: "ImportOptionsManager" ):
+        
+        import_options_manager.AddFavourite(
+            'no tags',
+            HydrusSerialisable.CreateFromString(
+                '[143, 1, [21, 2, [[[0, 4], [2, [151, 1, []]]]]]]'
+            )
+        )
+        
+        import_options_manager.AddFavourite(
+            'show new files',
+            HydrusSerialisable.CreateFromString(
+                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 1, 0]]]]]]]'
+            )
+        )
+        
+        import_options_manager.AddFavourite(
+            'show all files',
+            HydrusSerialisable.CreateFromString(
+                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 0, 0]]]]]]]'
+            )
+        )
+        
+        import_options_manager.AddFavourite(
+            'example blacklist',
+            HydrusSerialisable.CreateFromString(
+                '[143, 1, [21, 2, [[[0, 2], [2, [150, 1, [[44, 1, [["goblin", 1], ["orc", 1]]], []]]]]]]]'
+            )
+        )
         
     
 
@@ -589,9 +669,21 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         self._import_options_types_to_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options )
         
     
-    def _SetImportOptions( self, import_options_type: int, import_options: HydrusSerialisable.SerialisableBase ):
+    def _SetImportOptions( self, import_options_type: int, import_options: HydrusSerialisable.SerialisableBase, source_label: str | None = None ):
         
         self._import_options_types_to_import_options[ import_options_type ] = import_options
+        
+        if source_label is None:
+            
+            if import_options_type in self._import_option_types_to_source_labels:
+                
+                del self._import_option_types_to_source_labels[ import_options_type ]
+                
+            
+        else:
+            
+            self._import_option_types_to_source_labels[ import_options_type ] = source_label
+            
         
     
     def DeleteImportOptions( self, import_options_type: int ):
@@ -610,7 +702,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FillInWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer", source_label: str ):
+    def FillInWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer", source_label: str | None = None ):
         
         with self._lock:
             
@@ -627,16 +719,14 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
                     
                     if import_options is not None:
                         
-                        self._SetImportOptions( import_options_type, import_options )
-                        
-                        self._import_option_types_to_source_labels[ import_options_type ] = source_label
+                        self._SetImportOptions( import_options_type, import_options, source_label = source_label )
                         
                     
                 
             
         
     
-    def OverwriteWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer" ):
+    def OverwriteWithThisSlice( self, import_options_container_slice: "ImportOptionsContainer", source_label: str | None = None ):
         
         if import_options_container_slice.IsEmpty():
             
@@ -649,12 +739,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
             if import_options is not None:
                 
-                self._SetImportOptions( import_options_type, import_options )
-                
-                if import_options_type in self._import_option_types_to_source_labels:
-                    
-                    del self._import_option_types_to_source_labels[ import_options_type ]
-                    
+                self._SetImportOptions( import_options_type, import_options, source_label = source_label )
                 
             
         
@@ -733,11 +818,11 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetImportOptions( self, import_options_type: int, import_options: ImportOptionsMetatype ):
+    def SetImportOptions( self, import_options_type: int, import_options: ImportOptionsMetatype, source_label: str | None = None ):
         
         with self._lock:
             
-            self._SetImportOptions( import_options_type, import_options )
+            self._SetImportOptions( import_options_type, import_options, source_label = source_label )
             
         
     

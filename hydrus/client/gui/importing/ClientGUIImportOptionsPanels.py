@@ -36,6 +36,8 @@ from hydrus.client.metadata import ClientTags
 
 class EditFileFilteringImportOptionsPanel( QW.QWidget ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, file_filtering_import_options: FileFilteringImportOptions.FileFilteringImportOptions ):
         
         super().__init__( parent )
@@ -116,6 +118,15 @@ class EditFileFilteringImportOptionsPanel( QW.QWidget ):
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
+        
+        self._mimes.valueChanged.connect( self.valueChanged )
+        self._exclude_deleted.clicked.connect( self.valueChanged )
+        self._allow_decompression_bombs.clicked.connect( self.valueChanged )
+        self._min_size.valueChanged.connect( self.valueChanged )
+        self._max_size.valueChanged.connect( self.valueChanged )
+        self._max_gif_size.valueChanged.connect( self.valueChanged )
+        self._min_resolution.valueChanged.connect( self.valueChanged )
+        self._max_resolution.valueChanged.connect( self.valueChanged )
         
     
     def GetValue( self ) -> FileFilteringImportOptions.FileFilteringImportOptions:
@@ -410,6 +421,8 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
 
 class EditLocationImportOptionsPanel( QW.QWidget ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, location_import_options: LocationImportOptions.LocationImportOptions, show_downloader_options: bool ):
         
         super().__init__( parent )
@@ -496,6 +509,13 @@ class EditLocationImportOptionsPanel( QW.QWidget ):
         self._UpdateLocationText()
         self._UpdateDoArchiveWidget()
         
+        self._destination_location_context.locationChanged.connect( self.valueChanged )
+        self._do_import_destinations_on_already_in_db_files.clicked.connect( self.valueChanged )
+        self._auto_archive.clicked.connect( self.valueChanged )
+        self._do_archive_on_already_in_db_files.clicked.connect( self.valueChanged )
+        self._associate_primary_urls.clicked.connect( self.valueChanged )
+        self._associate_source_urls.clicked.connect( self.valueChanged )
+        
     
     def _UpdateDoArchiveWidget( self ):
         
@@ -542,6 +562,8 @@ class EditLocationImportOptionsPanel( QW.QWidget ):
     
 
 class EditNoteImportOptionsPanel( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, note_import_options: NoteImportOptions.NoteImportOptions, simple_mode = False ):
         
@@ -656,6 +678,13 @@ class EditNoteImportOptionsPanel( QW.QWidget ):
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
+        
+        self._get_notes.clicked.connect( self.valueChanged )
+        self._extend_existing_note_if_possible.clicked.connect( self.valueChanged )
+        self._conflict_resolution.currentIndexChanged.connect( self.valueChanged )
+        self._name_whitelist.listBoxChanged.connect( self.valueChanged )
+        self._names_to_name_overrides.columnListContentsChanged.connect( self.valueChanged )
+        self._all_name_override.valueChanged.connect( self.valueChanged )
         
     
     def _AddWhitelistItem( self ):
@@ -931,6 +960,8 @@ class EditNoteImportOptionsLegacyPanel( QW.QWidget ):
 
 class EditPrefetchImportOptionsPanel( QW.QWidget ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
         
         super().__init__( parent )
@@ -1030,6 +1061,10 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         self._UpdateDispositiveFromHash()
         self._UpdateDispositiveFromURL()
         
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
+        self._preimport_url_check_looks_for_neighbour_spam.clicked.connect( self.valueChanged )
+        
     
     def _UpdateDispositiveFromHash( self ):
         
@@ -1040,6 +1075,8 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
             
             self._preimport_url_check_type.SetValue( PrefetchImportOptions.DO_CHECK )
             
+        
+        self.valueChanged.emit()
         
     
     def _UpdateDispositiveFromURL( self ):
@@ -1053,6 +1090,8 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
             
         
         self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != PrefetchImportOptions.DO_NOT_CHECK )
+        
+        self.valueChanged.emit()
         
     
     def GetValue( self ) -> PrefetchImportOptions.PrefetchImportOptions:
@@ -1082,6 +1121,8 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
     
 
 class EditPresentationImportOptions( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):
         
@@ -1156,6 +1197,10 @@ class EditPresentationImportOptions( QW.QWidget ):
         
         self._presentation_status.currentIndexChanged.connect( self._UpdateInboxChoices )
         self._presentation_status.currentIndexChanged.connect( self._UpdateEnabled )
+        
+        self._presentation_status.currentIndexChanged.connect( self.valueChanged )
+        self._presentation_inbox.currentIndexChanged.connect( self.valueChanged )
+        self._presentation_location.locationChanged.connect( self.valueChanged )
         
     
     def _UpdateEnabled( self ):
@@ -1376,6 +1421,8 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetCogIconMenuItems( self ):
         
+        # TODO: This is woo woo, replace it with get/set and self.valueChanged emits
+        
         menu_template_items = []
         
         check_manager = ClientGUICommon.CheckboxManagerBoolean( self, '_to_new_files' )
@@ -1459,6 +1506,8 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditTagFilteringImportOptionsPanel( QW.QWidget ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, tag_filtering_import_options: TagFilteringImportOptions.TagFilteringImportOptions ):
         
         super().__init__( parent )
@@ -1469,7 +1518,7 @@ class EditTagFilteringImportOptionsPanel( QW.QWidget ):
         message += '\n' * 2
         message += 'This system tests the all tags that are parsed from the site, not any other tags the files may have in different places. Siblings of all those tags will also be tested. If none of your tag services have excellent siblings, it is worth adding multiple versions of your tag, just to catch different sites terms. Link up \'gore\', \'guro\', \'violence\', etc...'
         message += '\n' * 2
-        message += 'Additionally, unnamespaced rules will apply to namespaced tags. \'metroid\' in the blacklist will catch \'series:metroid\' as parsed from a site.'
+        message += 'Additionally, unnamespaced rules will apply to namespaced tags. \'low_resolution\' in the blacklist will catch \'meta:low_resolution\' as parsed from a site.'
         message += '\n' * 2
         message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
         
@@ -1507,6 +1556,8 @@ class EditTagFilteringImportOptionsPanel( QW.QWidget ):
         
         self.setLayout( vbox )
         
+        self._tag_blacklist_button.valueChanged.connect( self.valueChanged )
+        
     
     def _EditWhitelist( self ):
         
@@ -1521,6 +1572,8 @@ class EditTagFilteringImportOptionsPanel( QW.QWidget ):
                 self._tag_whitelist = dlg.GetTags()
                 
                 self._UpdateTagWhitelistLabel()
+                
+                self.valueChanged.emit()
                 
             
         
@@ -1560,6 +1613,8 @@ class EditTagFilteringImportOptionsPanel( QW.QWidget ):
     
 
 class EditTagImportOptionsPanel( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, tag_import_options: TagImportOptions.TagImportOptions, show_downloader_options: bool ):
         
@@ -1621,6 +1676,7 @@ class EditTagImportOptionsPanel( QW.QWidget ):
             QP.AddToLayout( self._services_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             panel.valueChanged.connect( self._UpdateNoTagsLabel )
+            panel.valueChanged.connect( self.valueChanged )
             
         
     
@@ -1632,7 +1688,7 @@ If this import context can fetch and parse tags from a remote location (such as 
 
 In these cases, if the URL has been previously downloaded and the client knows its file is already in the database, the client will usually not make a new network request to fetch the file's tags. This allows for quick reprocessing/skipping of previously seen items in large download queues and saves bandwidth. If you however wish to purposely fetch tags for files you have previously downloaded, you can also force tag fetching for these 'already in db' files.
 
-You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my unsorted folder' or 'pixiv subscription') to be applied to all imported files.
+You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my unsorted folder' or 'subscription x') to be applied to all imported files.
 
 ---
 

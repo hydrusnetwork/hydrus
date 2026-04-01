@@ -325,6 +325,11 @@ class PopupMessage( PopupWindow ):
                 
                 presented_hashes = CG.client_controller.Read( 'filter_hashes', location_context, hashes )
                 
+                if len( presented_hashes ) > 0:
+                    
+                    CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
+                    
+                
                 return presented_hashes
                 
             
@@ -338,11 +343,6 @@ class PopupMessage( PopupWindow ):
                         
                         self.TryToDismiss()
                         
-                    
-                
-                if len( presented_hashes ) > 0:
-                    
-                    CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
                     
                 
             
@@ -1467,6 +1467,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
             raise
             
         
+    
 
 class PopupMessageSummaryBar( QW.QFrame ):
     
@@ -1484,7 +1485,9 @@ class PopupMessageSummaryBar( QW.QFrame ):
         self._text = ClientGUICommon.BetterStaticText( self )
         self._text.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignVCenter )
         
-        self._expand_collapse = ClientGUICommon.BetterButton( self, '\u25bc', self.ExpandCollapse )
+        self._expand_collapse = ClientGUICommon.ExpandCollapseArrowButton( self, False )
+        self._expand_collapse.Expand()
+        self._expand_collapse.expandCollapseFlipped.connect( self.expandCollapse )
         
         dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self.dismissAll.emit )
         
@@ -1493,24 +1496,6 @@ class PopupMessageSummaryBar( QW.QFrame ):
         QP.AddToLayout( hbox, self._expand_collapse, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.setLayout( hbox )
-        
-    
-    def ExpandCollapse( self ):
-        
-        self.expandCollapse.emit()
-        
-        current_text = self._expand_collapse.text()
-        
-        if current_text == '\u25bc':
-            
-            new_text = '\u25b2'
-            
-        else:
-            
-            new_text = '\u25bc'
-            
-        
-        self._expand_collapse.setText( new_text )
         
     
     def SetNumMessages( self, num_messages_pending ):

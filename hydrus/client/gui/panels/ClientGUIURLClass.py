@@ -536,14 +536,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._no_more_parameters_than_this.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._keep_extra_parameters_for_server = QW.QCheckBox( self._options_panel )
-        tt = 'If checked, the URL not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
+        tt = 'If checked, the URL will not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
         tt += '\n\n'
         tt += 'Be careful mixing this with an API or Referral URL Converter that converts parameter data, since now you have optional parameter data to think about.'
         self._keep_extra_parameters_for_server.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._can_produce_multiple_files = QW.QCheckBox( self._options_panel )
         
-        tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
+        tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types that can provide multiple importable files (manga, mini-albums, etc..), where hydrus should know that there is not a 1:1 URL-file relationship.'
         tt += '\n' * 2
         tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
         
@@ -647,7 +647,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'This is the fully normalised URL, which is what is saved to the database. It is used to compare to other URLs.'
         tt += '\n' * 2
-        tt += 'We want to normalise to a single reliable URL because the same URL can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, we remove any cruft and "normalise" things. The preferred scheme (http/https) will be switched to, and, typically, parameters will be alphabetised and non-defined elements will be removed.'
+        tt += 'We want to normalise to a single reliable URL because the same URL can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-blonde_hair" can be altered at a later date, say to "/123456/bodysuit-green_eyes-blonde_hair". In order to collapse all the different expressions of a url down to a single comparable form, we remove any cruft and "normalise" things. The preferred scheme (http/https) will be switched to, and, typically, parameters will be alphabetised and non-defined elements will be removed.'
         
         self._normalised_url.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
@@ -1418,8 +1418,6 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingURLClass.URLClass, ), self._AddURLClass )
-        self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddDefaultsButton( ClientDefaults.GetDefaultURLClasses, self._AddURLClass )
         
         #
         

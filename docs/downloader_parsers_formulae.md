@@ -22,29 +22,27 @@ For instance, if you have this:
     <div class="media_taglist">
       <span class="generaltag"><a href="(search page)">blonde hair</a> (3456)</span>
       <span class="generaltag"><a href="(search page)">blue eyes</a> (4567)</span>
-      <span class="generaltag"><a href="(search page)">bodysuit</a> (5678)</span>
-      <span class="charactertag"><a href="(search page)">samus aran</a> (2345)</span>
-      <span class="artisttag"><a href="(search page)">splashbrush</a> (123)</span>
+      <span class="generaltag"><a href="(search page)">skirt</a> (5678)</span>
+      <span class="charactertag"><a href="(search page)">cool lady</a> (2345)</span>
+      <span class="artisttag"><a href="(search page)">cool artist</a> (123)</span>
     </div>
     <div class="content">
-      <span class="media">(a whole bunch of content that doesn't have tags in)</span>
+      <span class="media">(a whole bunch of content that doesn't have any tag data)</span>
     </div>
   </body>
 </html>
 ```
 
-_(Most boorus have a taglist like this on their file pages.)_
-
-To find the artist, "splashbrush", here, you could:
+To find the "cool artist" creator tag here, you could:
 
 *   search beneath the root tag (`#!html <html>`) for the `#!html <div>` tag with attribute `class="media_taglist"`
 *   search beneath that `#!html <div>` for `#!html <span>` tags with attribute `class="artisttag"`
 *   search beneath those `#!html <span>` tags for `#!html <a>` tags
 *   and then get the string content of those `#!html <a>` tags
 
-Changing the `artisttag` to `charactertag` or `generaltag` would give you `samus aran` or `blonde hair`, `blue eyes`, `bodysuit` respectively.
+Changing the `artisttag` to `charactertag` or `generaltag` would give you `cool lady` or `blonde hair`, `blue eyes`, `skirt` respectively.
 
-You might be tempted to just go straight for any `#!html <span>` with `class="artisttag"`, but many sites use the same class to render a sidebar of favourite/popular tags or some other sponsored content, so it is generally best to try to narrow down to a larger `#!html <div>` container so you don't get anything you don't mean.
+You might be tempted to just go straight for any `#!html <span>` with `class="artisttag"`, but many sites use the same class to render a sidebar of favourite/popular tags or some other sponsored content, so it is generally best to try to narrow down to a larger `#!html <div>` container so you don't get anything you don't mean. Don't go crazy, but a little specificity is generally a good failsafe.
 
 ### the ui
 
@@ -52,15 +50,17 @@ Clicking 'edit formula' on an HTML formula gives you this:
 
 [![](images/edit_html_formula_panel.png)](images/edit_html_formula_panel.png)
 
-You edit on the left and test on the right.
+There's a bunch going on here, but the main split is that you edit on the left and test on the right. In this case, we have our three html parsing rules set up, and then underneath we say we want to fetch the 'string'. For an `!#html <a>` tag, we might want to fetch the `href` attribute.
 
-### finding the right html tags
+Hydrus's powerful 'String Processing' system is also available. If you need to filter, convert, split, reorder, or otherwise munge the list of strings your formula gets, have a poke around here. Most formulae do not need any processing, but it is absolutely the way to get out of a tricky situation.
 
-When you add or edit one of the specific tag search rules, you get this:
+### first, finding the right html tags
+
+When you add or edit a tag search rule, you get this:
 
 [![](images/edit_html_tag_rule_panel.png)](images/edit_html_tag_rule_panel.png)
 
-You can set multiple key/value attribute search conditions, but you'll typically be searching for 'class' or 'id' here, if anything.
+There is again a lot packed in here, but you'll typically be searching for a 'tag name' plus a 'class' or 'id' attribute.
 
 Note that you can set it to fetch only the xth instance of a found tag, which can be useful in situations like this:
 
@@ -90,7 +90,7 @@ There isn't a great way to find the `#!html <span>` or the `#!html <a>` when loo
 
 You can solve some tricky problems this way!
 
-You can also set a String Match, which is the same panel as you say in with URL Classes. It tests its best guess at the tag's 'string' value, so you can find a tag with 'Original Image' as its text or that with a regex starts with 'Posted on: '. Have a play with it and you'll figure it out.
+You can also set a String Match on the tag's string content. It tests its best guess at the tag's 'string' value, so you can find a tag with 'Original Image' as its text or that with a regex starts with 'Posted on: '. Have a play with it and you'll figure it out.
 
 ### content to fetch
 
@@ -106,11 +106,9 @@ Returning the `href` attribute would return the string "(URL A)", returning the 
 
 You can set a final String Match to filter the parsed results (e.g. "only allow strings that only contain numbers" or "only allow full URLs as based on (complicated regex)") and String Converter to edit it (e.g. "remove the first three characters of whatever you find" or "decode from base64").
 
-You won't use these much, but they can sometimes get you out of a complicated situation.
-
 ### testing
 
-The testing panel on the right is important and worth using. Copy the html from the source you want to parse and then hit the paste buttons to set that as the data to test with.
+The testing panel on the right is important and worth using. Copy the html from the source you want to parse and then hit the paste buttons to set that as the data to test with. The larger panels of the parsing system pass their test data on to their children, so it is usually good to do one fetch at the 'edit parser' level to populate the test data for all your content parsers and formulae you then go into.
 
 ## json { id="json_formula" }
 
@@ -123,7 +121,7 @@ It is a bit simpler than HTML--if the current node is a list (called an 'Array' 
 [![](images/json_thread_example.png)](images/json_thread_example.png)
 
 !!! note
-    It is a great idea to check the html or json you are trying to parse with your browser. Most web browsers have excellent developer tools that let you walk through the nodes of the document you are trying to parse in a prettier way than I would ever have time to put together. This image is one of the views Firefox provides if you simply enter a JSON URL.
+    It is a great idea to check the html or json you are trying to parse with your browser. Most web browsers have excellent developer tools that let you walk through the nodes of the document super easily, much better than my ugly UI. This image is one of the views Firefox provides if you simply enter a JSON URL.
 
 Searching for "posts"->1st list item->"sub" on this data will give you "Nobody like kino here.".
 
@@ -189,7 +187,5 @@ If a different URL Class links to this parser via an API URL, this 'url' variabl
 [![](images/edit_context_variable_formula_panel.png)](images/edit_context_variable_formula_panel.png)
 
 Hit the 'edit example parsing context' to change the URL used for testing.
-
-I have used this several times to stitch together file URLs when I am pulling data from APIs, like in the zipper formula example above. In this case, the starting URL is `https://a.4cdn.org/tg/thread/57806016.json`, from which I extract the board name, "tg", using the string converter, and then add in 4chan's CDN domain to make the appropriate base file URL (`https:/i.4cdn.org/tg/`) for the given thread. I only have to jump through this hoop in 4chan's case because they explicitly store file URLs by board name. Other imageboards might have a static `https://imageboard.org/file_store/` for all files, so it is a little easier.
 
 If you want to make some parsers, you will have to get familiar with how different sites store and present their data!

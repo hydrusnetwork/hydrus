@@ -54,6 +54,7 @@ def PressKey( window, key ):
     
     uias.Char( window, key )
     
+
 class TestDBDialogs( unittest.TestCase ):
     
     def test_dialog_manage_subs( self ):
@@ -67,8 +68,6 @@ class TestDBDialogs( unittest.TestCase ):
                 panel = ClientGUISubscriptions.EditSubscriptionsPanel( dlg, [] )
                 
                 dlg.SetPanel( panel )
-                
-                TG.test_controller.CallLaterQtSafe( dlg, 2, 'test job', panel.Add )
                 
                 TG.test_controller.CallLaterQtSafe( dlg, 4, 'test job', OKChildDialog, panel )
                 

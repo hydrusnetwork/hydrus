@@ -76,7 +76,7 @@ class TestSubscription( unittest.TestCase ):
         
         # wait until I have searcher in here, so I can roll it all into domain_manager etc... rather than hitting db for gallery init and all that
         
-        # use safebooru (i.e. gelb 0.2.0) for examples. pseudo html documents here that work with the parsers
+        # use pseudo html documents here that work with the parsers
         
         # 404 all file pages for now
         

@@ -73,7 +73,15 @@ class StylePanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss or db_dir/static/qss (if you make one).'
         text += '\n' * 2
-        text += 'If you run from source and select e621, or Paper_Dark stylesheets, which include external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot the program. For a custom QSS in your db_dir that uses external assets, you must edit the .QSS so it uses absolute path names.'
+        text += 'If you select a stylesheet that uses additional icon assets, like e621 or Paper_Dark, there are some extra issues:'
+        text += '\n\n'
+        text += '- If you run from source, you must make sure that your CWD is the hydrus install folder when you boot the program.'
+        text += '\n'
+        text += '- If you run from the built release, select the "build_release" variants. Things _should_ line up.'
+        text += '\n'
+        text += '- If the QSS is in db_dir/static/qss, you must edit that .QSS file so it uses absolute path names.'
+        text += '\n\n'
+        text += 'If asset paths are not lining up, you will get some silent logspam, so if things are not loading, check the log!'
         
         st = ClientGUICommon.BetterStaticText( self, label = text )
         

@@ -26,12 +26,12 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
     
     def test_router( self ):
         
-        my_current_storage_tags = { 'samus aran', 'blonde hair' }
-        my_current_display_tags = { 'character:samus aran', 'blonde hair' }
-        repo_current_storage_tags = { 'lara croft' }
-        repo_current_display_tags = { 'character:lara croft' }
-        repo_pending_storage_tags = { 'tomb raider' }
-        repo_pending_display_tags = { 'series:tomb raider' }
+        my_current_storage_tags = { 'space bounty hunter', 'blonde hair' }
+        my_current_display_tags = { 'character:space bounty hunter', 'blonde hair' }
+        repo_current_storage_tags = { 'jane raider' }
+        repo_current_display_tags = { 'character:jane raider' }
+        repo_pending_storage_tags = { 'tomb charted' }
+        repo_pending_display_tags = { 'series:tomb charted' }
         
         service_keys_to_statuses_to_storage_tags = {
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
@@ -109,8 +109,8 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         # doing everything
         
-        rows_1 = [ 'character:samus aran', 'blonde hair' ]
-        rows_2 = [ 'character:lara croft', 'brown hair' ]
+        rows_1 = [ 'character:space bounty hunter', 'blonde hair' ]
+        rows_2 = [ 'character:jane raider', 'brown hair' ]
         
         expected_input_path_1 = actual_file_path + '.1.txt'
         
@@ -163,12 +163,12 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     
     def test_media_tags( self ):
         
-        my_current_storage_tags = { 'samus aran', 'blonde hair' }
-        my_current_display_tags = { 'character:samus aran', 'blonde hair' }
-        repo_current_storage_tags = { 'lara croft' }
-        repo_current_display_tags = { 'character:lara croft' }
-        repo_pending_storage_tags = { 'tomb raider' }
-        repo_pending_display_tags = { 'series:tomb raider' }
+        my_current_storage_tags = { 'space bounty hunter', 'blonde hair' }
+        my_current_display_tags = { 'character:space bounty hunter', 'blonde hair' }
+        repo_current_storage_tags = { 'jane raider' }
+        repo_current_display_tags = { 'character:jane raider' }
+        repo_pending_storage_tags = { 'tomb charted' }
+        repo_pending_display_tags = { 'series:tomb charted' }
         
         service_keys_to_statuses_to_storage_tags = {
             CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : {
@@ -497,7 +497,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     def test_media_txt( self ):
         
         actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
-        rows = [ 'character:samus aran', 'blonde hair' ]
+        rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         # simple
         
@@ -625,7 +625,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     def test_media_json( self ):
         
         actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
-        rows = [ 'character:samus aran', 'blonde hair' ]
+        rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         # no file means no rows
         
@@ -717,7 +717,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
     def test_media_tags( self ):
         
         hash = os.urandom( 32 )
-        rows = [ 'character:samus aran', 'blonde hair' ]
+        rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         # no tags makes no write
         
@@ -908,7 +908,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
     def test_media_txt( self ):
         
         actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
-        rows = [ 'character:samus aran', 'blonde hair' ]
+        rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         # no rows makes no write
         
@@ -1000,7 +1000,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
     def test_media_json( self ):
         
         actual_file_path = os.path.join( TG.test_controller.db_dir, 'file.jpg' )
-        rows = [ 'character:samus aran', 'blonde hair' ]
+        rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         # no rows makes no write
         
@@ -1076,7 +1076,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         #
         
-        tag_rows = [ 'character:samus aran', 'blonde hair' ]
+        tag_rows = [ 'character:space bounty hunter', 'blonde hair' ]
         
         exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'file_data', 'tags' ] )
         

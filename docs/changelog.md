@@ -7,6 +7,76 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [☠⛤ Version 666 ⛤☠](https://github.com/hydrusnetwork/hydrus/releases/tag/v666)
+
+### misc
+
+* when you create a new subscription with 'add' button, it now asks you for the downloader up-front. this was easy to forget to set, previously; now you can't miss it
+* the problem where media could sometimes not receive any content updates (rating changes, new tags, archive state, whatever) after a backup, lock, vacuum, or certain database transaction error recovery until a page was refreshed is fixed. a cache that the in-session pages refer to was held by a database module being reinitialised through these processes and thus, after cache reset, the connection to send the update signal on media changes wasn't getting through to UI
+* added `^(?!...$).+$` to the regex input menu's quick selections for 'anything except this exact phrase'. I have to search stackexchange to figure this out every time I need it; now it is just there. also fixed a formatting typo in this menu for the 'any of these' entry
+
+### media players
+
+* improved the guard around the QtMultimedia module for those Qts where it is not available or otherwise fails to import
+* if your options say to show something with QtMediaPlayer but the module isn't available, it now falls back to an 'open externally' button and does a little popup; the same handling for missing mpv
+* improved the popup text when you boot `help->about` with an unusual module load error to report
+* rejiggered the `help->about` 'Optional Libraries' list a little and moved mpv over there
+* added another mpv 'null' audio error text, 'Could not open device', to our new cascade of 'calm down, but set the null audio device now' error handling
+* added a `KDE and QtMediaPlayer` note to the 'installing - linux' help. installing `mit-krb5` may help
+
+### qss
+
+* the e621, e621_redux, and Paper_Dark qss stylesheets get 'built_release' alternates to handle the new 'lib' directory structure of the built release
+* updated the guidance on external asset paths in `options->style`
+
+### import options test panel
+
+* booting the options dialog in 'advanced mode' now adds a 'PREVIEW: import options' panel. this is the new central place that we'll be customising import options after my rewrite here is done
+* this panel saves nothing; it is only for playing around with. it takes your current settings and migrates them to the new system as the expected pending migration will
+* I am happy with the technical side of things here, but this thing is complicated and I would like to throw advanced users in the deep end and get feedback on where the roughest parts are. I'll sand down the roughest corners with better UI and consider it all as I revise the help docs
+* april fools this year is yet more hellish UI from hydev
+
+### removing the default downloaders
+
+* a fresh hydrus client database no longer starts with any downloader definitions! I am cleaning some legacy things and making the program more neutral from the start. users will now add whichever downloaders they want from third-party sources like the user-run downloader repo. not an april fools--sorry for the trouble!
+* existing users keep what they have; this only affects new installs
+* this also frees me from the maintenance burden, which I was failing at. several of the defaults were breaking and I was not keeping up with the issues
+* so, the defaults are removed from the `static` dir and there are no 'add from defaults' buttons in the edit panels. the UI now supports and starts with a 'null' state of 'no downloader selected' everywhere
+* users without any downloaders are pointed to the `network->downloaders` menu and the user-run repository
+* I updated the help documentation all over regarding this change. it may need a revisit to make new-user onboarding smoother
+
+### import options boring work
+
+* added a 'paste-fill' paste type to the options panel, for filling in gaps without overwriting
+* wrote paste buttons for individual options panels and the import options container panel
+* wrote copy buttons for the container panel
+* fleshed out the valueChanged signals for all the new options panels: prefetch; file filtering; tag filtering; locations; tags; notes; presentation
+* wrote a favourites button and adjusted the UI to handle it in the appropriate locations
+* wrote some basic default favourites
+* polished the UI, swapping to icon buttons, bunch of stuff
+* fixed some little logic and label bugs in the new import options stuff
+
+### little stuff and cleanup
+
+* the little `▲/▼` button you see across the program on static boxes and the popup toaster now uses a special shared class that uses nicer Qt tech to signal things and sets two new object names for QSS devs to hook into: `HydrusCollapseArrowCollapsed` and `HydrusCollapseArrowExpanded`. note that these guys use reversed labels depending on whether they expand up or down (I just realised this, working on it now), so if you want to put a new label or icon in, I think we might want to do some more here. let me know how it goes
+* I think I fixed an issue where the 'hey your page is super mega tall, careful' message was showing more than once if the session includes multiple pages in this state
+* updated some new async ui code, the stuff that does new unified callBack/errBack panel restoration after job reset, so that it better handles the error of its parent window being closed early, and a program shutdown call. this was causing some harmless error spam in some things like a delayed subscription popup files button press/dismiss
+* fixed a stupid error in the updated Linux .desktop file deployment script that broke the Icon with quotes around the path
+* made the various widgets, options, and importers ok with having no downloaders available. the first time a GUG comes in via the drag and drop system, it is set as the default
+* amidst the downloader work, cleaned up how subscriptions do some edit panel `Set` stuff, removing some legacy jank
+* fixed up an old hardcoded 'downloader updated' callable with a nicer Qt Signal
+* improved the error messages around invalid/missing/null GUGs at different stages
+* I also removed some legacy downloader db update code that would have fallen to bitrot here
+* fixed a couple `finally/return` syntax issues
+* 'manage login scripts' now has some red text up top warning that it is an ancient system that does not work well
+* updated the 'adding new downloaders' help to be more clear about what is going on with the png files. it now has an example png for artbooru.com
+* updated a bunch of ancient screenshots in the help, particularly the parsing system
+* fixed duplicated 'index to fetch' label in html parsing formula panel
+* replaced some whackadoodle ListBook fixed sizing with a proper `sizeHint` and some live rowheight checking and framewidth correction
+* cleaned up some subscription unit tests
+* the media result cache is now a singleton instance that persists through a database restart, and the unit tests now do some careful clearing on test database resetting here
+* fixed a missing definition typo in the filetype labels
+
 ## [Version 665](https://github.com/hydrusnetwork/hydrus/releases/tag/v665)
 
 ### misc
@@ -467,51 +537,3 @@ title: Changelog
 * retired my older directory picker dialog in favour of my newer 'quick' select, replacing use in the file import window; move media files; repair file locations; clear orphan files; review services manual export update files; manual import update files; select backup location; restore backup location
 * updated my 'quick' directory select call to remember the last directory selected this session (defaulting to install dir for now), and if the caller doesn't have a specific location in mind, to use that last selection as the starting dir of the next dialog open. it also handles cancel results a little nicer
 * removed one or two 'is the user in Qt5?' checks with the QtMediaPlayer work. I'm not sure when, but I think I'll purge the rest of these completely in the next month or so, probably at the next 'future build' commit. it is basically time to move on
-
-## [Version 656](https://github.com/hydrusnetwork/hydrus/releases/tag/v656)
-
-### misc
-
-* when you edit an ongoing tag autocomplete input to have or not have a leading hyphen, the results should now switch more reliably between `skirt` and `-skirt`. the logic was patchy here, previously, updating itself on certain unnamespaced text but not namespaced, and I believe in some cases in-construction OR predicates could be negated, but it should now, on all updates, work on all the correct predicates
-* all file and directory pickers across the program now no longer realise any symlinks you select. I never knew this was default behaviour, but now, if you tell 'move media files...' or similar to use a symlink, it will result in that dir you select, not the realised endpoint
-* if a file storage location involves a symlink, the 'move media files' dialog and related log entries will now say `/some/path (Real path: /other/path)`. if there is a problem determining the path, it will say `/some/path (Real path: Could not determine real path--check log!)`
-* the example urls list in the 'edit page parser' dialog now has copy/paste buttons for quicker in and out when you just need to grab some urls to test with etc.. . I will brush up this list object more in future and do duplicate removal and right-click menus and stuff
-* when hydrus does a free space check on your temp dir before a big db job, it now recognises the `SQLITE_TMPDIR` environment variable, which overrides and tells SQLite to use a different path, and it will check and talk about this guy instead. if SQLite is indeed redirected with `SQLITE_TMPDIR`, this is now stated in `help->about`
-* if duplicates auto-resolution fails to generate visual data for a file, it now prints a message to the log about the bad file hash, considers the file pair not duplicate, and no longer halts the whole system (issue #1950)
-
-### import options overhaul
-
-* I have planned out the overhaul to import options. we will migrate to a system that is similar to the current url-type-based  tag/note import options customisation but for all ways of importing and all import options types. the edit panels will get a strong usability and clarity pass, all gathered in one panel, with favourites/templates for quick load of preferred options, and the import options will be split into more granular types so you can, say, easily set up a specific tag blacklist while keeping default tag parsing rules. the current expected default categories will be global, local import, gallery, subscription, watcher, specific url classes, and the new import options will be: prefetch logic, file filtering, tag filtering, locations, tags, notes, presentation. should be easier to add a 'ratings options' to this sort of thing, too, in future
-* I did a load of boring behind the scenes cleanup this week to move this forward. nothing works different, but the shape of things is altering--
-* I wrote a new import options container object that will dynamically hold a swiss-cheese template of various options for a particular layer of the options context, and a manager to hold the defaults and serve the appropriate specific import options based on who is asking
-* the 'file import options' across the program is converted to 'file import options (legacy)'
-* same deal for 'tag import options'
-* wrote a 'prefetch import options'
-* the hash-check, url-check, and url-neighbour logic is migrated inside a file import options to this new prefetch import options, and all importers and options now interact with the prefetch import options, care-of the file import options. same thing will happen in future for the file filter stuff ('don't allow x filetype' etc...) and the locations stuff ('put it here and archive it'); and on the tag side for blacklist vs tag destination options; before I migrate all those newly decoupled lego blocks up one level to the new container class with, fingers crossed, minimum fuss
-* the edit file import options now breaks the prefetch logic out to a new UI box. these options are no longer hidden behind advanced mode, but for this transition period I will now start the box collapsed and have a scary warning label
-* now I have thought about this and planned it, I feel fairly good. I think I am 20% done and believe I can keep chipping away like this for a smooth migration, no gigantic changes at any stage
-
-### client api
-
-* the `/add_tags/search_tags` Client API request now delivers a very simple `autocomplete_text` Object that says what actual text the user entered and whether it was inclusive (i.e. started with a hyphen or not). I considered adding some other A/C logic like 'is explicit wildcard' and 'what automatic autocomplete wildcars are being added' to this structure, but that stuff is a little messy so I'll KISS for now
-* the unit tests now check this
-* Client API version is now 86
-
-### other boring cleanup
-
-* moved file and directory picker buttons out of `QtPorting` and harmonised the 'quick, select an existing dir' routine to `DialogsQuick`
-* moved the richer file and directory dialogs out of `QtPorting`
-
-### new domain logic prep
-
-* if the client has access to the library `tldextract`, it now defers to this for generating the 'second level domain' of an URL (or, more strictly, detecting the 'public suffix domain'). this is the `blah.com` style of domain, with no subdomains. at the moment, hydrus naively collapses a `blah.co.uk` to the unhelpful `co.uk` for various domain-management purposes (you may see this under _review session cookies_), which doesn't cause any errors but is ugly and does cause bloated sessions that collect all cookies under this TLD into one bucket and forces everything under the domain to share bandwidth tokens on this false second-level umbrella. this new library navigates this and produces the `blah.co.uk` result as desired
-* `help->about` now lists `tldextract` under the 'optional libraries' section
-* this code does nothing yet for almost all users. in the near future I will roll the library into the requirements for source users and the future build so we can test for issues. I have written a failsafe to try to not break any logins (anyone who has login cookies in a 'co.uk' style session entry will keep using that bucket after the planned transition), but we'll see if anything else pops up
-
-### future build committed
-
-* This release commits the changes tested with the recent future build. The test went well, and there are no special instructions for the update. Source users are encouraged to rebuild their venvs this week. Update as normal, and you will get--
-* - `requests` (networking library) `2.32.4` to `2.32.5`
-* - `mpv` (the python wrapper that talks to the dll) `1.0.7` to `1.0.8`
-* - `PySide6` (Qt) normal `6.8.3` to `6.9.3`
-* - `PySide6` (Qt) test, for source users, `6.9.3` to `6.10.1`

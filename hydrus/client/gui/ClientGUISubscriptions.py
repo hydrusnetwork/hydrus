@@ -358,7 +358,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._initial_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'The first sync will add no more than this many URLs.' ) )
         
         self._periodic_file_limit = ClientGUICommon.BetterSpinBox( self._file_limits_panel, min=1, max=limits_max )
-        self._periodic_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before. Note that this generally means top-level posts. If those posts include multiple files, e.g. as on Pixiv, they will still only count for one URL at the stage when this is checked.' ) )
+        self._periodic_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before. Note that this generally means top-level posts. If those posts can themselves include multiple files, they will still only count for one URL at the stage when this is checked.' ) )
         
         self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
         self._this_is_a_random_sample_sub.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' ) )
@@ -1405,9 +1405,17 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         tag_import_options = self._import_options_button.GetTagImportOptions()
         note_import_options = self._import_options_button.GetNoteImportOptions()
         
-        subscription.SetTuple( gug_key_and_name, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, self._no_work_until )
+        subscription.SetGUGKeyAndName( gug_key_and_name )
+        subscription.SetCheckerOptions( checker_options )
+        subscription.SetFileLimits( initial_file_limit, periodic_file_limit )
         
+        subscription.SetPaused( paused )
+        
+        subscription.SetFileImportOptions( file_import_options )
+        subscription.SetTagImportOptions( tag_import_options )
         subscription.SetNoteImportOptions( note_import_options )
+        
+        subscription.SetNoWorkUntil( self._no_work_until )
         
         subscription.SetThisIsARandomSampleSubscription( self._this_is_a_random_sample_sub.isChecked() )
         
@@ -1899,7 +1907,19 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
         
-        pretty_site = gug_key_and_name[1]
+        try:
+            
+            pretty_site = gug_key_and_name[1]
+            
+        except:
+            
+            pretty_site = 'unknown downloader'
+                
+        
+        if pretty_site == '':
+            
+            pretty_site = 'no downloader set!'
+            
         
         if len( query_headers ) > 0:
             
@@ -2460,7 +2480,16 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Add( self ):
         
-        gug_key_and_name = CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+        try:
+            
+            default_gug_key_and_name = CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+            
+            gug_key_and_name = ClientGUIImport.SelectGUGKeyAndName( self, default_gug_key_and_name, for_new_sub = True )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
         
         empty_subscription = ClientImportSubscriptions.Subscription( 'new subscription', gug_key_and_name = gug_key_and_name )
         
@@ -2559,8 +2588,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         if can_do_cased and can_do_caseless:
             
             choice_tuples = [
-                ( 'do a normal upper/lower case deduplication', False, 'Dedupe "samus_aran" with "samus_aran" or "Samus_Aran". This is usually the best option to go with--most sites ignore case.' ),
-                ( 'only do exact text deduplication', True, 'Dedupe "samus_aran" with "samus_aran", but not "Samus_Aran". Usually not important, but some specific galleries may care about this.' )
+                ( 'do a normal upper/lower case deduplication', False, 'Dedupe "my_query" with "my_query" or "My_Query". This is usually the best option to go with--most sites ignore case.' ),
+                ( 'only do exact text deduplication', True, 'Dedupe "my_query" with "my_query", but not "My_Query". Usually not important, but some specific galleries may care about this.' )
             ]
             
             message = 'Which kind of duplication are we going to do?'
@@ -2576,7 +2605,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif can_do_caseless:
             
-            message = 'There are no exact text duplicates. Only upper/lower case deduplication is available, merging queries like "samus_aran" and "Samus_Aran". Is this ok?'
+            message = 'There are no exact text duplicates. Only upper/lower case deduplication is available, merging queries like "my_query" and "My_Query". Is this ok?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -2914,7 +2943,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def LowerCaseQueries( self ):
         
-        message = 'This will convert the selected subscriptions\' queries to lowercase text. "Samus_Aran" will become "samus_aran". Most sites do not care about case, but it can help things stay neat.'
+        message = 'This will convert the selected subscriptions\' queries to lowercase text. "My_Query" will become "my_query". Most sites do not care about case, but it can help things stay neat.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         

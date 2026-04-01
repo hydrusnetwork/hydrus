@@ -83,11 +83,13 @@ class AsyncQtJob( object ):
                     
                     CG.client_controller.CallBlockingToQt( self._win, self._ui_restoration_callable )
                     
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    
+                    pass
+                    
                 except Exception as e:
                     
                     self._HandleErrback( e )
-                    
-                    return
                     
                 
             

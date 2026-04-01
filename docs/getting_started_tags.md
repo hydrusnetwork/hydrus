@@ -3,7 +3,7 @@ title: Tags
 ---
 
 # Getting started with tags
-A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'the legend of zelda' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
+A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'legend of the galactic heroes' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
 
 ## How do we find files? { id="intro" }
 
@@ -23,7 +23,7 @@ Prefixing a tag with a category and a colon will create a [_namespaced_ tag](faq
 
 *   `character:batman`
 *   `series:street fighter`
-*   `person:jennifer lawrence`
+*   `person:niccolò machiavelli`
 *   `title:vitruvian man`
 
 The client is set up to draw common namespaces in different colours, just like boorus do. You can change these colours in the options.

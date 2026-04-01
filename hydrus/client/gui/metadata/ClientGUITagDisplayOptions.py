@@ -46,7 +46,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._write_autocomplete_location_context.SetAllKnownFilesAllowed( True, False )
         
         self._search_namespaces_into_full_tags = QW.QCheckBox( self )
-        self._search_namespaces_into_full_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metroid". On large tag services, these searches are extremely slow.' ) )
+        self._search_namespaces_into_full_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:my cool series". On large tag services, these searches are extremely slow.' ) )
         
         self._unnamespaced_search_gives_any_namespace_wildcards = QW.QCheckBox( self )
         self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, an unnamespaced search like "sam" will return a special additional "any-namespace" wildcard for "sam (any namespace)", just as if you had typed "*:sam". If you regularly like to search for tags that may have multiple namespaces, this may save you time.\n\nIf you are not sure what this does, leave it unchecked.' ) )

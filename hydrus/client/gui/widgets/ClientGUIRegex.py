@@ -62,7 +62,7 @@ class RegexButton( ClientGUICommon.BetterButton ):
         ClientGUIMenus.AppendMenuItem( submenu, r'backslash character - \\', copy_desc, CG.client_controller.pub, 'clipboard', 'text', r'\\' )
         ClientGUIMenus.AppendMenuItem( submenu, r'beginning of line - ^', copy_desc, CG.client_controller.pub, 'clipboard', 'text', r'^' )
         ClientGUIMenus.AppendMenuItem( submenu, r'end of line - $', copy_desc, CG.client_controller.pub, 'clipboard', 'text', r'$' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'any of these - [{HC.UNICODE_ELLIPSIS}]', copy_desc, CG.client_controller.pub, 'clipboard', f'text', '[{HC.UNICODE_ELLIPSIS}]' )
+        ClientGUIMenus.AppendMenuItem( submenu, f'any of these - [{HC.UNICODE_ELLIPSIS}]', copy_desc, CG.client_controller.pub, 'clipboard', f'text', f'[{HC.UNICODE_ELLIPSIS}]' )
         ClientGUIMenus.AppendMenuItem( submenu, f'anything other than these - [^{HC.UNICODE_ELLIPSIS}]', copy_desc, CG.client_controller.pub, 'clipboard', 'text', f'[^{HC.UNICODE_ELLIPSIS}]' )
         
         ClientGUIMenus.AppendSeparator( submenu )
@@ -85,7 +85,8 @@ class RegexButton( ClientGUICommon.BetterButton ):
         ClientGUIMenus.AppendMenuItem( submenu, f'the previous characters are not: (non-consuming) - (?<!{HC.UNICODE_ELLIPSIS})', copy_desc, CG.client_controller.pub, 'clipboard', 'text', f'(?<!{HC.UNICODE_ELLIPSIS})' )
         
         ClientGUIMenus.AppendSeparator( submenu )
-        
+        # `^(?!...$).+$` - is anything but this
+        ClientGUIMenus.AppendMenuItem( submenu, f'anything except this exact phrase - ^(?!{HC.UNICODE_ELLIPSIS}$).+$', copy_desc, CG.client_controller.pub, 'clipboard', 'text', f'^(?!{HC.UNICODE_ELLIPSIS}$).+$' )
         ClientGUIMenus.AppendMenuItem( submenu, r'0074 -> 74 - [1-9]+\d*', copy_desc, CG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
         ClientGUIMenus.AppendMenuItem( submenu, r'filename - (?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)', copy_desc, CG.client_controller.pub, 'clipboard', 'text', '(?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)' )
         

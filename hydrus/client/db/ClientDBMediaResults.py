@@ -68,14 +68,14 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         self.modules_tag_display = modules_tag_display
         self.modules_similar_files = modules_similar_files
         
-        self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
+        self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache.instance()
         
         super().__init__( 'client media results', cursor )
         
     
     def ClearMediaResultCache( self ):
         
-        self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
+        self._weakref_media_result_cache.Clear()
         
     
     def DropMediaResults( self, hash_ids_to_hashes ):

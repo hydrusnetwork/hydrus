@@ -12,7 +12,7 @@ A _repository_ is a service in the hydrus network that stores a certain kind of 
 
 [Wikipedia](https://en.wikipedia.org/wiki/Tag_(metadata))
 
-A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'the legend of zelda' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
+A _tag_ is a small bit of text describing a single property of something. They make searching easy. Good examples are "flower" or "nicolas cage" or "the sopranos" or "2003". By combining several tags together ( e.g. \[ 'tiger woods', 'sports illustrated', '2008' \] or \[ 'cosplay', 'legend of the galactic heroes' \] ), a huge image collection is reduced to a tiny and easy-to-digest sample.
 
 A good word for the connection of a particular tag to a particular file is _mapping_.
 

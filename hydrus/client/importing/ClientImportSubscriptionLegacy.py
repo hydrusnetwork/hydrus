@@ -9,7 +9,6 @@ from hydrus.core import HydrusTime
 from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDownloading
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
@@ -476,7 +475,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
         if gug_key_and_name is None:
             
-            gug_key_and_name = ( HydrusData.GenerateKey(), 'unknown source' )
+            gug_key_and_name = ( HydrusData.GenerateKey(), '' )
             
         
         self._gug_key_and_name = gug_key_and_name
@@ -849,11 +848,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( serialisable_gallery_identifier, serialisable_gallery_stream_identifiers, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events ) = old_serialisable_info
             
-            gallery_identifier = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_identifier )
+            serialisable_gug_key_and_name = ( HydrusData.GenerateKey().hex(), 'unknown downloader' )
             
-            ( gug_key, gug_name ) = ClientDownloading.ConvertGalleryIdentifierToGUGKeyAndName( gallery_identifier )
-            
-            serialisable_gug_key_and_name = ( gug_key.hex(), gug_name )
+            paused = True
             
             new_serialisable_info = ( serialisable_gug_key_and_name, serialisable_queries, serialisable_checker_options, initial_file_limit, periodic_file_limit, paused, serialisable_file_import_options, serialisable_tag_import_options, no_work_until, no_work_until_reason, publish_files_to_popup_button, publish_files_to_page, merge_query_publish_events )
             
@@ -1226,16 +1223,17 @@ def ConvertLegacySubscriptionToNew( legacy_subscription: SubscriptionLegacy ):
     
     subscription = ClientImportSubscriptions.Subscription( name )
     
-    subscription.SetTuple(
-        gug_key_and_name,
-        checker_options,
-        initial_file_limit,
-        periodic_file_limit,
-        paused,
-        file_import_options,
-        tag_import_options,
-        no_work_until
-        )
+    subscription.SetGUGKeyAndName( gug_key_and_name )
+    subscription.SetCheckerOptions( checker_options )
+    
+    subscription.SetFileLimits( initial_file_limit, periodic_file_limit )
+    
+    subscription.SetPaused( paused )
+    
+    subscription.SetFileImportOptions( file_import_options )
+    subscription.SetTagImportOptions( tag_import_options )
+    
+    subscription.SetNoWorkUntil( no_work_until )
     
     (
         show_a_popup_while_working,

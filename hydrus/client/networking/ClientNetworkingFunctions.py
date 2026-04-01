@@ -249,10 +249,10 @@ def ConvertHTTPToHTTPS( url ):
 
 def ConvertPathTextToList( path: str ) -> list[ str ]:
     
-    # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
+    # /post/show/123456/akunim-anthro-armband-armwear-clothed-clothing-fem
     
-    # this is a valid URL, with double //
-    # https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg
+    # you can get URLs like this, with double //:
+    # https://somebooru.com//images/ab/cd/abcdblahblahblah.jpg
     # We have a bunch of legacy URLs where I collapsed starting // down to /. Oh well!
     
     if CG.client_controller.new_options.GetBoolean( 'remove_leading_url_double_slashes' ):

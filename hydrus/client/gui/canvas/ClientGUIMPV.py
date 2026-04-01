@@ -129,7 +129,8 @@ def log_message_is_about_no_audio_devices( component, message ):
     if 'ao/' in component: # ao/wasapi, potentially others
         
         probably_unplugged_tests = [
-            'There are no playback devices available' in message
+            'There are no playback devices available' in message,
+            'ould not open device' in message # could or Could?
         ]
         
     

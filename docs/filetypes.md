@@ -40,7 +40,7 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 
 ### Ugoira
 
-[Pixiv Ugoira format](https://www.pixiv.help/hc/en-us/articles/235584628-What-are-Ugoira-) is a custom animation format used by Pixiv. The Pixiv API provides a list of frame files (normally JPEG or PNG) and their durations. The frames can be stored in a ZIP file along with a JSON file containing the frame and duration information. A zip file containing images with 6 digit zero-padded filenames will be identified as a Ugoira file in hydrus. 
+[Pixiv Ugoira format](https://www.pixiv.help/hc/en-us/articles/235584628-What-are-Ugoira-) is a custom animation format used by Pixiv. The frames can be stored in a ZIP file along with a JSON file containing the frame and duration information. A zip file containing images with 6 digit zero-padded filenames will be identified as a Ugoira file in hydrus. 
 
 If there are no frame durations provided hydrus will assume each frame should last 125ms. Hydrus will look inside the zip for a file called `animation.json` and try to parse it as the 2 most common metadata formats that PixivUtil and gallery-dl generate. The Ugoira file will only have a duration in the database if it contains a valid `animation.json`. 
 

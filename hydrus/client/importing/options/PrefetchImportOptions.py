@@ -116,7 +116,7 @@ class PrefetchImportOptions( HydrusSerialisable.SerialisableBase ):
             
             statements.append( 'WARNING: ignores hashes for file redownload checks!' )
             
-        elif self._preimport_hash_check_type == DO_NOT_CHECK:
+        elif self._preimport_url_check_type == DO_NOT_CHECK:
             
             statements.append( 'WARNING: ignores URLs for file redownload checks!' )
             
@@ -138,7 +138,7 @@ class PrefetchImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( statements ) == 0:
             
-            statements.append( 'everything is fine' )
+            statements.append( 'looks good' )
             
         
         summary = ', '.join( statements )

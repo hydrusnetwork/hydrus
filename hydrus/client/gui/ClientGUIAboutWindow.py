@@ -82,21 +82,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     
     library_version_lines.append( 'python: {}'.format( v ) )
     library_version_lines.append( 'FFMPEG: {}'.format( HydrusFFMPEG.GetFFMPEGVersion() ) )
-    
-    if ClientGUIMPV.MPV_IS_AVAILABLE:
-        
-        library_version_lines.append( 'mpv api version: {}'.format( ClientGUIMPV.GetClientAPIVersionString() ) )
-        
-    else:
-        
-        library_version_lines.append( render_availability_line( 'mpv', ClientGUIMPV.MPV_IS_AVAILABLE, ClientGUIMPV.MPV_MODULE_NOT_FOUND, ClientGUIMPV.MPV_IMPORT_ERROR ) )
-        
-        if HC.RUNNING_FROM_FROZEN_BUILD and HC.PLATFORM_MACOS:
-            
-            HydrusData.ShowText( 'The macOS App does not come with MPV support on its own, but if your system has the dev library, libmpv1 or libmpv2, it will try to import it. It seems your system does not have this, or it failed to import. The specific error follows:' )
-            
-        
-    
     library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
     library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
     
@@ -202,8 +187,21 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines = []
     
     availability_lines.append( render_availability_line( 'QtCharts', ClientGUICharts.QT_CHARTS_OK, ClientGUICharts.QT_CHARTS_MODULE_NOT_FOUND, ClientGUICharts.QT_CHARTS_IMPORT_ERROR ) )
-    
+    availability_lines.append( render_availability_line( 'QtMultimedia', ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IS_AVAILABLE, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_MODULE_NOT_FOUND, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'QtPdf', ClientPDFHandling.PDF_OK, ClientPDFHandling.PDF_MODULE_NOT_FOUND, ClientPDFHandling.PDF_IMPORT_ERROR ) )
+    
+    availability_lines.append( '' )
+    
+    if ClientGUIMPV.MPV_IS_AVAILABLE:
+        
+        availability_lines.append( 'mpv api version: {}'.format( ClientGUIMPV.GetClientAPIVersionString() ) )
+        
+    else:
+        
+        availability_lines.append( render_availability_line( 'mpv', ClientGUIMPV.MPV_IS_AVAILABLE, ClientGUIMPV.MPV_MODULE_NOT_FOUND, ClientGUIMPV.MPV_IMPORT_ERROR ) )
+        
+    
+    availability_lines.append( '' )
     
     CBOR_AVAILABLE = False
     
@@ -226,7 +224,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'lxml', ClientParsing.LXML_IS_OK, not ClientParsing.LXML_IS_OK, '' ) )
     availability_lines.append( render_availability_line( 'lz4', HydrusCompression.LZ4_OK, not HydrusCompression.LZ4_OK, '' ) )
     availability_lines.append( render_availability_line( 'olefile', HydrusOLEHandling.OLEFILE_OK, not HydrusOLEHandling.OLEFILE_OK, '' ) )
-    availability_lines.append( render_availability_line( 'QtMultimedia', ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IS_AVAILABLE, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_MODULE_NOT_FOUND, ClientGUIQtMediaPlayer.QT_MULTIMEDIA_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'tldextract (under testing)', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
     
     #

@@ -538,7 +538,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             if ':' not in search_text and search_namespaces_into_full_tags and not exact_match:
                 
-                # 'char' -> 'character:samus aran'
+                # 'char' -> 'character:dave'
                 
                 special_search_text = '{}*:*'.format( search_text )
                 
@@ -892,7 +892,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 else:
                     
                     # we want the " " wrapping our search text to keep whitespace words connected and in order
-                    # "samus ar*" should not match "around samus"
+                    # "man ha*" should not match "happy man"
                     
                     # simple 'sam*' style subtag, so we can search fts4 no prob
                     
@@ -1008,7 +1008,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 else:
                     
                     # we want the " " wrapping our search text to keep whitespace words connected and in order
-                    # "samus ar*" should not match "around samus"
+                    # "man ha*" should not match "happy man"
                     
                     # simple 'sam*' style subtag, so we can search fts4 no prob
                     

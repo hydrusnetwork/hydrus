@@ -61,6 +61,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         del cls._db
         
+        TG.test_controller.ClearTestDB()
+        
     
     @classmethod
     def setUpClass( cls ):
