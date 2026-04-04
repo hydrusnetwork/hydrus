@@ -287,6 +287,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_lock_current_pan': False,
             'media_viewer_set_default_viewer_zoom_type_from_menu': False,
             'media_viewer_recenter_media_on_window_resize': True,
+            'pop_media_viewer_window_fully_onscreen_on_shortcut_resize': False,
             'allow_blurhash_fallback' : True,
             'fade_thumbnails' : True,
             'slideshow_always_play_duration_media_once_through' : False,
