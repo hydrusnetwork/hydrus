@@ -2328,7 +2328,7 @@ class CanvasWithHovers( Canvas ):
         
         if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' ):
             
-            CG.client_controller.CallLaterQtSafe( self, 0.1, 'removing titlebar from media viewer', self._FlipWindowAlwaysOnTop )
+            CG.client_controller.CallLaterQtSafe( self, 0.1, 'setting media viewer window on top', self._FlipWindowAlwaysOnTop )
             
         
         if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_frameless' ):
