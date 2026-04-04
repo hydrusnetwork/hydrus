@@ -464,6 +464,31 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         pass
         
     
+    def _FlipWindowAlwaysOnTop( self ):
+        
+        self._window_always_on_top = not self._window_always_on_top
+        
+        self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+        
+        self.window().show()
+        
+        self.update()
+        
+    
+    def _FlipHideWindowFrame( self ):
+        
+        window_real_geom = self.window().geometry()
+        
+        self._window_hide_frame = not self._window_hide_frame
+        
+        self.window().setWindowFlag( QC.Qt.WindowType.FramelessWindowHint, self._window_hide_frame )
+        
+        self.window().setGeometry( window_real_geom )
+        
+        self.window().show()
+        self.update()
+        
+    
     def _GetIndexString( self ):
         
         return ''
@@ -1419,6 +1444,22 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 HydrusImageNormalisation.SetDoICCProfileNormalisation( result )
                 
+            elif action in ( CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP, CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON, CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF ) and self._top_hover is not None:
+                
+                if action == CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON:
+                    
+                    self._window_always_on_top = False
+                    
+                elif action == CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF:
+                    
+                    self._window_always_on_top = True
+                    
+                self._FlipWindowAlwaysOnTop()
+                
+            elif action == CAC.SIMPLE_THISWINDOW_FRAMELESS_FLIP and self._top_hover is not None:
+                
+                self._FlipHideWindowFrame()
+                
             elif action in ( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER, CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER, CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ):
                 
                 if action == CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER:
@@ -2281,6 +2322,19 @@ class CanvasWithHovers( Canvas ):
             
         
         #
+        
+        self._window_always_on_top = False
+        self._window_hide_frame = False # should always start with titlebar/frame (to establish taskbar gubbins?)
+        
+        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' ):
+            
+            CG.client_controller.CallLaterQtSafe( self, 0.1, 'removing titlebar from media viewer', self._FlipWindowAlwaysOnTop )
+            
+        
+        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_frameless' ):
+            
+            CG.client_controller.CallLaterQtSafe( self, 0.1, 'removing titlebar from media viewer', self._FlipHideWindowFrame )
+            
         
         self._cursor_autohide_timer = QC.QTimer( self )
         self._last_cursor_autohide_touch_time = HydrusTime.GetNowFloat()
