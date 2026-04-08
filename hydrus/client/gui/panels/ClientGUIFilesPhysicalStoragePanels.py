@@ -106,6 +106,8 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         vbox = QP.VBoxLayout()
         
         warning = 'THIS IS SERIOUSLY ONLY FOR ADVANCED USERS. THE MIGRATION IS BIG AND SLOW, SO USERS WITH >1m FILES SHOULD THINK CAREFULLY.'
+        warning += '\n\n'
+        warning += 'DO NOT DO THIS IF YOU DO SYMLINK MAGIC INSIDE YOUR FILE STORAGE'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setObjectName( 'HydrusWarning' )

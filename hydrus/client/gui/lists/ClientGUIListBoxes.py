@@ -1868,7 +1868,7 @@ class ListBox( QW.QScrollArea ):
         return list( itertools.chain.from_iterable( ( term.GetSearchPredicates() for term in terms ) ) )
         
     
-    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ):
+    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ) -> list[ tuple[ str, tuple[ int, int, int ] ] ]:
         
         raise NotImplementedError()
         
@@ -3060,6 +3060,9 @@ class ListBoxTags( ListBox ):
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
         CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
+        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
+        
     
     def _GetCurrentLocationContext( self ):
         
@@ -3095,7 +3098,7 @@ class ListBoxTags( ListBox ):
             
         
     
-    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ):
+    def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ) -> list[ tuple[ str, tuple[ int, int, int ] ] ]:
         
         namespace_colours = self._GetNamespaceColours()
         
@@ -3293,14 +3296,6 @@ class ListBoxTags( ListBox ):
         pass
         
     
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
     def eventFilter( self, watched, event ):
         
         try:
@@ -3330,17 +3325,6 @@ class ListBoxTags( ListBox ):
                                 self._NewSearchPages( [ predicates ] )
                                 
                             
-                        
-                        event.accept()
-                        
-                        return True
-                        
-                    
-                elif event.type() == QC.QEvent.Type.MouseButtonRelease:
-                    
-                    if event.button() == QC.Qt.MouseButton.RightButton:
-                        
-                        self.ShowMenu()
                         
                         event.accept()
                         
@@ -3378,7 +3362,12 @@ class ListBoxTags( ListBox ):
             
         
     
-    def ShowMenu( self ):
+    def ForceTagRecalc( self ):
+        
+        pass
+        
+    
+    def ShowMenuFromSignal( self, pos ):
         
         if len( self._ordered_terms ) == 0 or not self.isEnabled():
             
@@ -4218,11 +4207,6 @@ class ListBoxTags( ListBox ):
             
         
         CGC.core().PopupMenu( self, menu )
-        
-    
-    def ForceTagRecalc( self ):
-        
-        pass
         
     
     def get_htl_background( self ):

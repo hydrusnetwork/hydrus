@@ -241,66 +241,69 @@ When it does this, it gives you this structure, typically under a `services` key
     "show_in_thumbnail" : true,
     "show_in_thumbnail_even_when_null" : true,
     "colours": {
-        "dislike": {
-            "brush": "#FFFFFF",
-            "pen": "#000000"
-        },
-        "like": {
-            "brush": "#50C878",
-            "pen": "#000000"
-        },
-        "mixed": {
-            "brush": "#5F5F5F",
-            "pen": "#000000"
-        },
-        "null": {
-            "brush": "#BFBFBF",
-            "pen": "#000000"
-        }
+      "dislike": {
+        "brush": "#FFFFFF",
+        "pen": "#000000"
+      },
+      "like": {
+        "brush": "#50C878",
+        "pen": "#000000"
+      },
+      "mixed": {
+        "brush": "#5F5F5F",
+        "pen": "#000000"
+      },
+      "null": {
+        "brush": "#BFBFBF",
+        "pen": "#000000"
+      }
+    },
   },
   "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : {
-    "name" : "example local rating numerical service",
-    "type" : 6,
-    "type_pretty" : "local numerical rating service",
-    "star_shape" : "fat star",
-    "allows_zero" : false,
-    "min_stars" : 1,
-    "max_stars" : 5,
-    "show_in_thumbnail" : true,
-    "show_in_thumbnail_even_when_null" : false,
+    "name": "example local rating numerical service",
+    "type": 6,
+    "type_pretty": "local numerical rating service",
+    "star_shape": "fat star",
+    "allows_zero": false,
+    "min_stars": 1,
+    "max_stars": 5,
+    "show_in_thumbnail": true,
+    "show_in_thumbnail_even_when_null": false,
     "colours": {
-        "dislike": {
-            "brush": "#FFFFFF",
-            "pen": "#000000"
-        },
-        "like": {
-            "brush": "#50C878",
-            "pen": "#000000"
-        },
-        "mixed": {
-            "brush": "#5F5F5F",
-            "pen": "#000000"
-        },
-        "null": {
-            "brush": "#BFBFBF",
-            "pen": "#000000"
-        }
+      "dislike": {
+        "brush": "#FFFFFF",
+        "pen": "#000000"
+      },
+      "like": {
+        "brush": "#50C878",
+        "pen": "#000000"
+      },
+      "mixed": {
+        "brush": "#5F5F5F",
+        "pen": "#000000"
+      },
+      "null": {
+        "brush": "#BFBFBF",
+        "pen": "#000000"
+      }
+    }
   },
   "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : {
-    "name" : "example local rating inc/dec service",
-    "type" : 22,
-    "type_pretty" : "local inc/dec rating service",
-    "show_in_thumbnail" : false,
-    "show_in_thumbnail_even_when_null" : false,
+    "name": "example local rating inc/dec service",
+    "type": 22,
+    "type_pretty": "local inc/dec rating service",
+    "show_in_thumbnail": false,
+    "show_in_thumbnail_even_when_null": false,
     "colours": {
-        "like": {
-            "brush": "#50C878",
-            "pen": "#000000"
-        },
-        "mixed": {
-            "brush": "#5F5F5F",
-            "pen": "#000000"
-        }
+      "like": {
+        "brush": "#50C878",
+        "pen": "#000000"
+      },
+      "mixed": {
+        "brush": "#5F5F5F",
+        "pen": "#000000"
+      }
+    }
   },
   "7472617368" : {
     "name" : "trash",
@@ -1705,13 +1708,15 @@ If you send `null` timestamp time, then this will instruct to delete the existin
 *   7 - File originally imported time
 
 !!! warning "Adding or Deleting"
-    You can add or delete type 0 (web domain) timestamps, but you can only edit existing instances of all the others. This is broadly how the _manage times_ dialog works, also. Stuff like 'last viewed' is tied up with other numbers like viewtime and num_views, so if that isn't already in the database, then we can't just add the timestamp on its own. Same with 'deleted time' for a file that isn't deleted! So, in general, other than web domain stuff, you can only edit times you already see in [/get\_files/file\_metadata](#get_files_file_metadata).
+    You can add or delete type 0 (web domain) timestamps and set an archived time with no previous record, but you can only edit existing instances of all the others. This is broadly how the _manage times_ dialog works, also. Stuff like 'last viewed' is tied up with other numbers like viewtime and num_views, so if that isn't already in the database, then we can't just add the timestamp on its own. Same with 'deleted time' for a file that isn't deleted! So, in general, other than web domain stuff, you can only edit times you already see in [/get\_files/file\_metadata](#get_files_file_metadata).
 
 If you select 0, you have to include a `domain`, which will usually be a web domain, but you can put anything in there.
 
 If you select 1, the client will _not_ alter the modified time on your hard disk, only the database record. This is unlike the dialog. Let's let this system breathe a bit before we try to get too clever.
 
 If you select 3, 4, or 7, you have to include a `file_service_key`. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it.
+
+If you select 5 and the file is currently in the inbox, it will be archived!
 
 If you select 6, you have to include a `canvas_type`, which is:
 
@@ -2214,6 +2219,7 @@ Response:
       "num_frames" : 102,
       "num_words" : null,
       "is_inbox" : false,
+      "time_archived" : 1641044542,
       "is_local" : true,
       "is_trashed" : false,
       "is_deleted" : false,

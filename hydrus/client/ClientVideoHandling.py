@@ -17,6 +17,7 @@ class AnimationRendererPIL( object ):
             
         
         self._pil_image = None
+        self._initial_size = ( 0, 0 )
         
         self._path = path
         self._num_frames = num_frames
@@ -52,9 +53,15 @@ class AnimationRendererPIL( object ):
             HydrusData.ShowText( 'Loading animation with PIL' )
             
         
+        if self._pil_image is not None:
+            
+            self._pil_image.close()
+            
+        
         # dequantize = False since we'll be doing that later for each frame in turn
         # if we do it now, it collapses down to a one frame object
         self._pil_image = HydrusImageHandling.GeneratePILImage( self._path, dequantize = False )
+        self._initial_size = self._pil_image.size
         
         self._pil_global_palette = self._pil_image.palette
         
@@ -87,15 +94,30 @@ class AnimationRendererPIL( object ):
             
             try:
                 
-                self._pil_image.seek( self._current_render_index )
-                
-                size = self._pil_image.size
+                size_before_seek = self._pil_image.size
                 
                 # this out of the blue: <PIL.GifImagePlugin.GifImageFile image mode=RGBA size=85171x53524 at 0x1BF0386C460>
                 # 8GB memory 20 second fail render
-                if size[0] > 16384 or size[1] > 16384:
+                # another one started 640x480 and suddenly went to 28579x93263 because of frame malformation
+                # we need to test this _before_ the seek, which triggers a 'load current frame' before doing the seek
+                # we also test afterwards, to force a rewind, lest something try to render the current frame naively
+                if size_before_seek[0] > 16384 or size_before_seek[1] > 16384:
                     
                     raise HydrusExceptions.DamagedOrUnusualFileException( 'Crazy animation frame went bananas!' )
+                    
+                
+                self._pil_image.seek( self._current_render_index )
+                
+                size_after_seek = self._pil_image.size
+                
+                if size_after_seek[0] > 16384 or size_after_seek[1] > 16384:
+                    
+                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Crazy animation frame went bananas!' )
+                    
+                
+                if size_after_seek != self._initial_size:
+                    
+                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Resolution changed during render! We cannot handle this.' )
                     
                 
             except Exception as e:

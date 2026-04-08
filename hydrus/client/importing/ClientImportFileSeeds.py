@@ -8,7 +8,6 @@ import threading
 import time
 import traceback
 import typing
-import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData

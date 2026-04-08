@@ -428,6 +428,8 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 else:
                     
+                    ClientFiles.PopulateComparableSidecarPrefixes( [ path ], comparable_sidecar_prefixes )
+                    
                     if not os.path.exists( path ):
                         
                         HydrusData.Print( 'Missing file: ' + path )
@@ -439,6 +441,10 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                         HydrusData.Print( 'File currently in use: ' + path )
                         
                         local_file_parse.result = RESULT_OCCUPIED
+                        
+                    elif ClientFiles.LooksLikeSidecarPath( path, comparable_sidecar_prefixes ):
+                        
+                        local_file_parse.result = RESULT_SIDECAR
                         
                     else:
                         

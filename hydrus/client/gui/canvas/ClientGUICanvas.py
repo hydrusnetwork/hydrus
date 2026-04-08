@@ -171,7 +171,7 @@ class CanvasBackgroundColourGeneratorDuplicates( CanvasBackgroundColourGenerator
     
     def CanDoTransparencyCheckerboard( self ) -> bool:
         
-        return CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) or CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' )
+        return CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' )
         
     
     def GetColour( self ) -> QG.QColor:
@@ -1440,6 +1440,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 CG.client_controller.pub( 'clear_image_cache' )
                 CG.client_controller.pub( 'clear_image_tile_cache' )
+                CG.client_controller.pub( 'new_transparency_options' )
                 
             else:
                 
@@ -1698,19 +1699,8 @@ class CanvasPanel( Canvas ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.MouseButton.RightButton:
-            
-            Canvas.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        # contextmenu doesn't quite work here yet due to focus issues
-        
-        self.ShowMenu()
+        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
         
     
     def ClearMedia( self ):
@@ -1747,7 +1737,7 @@ class CanvasPanel( Canvas ):
         self._hidden_page_current_media = None
         
     
-    def ShowMenu( self ):
+    def ShowMenuFromSignal( self, pos ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -4330,14 +4320,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
     def NotifyUserChangedMedia( self ):
         
         self._RegisterNextSlideshowPresentation()
@@ -4372,7 +4354,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             elif action == CAC.SIMPLE_SHOW_MENU:
                 
-                self.ShowMenu()
+                self.ShowMenuFromSignal( self.mapFromGlobal( QG.QCursor.pos() ) )
                 
             else:
                 
@@ -4392,13 +4374,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         return command_processed
         
     
-    def ShowMenu( self ):
+    def ShowMenuFromSignal( self, pos ):
         
         if self._current_media is not None:
             
             new_options = CG.client_controller.new_options
-            
-            advanced_mode = new_options.GetBoolean( 'advanced_mode' )
             
             services = CG.client_controller.services_manager.GetServices()
             

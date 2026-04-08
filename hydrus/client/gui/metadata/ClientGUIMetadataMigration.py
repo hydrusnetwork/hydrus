@@ -11,6 +11,8 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientStrings
+from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStringControls
@@ -27,6 +29,8 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
+from hydrus.client.metadata import ClientMetadataMigrationImporters
+from hydrus.client.metadata import ClientTags
 from hydrus.client.parsing import ClientParsing
 
 class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -248,6 +252,48 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         return router
         
     
+    def UserIsOKToOK( self ):
+        
+        router = self._GetValue()
+        
+        importers = router.GetImporters()
+        exporter = router.GetExporter()
+        
+        if True in ( isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes ) for importer in importers ) and isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT ):
+            
+            if exporter.GetSeparator() == '\n':
+                
+                message = 'Hey, you are exporing notes to a .txt file but have selected a "newline" separator to split multiple notes. This will break any notes that have multiple lines--are you sure you do not want to select "||||" (or something else unlikely to appear in your note text) as your separator instead? Another option is to export to JSON instead.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.DialogCode.Accepted:
+                    
+                    return False
+                    
+                
+            
+        
+        if True in ( isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT ) for importer in importers ) and isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes ):
+            
+            txt_importers = [ importer for importer in importers if isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT ) ]
+            
+            if True in ( txt_importer.GetSeparator() == '\n' for txt_importer in txt_importers ):
+                
+                message = 'Hey, you are importing notes from a .txt file but have selected the "newline" separator to specify where multiple notes split. If any of your notes have multiple lines, they will be broken by this! Are you sure this is how the notes in the .txt are formatted, with a newline separator? If you created these sidecars, it would be better if you used a different separator like "||||" or just went for JSON instead. Are you sure you want to go ahead?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.DialogCode.Accepted:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
+        
+    
 
 def convert_router_to_pretty_string( router: ClientMetadataMigration.SingleFileMetadataRouter ) -> str:
     
@@ -271,6 +317,256 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         self.setMinimumWidth( width )
         
         self.AddImportExportButtons( ( ClientMetadataMigration.SingleFileMetadataRouter, ) )
+        
+        #
+        
+        jobs = []
+        
+        if ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON in allowed_exporter_classes:
+            
+            template_routers = []
+            
+            if ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes in allowed_importer_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes() ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'notes' ] )
+                    )
+                )
+                
+            
+            if ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs in allowed_importer_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs() ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'urls' ] )
+                    )
+                )
+                
+            
+            if ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags in allowed_importer_classes:
+                
+                for tag_service in CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
+                    
+                    template_routers.append(
+                        ClientMetadataMigration.SingleFileMetadataRouter(
+                            importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = tag_service.GetServiceKey(), tag_display_type = ClientTags.TAG_DISPLAY_STORAGE ) ],
+                            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'tags', 'storage', tag_service.GetName() ] )
+                        )
+                    )
+                    
+                    template_routers.append(
+                        ClientMetadataMigration.SingleFileMetadataRouter(
+                            importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = tag_service.GetServiceKey(), tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ],
+                            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'tags', 'display', tag_service.GetName() ] )
+                        )
+                    )
+                    
+                
+            
+            # timestamps
+            
+            if ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps in allowed_importer_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED ) ) ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'times', 'archived' ] )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_IMPORTED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) ) ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'times', 'imported' ] )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER ) ) ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'times', 'last_viewed_media_viewer' ] )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_PREVIEW ) ) ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON( nested_object_names = [ 'times', 'last_viewed_preview_viewer' ] )
+                    )
+                )
+                
+            
+            if len( template_routers ) > 0:
+                
+                jobs.append( ( 'easy one-click JSON that covers the basics', 'this will export all notes, urls, tags, and basic times as they are currently defined', template_routers ) )
+                
+            
+        
+        if ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON in allowed_importer_classes:
+            
+            template_routers = []
+            
+            if ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes in allowed_exporter_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'notes' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
+                    )
+                )
+                
+            
+            if ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs in allowed_exporter_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'urls' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs()
+                    )
+                )
+                
+            
+            if ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags in allowed_exporter_classes:
+                
+                for tag_service in CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
+                    
+                    template_routers.append(
+                        ClientMetadataMigration.SingleFileMetadataRouter(
+                            importers = [
+                                ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                    json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                        parse_rules = [
+                                            ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'tags' ) ),
+                                            ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'storage' ) ),
+                                            ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = tag_service.GetName() ) ),
+                                            ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                        ],
+                                        content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                    )
+                                )
+                            ],
+                            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags( service_key = tag_service.GetServiceKey() )
+                        )
+                    )
+                    
+                
+            
+            # timestamps
+            
+            if ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps in allowed_exporter_classes:
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'times' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'archived' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED ) )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'times' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'imported' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_IMPORTED, location = CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY ) )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'times' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'last_viewed_media_viewer' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER ) )
+                    )
+                )
+                
+                template_routers.append(
+                    ClientMetadataMigration.SingleFileMetadataRouter(
+                        importers = [
+                            ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON(
+                                json_parsing_formula = ClientParsing.ParseFormulaJSON(
+                                    parse_rules = [
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'times' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_DICT_KEY, ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'last_viewed_preview_viewer' ) ),
+                                        ( ClientParsing.JSON_PARSE_RULE_TYPE_ALL_ITEMS, None ),
+                                    ],
+                                    content_to_fetch = ClientParsing.JSON_CONTENT_STRING
+                                )
+                            )
+                        ],
+                        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps( timestamp_data_stub = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_PREVIEW ) )
+                    )
+                )
+                
+            
+            if len( template_routers ) > 0:
+                
+                jobs.append( ( 'easy one-click JSON that covers the basics', 'this will import all notes, urls, tags, and basic times as they are currently defined. it will match the easy-export JSON and if tag service names match up, tags will work too', template_routers ) )
+                
+            
+        
+        if len( jobs ) > 0:
+            
+            menu_template_items = [ ClientGUIMenuButton.MenuTemplateItemCall( label, description, self.AddDatas, templates ) for ( label, description, templates ) in jobs ]
+            
+            #
+            
+            self._templates_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().star, menu_template_items )
+            
+            QP.AddToLayout( self._buttons_hbox, self._templates_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            
         
     
     def _AddRouter( self ):

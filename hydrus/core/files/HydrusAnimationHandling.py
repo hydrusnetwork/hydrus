@@ -216,6 +216,8 @@ def GetFrameDurationsMSPILAnimation( path, human_file_description = None ):
     
     pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
     
+    initial_size = pil_image.size
+    
     try:
         
         times_to_play = GetTimesToPlayPILAnimationFromPIL( pil_image )
@@ -243,6 +245,19 @@ def GetFrameDurationsMSPILAnimation( path, human_file_description = None ):
                 
             
             try:
+                
+                # seek triggers an image render, so do crazy resolution test beforehand
+                this_frame_size = pil_image.size
+                
+                if this_frame_size[0] > 16384 or this_frame_size[1] > 16384:
+                    
+                    raise Exception( 'This animation is crazy huge, not rendering this.' )
+                    
+                
+                if this_frame_size != initial_size:
+                    
+                    raise Exception( 'Animation size changed, this is crazy.' )
+                    
                 
                 pil_image.seek( i )
                 

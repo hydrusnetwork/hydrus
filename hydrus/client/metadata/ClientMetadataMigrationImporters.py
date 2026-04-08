@@ -308,7 +308,7 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
         
     
     def _GetSerialisableInfo( self ):
-    
+        
         serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         serialisable_timestamp_data_stub = self._timestamp_data_stub.GetSerialisableTuple()
         
@@ -340,6 +340,11 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
     def ImportSansStringProcessing( self, media_result: ClientMediaResult.MediaResult ) -> list[ str ]:
         
         rows = []
+        
+        if self._timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED and media_result.GetLocationsManager().inbox:
+            
+            return []
+            
         
         timestamp = HydrusTime.SecondiseMS( media_result.GetTimesManager().GetTimestampMSFromStub( self._timestamp_data_stub ) )
         

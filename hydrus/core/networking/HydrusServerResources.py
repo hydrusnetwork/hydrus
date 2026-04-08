@@ -611,6 +611,7 @@ class HydrusResource( Resource ):
             
             request.setHeader( 'Cache-Control', 'max-age={}'.format( max_age ) )
             
+        
         if response_context.HasPath():
             
             path = response_context.GetPath()

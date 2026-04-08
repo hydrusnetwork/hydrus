@@ -5,12 +5,16 @@ from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMediaResult
 
 class ThumbnailPairListModel( QC.QAbstractTableModel ):
@@ -476,6 +480,25 @@ class ThumbnailPairList( QW.QTableView ):
         
         self.setMinimumSize( QC.QSize( my_width, max_thumbnail_height_for_min_height_calc * self.MIN_NUM_ROWS_HEIGHT ) )
         
+        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
+        
+    
+    def _ShowSelectedPairsInNewPage( self ):
+        
+        selected_index_ints = [ model_index.row() for model_index in self.selectionModel().selectedRows() ]
+        
+        if len( selected_index_ints ) == 0:
+            
+            return
+            
+        
+        pairs = [ self.model().GetMediaResultPair( selected_index_int ) for selected_index_int in selected_index_ints ]
+        
+        media_results = [ pair_item for pair in pairs for pair_item in pair ]
+        
+        ClientGUIMediaSimpleActions.ShowMediaResultsInNewPageWithAppropriateLocationContext( media_results )
+        
     
     def model( self ) -> ThumbnailPairListModel:
         
@@ -485,6 +508,29 @@ class ThumbnailPairList( QW.QTableView ):
     def SetData( self, tuples_of_data ):
         
         self.model().SetData( tuples_of_data )
+        
+    
+    def ShowMenuFromSignal( self, pos ):
+        
+        if self.selectionModel().hasSelection():
+            
+            menu = ClientGUIMenus.GenerateMenu( self )
+            
+            num_selected = len( self.selectionModel().selectedRows() )
+            
+            if num_selected == 1:
+                
+                label = 'show selected row in a new page'
+                
+            else:
+                
+                label = f'show {HydrusNumbers.ToHumanInt(num_selected)} rows in a new page'
+                
+            
+            ClientGUIMenus.AppendMenuItem( menu, label, 'Open a new page and show these pairs, even if deleted', self._ShowSelectedPairsInNewPage )
+            
+            CGC.core().PopupMenu( self, menu )
+            
         
     
 

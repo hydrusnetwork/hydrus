@@ -1,9 +1,11 @@
+import collections
 import hashlib
 import json
 import typing
 
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusData
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusExceptions
 
 META_SERIALISABLE_TYPE_JSON_OK = 0
@@ -291,6 +293,11 @@ class SerialisableBase( object ):
         return CreateFromString( self.DumpToString() )
         
     
+    def GetSerialisableDescription( self ):
+        
+        return f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE})'
+        
+    
     def GetSerialisedHash( self ):
         
         # as a note, this should not be relied on in future--the serialised string could change due to object updates, or in rare cases, because the contained objects are still hot
@@ -431,6 +438,11 @@ class SerialisableBaseNamed( SerialisableBase ):
         raise NotImplementedError()
         
     
+    def GetSerialisableDescription( self ):
+        
+        return f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE}) "{self._name}"'
+        
+    
     def GetSerialisableTuple( self ):
         
         return ( self.SERIALISABLE_TYPE, self._name, self.SERIALISABLE_VERSION, self._GetSerialisableInfo() )
@@ -445,6 +457,7 @@ class SerialisableBaseNamed( SerialisableBase ):
         self._name = HydrusData.GetNonDupeName( self._name, disallowed_names, do_casefold = do_casefold )
         
     
+
 class SerialisableDictionary( SerialisableBase, dict ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_DICTIONARY
@@ -551,6 +564,43 @@ class SerialisableDictionary( SerialisableBase, dict ):
             
         
     
+    def GetSerialisableDescription( self ):
+        
+        result = f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE})'
+        result += '\n'
+        
+        gubbins_counter = collections.Counter()
+        
+        for ( key, value ) in self.items():
+            
+            if isinstance( key, SerialisableBase ):
+                
+                key_str = key.GetSerialisableDescription()
+                
+            else:
+                
+                key_str = str( type( key ) )
+                
+            
+            if isinstance( value, SerialisableBase ):
+                
+                value_str = value.GetSerialisableDescription()
+                
+            else:
+                
+                value_str = str( type( value ) )
+                
+            
+            gubbins_counter[ f'{key_str}: {value_str}' ] += 1
+            
+        
+        gubbins_strings = [ f'{HydrusNumbers.ToHumanInt( count )}: {desc_str}' for ( desc_str, count ) in gubbins_counter.items() ]
+        
+        result += '\n'.join( gubbins_strings )
+        
+        return result
+        
+    
     def GetSerialisableTuple( self ):
         
         if hasattr( self, '_lock' ):
@@ -648,6 +698,43 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
         
     
 
+    def GetSerialisableDescription( self ):
+        
+        result = f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE})'
+        result += '\n'
+        
+        gubbins_counter = collections.Counter()
+        
+        for ( key, value ) in self.items():
+            
+            if isinstance( key, SerialisableBase ):
+                
+                key_str = key.GetSerialisableDescription()
+                
+            else:
+                
+                key_str = str( type( key ) )
+                
+            
+            if isinstance( value, SerialisableBase ):
+                
+                value_str = value.GetSerialisableDescription()
+                
+            else:
+                
+                value_str = str( type( value ) )
+                
+            
+            gubbins_counter[ f'{key_str}: {value_str}' ] += 1
+            
+        
+        gubbins_strings = [ f'{HydrusNumbers.ToHumanInt( count )}: {desc_str}' for ( desc_str, count ) in gubbins_counter.items() ]
+        
+        result += '\n'.join( gubbins_strings )
+        
+        return result
+        
+    
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_BYTES_DICT ] = SerialisableBytesDictionary
 
 class SerialisableList( SerialisableBase, list ):
@@ -750,6 +837,34 @@ class SerialisableList( SerialisableBase, list ):
             
             return ( 3, new_serialisable_info )
             
+        
+    
+    def GetSerialisableDescription( self ):
+        
+        result = f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE})'
+        result += '\n'
+        
+        gubbins_counter = collections.Counter()
+        
+        for item in self:
+            
+            if isinstance( item, SerialisableBase ):
+                
+                item_str = item.GetSerialisableDescription()
+                
+            else:
+                
+                item_str = str( type( item ) )
+                
+            
+            gubbins_counter[ item_str ] += 1
+            
+        
+        gubbins_strings = [ f'{HydrusNumbers.ToHumanInt( count )}: {desc_str}' for ( desc_str, count ) in gubbins_counter.items() ]
+        
+        result += '\n'.join( gubbins_strings )
+        
+        return result
         
     
 

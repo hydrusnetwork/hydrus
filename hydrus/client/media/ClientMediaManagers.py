@@ -1322,6 +1322,11 @@ class LocationsManager( object ):
             
             ( hashes, timestamp_data ) = row
             
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
+                
+                self.inbox = False
+                
+            
             if action == HC.CONTENT_UPDATE_ADD:
                 
                 self._times_manager.UpdateTime( timestamp_data )

@@ -3,7 +3,6 @@ import sqlite3
 
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 class HydrusDBModule( HydrusDBBase.DBBase ):
     

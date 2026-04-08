@@ -178,6 +178,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
+        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
+        
     
     def _CalculateVisiblePageIndices( self ):
         
@@ -939,14 +942,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
     def DoMouseMoveEvent( self, event ):
         
         if event.buttons() & QC.Qt.MouseButton.LeftButton:
@@ -1046,201 +1041,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._last_size = QP.ScrollAreaVisibleRect( self ).size()
         
     
-    def GetTotalFileSize( self ):
-        
-        return sum( ( m.GetSize() for m in self._sorted_media ) )
-        
-    
-    def MaintainPageCache( self ):
-        
-        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._DirtyAllPages()
-            
-        
-        self._DeleteAllDirtyPages()
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.MouseButton.RightButton:
-            
-            QW.QScrollArea.mouseReleaseEvent( self, event )
-            
-            return
-            
-        
-        self.ShowMenu()
-        
-    
-    def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
-        
-        super().MoveMedia( medias, insertion_index )
-        
-        self._NotifyThumbnailsHaveMoved()
-        
-        self._ScrollToMedia( medias[0] )
-        
-    
-    def NewThumbnails( self, hashes ):
-        
-        affected_thumbnails = self._GetMedia( hashes )
-        
-        if len( affected_thumbnails ) > 0:
-            
-            self._RedrawMedia( affected_thumbnails )
-            
-        
-    
-    def NotifyFilesNeedRedraw( self, hashes ):
-        
-        affected_media = self._GetMedia( hashes )
-        
-        self._RedrawMedia( affected_media )
-        
-    
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
-        
-        command_processed = True
-        
-        if command.IsSimpleCommand():
-            
-            action = command.GetSimpleAction()
-            
-            if action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
-                
-                ( move_direction, selection_status ) = command.GetSimpleData()
-                
-                shift = selection_status == CAC.SELECTION_STATUS_SHIFT
-                
-                if move_direction in ( CAC.MOVE_HOME, CAC.MOVE_END ):
-                    
-                    if move_direction == CAC.MOVE_HOME:
-                        
-                        self._ScrollHome( shift )
-                        
-                    else: # MOVE_END
-                        
-                        self._ScrollEnd( shift )
-                        
-                    
-                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
-                    
-                    if move_direction == CAC.MOVE_PAGE_UP:
-                        
-                        direction = -1
-                        
-                    else: # MOVE_PAGE_DOWN
-                        
-                        direction = 1
-                        
-                    
-                    self._MoveThumbnailFocus( self._num_rows_per_actual_page * direction, 0, shift )
-                    
-                else:
-                    
-                    if move_direction == CAC.MOVE_LEFT:
-                        
-                        rows = 0
-                        columns = -1
-                        
-                    elif move_direction == CAC.MOVE_RIGHT:
-                        
-                        rows = 0
-                        columns = 1
-                        
-                    elif move_direction == CAC.MOVE_UP:
-                        
-                        rows = -1
-                        columns = 0
-                        
-                    elif move_direction == CAC.MOVE_DOWN:
-                        
-                        rows = 1
-                        columns = 0
-                        
-                    else:
-                        
-                        raise NotImplementedError()
-                        
-                    
-                    self._MoveThumbnailFocus( rows, columns, shift )
-                    
-                
-            elif action == CAC.SIMPLE_SELECT_FILES:
-                
-                file_filter = command.GetSimpleData()
-                
-                self._Select( file_filter )
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            return super().ProcessApplicationCommand( command )
-            
-        else:
-            
-            return command_processed
-            
-        
-    
-    def RedrawAllThumbnails( self ):
-        
-        self._DirtyAllPages()
-        
-        for m in self._collected_media:
-            
-            m.RecalcInternals()
-            
-        
-        for thumbnail in self._sorted_media:
-            
-            thumbnail.ClearTagSummaryCaches()
-            
-        
-        self.widget().update()
-        
-    
-    def SetFocusedMedia( self, media ):
-        
-        super().SetFocusedMedia( media )
-        
-        if media is None:
-            
-            self._SetFocusedMedia( None )
-            
-        else:
-            
-            try:
-                
-                my_media = self._GetMedia( media.GetHashes() )[0]
-                
-                self._HitMedia( my_media, False, False )
-                
-                self._ScrollToMedia( self._focused_media )
-                
-            except Exception as e:
-                
-                pass
-                
-            
-        
-    
-    def showEvent( self, event ):
-        
-        self._UpdateScrollBars()
-        
-    
-    def ShowMenu( self, do_not_show_just_return = False ):
+    def GetMenu( self ) -> QW.QMenu:
         
         flat_selected_medias = ClientMedia.FlattenMedia( self._selected_media )
         
@@ -1861,15 +1662,201 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             ClientGUIMediaMenus.AddShareMenu( self, self, menu, self._focused_media, self._selected_media )
             
         
-        if not do_not_show_just_return:
+        return menu
+        
+    
+    def GetTotalFileSize( self ):
+        
+        return sum( ( m.GetSize() for m in self._sorted_media ) )
+        
+    
+    def MaintainPageCache( self ):
+        
+        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
-            CGC.core().PopupMenu( self, menu )
+            self._DirtyAllPages()
             
         
+        self._DeleteAllDirtyPages()
+        
+    
+    def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
+        
+        super().MoveMedia( medias, insertion_index )
+        
+        self._NotifyThumbnailsHaveMoved()
+        
+        self._ScrollToMedia( medias[0] )
+        
+    
+    def NewThumbnails( self, hashes ):
+        
+        affected_thumbnails = self._GetMedia( hashes )
+        
+        if len( affected_thumbnails ) > 0:
+            
+            self._RedrawMedia( affected_thumbnails )
+            
+        
+    
+    def NotifyFilesNeedRedraw( self, hashes ):
+        
+        affected_media = self._GetMedia( hashes )
+        
+        self._RedrawMedia( affected_media )
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        if command.IsSimpleCommand():
+            
+            action = command.GetSimpleAction()
+            
+            if action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                
+                ( move_direction, selection_status ) = command.GetSimpleData()
+                
+                shift = selection_status == CAC.SELECTION_STATUS_SHIFT
+                
+                if move_direction in ( CAC.MOVE_HOME, CAC.MOVE_END ):
+                    
+                    if move_direction == CAC.MOVE_HOME:
+                        
+                        self._ScrollHome( shift )
+                        
+                    else: # MOVE_END
+                        
+                        self._ScrollEnd( shift )
+                        
+                    
+                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
+                    
+                    if move_direction == CAC.MOVE_PAGE_UP:
+                        
+                        direction = -1
+                        
+                    else: # MOVE_PAGE_DOWN
+                        
+                        direction = 1
+                        
+                    
+                    self._MoveThumbnailFocus( self._num_rows_per_actual_page * direction, 0, shift )
+                    
+                else:
+                    
+                    if move_direction == CAC.MOVE_LEFT:
+                        
+                        rows = 0
+                        columns = -1
+                        
+                    elif move_direction == CAC.MOVE_RIGHT:
+                        
+                        rows = 0
+                        columns = 1
+                        
+                    elif move_direction == CAC.MOVE_UP:
+                        
+                        rows = -1
+                        columns = 0
+                        
+                    elif move_direction == CAC.MOVE_DOWN:
+                        
+                        rows = 1
+                        columns = 0
+                        
+                    else:
+                        
+                        raise NotImplementedError()
+                        
+                    
+                    self._MoveThumbnailFocus( rows, columns, shift )
+                    
+                
+            elif action == CAC.SIMPLE_SELECT_FILES:
+                
+                file_filter = command.GetSimpleData()
+                
+                self._Select( file_filter )
+                
+            else:
+                
+                command_processed = False
+                
+            
         else:
             
-            return menu
+            command_processed = False
             
+        
+        if not command_processed:
+            
+            return super().ProcessApplicationCommand( command )
+            
+        else:
+            
+            return command_processed
+            
+        
+    
+    def RedrawAllThumbnails( self ):
+        
+        self._DirtyAllPages()
+        
+        for m in self._collected_media:
+            
+            m.RecalcInternals()
+            
+        
+        for thumbnail in self._sorted_media:
+            
+            thumbnail.ClearTagSummaryCaches()
+            
+        
+        self.widget().update()
+        
+    
+    def SetFocusedMedia( self, media ):
+        
+        super().SetFocusedMedia( media )
+        
+        if media is None:
+            
+            self._SetFocusedMedia( None )
+            
+        else:
+            
+            try:
+                
+                my_media = self._GetMedia( media.GetHashes() )[0]
+                
+                self._HitMedia( my_media, False, False )
+                
+                self._ScrollToMedia( self._focused_media )
+                
+            except Exception as e:
+                
+                pass
+                
+            
+        
+    
+    def showEvent( self, event ):
+        
+        self._UpdateScrollBars()
+        
+    
+    def ShowMenu( self ):
+        
+        menu = self.GetMenu()
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def ShowMenuFromSignal( self, pos ):
+        
+        self.ShowMenu()
         
     
     def Sort( self, media_sort = None ):

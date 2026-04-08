@@ -732,6 +732,11 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                             
                         elif action == HC.CONTENT_UPDATE_SET:
                             
+                            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
+                                
+                                self.modules_files_inbox.ArchiveFiles( hash_ids )
+                                
+                            
                             self.modules_files_timestamps.SetTime( hash_ids, timestamp_data )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:

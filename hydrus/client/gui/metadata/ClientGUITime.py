@@ -1555,6 +1555,11 @@ class TimestampDataStubCtrl( QW.QWidget ):
             
             label = HC.timestamp_type_str_lookup[ timestamp_type ]
             
+            if timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
+                
+                label += ' (will auto-archive on import!)'
+                
+            
             self._timestamp_type.addItem( label, timestamp_type )
             
         

@@ -425,31 +425,31 @@ class ExpandCollapseArrowButton( BetterButton ):
     
     def _UpdateLabel( self ):
         
-        if self._is_collapsed:
+        if self._expands_downward:
             
-            if self._expands_downward:
+            if self._is_collapsed:
                 
                 label = self.DOWN_ARROW
+                object_name = 'HydrusCollapseArrowDown'
                 
             else:
                 
                 label = self.UP_ARROW
+                object_name = 'HydrusCollapseArrowUp'
                 
-            
-            object_name = 'HydrusCollapseArrowCollapsed'
             
         else:
             
-            if self._expands_downward:
+            if self._is_collapsed:
                 
                 label = self.UP_ARROW
+                object_name = 'HydrusCollapseArrowUp'
                 
             else:
                 
                 label = self.DOWN_ARROW
+                object_name = 'HydrusCollapseArrowDown'
                 
-            
-            object_name = 'HydrusCollapseArrowExpanded'
             
         
         self.setText( label )

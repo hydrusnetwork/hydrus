@@ -17,6 +17,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearchPredicate
 
@@ -457,6 +458,33 @@ def ShowFilesInNewDuplicatesFilterPage( hashes: collections.abc.Collection[ byte
 def ShowFilesInNewPage( hashes: collections.abc.Collection[ bytes ], location_context: ClientLocation.LocationContext, media_sort = None, media_collect = None ):
     
     CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
+    
+
+def ShowMediaResultsInNewPageWithAppropriateLocationContext( media_results: list[ ClientMediaResult.MediaResult ] ):
+    
+    hashes = [ media_result.GetHash() for media_result in media_results ]
+    
+    need_all_known_files = False in ( media_result.GetLocationsManager().IsLocal() for media_result in media_results )
+    
+    if need_all_known_files:
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
+        
+    else:
+        
+        need_hydrus_local_file_storage = True in ( media_result.GetLocationsManager().IsTrashed() for media_result in media_results )
+        
+        if need_hydrus_local_file_storage:
+            
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY )
+            
+        else:
+            
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
+            
+        
+    
+    ShowFilesInNewPage( hashes, location_context )
     
 
 def ShowSimilarFilesInNewPage( media: collections.abc.Collection[ ClientMedia.MediaSingleton ], location_context: ClientLocation.LocationContext, max_hamming: int ):

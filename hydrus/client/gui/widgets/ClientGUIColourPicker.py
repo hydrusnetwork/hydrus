@@ -128,6 +128,9 @@ class ColourPickerButton( QW.QPushButton ):
         
         self._highlighted = False
         
+        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
+        
     
     def SetColour( self, colour ):
         
@@ -235,25 +238,7 @@ class ColourPickerButton( QW.QPushButton ):
         self.SetColour( colour )
         
     
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Reason.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
-    def mouseReleaseEvent( self, event ):
-        
-        if event.button() != QC.Qt.MouseButton.RightButton:
-            
-            return QW.QPushButton.mouseReleaseEvent( self, event )
-            
-        
-        self.ShowMenu()
-        
-    
-    def ShowMenu( self ):
+    def ShowMenuFromSignal( self, pos ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         

@@ -58,7 +58,7 @@ class DuplicatesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._duplicate_background_switch_intensity_b.setToolTip( ClientGUIFunctions.WrapToolTip( 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.' ) )
         
         self._draw_transparency_checkerboard_media_canvas_duplicates = QW.QCheckBox( colours_panel )
-        self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( ClientGUIFunctions.WrapToolTip( 'Same as the setting in _media playback_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' ) )
+        self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( ClientGUIFunctions.WrapToolTip( 'Same as the setting in _media playback_, but only for the duplicate filter.' ) )
         
         #
         

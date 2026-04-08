@@ -248,6 +248,7 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._checkboxes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         

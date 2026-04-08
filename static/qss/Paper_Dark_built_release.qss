@@ -471,3 +471,8 @@ QLabel#HydrusInvalid, QLabel#HydrusWarning {
 QLabel#HydrusHyperlink {
 	qproperty-link_color: #009999;
 }
+
+QPushButton#HydrusCollapseArrowUp, QPushButton#HydrusCollapseArrowDown {
+    padding-left: 4px;
+    padding-right: 4px;
+}

@@ -7,6 +7,56 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 667](https://github.com/hydrusnetwork/hydrus/releases/tag/v667)
+
+### misc
+
+* fixed an issue with subs where a sub with all DEAD queries was considered 'no work remaining', and thus subs in that situation with nonetheless outstanding file downloads would not clear those outstanding file downloads if the work spilled over to future sub runs
+* all thumbnail pair lists (which are in the duplicates auto-resolution UI) now have a menu that says 'show x rows in a new page' so can you can review things in more detail. let me know if this swallows deleted thumbnails anywhere
+* the file storage granularisation system can now handle cross-filesystem granularisation. this can happen on 3-to-2 when some of the 3-granular subfolders have been migrated to a second location and need to be collected in a central source that might be on a different partition. it seems to also occur in 2-to-3 when the filesystem has overlapping subfolder orphans from a previous borked migration or similar and things are tidied as part of the regranularisation. the previous very fast atomic 'file rename' was raising an error here; now I do some efficient device checking of subfolders and move to a 'copy2+unlink' combo instead when the device differs
+* the granularisation panel now warns those with weird symlinked storage to stay away
+* the routine that counts up the durations of a gif's frames and the hydrus native renderer now fall back to best-guess defaults if A) the file changes resolution mid-parse or B) any frame appears to have a width or height bigger than 16k pixels. we encountered a malformed gif this week that went from 640x480 to a fake 28579x93263 and caused a memory explosion. should handle this situation better now
+* continuing the 'clean up PIL Images better' work, native animation renders that error out are now explicitly closed before reinitialisation
+* thanks to a user, the 'Paper_Dark' QSS files have fixed, visible `▲/▼` button labels. relatedly, the objectNames I added for this guy last week are renamed to `HydrusCollapseArrowUp/Down`. they were `Expanded/Collapsed`, but since the arrows reverse depending on an upwards or downwards expand, we realised we'd want something more specific to the actual label being shown if we ever wanted custom icons/labels
+
+### sidecars
+
+* sidecars gets an easy one-click template that covers simple stuff. the 'edit metadata migration routers' dialog, which the main guy in sidecar editing, now has a star button. when exporting to sidecars, it offers an 'easy one-click JSON that covers the basics' template that spams out definitions for a single 'filename.jpg.json' JSON sidecar that gets your notes, urls, tags for each tag service by storage (no siblings/parents) and display (with siblings/parents), and timestamps for archived time, main import time, and media/preview viewer 'last viewed time'. when importing from sidecars, the buton offers the same 'easy one-click' option to eat from a JSON using the same format and will line up any tag services that have the same service name
+* if you try to export notes to a .txt sidecar using `\n` as the separator, or conversely import notes from a `\n` .txt sidecar, the 'edit sidecar stuff' dialog now moans at you on ok, asking if you are totally sure that is correct. since notes often _include_ newlines, something like `||||` is more appropriate
+* when dragging and dropping individual files onto the client, it can now give a pretty 'sidecar' result when you drop individual files. this only worked if you dropped directories previously, with individual file drops giving 'PROBLEM: filetype unsupported' for the sidecars. this is an aesthetic change only; it doesn't matter that sidecars are not parsed ok at this step, but it is nice to have the correct 'won't try to import' label
+* in the 'add metadata before we import' sub-dialog of the manual file import, the 'sidecars' list now shows better metadata context around the sidecar content preview. the 'notes' now compresses multiple notes better, with a total count and elided preview; the 'tags' now says to which tag service they are going; the 'URLs' now says how many URLs and elides better; the 'timestamp' now converts to a nice datestring and says what the destination is for that time (previously it just said the UNIX timestamp flat wew)
+
+### Client API and setting archived time
+
+* for sidecars and the Client API, if you push an archived time on a file in the inbox, the file is now auto-archived! the UI and Client API docs now mention this
+* previously, the data was (buggily) recorded but generally swallowed and not reported anywhere
+* the Client API 'file metadata' call now gives a `time_archived` if the file is not in the inbox and there is a known timestamp
+* sidecar routers, when harvesting timestamps to send to a sidecar file, will no longer suck an orphaned archive timestamp from a file that is in the inbox
+* Client API version is now 89
+
+### QtMediaPlayer transparency
+
+* the QtMediaPlayer should now support transparency properly! previously, if you put up an animated gif with transparency, the transparent areas would be black with ugly fuzzy edges. now it does a checkerboard or greenscreen using the same settings as a static image. on some files there is still fuzz, but most of the time it looks great
+* the QtMediaPlayer should also show the normal background colour while it waits for a non-transparent media to load. it probably flashed black before, so should cut down on some load flicker
+* the normal static image checkerboard and greenscreen transparency uses the same, updated tech here. rather than drawing a bunch of boxes, we now have a textured pixmap brush, and in fact in all cases we just set a brush and do an eraseRect, nice and clean. Qt is great
+* the 'show transparency and checkerboard in duplicate filter' setting in `duplicates` is now its own thing and applies independently to the one in `media playback`. previously it had some whack 'only applies if the media playback guy is unchecked', which is the kind of thing you can convince yourself is useful and technically correct but violates KISS
+
+### ingesting serialised objects
+
+* the 'import downloaders' panel now accepts drag-and-drop or pasted JSON files
+* added a `help->debug->what is this object?` debug review panel to figure out mysterious bits of json or png or whatever
+
+### boring stuff
+
+* improved error handling for setting QtMediaPlayer null audio device on media load
+* improved how 'show menu' events are handled, Qt-side, for the: colour picker widget; preview viewer; navigable media viewer; taglist
+* cleaned up some ugly menu generation/show for the main thumbnail grid
+* decoupled the 'import downloaders' serialised object ingestion routine and brushed it up a bit with nicer error reporting and so on
+* all serialisable objects can now describe themselves with regards to the serialisation system, with special hooks for named objects and the special list, dict, and bytes dict
+* fixed up several places that do a fast 'is it a jpeg/png' mime check, which was accidentally skipping the png side and doing the slower check
+* fixed a bad layout flag in the 'select from a list of checkboxes now mate' dialog
+* fixed some close-curly-brace typos in the example Client API Services Object JSON
+
 ## [☠⛤ Version 666 ⛤☠](https://github.com/hydrusnetwork/hydrus/releases/tag/v666)
 
 ### misc
@@ -480,60 +530,3 @@ title: Changelog
 * updated the unit tests for the new 'file filtering import options' object
 * updated the unit tests for the 'location import options' object
 * wrote some very basic prefitch import options unit tests
-
-## [Version 657](https://github.com/hydrusnetwork/hydrus/releases/tag/v657)
-
-### misc
-
-* the 'edit header' dialog panel, where you configure custom http headers, is given a usability pass. this thing never got out of debug-tier and none of the widgets were labelled lol. it has a grid with labels and some nicer strings for the enigmatic 'approved' status
-* added some safety code for the new `tldextract` test I added last week. one of the calls I make is newer than I expected (issue #1953)
-
-### QtMediaPlayer
-
-* I revisited the QtMediaPlayer, which is an experimental alternate to the mpv embed that I haven't touched in ages. I may have strongly succeeded
-* I am rolling out a new type of QtMediaPlayer. the old one is called (Test 1 - VideoWidget); this new one is (Test 2 - GraphicsView). both are listed in the `options->media playback` settings for audio/video/animation. this new GraphicsView solution does not have the 'always on top' rendering problem the old one had, meaning the seek bar is shown and behaves properly!! this guy basically looks just like mpv, although it is less customisable and your performance and interpolation quality etc.. may be a little worse (issue #1883)
-* if you have had trouble with mpv, please try this new GraphicsView player out. I don't know how crashy it is, so brace yourself. I'm interested in performance, errors, what filetypes it cannot handle, which mouse interactions fail to register, anything you think pertinent. if we can nail it down, I can polish all this as the new mpv fallback for macOS and Wayland and anyone else with mpv trouble
-* one thing I did notice btw is that it spams some debug-warning stuff to your log when it loads files with unusual metadata. I silenced a bunch of it with Qt logging options, but there's more to do
-* all users can now see the experimental QtMediaPlayer options. previously it was blocked behind source users in advanced mode
-* the volume button now appears for QtMediaPlayers (although obviously still hidden by the 'on top' behaviour of the old one)
-* fixed volume application for the experimental QtMediaPlayer--because of a type problem, it was either doing mute at 0 or 100% everywhere else
-* fixed an unload media bug in the QtMediaPlayer for PyQt6
-
-### new hydrus API web-based browser
-
-* another user has created a web portal for your hydrus install! check it out here: https://hyaway.com/ | documentation https://docs.hyaway.com/ | github https://github.com/hyaway/hyaway
-* I don't know much about it, but it looks cool and is open source. you can use the hosted version at that site or set up your own instance. if you want to browse your client from your phone, check it out
-* I added this to the collection of other Client API tools on the landing page here https://hydrusnetwork.github.io/hydrus/client_api.html
-
-### Client API rating colours
-
-* the `Services Object` in the Client API now provides the pen and brush colours for different rating service states, in #ffffff format, and bools for `show_in_thumbnail` and `show_in_thumbnail_even_if_null`, and for numerical ratings, a convenience `allows_zero`.
-* updated the unit tests to check for this and the help to talk about it
-* the Client API version is now 87
-
-### python 3.14 and opencv
-
-* tl;dr: you can now get setup with hydrus on the (new) python 3.14 easily--just do `setup_venv` as normal and select `(a)dvanced` and then `(t)est` for everything
-* it has been previously tricky to run hydrus on python 3.14 because of some funny library stuff. you could fudge things manually, but it wasn't nice, there were image rendering bugs, and the `setup_venv` script didn't have a path for it. this situation improved in just the last week, which is good because some users on bleeding edge OSes are getting rollouts of 3.14 right now (issue #1950)
-* the 'test' version of `opencv-python-headless` is bumped from `4.12.0.88` to `4.13.0.90`, which is the first version of OpenCV that is ok with the newer numpy
-* the 'normal' vs 'test' OpenCV requirement bundles now include `numpy`, with respective versions of `~2.3.1` and `2.4.1`
-* as a side thing, the new 'test' Qt, `PySide6 6.10.1`, seems to be the first version that installs nicely on 3.14
-* all the `setup_venv` scripts now ask if you want the `(n)ormal` rather than the `(n)ew` version of things. 'new' was originally to contrast to the 'old' version, but these days it is more confusing vs 'test'
-* all the `setup_venv` scripts now direct users on Py 3.14 to go in (a)dvanced mode. get the (t)est versions of things and you should be good, but I'll be interested to hear where not
-* all the `setup_venv` scripts now temporarily ask a fourth question in (a)dvanced mode, for the new domain-parsing `tldextract` library, which I added test code for last week
-* as a side thing, in the `setup_venv.bat` script, the secret (d)ev mode that adds some unit test and build gubbins now allows you (me) to make the (a)dvanced choices
-* I also maintain a 3.14 test environment here in my IDE. I can do 3.10-3.14 and PyQt6 and regularly do simple tests in all of them, so I hope we'll catch bigger version-specific issues, and we'll know when 3.10 is no longer supportable
-
-### network domain management overhaul, mostly boring
-
-* a push on better per-domain settings and status tracking went well. like with other recent rewrites, I've mostly just done behind the scenes prep work, with no large changes yet, but I'm feeling good about it. in the end of this, I hope to have domain-specific settings for most of the stuff in the 'general' panel of `options->connection`. again, like with other settings overhauls, I'm planning to have a global default which you then override with custom settings for a particular domain if you wish. ideally we'll have favourites/templates and the ability to bundle these settings with a downloader, like you can headers and bandwidth rules
-* the 'halt new jobs as long as this many network infrastructure errors on their domain' setting now applies to all levels of the domain. if `site.com` gets a bunch of connection errors, a request to `subdomain.site.com` will now also wait on that option. the domain vs second-level domain logic here was previously spotty, and some subdomain stuff wasn't waiting when it was supposed to
-* sketched out `DomainSettings` and `DomainStatus` objects to track the settings and basic event history on a per-domain basis in an easily future-extendable way. they don't work yet, but I'm prepping for it
-* wrote some unit tests for the new objects
-* domain errors are now reported with an event type, in prep for the new objects
-
-### boring code cleanup
-
-* retired my older directory picker dialog in favour of my newer 'quick' select, replacing use in the file import window; move media files; repair file locations; clear orphan files; review services manual export update files; manual import update files; select backup location; restore backup location
-* updated my 'quick' directory select call to remember the last directory selected this session (defaulting to install dir for now), and if the caller doesn't have a specific location in mind, to use that last selection as the starting dir of the next dialog open. it also handles cancel results a little nicer
-* removed one or two 'is the user in Qt5?' checks with the QtMediaPlayer work. I'm not sure when, but I think I'll purge the rest of these completely in the next month or so, probably at the next 'future build' commit. it is basically time to move on

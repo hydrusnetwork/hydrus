@@ -981,7 +981,27 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     return HC.APPLICATION_UNKNOWN
     
 
-headers_and_mime_thumbnails = [ ( offsets_and_headers, mime ) for ( offsets_and_headers, mime ) in headers_and_mime if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG ) ]
+headers_and_mime_png = [ ( offsets_and_headers, mime ) for ( offsets_and_headers, mime ) in headers_and_mime if mime in ( HC.UNDETERMINED_PNG, ) ]
+
+def GetIsPNGRealQuick( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        bit_to_check = f.read( 256 )
+        
+    
+    for ( offsets_and_headers, mime ) in headers_and_mime_png:
+        
+        if passes_offsets_and_headers( offsets_and_headers, bit_to_check ):
+            
+            return True
+            
+        
+    
+    return False
+    
+
+headers_and_mime_thumbnails = [ ( offsets_and_headers, mime ) for ( offsets_and_headers, mime ) in headers_and_mime if mime in ( HC.IMAGE_JPEG, HC.UNDETERMINED_PNG ) ]
 
 def GetThumbnailMime( path ):
     
@@ -993,6 +1013,11 @@ def GetThumbnailMime( path ):
     for ( offsets_and_headers, mime ) in headers_and_mime_thumbnails:
         
         if passes_offsets_and_headers( offsets_and_headers, bit_to_check ):
+            
+            if mime == HC.UNDETERMINED_PNG:
+                
+                return HC.IMAGE_PNG
+                
             
             return mime
             

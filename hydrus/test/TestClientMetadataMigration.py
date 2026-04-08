@@ -414,7 +414,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         times_manager.SetFileModifiedTimestampMS( file_modified_timestamp_ms )
         times_manager.SetDomainModifiedTimestampMS( 'site.com', site_dot_com_modified_timestamp_ms )
         
-        inbox = True
+        inbox = False
         
         local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, set() )
         
@@ -442,6 +442,16 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         result = importer.Import( media_result )
         
         self.assertEqual( set( result ), { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } )
+        
+        # no timestamp on inbox
+        
+        media_result.GetLocationsManager().inbox = True
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), set() )
+        
+        media_result.GetLocationsManager().inbox = False
         
         # with string processor
         

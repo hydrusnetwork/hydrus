@@ -98,6 +98,8 @@ def RegranulariseFileStorage( base_location_paths: list[ str ], prefix_types: li
     # there is one canonical destination for each ending prefix, which means going from 3 to 2 may mean moving and merging some things
     ending_prefixes_to_ending_subfolders = dict()
     
+    base_location_paths_to_device_ids = { base_location_path : HydrusPaths.GetDeviceId( base_location_path ) for base_location_path in base_location_paths }
+    
     base_location_paths_to_granular_folder_prefixes_deleted = collections.defaultdict( list )
     
     # I tested this with worker pool, to which it would batch out 100 renames at a time. the idea was to buffer renames against high latency storage
@@ -150,6 +152,7 @@ def RegranulariseFileStorage( base_location_paths: list[ str ], prefix_types: li
         for ( num_source_subfolders_done, source_subfolder ) in enumerate( source_subfolders_we_are_doing ):
             
             starting_prefix = source_subfolder.prefix
+            source_device_id = base_location_paths_to_device_ids[ source_subfolder.base_location.path ]
             
             job_status.SetStatusText( f'Working "{starting_prefix}" ({HydrusNumbers.ValueRangeToPrettyString( num_source_subfolders_done, num_source_subfolders_to_do )})' + HC.UNICODE_ELLIPSIS )
             job_status.SetGauge( num_source_subfolders_done, num_source_subfolders_to_do )
@@ -207,7 +210,11 @@ def RegranulariseFileStorage( base_location_paths: list[ str ], prefix_types: li
                             
                             destination_path = destination_subfolder.GetFilePath( filename )
                             
-                            all_rename_jobs.append( ( source_path, destination_path ) )
+                            destination_device_id = base_location_paths_to_device_ids[ destination_subfolder.base_location.path ]
+                            
+                            is_the_same_filesystem = source_device_id == destination_device_id
+                            
+                            all_rename_jobs.append( ( source_path, destination_path, is_the_same_filesystem ) )
                             
                         else:
                             
@@ -234,9 +241,18 @@ def RegranulariseFileStorage( base_location_paths: list[ str ], prefix_types: li
                         
                     
                 
-                for ( source_path, destination_path ) in chunk_of_rename_jobs:
+                for ( source_path, destination_path, is_the_same_filesystem ) in chunk_of_rename_jobs:
                     
-                    os.replace( source_path, destination_path )
+                    if is_the_same_filesystem:
+                        
+                        os.replace( source_path, destination_path )
+                        
+                    else:
+                        
+                        HydrusPaths.safe_copy2( source_path, destination_path )
+                        
+                        os.unlink( source_path )
+                        
                     
                 
                 num_files_moved += len( chunk_of_rename_jobs )

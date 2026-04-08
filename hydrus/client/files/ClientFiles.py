@@ -132,6 +132,45 @@ def GetAllFilePaths( path: str, search_subdirectories: bool, clear_out_sidecars 
     
     HydrusText.HumanTextSort( file_paths )
     
+    PopulateComparableSidecarPrefixes( file_paths, comparable_sidecar_prefixes )
+    
+    if clear_out_sidecars:
+        
+        ( file_paths, sidecar_paths ) = DifferentiateSidecarPaths( file_paths, comparable_sidecar_prefixes )
+        
+    
+    return ( file_paths, sidecar_paths )
+    
+
+def DifferentiateSidecarPaths( file_paths, comparable_sidecar_prefixes ):
+    
+    undifferentiated_file_paths = file_paths
+    
+    file_paths = []
+    sidecar_paths = []
+    
+    for path in undifferentiated_file_paths:
+        
+        if LooksLikeSidecarPath( path, comparable_sidecar_prefixes ):
+            
+            sidecar_paths.append( path )
+            
+        else:
+            
+            file_paths.append( path )
+            
+        
+    
+    return ( file_paths, sidecar_paths )
+    
+
+def LooksLikeSidecarPath( file_path, comparable_sidecar_prefixes ):
+    
+    return has_sidecar_ext( file_path ) and get_comparable_sidecar_prefix( file_path ) in comparable_sidecar_prefixes
+    
+
+def PopulateComparableSidecarPrefixes( file_paths, comparable_sidecar_prefixes ):
+    
     for file_path in file_paths:
         
         if not has_sidecar_ext( file_path ):
@@ -139,27 +178,6 @@ def GetAllFilePaths( path: str, search_subdirectories: bool, clear_out_sidecars 
             comparable_sidecar_prefixes.add( get_comparable_sidecar_prefix( file_path ) )
             
         
-    
-    if clear_out_sidecars:
-        
-        undifferentiated_file_paths = file_paths
-        
-        file_paths = []
-        
-        for path in undifferentiated_file_paths:
-            
-            if has_sidecar_ext( path ) and get_comparable_sidecar_prefix( path ) in comparable_sidecar_prefixes:
-                
-                sidecar_paths.append( path )
-                
-            else:
-                
-                file_paths.append( path )
-                
-            
-        
-    
-    return ( file_paths, sidecar_paths )
     
 
 def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None ):

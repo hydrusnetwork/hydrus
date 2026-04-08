@@ -43,6 +43,7 @@ from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 
@@ -1130,7 +1131,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_index = HydrusNumbers.ToHumanInt( index + 1 )
             
             pretty_path = path
-            pretty_strings = ', '.join( strings )
+            pretty_strings = ' | '.join( strings )
             
             return ( pretty_index, pretty_path, pretty_strings )
             
@@ -1171,15 +1172,78 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 processed_strings = router.GetStringProcessor().ProcessStrings( pre_processed_strings )
                 
+                processed_strings = list( processed_strings )
+                
+                HydrusText.HumanTextSort( processed_strings )
+                
                 exporter = router.GetExporter()
                 
                 if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
                     
-                    processed_strings = HydrusTags.CleanTags( processed_strings )
+                    try:
+                        
+                        service_name = CG.client_controller.services_manager.GetName( exporter.GetServiceKey() )
+                        
+                    except HydrusExceptions.DataMissing:
+                        
+                        service_name = 'unknown tag service!'
+                        
+                    
+                    clean_tags = list( HydrusTags.CleanTags( processed_strings ) )
+                    
+                    ClientTagSorting.SortTags( ClientTagSorting.TagSort.STATICGetTextASCDefault(), clean_tags )
+                    
+                    processed_strings = [ f'to "{service_name}": ' + ', '.join( clean_tags ) ]
                     
                 elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes ):
                     
-                    processed_strings = [ f'note: {HydrusText.GetFirstLineSummary( s )}' for s in processed_strings ]
+                    if len( processed_strings ) == 1:
+                        
+                        processed_strings = [ '1 note: ' + HydrusText.ElideText( HydrusText.GetFirstLineSummary( processed_strings[0] ), 64  ) ]
+                        
+                    else:
+                        
+                        summaries = [ HydrusText.ElideText( HydrusText.GetFirstLineSummary( s ), 32 ) for s in processed_strings ]
+                        
+                        processed_strings = [ f'{HydrusNumbers.ToHumanInt(len( processed_strings ))} notes: ' + ', '.join( summaries ) ]
+                        
+                    
+                elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
+                    
+                    if len( processed_strings ) == 1:
+                        
+                        processed_strings = [ '1 URL: ' + HydrusText.ElideText( HydrusText.GetFirstLineSummary( processed_strings[0] ), 64  ) ]
+                        
+                    else:
+                        
+                        summaries = [ HydrusText.ElideText( HydrusText.GetFirstLineSummary( s ), 32 ) for s in processed_strings ]
+                        
+                        processed_strings = [ f'{HydrusNumbers.ToHumanInt(len( processed_strings ))} URLs: ' + ', '.join( summaries ) ]
+                        
+                    
+                elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ):
+                    
+                    timestamp_data_stub = exporter.GetTimestampDataStub()
+                    
+                    pretty_timestamp_data_stub = timestamp_data_stub.ToString()
+                    
+                    if len( processed_strings ) == 1:
+                        
+                        try:
+                            
+                            pretty_time = HydrusTime.TimestampToPrettyTime( float( processed_strings[0] ) )
+                            
+                        except Exception as e:
+                            
+                            pretty_time = f'Could not parse time! {e}'
+                            
+                        
+                        processed_strings = [ f'{pretty_timestamp_data_stub}: {pretty_time}' ]
+                        
+                    else:
+                        
+                        processed_strings = [ f'{pretty_timestamp_data_stub}: {HydrusNumbers.ToHumanInt( len( processed_strings ))} times?' ]
+                        
                     
                 
                 strings.extend( sorted( processed_strings ) )

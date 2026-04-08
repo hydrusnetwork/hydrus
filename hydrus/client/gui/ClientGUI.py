@@ -76,13 +76,13 @@ from hydrus.client.gui.networking import ClientGUILogin
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUIPages
-from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.panels import ClientGUIFilesPhysicalStoragePanels
 from hydrus.client.gui.panels import ClientGUILocalFileImports
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
+from hydrus.client.gui.panels import ClientGUISerialisableImport
 from hydrus.client.gui.panels import ClientGUIURLClass
 from hydrus.client.gui.panels.options import ClientGUIManageOptionsPanel
 from hydrus.client.gui.parsing import ClientGUIParsing
@@ -2139,7 +2139,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'import downloaders' )
         
-        panel = ClientGUIScrolledPanelsReview.ReviewDownloaderImport( frame, self._controller.network_engine )
+        panel = ClientGUISerialisableImport.ReviewDownloaderImport( frame, self._controller.network_engine )
         
         frame.SetPanel( panel )
         
@@ -3696,6 +3696,12 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenu( debug_menu, network_actions, 'network actions' )
         
+        ClientGUIMenus.AppendSeparator( debug_menu )
+        
+        ClientGUIMenus.AppendMenuItem( debug_menu, 'what is this object?', 'Submit a serialised hydrus object and get info from it.', self._LaunchWhatIsThisObject )
+        
+        ClientGUIMenus.AppendSeparator( debug_menu )
+        
         tests = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
@@ -4132,6 +4138,15 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         self._controller.CallLaterQtSafe( self, 0.25, 'load initial session', do_it, default_gui_session, load_a_blank_page )
+        
+    
+    def _LaunchWhatIsThisObject( self ):
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'what is this?' )
+        
+        panel = ClientGUISerialisableImport.ReviewWhatIsThisObject( frame )
+        
+        frame.SetPanel( panel )
         
     
     def _LockServer( self, service_key, lock ):

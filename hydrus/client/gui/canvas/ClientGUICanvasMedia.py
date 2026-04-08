@@ -26,6 +26,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
+from hydrus.client.gui.canvas import ClientGUITransparency
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
@@ -538,69 +539,19 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if CG.client_controller.new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ):
                 
-                neon_greenscreen = QG.QColor( 34, 255, 0 )
-                
-                painter.setBackground( QG.QBrush( neon_greenscreen ) )
-                
-                painter.eraseRect( painter.viewport() )
+                brush = ClientGUITransparency.MakeGreenscreenBrush()
                 
             else:
                 
-                light_grey = QG.QColor( 237, 237, 237 )
-                dark_grey = QG.QColor( 222, 222, 222 )
-                
-                painter.setBackground( QG.QBrush( light_grey ) )
-                
-                painter.eraseRect( painter.viewport() )
-                
-                # 16x16 boxes, light grey in top right
-                BOX_LENGTH = int( 16 * self.devicePixelRatio() )
-                
-                painter_width = painter.viewport().width()
-                painter_height = painter.viewport().height()
-                
-                num_cols = painter_width // BOX_LENGTH
-                
-                if painter_width % BOX_LENGTH > 0:
-                    
-                    num_cols += 1
-                    
-                
-                num_rows = painter_height // BOX_LENGTH
-                
-                if painter_height % BOX_LENGTH > 0:
-                    
-                    num_rows += 1
-                    
-                
-                painter.setBrush( QG.QBrush( dark_grey ) )
-                painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
-                
-                for y_index in range( num_rows ):
-                    
-                    for x_index in range( num_cols ):
-                        
-                        if ( x_index + y_index ) % 2 == 1:
-                            
-                            rect = QC.QRect( x_index * BOX_LENGTH, y_index * BOX_LENGTH, BOX_LENGTH, BOX_LENGTH )
-                            
-                            if painter.viewport().intersects( rect ):
-                                
-                                painter.drawRect( rect )
-                                
-                            
-                        
-                    
-                
-                self._have_drawn_background_once = True
+                brush = ClientGUITransparency.MakeCheckerboardBrush( int( 16 * self.devicePixelRatio() ) )
                 
             
-            return
+        else:
+            
+            brush = QG.QBrush( self._background_colour_generator.GetColour() )
             
         
-        colour = self._background_colour_generator.GetColour()
-        
-        painter.setBackground( QG.QBrush( colour ) )
+        painter.setBackground( brush )
         
         painter.eraseRect( painter.viewport() )
         

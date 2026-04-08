@@ -163,7 +163,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( transparency_panel )
-        self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
+        self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Applies to native viewer and QtMediaPlayer. Does not apply to MPV.' ) )
         
         self._draw_transparency_checkerboard_as_greenscreen = QW.QCheckBox( transparency_panel )
         self._draw_transparency_checkerboard_as_greenscreen.setToolTip( ClientGUIFunctions.WrapToolTip( 'Instead of a checkerboard pattern, draw a bright green colour.' ) )

@@ -1527,8 +1527,6 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             query_hash_ids = set()
             
         
-        query_hash_ids = typing.cast( set[ int ], query_hash_ids )
-        
         # this was bodged in here during a rewrite; there is probably a nicer 'if cross-referenced already, do above, else this', but this is fine for now
         if search_state.there_are_simple_files_info_preds_to_search_for and not search_state.done_files_info_predicates:
             

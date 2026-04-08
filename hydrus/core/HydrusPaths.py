@@ -765,19 +765,11 @@ def GetPartitionInfo( path ) -> FakeDiskPart | None:
     return None
     
 
-def GetDevice( path ) -> str | None:
+def GetDeviceId( path: str ):
     
-    partition_info = GetPartitionInfo( path )
+    result = os.stat( path )
     
-    if partition_info is None:
-        
-        return None
-        
-    else:
-        
-        # noinspection PyUnresolvedReferences
-        return partition_info.device
-        
+    return result.st_dev
     
 
 def GetFileSystemType( path: str ) -> str | None:

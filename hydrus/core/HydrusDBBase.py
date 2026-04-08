@@ -54,7 +54,7 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes, no_temp_needed = False ):
         
         temp_disk_free_space = HydrusPaths.GetFreeSpace( temp_dir )
         
-        temp_and_db_on_same_device = HydrusPaths.GetDevice( temp_dir ) == HydrusPaths.GetDevice( db_dir )
+        temp_and_db_on_same_device = HydrusPaths.GetDeviceId( temp_dir ) == HydrusPaths.GetDeviceId( db_dir )
         
         if temp_and_db_on_same_device and temp_space_needed > 0:
             
