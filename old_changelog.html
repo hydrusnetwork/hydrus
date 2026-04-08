@@ -34,6 +34,47 @@
         <div class="content">
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
+                <li>
+                    <h2 id="version_667"><a href="#version_667">version 667</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an issue with subs where a sub with all DEAD queries was considered 'no work remaining', and thus subs in that situation with nonetheless outstanding file downloads would not clear those outstanding file downloads if the work spilled over to future sub runs</li>
+                        <li>all thumbnail pair lists (which are in the duplicates auto-resolution UI) now have a menu that says 'show x rows in a new page' so can you can review things in more detail. let me know if this swallows deleted thumbnails anywhere</li>
+                        <li>the file storage granularisation system can now handle cross-filesystem granularisation. this can happen on 3-to-2 when some of the 3-granular subfolders have been migrated to a second location and need to be collected in a central source that might be on a different partition. it seems to also occur in 2-to-3 when the filesystem has overlapping subfolder orphans from a previous borked migration or similar and things are tidied as part of the regranularisation. the previous very fast atomic 'file rename' was raising an error here; now I do some efficient device checking of subfolders and move to a 'copy2+unlink' combo instead when the device differs</li>
+                        <li>the granularisation panel now warns those with weird symlinked storage to stay away</li>
+                        <li>the routine that counts up the durations of a gif's frames and the hydrus native renderer now fall back to best-guess defaults if A) the file changes resolution mid-parse or B) any frame appears to have a width or height bigger than 16k pixels. we encountered a malformed gif this week that went from 640x480 to a fake 28579x93263 and caused a memory explosion. should handle this situation better now</li>
+                        <li>continuing the 'clean up PIL Images better' work, native animation renders that error out are now explicitly closed before reinitialisation</li>
+                        <li>thanks to a user, the 'Paper_Dark' QSS files have fixed, visible `▲/▼` button labels. relatedly, the objectNames I added for this guy last week are renamed to `HydrusCollapseArrowUp/Down`. they were `Expanded/Collapsed`, but since the arrows reverse depending on an upwards or downwards expand, we realised we'd want something more specific to the actual label being shown if we ever wanted custom icons/labels</li>
+                        <li><h3>sidecars</h3></li>
+                        <li>sidecars gets an easy one-click template that covers simple stuff. the 'edit metadata migration routers' dialog, which the main guy in sidecar editing, now has a star button. when exporting to sidecars, it offers an 'easy one-click JSON that covers the basics' template that spams out definitions for a single 'filename.jpg.json' JSON sidecar that gets your notes, urls, tags for each tag service by storage (no siblings/parents) and display (with siblings/parents), and timestamps for archived time, main import time, and media/preview viewer 'last viewed time'. when importing from sidecars, the buton offers the same 'easy one-click' option to eat from a JSON using the same format and will line up any tag services that have the same service name</li>
+                        <li>if you try to export notes to a .txt sidecar using `\n` as the separator, or conversely import notes from a `\n` .txt sidecar, the 'edit sidecar stuff' dialog now moans at you on ok, asking if you are totally sure that is correct. since notes often _include_ newlines, something like `||||` is more appropriate</li>
+                        <li>when dragging and dropping individual files onto the client, it can now give a pretty 'sidecar' result when you drop individual files. this only worked if you dropped directories previously, with individual file drops giving 'PROBLEM: filetype unsupported' for the sidecars. this is an aesthetic change only; it doesn't matter that sidecars are not parsed ok at this step, but it is nice to have the correct 'won't try to import' label</li>
+                        <li>in the 'add metadata before we import' sub-dialog of the manual file import, the 'sidecars' list now shows better metadata context around the sidecar content preview. the 'notes' now compresses multiple notes better, with a total count and elided preview; the 'tags' now says to which tag service they are going; the 'URLs' now says how many URLs and elides better; the 'timestamp' now converts to a nice datestring and says what the destination is for that time (previously it just said the UNIX timestamp flat wew)</li>
+                        <li><h3>Client API and setting archived time</h3></li>
+                        <li>for sidecars and the Client API, if you push an archived time on a file in the inbox, the file is now auto-archived! the UI and Client API docs now mention this</li>
+                        <li>previously, the data was (buggily) recorded but generally swallowed and not reported anywhere</li>
+                        <li>the Client API 'file metadata' call now gives a `time_archived` if the file is not in the inbox and there is a known timestamp</li>
+                        <li>sidecar routers, when harvesting timestamps to send to a sidecar file, will no longer suck an orphaned archive timestamp from a file that is in the inbox</li>
+                        <li>Client API version is now 89</li>
+                        <li><h3>QtMediaPlayer transparency</h3></li>
+                        <li>the QtMediaPlayer should now support transparency properly! previously, if you put up an animated gif with transparency, the transparent areas would be black with ugly fuzzy edges. now it does a checkerboard or greenscreen using the same settings as a static image. on some files there is still fuzz, but most of the time it looks great</li>
+                        <li>the QtMediaPlayer should also show the normal background colour while it waits for a non-transparent media to load. it probably flashed black before, so should cut down on some load flicker</li>
+                        <li>the normal static image checkerboard and greenscreen transparency uses the same, updated tech here. rather than drawing a bunch of boxes, we now have a textured pixmap brush, and in fact in all cases we just set a brush and do an eraseRect, nice and clean. Qt is great</li>
+                        <li>the 'show transparency and checkerboard in duplicate filter' setting in `duplicates` is now its own thing and applies independently to the one in `media playback`. previously it had some whack 'only applies if the media playback guy is unchecked', which is the kind of thing you can convince yourself is useful and technically correct but violates KISS</li>
+                        <li><h3>ingesting serialised objects</h3></li>
+                        <li>the 'import downloaders' panel now accepts drag-and-drop or pasted JSON files</li>
+                        <li>added a `help-&gt;debug-&gt;what is this object?` debug review panel to figure out mysterious bits of json or png or whatever</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>improved error handling for setting QtMediaPlayer null audio device on media load</li>
+                        <li>improved how 'show menu' events are handled, Qt-side, for the: colour picker widget; preview viewer; navigable media viewer; taglist</li>
+                        <li>cleaned up some ugly menu generation/show for the main thumbnail grid</li>
+                        <li>decoupled the 'import downloaders' serialised object ingestion routine and brushed it up a bit with nicer error reporting and so on</li>
+                        <li>all serialisable objects can now describe themselves with regards to the serialisation system, with special hooks for named objects and the special list, dict, and bytes dict</li>
+                        <li>fixed up several places that do a fast 'is it a jpeg/png' mime check, which was accidentally skipping the png side and doing the slower check</li>
+                        <li>fixed a bad layout flag in the 'select from a list of checkboxes now mate' dialog</li>
+                        <li>fixed some close-curly-brace typos in the example Client API Services Object JSON</li>
+                    </ul>
+                </li>
 			    <li>
                     <h2 id="version_666"><a href="#version_666">☠⛤ version 666 ⛤☠</a></h2>
                     <ul>
