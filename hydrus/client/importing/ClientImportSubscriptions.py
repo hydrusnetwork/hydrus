@@ -148,7 +148,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetQueryHeadersForProcessing( self ) -> list[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
         
-        query_headers = list( self._query_headers )
+        query_headers = [ query_header for query_header in self._query_headers if not query_header.IsPaused() ]
         
         if CG.client_controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
             
@@ -367,6 +367,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer,
         status_prefix: str
         ):
+        
+        if query_header.IsPaused():
+            
+            return
+            
         
         query_text = query_header.GetQueryText()
         query_name = query_header.GetHumanName()
@@ -1040,6 +1045,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         query_log_container: ClientImportSubscriptionQuery.SubscriptionQueryLogContainer,
         query_summary_name: str
         ):
+        
+        if query_header.IsPaused():
+            
+            return
+            
         
         this_query_has_done_work = False
         
