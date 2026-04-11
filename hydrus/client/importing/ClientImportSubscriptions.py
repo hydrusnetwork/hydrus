@@ -1378,6 +1378,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             estimates.append( estimate )
             
         
+        if len( estimates ) == 0:
+            
+            return ( 0, 0 )
+            
+        
         min_estimate = min( estimates )
         max_estimate = max( estimates )
         
