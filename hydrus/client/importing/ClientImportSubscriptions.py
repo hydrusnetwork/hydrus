@@ -148,7 +148,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _GetQueryHeadersForProcessing( self ) -> list[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ]:
         
-        query_headers = [ query_header for query_header in self._query_headers if not query_header.IsPaused() ]
+        query_headers = [ query_header for query_header in self._query_headers if query_header.IsCapableOfWorking() ]
         
         if CG.client_controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
             
@@ -349,7 +349,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             return False
             
         
-        result = True in ( query_header.IsSyncDue() for query_header in self._query_headers )
+        query_headers = self._GetQueryHeadersForProcessing()
+        
+        result = True in ( query_header.IsSyncDue() for query_header in query_headers )
         
         if HG.subscription_report_mode:
             
@@ -1001,12 +1003,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _WorkOnQueriesFilesCanDoWork( self ):
         
-        for query_header in self._query_headers:
-            
-            if not query_header.IsExpectingToWorkInFuture():
-                
-                continue
-                
+        query_headers = self._GetQueryHeadersForProcessing()
+        
+        for query_header in query_headers:
             
             if query_header.HasFileWorkToDo():
                 
@@ -1370,7 +1369,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         estimates = []
         
-        for query_header in self._query_headers:
+        query_headers = self._GetQueryHeadersForProcessing()
+        
+        for query_header in query_headers:
             
             estimate = query_header.GetBandwidthWaitingEstimate( bandwidth_manager, self._name )
             
@@ -1387,7 +1388,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         next_work_times = set()
         
-        for query_header in self._query_headers:
+        query_headers = self._GetQueryHeadersForProcessing()
+        
+        for query_header in query_headers:
             
             next_work_time = query_header.GetNextWorkTime( CG.client_controller.network_engine.bandwidth_manager, self._name )
             

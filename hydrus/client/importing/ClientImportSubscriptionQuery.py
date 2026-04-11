@@ -664,6 +664,16 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         return result
         
     
+    def IsCapableOfWorking( self ):
+        
+        if self.IsPaused() or not self.IsLogContainerOK():
+            
+            return False
+            
+        
+        return True
+        
+    
     def IsCheckingNow( self ):
         
         return self._check_now
@@ -676,9 +686,10 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
     
     def IsExpectingToWorkInFuture( self ):
         
-        no_work_due = self.IsDead() and not self.HasFileWorkToDo()
+        no_work_expected = self.IsDead() and not self.HasFileWorkToDo()
+        cannot_work = not self.IsCapableOfWorking()
         
-        if self.IsPaused() or no_work_due or not self.IsLogContainerOK():
+        if cannot_work or no_work_expected:
             
             return False
             
