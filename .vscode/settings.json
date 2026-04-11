@@ -3,5 +3,6 @@
   "editor.renderWhitespace": "boundary",
   "files.trimTrailingWhitespace": false,
   "diffEditor.ignoreTrimWhitespace": false,
-  "editor.tabSize": 4
+  "editor.tabSize": 4,
+  "git.ignoreLimitWarning": true
 }

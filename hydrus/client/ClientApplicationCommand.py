@@ -204,6 +204,10 @@ SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER = 191
 SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER = 192
 SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN = 193
 SIMPLE_START_SLIDESHOW = 194
+SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP = 195
+SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON = 196
+SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF = 197
+SIMPLE_THISWINDOW_FRAMELESS_FLIP = 198
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -452,7 +456,11 @@ simple_enum_to_str_lookup = {
     SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER : 'flip drawing transparency as checkerboard in media viewer',
     SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER : 'flip drawing transparency as checkerboard in media viewer (duplicate filter)',
     SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN : 'flip between drawing transparency and checkerboard and greenscreen',
-    SIMPLE_OPEN_OPTIONS : 'open the options dialog'
+    SIMPLE_OPEN_OPTIONS : 'open the options dialog',
+    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP : 'flip whether this window is always on top',
+    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON : 'set this window to be always on top',
+    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF : 'set this window to not be always on top',
+    SIMPLE_THISWINDOW_FRAMELESS_FLIP : 'flip whether this window is frameless',
 }
 
 legacy_simple_str_to_enum_lookup = {
