@@ -11,8 +11,7 @@ client_a = Analysis(['hydrus/hydrus_client.py'],
                ('hydrus/static', 'static'),
                ('hydrus/license.txt', '.'),
                ('hydrus/README.md', '.'),
-               ('hydrus/help my client will not boot.txt', '.'),
-               ('hydrus/db', 'db')
+               ('hydrus/help my client will not boot.txt', '.')
              ],
              excludes=[],
              win_no_prefer_redirects=False,

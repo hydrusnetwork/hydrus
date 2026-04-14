@@ -16,7 +16,7 @@ client_a = Analysis(['hydrus\\hydrus_client.pyw'],
                ('hydrus\\license.txt', '.'),
                ('hydrus\\README.md', '.'),
                ('hydrus\\auto_update_installer.bat', '.'),
-               ('hydrus\\help my client will not boot.txt', '.'),
+               ('hydrus\\help my client will not boot.txt', '.')
              ],
              excludes=[],
              win_no_prefer_redirects=False,
