@@ -1,0 +1,31 @@
+*** The purpose of this document ***
+
+If you have had to restore an old client_files structure to a new database, or _vice versa_, and the client will not now boot or cannot load any files because it cannot find your media files storage locations, this document will guide you through what to do next.
+
+
+*** What the problem is ***
+
+The database remembers what granularity it is expecting. When you migrate from 2 to 3, it records that and it remembers all 8192 expected locations for everything. If you only have 256, it isn't easy to rework the database to fix it.
+
+
+*** Fixing a 3 database that has a 2 storage structure ***
+
+If you get the 'repair missing locations' dialog on startup, the solution is:
+
+- Boot up a different client. Either set up a fresh client in a different location or use the -d launch parameter to boot up a fresh database on something like Desktop/temp_hydrus.
+- Go into 'move media files' and then the granularisation sub-panel.
+- Use the 'granularise offline folder 2 to 3' button to convert your original database's file storage from 2 to 3. If you use multiple locations or store your thumbnails elsewhere, repeat it for all.
+- You are now good.
+
+
+*** Fixing a 2 database that has a 3 storage structure ***
+
+If you can boot the client but none of your files load because they are in 0-f subdirs, the solution is:
+
+- Boot up a different client. Either set up a fresh client in a different location or use the -d launch parameter to boot up a fresh database on something like Desktop/temp_hydrus.
+- Go into 'move media files' and then the granularisation sub-panel.
+- Use the 'granularise offline folder 3 to 2' button to convert your original database's file storage from 3 to 2. If you use multiple locations or store your thumbnails elsewhere, repeat it for all.
+- Boot up the original client.
+- Go into 'move media files' and then convert its database from 2 to 3.
+- Restart the original client. It may say something like 'some stuff was missing, but I found it elsewhere'.
+- You are now good. You may have some orphan/stub 0-f sub folders in your client_files, but they are harmless and you can ignore them.

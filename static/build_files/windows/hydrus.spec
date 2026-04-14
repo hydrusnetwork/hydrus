@@ -7,7 +7,6 @@ client_a = Analysis(['hydrus\\hydrus_client.pyw'],
              pathex=['.'],
              binaries=[
                ('hydrus\\static\\build_files\\windows\\sqlite3.dll', '.'),
-               ('hydrus\\static\\build_files\\windows\\sqlite3.exe', 'db'),
                ('hydrus\\libmpv-2.dll', '.')
              ],
              datas=[
@@ -18,7 +17,6 @@ client_a = Analysis(['hydrus\\hydrus_client.pyw'],
                ('hydrus\\README.md', '.'),
                ('hydrus\\auto_update_installer.bat', '.'),
                ('hydrus\\help my client will not boot.txt', '.'),
-               ('hydrus\\db', 'db')
              ],
              excludes=[],
              win_no_prefer_redirects=False,

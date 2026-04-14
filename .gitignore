@@ -40,9 +40,7 @@ local.properties
 # Locally stored "Eclipse launch configurations"
 *.launch
 
-### Some rules to keep out installation-specific stuff that's generated when Hydrus is run from source
-logs/
-crash.log
+### Some rules to keep out installation-specific stuff generated when Hydrus is run from source
 
 # user's db files
 # I nonetheless recommend you use the -d switch to put your db somewhere else if you run and update from git source
@@ -53,6 +51,7 @@ crash.log
 /db/*.key
 /db/*.log
 /db/*.conf
+/db/hydrus_crash.log
 /db/client_running
 /db/server_running
 /db/client_files/
@@ -97,4 +96,3 @@ uv.lock
 
 .cache
 shell.nix
-

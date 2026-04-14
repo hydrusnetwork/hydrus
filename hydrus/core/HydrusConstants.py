@@ -56,7 +56,6 @@ HELP_DIR = os.path.join( CONTENT_BASE_DIR, 'help' )
 LICENSE_PATH = os.path.join( CONTENT_BASE_DIR, 'license.txt' )
 
 DEFAULT_DB_DIR = os.path.join( BASE_DIR, 'db' )
-CONTENT_DB_DIR = os.path.join( CONTENT_BASE_DIR, 'db' )
 
 #
 
