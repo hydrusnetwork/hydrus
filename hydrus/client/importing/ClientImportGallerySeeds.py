@@ -399,7 +399,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         return False
         
     
-    def WorkOnURL( self, gallery_token_name, gallery_seed_log: "GallerySeedLog", file_seeds_callable, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, file_import_options, gallery_urls_seen_before = None ):
+    def WorkOnURL( self, gallery_token_name, gallery_seed_log: "GallerySeedLog", file_seeds_callable, status_hook, title_hook, network_job_factory, network_job_presentation_context_factory, gallery_urls_seen_before = None ):
         
         if gallery_urls_seen_before is None:
             
@@ -547,7 +547,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     self.AddRequestHeaders( request_headers )
                     
                 
-                file_seeds = ClientImporting.ConvertParsedPostsToFileSeeds( parsed_posts, url_for_child_referral, file_import_options )
+                file_seeds = ClientImporting.ConvertParsedPostsToFileSeeds( parsed_posts, url_for_child_referral )
                 
                 for file_seed in file_seeds:
                     

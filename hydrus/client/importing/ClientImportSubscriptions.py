@@ -22,6 +22,7 @@ from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainerMigration
 from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -697,7 +698,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 try:
                     
-                    ( num_urls_added_in_this_call, num_urls_already_in_file_seed_cache_in_this_call, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, gallery_urls_seen_before = gallery_urls_seen_this_sync )
+                    ( num_urls_added_in_this_call, num_urls_already_in_file_seed_cache_in_this_call, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason ) = gallery_seed.WorkOnURL( 'subscription', gallery_seed_log, file_seeds_callable, status_hook, title_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), gallery_urls_seen_before = gallery_urls_seen_this_sync )
                     
                 except HydrusExceptions.CancelledException as e:
                     
@@ -1151,7 +1152,16 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         job_status.SetStatusText( x_out_of_y + HydrusText.GetFirstLine( text ), 2 )
                         
                     
-                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_QUIET, self._tag_import_options, self._note_import_options )
+                    import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+                        self._file_import_options,
+                        FileImportOptionsLegacy.IMPORT_TYPE_QUIET,
+                        self._tag_import_options,
+                        self._note_import_options,
+                        file_seed.GetReferralURL(),
+                        file_seed.file_seed_data
+                    )
+                    
+                    file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), import_options_container )
                     
                     query_tag_import_options_legacy = query_header.GetTagImportOptions()
                     

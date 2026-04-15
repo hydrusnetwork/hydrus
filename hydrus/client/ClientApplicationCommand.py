@@ -204,10 +204,10 @@ SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER = 191
 SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER = 192
 SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN = 193
 SIMPLE_START_SLIDESHOW = 194
-SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP = 195
-SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON = 196
-SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF = 197
-SIMPLE_THISWINDOW_FRAMELESS_FLIP = 198
+SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP = 195
+SIMPLE_WINDOW_ALWAYS_ON_TOP_ON = 196
+SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF = 197
+SIMPLE_WINDOW_FRAMELESS_FLIP = 198
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -314,9 +314,9 @@ simple_enum_to_str_lookup = {
     LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR : 'show similar files: 4 (similar)',
     LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE : 'show similar files: 8 (speculative)',
     LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR : 'show similar files: 2 (very similar)',
-    SIMPLE_GLOBAL_AUDIO_MUTE : 'mute global audio',
-    SIMPLE_GLOBAL_AUDIO_MUTE_FLIP : 'mute/unmute global audio',
-    SIMPLE_GLOBAL_AUDIO_UNMUTE : 'unmute global audio',
+    SIMPLE_GLOBAL_AUDIO_MUTE : 'global audio: mute',
+    SIMPLE_GLOBAL_AUDIO_MUTE_FLIP : 'global audio: mute/unmute',
+    SIMPLE_GLOBAL_AUDIO_UNMUTE : 'global audio: unmute',
     SIMPLE_HIDE_TO_SYSTEM_TRAY : 'hide to system tray',
     SIMPLE_INBOX_FILE : 'inbox file',
     SIMPLE_LAUNCH_MEDIA_VIEWER : 'launch the media viewer',
@@ -433,7 +433,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_DUPLICATE_MEDIA_CLEAR_ALL_FOCUSED_FALSE_POSITIVES : 'file relationships: clear all false positives (just focused file)',
     SIMPLE_DUPLICATE_MEDIA_CLEAR_INTERNAL_FALSE_POSITIVES : 'file relationships: delete false positives within selection',
     SIMPLE_AUTOCOMPLETE_FORCE_FETCH : 'force-fetch tag autocomplete results',
-    SIMPLE_AUTOCOMPLETE_IME_MODE : 'flip IME-friendly mode on/off (this disables extra shortcut processing so you can do IME popup stuff)',
+    SIMPLE_AUTOCOMPLETE_IME_MODE : 'IME-friendly mode: flip on/off (this disables extra shortcut processing so you can do IME popup stuff)',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_LEFT : 'if input is empty, move left one autocomplete dropdown tab',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_TAB_RIGHT : 'if input is empty, move right one autocomplete dropdown tab',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT : 'if input & results list are empty, move to left one service page',
@@ -441,8 +441,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
     SIMPLE_MEDIA_SEEK_DELTA : 'seek media',
-    SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'flip profile mode on/off',
-    SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show (flip on/off)',
+    SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'profile mode: flip on/off',
+    SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show: flip on/off',
     SIMPLE_OPEN_COMMAND_PALETTE : 'open the command palette',
     SIMPLE_MOVE_THUMBNAIL_FOCUS : 'move the thumbnail focus',
     SIMPLE_SELECT_FILES : 'select files',
@@ -452,15 +452,15 @@ simple_enum_to_str_lookup = {
     SIMPLE_NATIVE_OPEN_FILE_PROPERTIES : 'open file properties',
     SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG : 'open in another program',
     SIMPLE_RELOAD_CURRENT_STYLESHEET : 'reload current qss stylesheet',
-    SIMPLE_FLIP_ICC_PROFILE_APPLICATION : 'flip apply image ICC Profile colour adjustments',
-    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER : 'flip drawing transparency as checkerboard in media viewer',
-    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER : 'flip drawing transparency as checkerboard in media viewer (duplicate filter)',
-    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN : 'flip between drawing transparency and checkerboard and greenscreen',
+    SIMPLE_FLIP_ICC_PROFILE_APPLICATION : 'apply image ICC Profile colour adjustments: flip on/off',
+    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER : 'drawing transparency as checkerboard: flip on/off',
+    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER : 'drawing transparency as checkerboard (duplicate filter): flip on/off',
+    SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN : 'drawing transparency as greenscreen: flip on/off',
     SIMPLE_OPEN_OPTIONS : 'open the options dialog',
-    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP : 'flip whether this window is always on top',
-    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_ON : 'set this window to be always on top',
-    SIMPLE_THISWINDOW_ALWAYS_ON_TOP_OFF : 'set this window to not be always on top',
-    SIMPLE_THISWINDOW_FRAMELESS_FLIP : 'flip whether this window is frameless',
+    SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP : 'window "always on top": flip on/off',
+    SIMPLE_WINDOW_ALWAYS_ON_TOP_ON : 'window "always on top": set on',
+    SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF : 'window "always on top": set off',
+    SIMPLE_WINDOW_FRAMELESS_FLIP : 'window "frameless": flip on/off',
 }
 
 legacy_simple_str_to_enum_lookup = {

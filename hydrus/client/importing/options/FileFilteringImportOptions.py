@@ -72,22 +72,22 @@ class FileFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if mime not in allowed_mimes:
             
-            raise HydrusExceptions.FileImportRulesException( 'File was a {}, which is not allowed by the File Import Options.'.format( HC.mime_string_lookup[ mime ] ) )
+            raise HydrusExceptions.FileImportRulesException( 'File was a {}, which is not allowed by the File Filtering Import Options.'.format( HC.mime_string_lookup[ mime ] ) )
             
         
         if self._min_size is not None and size < self._min_size:
             
-            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the lower limit is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
+            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the lower limit in the File Filtering Import Options is ' + HydrusData.ToHumanBytes( self._min_size ) + '.' )
             
         
         if self._max_size is not None and size > self._max_size:
             
-            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
+            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit in the File Filtering Import Options is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
             
         
         if mime == HC.ANIMATION_GIF and self._max_gif_size is not None and size > self._max_gif_size:
             
-            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
+            raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs in the File Filtering Import Options is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
             
         
         if self._min_resolution is not None:
@@ -99,7 +99,7 @@ class FileFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_thin or too_short:
                 
-                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the lower limit is ' + ClientData.ResolutionToPrettyString( self._min_resolution ) )
+                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the lower limit in the File Filtering Import Options is ' + ClientData.ResolutionToPrettyString( self._min_resolution ) )
                 
             
         
@@ -112,7 +112,7 @@ class FileFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if too_wide or too_tall:
                 
-                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the upper limit is ' + ClientData.ResolutionToPrettyString( self._max_resolution ) )
+                raise HydrusExceptions.FileImportRulesException( 'File had resolution ' + ClientData.ResolutionToPrettyString( ( width, height ) ) + ' but the upper limit in the File Filtering Import Options is ' + ClientData.ResolutionToPrettyString( self._max_resolution ) )
                 
             
         

@@ -19,7 +19,7 @@ from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainer
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
@@ -201,8 +201,7 @@ class TestMigration( unittest.TestCase ):
         
         ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = ( 65535, HC.IMAGE_JPEG, 640, 480, None, None, False, None )
         
-        file_import_options = FileImportOptionsLegacy.FileImportOptionsLegacy()
-        file_import_options.SetIsDefault( True )
+        import_options_container = ImportOptionsContainer.ImportOptionsManager.STATICGetDefaultInitialisedManager().GetDefaultImportOptionsContainerForCallerType( ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL )
         
         for i in range( 100 ):
             
@@ -221,7 +220,7 @@ class TestMigration( unittest.TestCase ):
             
             if i < 50:
                 
-                fake_file_import_job = ClientImportFiles.FileImportJob( 'fake path', file_import_options )
+                fake_file_import_job = ClientImportFiles.FileImportJob( 'fake path', import_options_container )
                 
                 fake_file_import_job._pre_import_file_status = ClientImportFiles.FileImportStatus( CC.STATUS_UNKNOWN, hash )
                 fake_file_import_job._file_info = ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words )

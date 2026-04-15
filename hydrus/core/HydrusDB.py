@@ -478,10 +478,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             ( version, ) = self._Execute( 'SELECT version FROM version;' ).fetchone()
             
         
-        if did_updates:
-            
-            self._UpdateDBFolderWithSupplementaryFiles()
-            
+        # I did have _UpdateDBFolderWithSupplementaryUpdates here, on a did_updates, but decided against it
         
         self._CloseDBConnection()
         
@@ -711,9 +708,9 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
                 self._is_first_start = True
                 
-                self._UpdateDBFolderWithSupplementaryFiles()
-                
                 self._CreateDB()
+                
+                self._UpdateDBFolderWithSupplementaryFiles()
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()
                 
@@ -1009,20 +1006,17 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         db_files_dir = os.path.join( HydrusStaticDir.INSTALL_STATIC_DIR, 'db_files' )
         
-        if os.path.exists( db_files_dir ):
+        if os.path.exists( db_files_dir ) and os.path.isdir( db_files_dir ):
             
             for filename in os.listdir( db_files_dir ):
                 
                 source_path = os.path.join( db_files_dir, filename )
                 
-                if os.path.isfile( source_path ):
+                if filename.endswith( '.txt' ) and os.path.isfile( source_path ):
                     
-                    if filename.endswith( '.txt' ):
-                        
-                        dest_path = os.path.join( self._db_dir, filename )
-                        
-                        HydrusPaths.MirrorFile( source_path, dest_path )
-                        
+                    dest_path = os.path.join( self._db_dir, filename )
+                    
+                    HydrusPaths.MirrorFile( source_path, dest_path )
                     
                 
             
@@ -1031,7 +1025,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             sqlite_exe_path = os.path.join( HydrusStaticDir.INSTALL_STATIC_DIR, 'build_files', 'windows', 'sqlite3.exe' )
             
-            if os.path.exists( sqlite_exe_path ):
+            if os.path.exists( sqlite_exe_path ) and os.path.isfile( sqlite_exe_path ):
                 
                 dest_path = os.path.join( self._db_dir, 'sqlite3.exe' )
                 

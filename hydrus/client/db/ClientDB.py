@@ -3662,9 +3662,9 @@ class DB( HydrusDB.HydrusDB ):
             HydrusData.ShowText( 'File import job starting db job' )
             
         
-        file_import_options = file_import_job.GetFileImportOptions()
+        import_options_container = file_import_job.GetImportOptionsContainer()
         
-        location_import_options = file_import_options.GetLocationImportOptions()
+        location_import_options = import_options_container.GetLocationImportOptions()
         
         destination_location_context = location_import_options.GetDestinationLocationContext()
         
@@ -3771,7 +3771,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            if file_import_options.GetLocationImportOptions().AutomaticallyArchives():
+            if import_options_container.GetLocationImportOptions().AutomaticallyArchives():
                 
                 if HG.file_import_report_mode:
                     

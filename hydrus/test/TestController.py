@@ -1017,7 +1017,7 @@ class Controller( object ):
             TestHydrusNetworking
         ]
         
-        module_lookup[ 'import' ] = [
+        module_lookup[ 'subscriptions' ] = [
             TestClientImportSubscriptions
         ]
         

@@ -33,9 +33,11 @@ def FileIsAnimated( path ):
 # bits of this were originally cribbed from moviepy
 def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second = False ):
     
+    ffmpeg_path = HydrusFFMPEG.GetCurrentFFMPEGPath()
+    
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-xerror", "-i", path ]
+    cmd = [ ffmpeg_path, "-xerror", "-i", path ]
     
     if only_first_second:
         
@@ -787,6 +789,8 @@ def ParseFFMPEGVideoResolution( lines, png_ok = False ) -> tuple[ int, int ]:
 
 def VideoHasAudio( path, info_lines ) -> bool:
     
+    ffmpeg_path = HydrusFFMPEG.GetCurrentFFMPEGPath()
+    
     ( audio_found, audio_format ) = HydrusAudioHandling.ParseFFMPEGAudio( info_lines )
     
     if not audio_found:
@@ -798,7 +802,7 @@ def VideoHasAudio( path, info_lines ) -> bool:
     # so, let's read it as PCM and see if there is any noise
     # this obviously only works for single audio stream vids, we'll adapt this if someone discovers a multi-stream mkv with a silent channel that doesn't work here
     
-    cmd = [ HydrusFFMPEG.FFMPEG_PATH ]
+    cmd = [ ffmpeg_path ]
     
     # this is perhaps not sensible for eventual playback and I should rather go for wav file-like and feed into python 'wave' in order to maintain stereo/mono and so on and have easy chunk-reading
     
@@ -942,7 +946,9 @@ class VideoRendererFFMPEG( object ):
         
         ( w, h ) = self._target_resolution
         
-        cmd = [ HydrusFFMPEG.FFMPEG_PATH ]
+        ffmpeg_path = HydrusFFMPEG.GetCurrentFFMPEGPath()
+        
+        cmd = [ ffmpeg_path ]
         
         if do_ss and do_fast_seek: # fast seek
             

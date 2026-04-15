@@ -12,6 +12,9 @@ from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainerMigration
+from hydrus.client.importing.options import NoteImportOptionsLegacy
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.importing.options import PrefetchImportOptions
 
 class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
@@ -232,7 +235,20 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                                     file_import_options.SetPrefetchImportOptions( prefetch_import_options )
                                     file_import_options.SetFileFilteringImportOptions( file_filtering_import_options )
                                     
-                                    file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'Downloaded File - {hash.hex()}' )
+                                    tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
+                                    note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+                                    note_import_options.SetIsDefault( True )
+                                    
+                                    import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+                                        file_import_options,
+                                        FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+                                        tag_import_options,
+                                        note_import_options,
+                                        None,
+                                        'quick download'
+                                    )
+                                    
+                                    file_import_job = ClientImportFiles.FileImportJob( temp_path, import_options_container, human_file_description = f'Downloaded File - {hash.hex()}' )
                                     
                                     file_import_job.DoWork()
                                     

@@ -7,6 +7,62 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 668](https://github.com/hydrusnetwork/hydrus/releases/tag/v668)
+
+### mistakes
+
+* HOTFIX: I made a v667a last week to fix a regression where subscription queries with outstanding file queues were downloading those files even if the individual query was paused. The 'finish jobs even if you are DEAD' check change was too lenient first time around. Sorry for the trouble!
+* HOTFIX 2: I then made a v667b since the first one didn't get everything. individually paused queries that had a due-to-work 'do gallery search' check were 100% CPUing the subscription daemon. I fixed it in the same way as the file check and added additional guards for other 'cannot work' error states and calls. the run logic in individual subscription queries was not clean, and a little change revealed the faults. I regret it and apologise to those hit with inconvenience and frustration here
+* I have added unit tests for query pause, DEAD, 'has outstanding file work', 'has a due sync', 'is checking now', and 'is expecting to work in the future' states. this specific error will not happen again
+
+### new media viewer shortcuts
+
+* thanks to a user, we have some more window and media viewer options, including some clever debug stuff for those who get annoying 'rescued from offscreen' behaviour--
+* you can now map 'always on top: on, off, flip on/off' in the media viewer's shortcuts set
+* you can now map 'frameless: flip on/off' in the media viewer's shortcuts set
+* in `options->gui`, you can now control whether an offscreen-rescued window gets the (default 40, 40) top-left safety padding
+* you can also only remove the safety padding only when doing the 'resize to media' job for the media viewer
+* and you can set the fuzzy 40px amount to something else
+
+### misc
+
+* renamed a handful of shortcuts action labels from 'verb thing' to 'thing: verb' for better sorting
+* ADVANCED: added settings to `options->importing` to expose the until-now hardcoded bottlenecks on how many particular import queues can run at once (e.g. 'gallery files'). this is the thing that handles a 'pending' vs 'working' state in import page UI. it has an 'ADVANCED' warning label
+
+### client api
+
+* I chickened out of removing/default-off-ing some deprecated calls in the Client API as I had planned. it is not the season for causing fresh headaches, and nothing will break today
+* since we'll indefinitely live with some mess, I decided to make a quick update to `The Services Object`. I hate that I made the `service_key` the key of the Objects involved here since in some JSON libraries it is a real pain to navigate. thus, anywhere I add the old Services Object under `services`, I also now add `services_v2`, which has the services as a list. same format except they now have a `service_key` field. I will not remove `services` any time soon, so no need to change anything you already have
+* the Client API docs now refer to the `services_v2` structure so that new guys and projects are steered towards something non-weird
+* I concede this is spammy and inelegant, but it resolves and KISSes an early mistake. the cruft is intensifying to the point where we may not be able to contain it, but why contain it? let it spill over into the add-ons and the MCPs, let the scripts pile up in the streets. in the end, they will beg us for a Rust conversion
+* Client API version is now 90
+
+### db dir build stuff
+
+* I reworked how the 'help my db is broke.txt' help files (and for Windows, 'sqlite3.exe') end up in a db dir. these files now primarily live in `static/db_files`. any .txt files in there are mirrored into a new database folder on db creation. I strongly considered updating these files on any update, but I went back on it, preferring not to auto-fiddle with the db dir overmuch--I'll make a manual command for it
+* a `CONTENT_DB_PATH` variable that had caused some hassle for patched source installs like the AUR release is now gone
+* I will be removing the 'db' dir from the main repo in the future. I'll do more planning and testing around .gitignore just to be certain doing that will be smooth. we obviously want this to be absolutely failsafe
+* I also expect to eventually migrate these .txt files to proper .md help files, with formatting and everything, at which point this will scale back significantly, probably just to a single .txt that says 'if everything is busted, go here in the help'
+* I am finally ready to plan moving the default location of the db outside of the install dir. we'll have a first-start wizard to select/find location and a small file in your user folder to track available profiles or whatever if the client is run without `-d`, or something along those lines. this transition will take careful planning, so your general thoughts are appreciated
+
+### boring import options overhaul
+
+* every single importer across the program now converts the legacy file, tag, and note import options to the new 'import options container' before passing it to the main file import object. the whole file import object pipeline below the importer level is now converted to the new options structure!
+* cleared 'file import options' out of some of the parsing pipeline where it wasn't used any more. this seems to have cleared all import options out of the gallery pipeline
+* wrote out a modern 'set up a default set of options' call following the existing loud/quiet dichotomy and 'post urls get tags; watchers don't' ruleset
+* my in-testing 'import options' panel gets a 'reset to defaults' button that will reset the main defaults, all the custom url classes, or the favourites/templates
+* fiddled with some of the wording in this UI. defaulting the defaults back to 'use defaults' etc.. can make for unclear tooltips
+* fleshed out the container object to offer up different import options in a more convenient and nicely typed way in the real pipelines
+* in the file import, the 'should fetch metadata even if url/hash recognised...' advanced setting is now strictly _any_ metadata. previously this checkbox would only kick in if you actually had some tags set up to parse and import somewhere. after the migration, these checkboxes will be moving to an independant 'prefetch import options' guy, away from tags completely
+* certain non-already-in-db imports that have no tags or notes are now one db hit cheaper
+* certain already-in-db imports are now one db hit cheaper
+
+### other boring stuff
+
+* fixed a possible count bug in the thread slot system where in certain late-initialisation systems it could undercount the number of active jobs in a slot
+* the 'prefer system ffmpeg' setting no longer needs a client restart. the call that discerns the ffmpeg path to use is also a little more sensible and failsafe, and cycling the options dialog now resets some state so you can put an ffmpeg in your hydrus 'bin' folder, ok the options, and it'll redo the 'is there one there?' test
+* updated `crash.log` to `/db/hydrus_crash.log` in `.gitignore` file
+
 ## [Version 667](https://github.com/hydrusnetwork/hydrus/releases/tag/v667)
 
 ### misc
@@ -479,54 +535,3 @@ title: Changelog
 * fixed the 'this service doesn't use an SVG rating' 404 when fetching SVG files for rating services--it was 500ing previously. added a unit test for this too
 * fixed the error handling in this SVG fetch routine to handle certain other error cases better
 * client api version is now 88
-
-## [Version 658](https://github.com/hydrusnetwork/hydrus/releases/tag/v658)
-
-### misc
-
-* fixed an exclusive-to-inclusive system predicate parsing regression, for instance the input `system:filetype is not x` was parsing as `system:filetype is x`, which was because of a logical hole in a recent rewrite
-* added 'Active Search Predicates list height' to `options->file search`. this is the list _above_ the tag autocomplete input on normal search boxes. defaults to 6 (was previously 8 due to weirdness)
-* tag lists no longer default to min height 8 rows but 1. let me know if anything sizes crazy now
-* fixed the `help->about` db transaction period, which was typoed and calculating off the wrong number
-* the 'don't use important accounts with hydrus' warning is clarified and unified in the downloader help, login dialog, and now session cookies dialog
-* the media viewer right-click menu now has a 'player' sub-menu at the end that says what player (mpv, QtMediaPlayer, Hydrus Native stuff) is currently in view. might be worth tucking this into a deeper advanced/maintenance/debug menu somewhere in a future reshuffle, but for now it is there
-
-### QtMediaPlayer (and an mpv thing)
-
-* fixed a 'C++ object already deleted' instability error with the new GraphicsView QtMediaPlayer. I had this a couple of times in devving but needed to tighten up how some mouse event hacks were owned and destroyed
-* fixed an UI hang that could sometimes occur in PySide6 when opening a new media viewer when the preview viewer already has a QtMediaPlayer loaded
-* added `TEST: Use the same mpv player through media transitions` and `TEST: Use the same QtMediaPlayer through media transitions` options to `options->media playback`. previously, I would always create or swap to a different player when navigating from video to video, because re-using the same guy was super flickery or crash city. things are better now and I'm open to testing it more
-* added `TEST: Use OpenGL Window in QtMediaPlayer` to `options->media playback`. maybe it improves performance for big vids? I noticed it can cause some initial window-level flickering in Windows, but it is worth trying in different situations
-
-### boring QtMediaPlayer cleanup
-
-* the new GraphicsView test now loops natively and tracks 'num plays' through some fudgy maths (previously it hooked into the video 'end; stop' statechange and manually did 'seek 0; play'). I've had some reports about the program hanging on video end-loop, so let's see if this helps that
-* made the mouse-move event hack a little safer
-* rewrote some media destruction signals and moved QtMediaPlayer destruction responsibility from the GUI to the MediaContainer itself. there's no more weird reparenting
-* QtMediaPlayers are now cleaned up more aggressively. generally a 500ms timer instead of 5s
-
-### boring cleanup
-
-* broke `options->media playback` into sections and fixed some layout issues
-* fixed a bit of foolishness that was causing the `hydrus_test_boot.py` unit test script to always exit( 1 ) even when everything was OK
-* relatedly, replaced all lazy `except:` handling with `except Exception as e:`
-* if the duplicates filter fails to generate a visual duplicate comparison, the error now only makes one popup per program boot. it still spams some basic 'hash x failed' stuff to log so we can debug the issue
-* cleaned up a little 'menu last click' global out of HG
-* added a 'Run the launch script, not the .py' note to the 'running from source' help
-
-### boring import options overhaul
-
-* broke the 'file filtering import options' (stuff like allowed filetypes and min/max filesize) out of 'file import options (legacy)' just like I did presentation and prefetch import options the other week. the legacy object now holds a 'file filtering import options' sub-object in prep for the conversion to the new options structure
-* did the same for the 'location import options' (stuff like where to put the file and auto-archive/url options)
-* wrote an edit panel for 'file filtering import options'
-* did the same for 'location import options'
-* fixed the red warning text about an invalid, empty import destination context to now appear properly and instantly on dialog load, if it boots with an invalid destination context
-* 'associate primary/source urls' checkboxes are no longer hidden behind advanced mode
-* the prefetch import options are now in their own edit panel
-* the presentation and notes import options panels are now QWidgets not ScrollingEditPanels, which will fix some jank layout we've seen here
-* fixed some layout expanding issues in the file import options panel
-* network job and file import statuses now work with a file filtering import options object for their filtering decisions, not a file import options
-* importers now consult a location import options for pre-work destination validity checks
-* updated the unit tests for the new 'file filtering import options' object
-* updated the unit tests for the 'location import options' object
-* wrote some very basic prefitch import options unit tests

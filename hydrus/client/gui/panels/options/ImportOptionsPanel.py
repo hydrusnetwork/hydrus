@@ -66,7 +66,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: reset selected to default and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: clear selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteDefaultMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste onto what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
         
@@ -77,6 +77,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         default_import_options_list_panel.AddButton( 'edit', self._EditDefault, enabled_only_on_single_selection = True )
         default_import_options_list_panel.AddButton( 'clear', self._ClearDefault, enabled_only_on_selection = True )
+        default_import_options_list_panel.AddSeparator()
+        default_import_options_list_panel.AddButton( 'reset to defaults', self._ResetDefaultToDefault )
         
         #
         
@@ -96,8 +98,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: reset selected to default and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste only what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: clear selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste only what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
         
         url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
@@ -496,6 +498,59 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     def _PasteURLClassMerge( self ):
         
         self._PasteURLClass( paste_type = PASTE_MERGE )
+        
+    
+    def _ResetDefaultToDefault( self ):
+        
+        choice_tuples = [
+            ( 'reset top defaults', 'defaults', 'Clear the default import options list and set everything back to how a new client database has it.' ),
+            ( 'reset url classes', 'url_classes', 'Clear all the default URL Class entries.' ),
+            ( 'reset favourites/templates', 'favourites', 'Clear the favourites/templates under the star icon button.' )
+        ]
+        
+        try:
+            
+            default_reset_result = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Reset things?', choice_tuples )
+            
+        except HydrusExceptions.CancelledException as e:
+            
+            return
+            
+        
+        message = f'Hey, you selected to reset "{default_reset_result}". I am going to clear everything and reset to defaults, ok? If it does not go how you want, cancel out of the options dialog.'
+        
+        yn_result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'let\'s do it', no_label = 'no, hold off' )
+        
+        if yn_result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        if default_reset_result == 'defaults':
+            
+            ImportOptionsContainer.ImportOptionsManager.STATICPopulateManagerWithDefaultDefaults( self._import_options_container_manager )
+            
+            self._default_import_options_list.UpdateDatas()
+            
+        elif default_reset_result == 'url_classes':
+            
+            url_class_keys = list( self._import_options_container_manager.GetURLClassKeysToDefaultImportOptionsContainers().keys() )
+            
+            for url_class_key in url_class_keys:
+                
+                self._import_options_container_manager.DeleteDefaultImportOptionsContainerForURLClass( url_class_key )
+                
+            
+            ImportOptionsContainer.ImportOptionsManager.STATICPopulateManagerWithDefaultURLClassDefaults( self._import_options_container_manager )
+            
+            self._url_class_import_options_list.UpdateDatas()
+            
+        elif default_reset_result == 'favourites':
+            
+            self._import_options_container_manager.SetFavouriteImportOptionContainers( {} )
+            
+            ImportOptionsContainer.ImportOptionsManager.STATICPopulateManagerWithDefaultFavourites( self._import_options_container_manager )
+            
         
     
     def _SeeDefaultStack( self ):

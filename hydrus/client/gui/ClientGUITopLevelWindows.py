@@ -21,17 +21,20 @@ FUZZY_PADDING = 10
 # let's see what happens if we forgive such madness
 #FORGIVE_FRAME_GUBBINS_FUZZY_PADDING = 40 #now global user controlled. leaving this and above for posterity
 
-def GetSafePosition( position: QC.QPoint, frame_key, fuzzy_relocate = True ):
+def GetSafePosition( position: QC.QPoint, frame_key ):
     
     if CG.client_controller.new_options.GetBoolean( 'disable_get_safe_position_test' ):
         
         return ( position, None )
         
     
-    if not CG.client_controller.new_options.GetBoolean( 'fuzzy_relocate_on_get_safe_position_test' ) or ( 
-       not CG.client_controller.new_options.GetBoolean( 'fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas' ) and frame_key == 'media_window' ):
+    if frame_key == 'media_window_size_self_to_media':
         
-        fuzzy_relocate = False
+        do_fuzzy_relocate = CG.client_controller.new_options.GetBoolean( 'fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas' )
+        
+    else:
+        
+        do_fuzzy_relocate = CG.client_controller.new_options.GetBoolean( 'fuzzy_relocate_on_get_safe_position_test' )
         
     
     # some window managers size the windows just off screen to cut off borders
@@ -52,7 +55,12 @@ def GetSafePosition( position: QC.QPoint, frame_key, fuzzy_relocate = True ):
             
             first_display = QW.QApplication.screens()[0]
             
-            rescue_position = first_display.availableGeometry().topLeft() + ( fuzzy_point if fuzzy_relocate else QC.QPoint( 0, 0 ) )
+            rescue_position = first_display.availableGeometry().topLeft()
+            
+            if do_fuzzy_relocate:
+                
+                rescue_position += fuzzy_point
+                
             
             rescue_screen = QW.QApplication.screenAt( rescue_position )
             

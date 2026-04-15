@@ -11,16 +11,42 @@ FFMPEG_NO_CONTENT_ERROR_PUBBED = False
 
 if HC.PLATFORM_WINDOWS:
     
-    FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg.exe' )
+    FFMPEG_EXE_NAME = 'ffmpeg.exe'
     
 else:
     
-    FFMPEG_PATH = os.path.join( HC.BIN_DIR, 'ffmpeg' )
+    FFMPEG_EXE_NAME = 'ffmpeg'
     
 
-if not os.path.exists( FFMPEG_PATH ):
+HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR = False
+HYDRUS_BIN_FFMPEG_EXISTS = False
+PREFER_SYSTEM_FFMPEG = False
+
+FFMPEG_SUBPROCESS_TIMEOUT = 15
+
+def GetCurrentFFMPEGPath() -> str:
     
-    FFMPEG_PATH = os.path.basename( FFMPEG_PATH )
+    if not PREFER_SYSTEM_FFMPEG:
+        
+        hydrus_bin_ffmpeg_path = os.path.join( HC.BIN_DIR, FFMPEG_EXE_NAME )
+        
+        global HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR
+        global HYDRUS_BIN_FFMPEG_EXISTS
+        
+        if not HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR:
+            
+            HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR = True
+            
+            HYDRUS_BIN_FFMPEG_EXISTS = os.path.exists( hydrus_bin_ffmpeg_path )
+            
+        
+        if HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR and HYDRUS_BIN_FFMPEG_EXISTS:
+            
+            return hydrus_bin_ffmpeg_path
+            
+        
+    
+    return FFMPEG_EXE_NAME
     
 
 def CheckFFMPEGError( lines ):
@@ -43,27 +69,29 @@ def CheckFFMPEGError( lines ):
 
 def GetFFMPEGVersion():
     
-    cmd = [ FFMPEG_PATH, '-version' ]
+    ffmpeg_path = GetCurrentFFMPEGPath()
+    
+    cmd = [ ffmpeg_path, '-version' ]
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
         
     except FileNotFoundError:
         
-        return 'no ffmpeg found at path "{}"'.format( FFMPEG_PATH )
+        return 'no ffmpeg found at path "{}"'.format( ffmpeg_path )
         
     except HydrusExceptions.SubprocessTimedOut:
         
-        return f'ffmpeg took too long to respond from path "{FFMPEG_PATH}"'
+        return f'ffmpeg took too long to respond from path "{ffmpeg_path}"'
         
     except Exception as e:
         
         HydrusData.ShowException( e )
         
-        return 'unable to execute ffmpeg at path "{}"'.format( FFMPEG_PATH )
+        return 'unable to execute ffmpeg at path "{}"'.format( ffmpeg_path )
         
     
     lines = stdout.splitlines()
@@ -162,23 +190,25 @@ def HandleFFMPEGNoContentAndGenerateException( path, stdout, stderr ):
 
 def RenderImageToImagePath( path, temp_image_path ):
     
+    ffmpeg_path = GetCurrentFFMPEGPath()
+    
     # -y to overwrite the temp path
     
     if temp_image_path.endswith( '.jpg' ):
         
         # '-q:v 1' does high quality
-        cmd = [ FFMPEG_PATH, "-xerror", '-y', "-i", path, "-q:v", "1", temp_image_path ]
+        cmd = [ ffmpeg_path, "-xerror", '-y', "-i", path, "-q:v", "1", temp_image_path ]
         
     else:
         
-        cmd = [ FFMPEG_PATH, "-xerror", '-y', "-i", path, temp_image_path ]
+        cmd = [ ffmpeg_path, "-xerror", '-y', "-i", path, temp_image_path ]
         
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        HydrusSubprocess.RunSubprocess( cmd )
+        HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
         
     except HydrusExceptions.SubprocessTimedOut:
         
@@ -192,15 +222,17 @@ def RenderImageToImagePath( path, temp_image_path ):
 
 def RenderImageToRawRGBABytes( path ):
     
+    ffmpeg_path = GetCurrentFFMPEGPath()
+    
     # no dimensions here, so called is responsible for reshaping numpy array or whatever
     
-    cmd = [ FFMPEG_PATH, "-xerror", '-i', path, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-' ]
+    cmd = [ ffmpeg_path, "-xerror", '-i', path, '-f', 'rawvideo', '-pix_fmt', 'rgba', '-' ]
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, bufsize = 1024 * 512, text = False )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
         
     except HydrusExceptions.SubprocessTimedOut:
         
@@ -216,13 +248,15 @@ def RenderImageToRawRGBABytes( path ):
 
 def RenderImageToPNGBytes( path ):
     
-    cmd = [ FFMPEG_PATH, "-xerror", '-i', path, '-f', 'image2pipe', '-vcodec', 'png', '-' ]
+    ffmpeg_path = GetCurrentFFMPEGPath()
+    
+    cmd = [ ffmpeg_path, "-xerror", '-i', path, '-f', 'image2pipe', '-vcodec', 'png', '-' ]
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, bufsize = 1024 * 512, text = False )
+        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
         
     except HydrusExceptions.SubprocessTimedOut:
         

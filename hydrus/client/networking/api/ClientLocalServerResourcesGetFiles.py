@@ -519,6 +519,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         if include_services_object:
             
             body_dict[ 'services' ] = ClientLocalServerCore.GetServicesDict()
+            body_dict[ 'services_v2' ] = ClientLocalServerCore.GetServicesList()
             
         
         mime = request.preferred_mime

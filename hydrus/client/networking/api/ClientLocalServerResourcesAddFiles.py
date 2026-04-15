@@ -20,6 +20,9 @@ from hydrus.client import ClientPaths
 from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainerMigration
+from hydrus.client.importing.options import NoteImportOptionsLegacy
+from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientFileMigration
 from hydrus.client.networking.api import ClientLocalServerCore
@@ -76,7 +79,20 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
             file_import_options.GetLocationImportOptions().SetDestinationLocationContext( custom_location_context )
             
         
-        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'API POSTed File' )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+        note_import_options.SetIsDefault( True )
+        
+        import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+            file_import_options,
+            FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+            tag_import_options,
+            note_import_options,
+            None,
+            'api file'
+        )
+        
+        file_import_job = ClientImportFiles.FileImportJob( temp_path, import_options_container, human_file_description = f'API POSTed File' )
         
         body_dict = {}
         

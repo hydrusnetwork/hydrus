@@ -1200,8 +1200,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         window_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._my_canvas._window_always_on_top, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_THISWINDOW_ALWAYS_ON_TOP_FLIP ) )
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'remove titlebar/frame', 'Toggle the OS frame of this window.', self._my_canvas._window_hide_frame, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_THISWINDOW_FRAMELESS_FLIP ) )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._my_canvas.IsAlwaysOnTop(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP ) )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'remove titlebar/frame', 'Toggle the OS frame of this window.', self._my_canvas.IsHidingWindowFrame(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_FRAMELESS_FLIP ) )
         
         ClientGUIMenus.AppendSeparator( window_menu )
         

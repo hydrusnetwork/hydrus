@@ -79,9 +79,11 @@ def GetPSDImageResourceIds( image_resources ):
 
 def GetFFMPEGPSDLines( path ):
     
+    ffmpeg_path = HydrusFFMPEG.GetCurrentFFMPEGPath()
+    
     # open the file in a pipe, provoke an error, read output
     
-    cmd = [ HydrusFFMPEG.FFMPEG_PATH, "-xerror", "-i", path ]
+    cmd = [ ffmpeg_path, "-xerror", "-i", path ]
     
     HydrusData.CheckProgramIsNotShuttingDown()
     

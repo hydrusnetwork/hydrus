@@ -968,20 +968,20 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         
         #
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( self )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( self )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( self )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( self )
         
         tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
         tt += '\n' * 2
-        tt += 'This will force the client to download the metadata for a file even if it thinks it has visited its page before. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
+        tt += 'This will force the client to download the metadata for a file even if it recognises the URL and thinks it already has it. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'I strongly recommend you uncheck this for normal use.  When it is on, downloaders could be inefficent!'
         tt += '\n' * 2
-        tt += 'This will force the client to download further metadata for a file even if an earlier parsing step has given a hash that the client thinks it recognises. Normally, hydrus will skip downloading an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
+        tt += 'This will force the client to download further metadata for a file even if an earlier parsing step has given a hash it recognises and thinks it already has it. Normally, hydrus will skip downloading an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._preimport_hash_check_type = ClientGUICommon.BetterChoice( self )
         self._preimport_url_check_type = ClientGUICommon.BetterChoice( self )
@@ -1036,13 +1036,13 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         
         rows = []
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setVisible( False )
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setVisible( False )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setVisible( False )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setVisible( False )
         
-        #rows.append( ( 'force metadata fetch even if hash recognised and file appears "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
-        #rows.append( ( 'force metadata fetch even if url recognised and file appears "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
         rows.append( ( 'check hashes to determine "already in db/previously deleted" outcome?: ', self._preimport_hash_check_type ) )
         rows.append( ( 'check URLs to determine "already in db/previously deleted" outcome?: ', self._preimport_url_check_type ) )
+        #rows.append( ( 'force metadata/page fetch even if hash recognised and file appears "already in db"?: ', self._preimport_hash_check_type ) )
+        #rows.append( ( 'force metadata/page fetch even if url recognised and file appears "already in db"?: ', self._preimport_url_check_type ) )
         rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -1061,8 +1061,8 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
         self._UpdateDispositiveFromHash()
         self._UpdateDispositiveFromURL()
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.clicked.connect( self.valueChanged )
         self._preimport_url_check_looks_for_neighbour_spam.clicked.connect( self.valueChanged )
         
     
@@ -1107,8 +1107,8 @@ class EditPrefetchImportOptionsPanel( QW.QWidget ):
     
     def SetValue( self, prefetch_import_options: PrefetchImportOptions.PrefetchImportOptions ):
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfHashKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setChecked( prefetch_import_options.ShouldFetchMetadataEvenIfURLKnownAndFileAlreadyInDB() )
         
         preimport_hash_check_type = prefetch_import_options.GetPreImportHashCheckType()
         preimport_url_check_type = prefetch_import_options.GetPreImportURLCheckType()
@@ -1775,20 +1775,20 @@ class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
         
         prefetch_import_options_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'prefetch options' )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( prefetch_import_options_panel )
         
         tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
         tt += '\n' * 2
         tt += 'This will force the client to download the metadata for a file even if it thinks it has visited its page before. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'I strongly recommend you uncheck this for normal use.  When it is on, downloaders could be inefficent!'
         tt += '\n' * 2
         tt += 'This will force the client to download the metadata for a file even if the gallery step has given a hash that the client thinks it recognises. Normally, hydrus will skip an URL in this case (although the hash-from-gallery case is rare, so this option rarely matters). This is mostly a debug complement to the url check option.'
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1806,8 +1806,8 @@ class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._use_default_dropdown.SetValue( tag_import_options_legacy.IsDefault() )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         self._SetValue( tag_import_options_legacy )
         
@@ -1833,8 +1833,8 @@ class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'force page fetch even if url recognised and file already in db: ', self._fetch_tags_even_if_url_recognised_and_file_already_in_db ) )
-        rows.append( ( 'force page fetch even if hash recognised and file already in db: ', self._fetch_tags_even_if_hash_recognised_and_file_already_in_db ) )
+        rows.append( ( 'force metadata/page fetch even if url recognised and file already in db: ', self._fetch_metadata_even_if_url_recognised_and_file_already_in_db ) )
+        rows.append( ( 'force metadata/page fetch even if hash recognised and file already in db: ', self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db ) )
         
         gridbox = ClientGUICommon.WrapInGrid( prefetch_import_options_panel, rows )
         
@@ -1933,8 +1933,8 @@ class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._use_default_dropdown.SetValue( tag_import_options_legacy.IsDefault() )
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfURLKnownAndFileAlreadyInDB() )
+        self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.setChecked( tag_import_options_legacy.ShouldFetchTagsEvenIfHashKnownAndFileAlreadyInDB() )
         
         self._tag_filtering_import_options.SetValue( tag_filtering_import_options )
         
@@ -1978,8 +1978,8 @@ class EditTagImportOptionsLegacyPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_tags_even_if_url_recognised_and_file_already_in_db.isChecked()
-            fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.isChecked()
+            fetch_tags_even_if_url_recognised_and_file_already_in_db = self._fetch_metadata_even_if_url_recognised_and_file_already_in_db.isChecked()
+            fetch_tags_even_if_hash_recognised_and_file_already_in_db = self._fetch_metadata_even_if_hash_recognised_and_file_already_in_db.isChecked()
             
             tag_filtering_import_options = self._tag_filtering_import_options.GetValue()
             tag_import_options = self._tag_import_options.GetValue()

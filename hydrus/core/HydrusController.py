@@ -48,8 +48,6 @@ class HydrusController( object ):
         
         self._thread_slots = {}
         
-        self._thread_slots[ 'misc' ] = ( 0, 10 )
-        
         self._thread_slot_lock = threading.Lock()
         
         self._call_to_threads = []
@@ -716,7 +714,7 @@ class HydrusController( object ):
             
             ( current_threads, max_threads ) = self._thread_slots[ thread_type ]
             
-            self._thread_slots[ thread_type ] = ( current_threads - 1, max_threads )
+            self._thread_slots[ thread_type ] = ( max( 0, current_threads - 1 ), max_threads )
             
         
     

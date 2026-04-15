@@ -197,11 +197,6 @@ class Controller( HydrusController.HydrusController ):
         
         self._page_key_lock = threading.Lock()
         
-        self._thread_slots[ 'watcher_files' ] = ( 0, 15 )
-        self._thread_slots[ 'watcher_check' ] = ( 0, 5 )
-        self._thread_slots[ 'gallery_files' ] = ( 0, 15 )
-        self._thread_slots[ 'gallery_search' ] = ( 0, 5 )
-        
         self._alive_page_keys = set()
         self._closed_page_keys = set()
         
@@ -370,6 +365,27 @@ class Controller( HydrusController.HydrusController ):
                     break
                     
                 
+            
+        
+    
+    def _UpdateThreadSlotLockLimits( self ):
+        
+        for ( lock_name, option_name ) in [
+            ( 'misc', 'thread_slots_misc' ),
+            ( 'gallery_files', 'thread_slots_gallery_files' ),
+            ( 'gallery_search', 'thread_slots_gallery_search' ),
+            ( 'watcher_files', 'thread_slots_watcher_files' ),
+            ( 'watcher_check', 'thread_slots_watcher_check' ),
+        ]:
+            
+            if lock_name not in self._thread_slots:
+                
+                self._thread_slots[ lock_name ] = ( 0, 1 )
+                
+            
+            ( current_thread_count, current_option ) = self._thread_slots[ lock_name ]
+            
+            self._thread_slots[ lock_name ] = ( current_thread_count, self.new_options.GetInteger( option_name ) )
             
         
     
@@ -1234,6 +1250,18 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusPaths.DO_NOT_DO_CHMOD_MODE = self.new_options.GetBoolean( 'do_not_do_chmod_mode' )
         
+        with self._thread_slot_lock:
+            
+            self._UpdateThreadSlotLockLimits()
+            
+        
+        from hydrus.core.files import HydrusFFMPEG
+        
+        HydrusFFMPEG.HYDRUS_BIN_FFMPEG_WAS_LOOKED_FOR = False
+        HydrusFFMPEG.HYDRUS_BIN_FFMPEG_EXISTS = False
+        HydrusFFMPEG.PREFER_SYSTEM_FFMPEG = self.new_options.GetBoolean( 'use_system_ffmpeg' )
+        HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT = self.new_options.GetInteger( 'ffmpeg_subprocess_timeout' )
+        
     
     def InitModel( self ):
         
@@ -1251,15 +1279,7 @@ class Controller( HydrusController.HydrusController ):
         
         HC.options = self.options
         
-        if self.new_options.GetBoolean( 'use_system_ffmpeg' ):
-            
-            from hydrus.core.files import HydrusFFMPEG
-            
-            if HydrusFFMPEG.FFMPEG_PATH.startswith( HC.BIN_DIR ):
-                
-                HydrusFFMPEG.FFMPEG_PATH = os.path.basename( HydrusFFMPEG.FFMPEG_PATH )
-                
-            
+        self.ReinitGlobalSettings()
         
         self.frame_splash_status.SetSubtext( 'image caches' )
         
@@ -1587,8 +1607,6 @@ class Controller( HydrusController.HydrusController ):
             
         
         self.CallBlockingToQtTLW( qt_code_style )
-        
-        self.ReinitGlobalSettings()
         
         def qt_code_pregui():
             

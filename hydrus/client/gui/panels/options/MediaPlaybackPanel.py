@@ -172,8 +172,13 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         system_panel = ClientGUICommon.StaticBox( self, 'system' )
         
+        # this ffmpeg stuff can migrate to the executable manager when we get there, maybe as some hardcoded 'global'-like entry
+        
         self._use_system_ffmpeg = QW.QCheckBox( system_panel )
-        self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using any static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
+        self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Hydrus first looks for it in your "install_dir/(lib/)bin" folder but will fallback to just asking PATH; check this to always default to the system ffmpeg in your path.' ) )
+        
+        self._ffmpeg_subprocess_timeout = ClientGUICommon.BetterSpinBox( system_panel, 15, 1, 600 )
+        self._ffmpeg_subprocess_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If an ffmpeg call (fetch video metadata, thumbnail rendering, etc..) takes longer than this, the job is cancelled. If you have a big webms and a slow computer, you can boost this.' ) )
         
         self._load_images_with_pil = QW.QCheckBox( system_panel )
         self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
@@ -245,6 +250,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
         self._do_icc_profile_normalisation.setChecked( self._new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
         self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
+        self._ffmpeg_subprocess_timeout.setValue( self._new_options.GetInteger( 'ffmpeg_subprocess_timeout' ) )
         
         all_media_view_options = self._new_options.GetMediaViewOptions()
         
@@ -336,6 +342,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
+        rows.append( ( 'FFMPEG call timeout:', self._ffmpeg_subprocess_timeout ) )
         rows.append( ( 'Apply image ICC Profile colour adjustments:', self._do_icc_profile_normalisation ) )
         rows.append( ( 'Allow loading of truncated images:', self._enable_truncated_images_pil ) )
         rows.append( ( 'Load images with PIL:', self._load_images_with_pil ) )

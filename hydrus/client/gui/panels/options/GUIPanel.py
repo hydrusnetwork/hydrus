@@ -79,8 +79,8 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas = QW.QCheckBox( self._misc_panel )
         self._fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'Unchecked by default to prevent the above padding behaviour when sizing media viewer windows to their media. Check to enable this behaviour again in that specific case.' ) )
         
-        self._save_window_size_and_position_on_close = QW.QCheckBox( self._misc_panel )
-        self._save_window_size_and_position_on_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you want to save media viewer size when closing the window in addition to when it gets resized/moved normally, check this box. Can be useful behaviour when using multiple open media viewers.' ) )
+        self._save_media_viewer_window_size_and_position_on_close = QW.QCheckBox( self._misc_panel )
+        self._save_media_viewer_window_size_and_position_on_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you want to save media viewer size when closing the window in addition to when it gets resized/moved normally, check this box. Can be useful behaviour when using multiple open media viewers.' ) )
         
         self._forgive_frame_gubbins_fuzzy_padding = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 0, max = 100 )
         self._forgive_frame_gubbins_fuzzy_padding.setToolTip( ClientGUIFunctions.WrapToolTip( 'Controls the amount of fuzziness added to the rescued window positions. This applies to both of the above 2 options.' ) )
@@ -135,7 +135,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._forgive_frame_gubbins_fuzzy_padding.setValue( self._new_options.GetInteger( 'forgive_frame_gubbins_fuzzy_padding' ) )
         
-        self._save_window_size_and_position_on_close.setChecked( self._new_options.GetBoolean( 'save_window_size_and_position_on_close' ) )
+        self._save_media_viewer_window_size_and_position_on_close.setChecked( self._new_options.GetBoolean( 'save_media_viewer_window_size_and_position_on_close' ) )
         
         for ( name, info ) in self._new_options.GetFrameLocations():
             
@@ -185,12 +185,10 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'BUGFIX: Disable off-screen window rescue: ', self._disable_get_safe_position_test ) )
-        
-        rows.append( ( 'Rescue windows extra safely:', self._fuzzy_relocate_on_get_safe_position_test ) )
-        rows.append( ( 'Rescue extra safely for programmatic resize:', self._fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas ) )
-        rows.append( ( 'DEBUG: how much extra padding to use (px): ', self._forgive_frame_gubbins_fuzzy_padding ) )
-        
-        rows.append( ( 'Save media viewer window size and position on close: ', self._save_window_size_and_position_on_close ) )
+        rows.append( ( 'When rescuing, add top-left safety padding:', self._fuzzy_relocate_on_get_safe_position_test ) )
+        rows.append( ( 'DEBUG: When rescuing resizing-to-media media viewer, add top-left safety padding:', self._fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas ) )
+        rows.append( ( 'DEBUG: top-left padding to use (px): ', self._forgive_frame_gubbins_fuzzy_padding ) )
+        rows.append( ( 'Save media viewer window size and position on close: ', self._save_media_viewer_window_size_and_position_on_close ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -355,7 +353,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'fuzzy_relocate_on_get_safe_position_test', self._fuzzy_relocate_on_get_safe_position_test.isChecked() )
         self._new_options.SetBoolean( 'fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas', self._fuzzy_relocate_on_get_safe_position_test_only_for_self_sizing_media_viewer_canvas.isChecked() )
         self._new_options.SetInteger( 'forgive_frame_gubbins_fuzzy_padding', self._forgive_frame_gubbins_fuzzy_padding.value() )
-        self._new_options.SetBoolean( 'save_window_size_and_position_on_close', self._save_window_size_and_position_on_close.isChecked() )
+        self._new_options.SetBoolean( 'save_media_viewer_window_size_and_position_on_close', self._save_media_viewer_window_size_and_position_on_close.isChecked() )
         
         for listctrl_list in self._frame_locations.GetData():
             

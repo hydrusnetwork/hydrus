@@ -5,14 +5,16 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.importing.options.FileFilteringImportOptions import FileFilteringImportOptions
-from hydrus.client.importing.options.LocationImportOptions import LocationImportOptions
-from hydrus.client.importing.options.NoteImportOptions import NoteImportOptions
-from hydrus.client.importing.options.PrefetchImportOptions import PrefetchImportOptions
-from hydrus.client.importing.options.PresentationImportOptions import PresentationImportOptions
-from hydrus.client.importing.options.TagFilteringImportOptions import TagFilteringImportOptions
-from hydrus.client.importing.options.TagImportOptions import TagImportOptions
+from hydrus.client import ClientLocation
+from hydrus.client.importing.options import FileFilteringImportOptions
+from hydrus.client.importing.options import LocationImportOptions
+from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.importing.options import PrefetchImportOptions
+from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.importing.options import TagFilteringImportOptions
+from hydrus.client.importing.options import TagImportOptions
 
 IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT = 0
 IMPORT_OPTIONS_CALLER_TYPE_POST_URLS = 1
@@ -428,6 +430,17 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def DeleteDefaultImportOptionsContainerForURLClass( self, url_class_key: bytes ):
+        
+        with self._lock:
+            
+            if url_class_key in self._url_class_keys_to_default_import_options_containers:
+                
+                del self._url_class_keys_to_default_import_options_containers[ url_class_key ]
+                
+            
+        
+    
     def DeleteFavourite( self, name: str ):
         
         with self._lock:
@@ -547,15 +560,13 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
     
     @staticmethod
-    def GetDefaultInitialisedManager() -> "ImportOptionsManager":
+    def STATICGetDefaultInitialisedManager() -> "ImportOptionsManager":
             
             import_options_manager = ImportOptionsManager.STATICGetEmptyButValidManager()
             
+            ImportOptionsManager.STATICPopulateManagerWithDefaultDefaults( import_options_manager )
+            ImportOptionsManager.STATICPopulateManagerWithDefaultURLClassDefaults( import_options_manager )
             ImportOptionsManager.STATICPopulateManagerWithDefaultFavourites( import_options_manager )
-            
-            # loud settings for global
-            # quiet filters for the three others
-            # post/watchable tag parsing
             
             return import_options_manager
             
@@ -564,7 +575,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     @staticmethod
     def STATICGetEmptyButValidManager() -> "ImportOptionsManager":
             
-            manager = ImportOptionsManager()
+            import_options_manager = ImportOptionsManager()
             
             for import_options_caller_type in IMPORT_OPTIONS_CALLER_TYPES_EDITABLE_CANONICAL_ORDER:
                 
@@ -572,20 +583,100 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
                 
                 if import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_GLOBAL:
                     
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_FILE_FILTERING, FileFilteringImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_LOCATIONS, LocationImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_NOTES, NoteImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PREFETCH, PrefetchImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PRESENTATION, PresentationImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAG_FILTERING, TagFilteringImportOptions() )
-                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAGS, TagImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_FILE_FILTERING, FileFilteringImportOptions.FileFilteringImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_LOCATIONS, LocationImportOptions.LocationImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_NOTES, NoteImportOptions.NoteImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PREFETCH, PrefetchImportOptions.PrefetchImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PRESENTATION, PresentationImportOptions.PresentationImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAG_FILTERING, TagFilteringImportOptions.TagFilteringImportOptions() )
+                    import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAGS, TagImportOptions.TagImportOptions() )
                     
                 
-                manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, import_options_container )
+                import_options_manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, import_options_container )
                 
             
-            return manager
+            return import_options_manager
             
+        
+    
+    @staticmethod
+    def STATICPopulateManagerWithDefaultDefaults( import_options_manager: "ImportOptionsManager" ):
+        
+        prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+        
+        prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+        prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
+        prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
+        
+        file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
+        
+        file_filtering_import_options.SetAllowsDecompressionBombs( True )
+        file_filtering_import_options.SetExcludesDeleted( True )
+        
+        location_import_options = LocationImportOptions.LocationImportOptions()
+        
+        location_import_options.SetAutomaticallyArchives( False )
+        location_import_options.SetShouldAssociatePrimaryURLs( True )
+        location_import_options.SetShouldAssociateSourceURLs( True )
+        location_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
+        
+        import_options_container = ImportOptionsContainer()
+        
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_FILE_FILTERING, file_filtering_import_options )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_LOCATIONS, location_import_options )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_NOTES, NoteImportOptions.NoteImportOptions() )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PREFETCH, prefetch_import_options )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PRESENTATION, PresentationImportOptions.PresentationImportOptions() )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAG_FILTERING, TagFilteringImportOptions.TagFilteringImportOptions() )
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAGS, TagImportOptions.TagImportOptions() )
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_GLOBAL, import_options_container )
+        
+        #
+        
+        quiet_presentation_import_options = PresentationImportOptions.PresentationImportOptions()
+        
+        quiet_presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
+        
+        quiet_import_options_container = ImportOptionsContainer()
+        
+        quiet_import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_PRESENTATION, quiet_presentation_import_options )
+        
+        #
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_SUBSCRIPTION, quiet_import_options_container.Duplicate() )
+        
+        #
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API, quiet_import_options_container.Duplicate() )
+        
+        #
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER, quiet_import_options_container.Duplicate() )
+        
+        #
+        
+        service_tag_import_options = TagImportOptions.ServiceTagImportOptions( get_tags = True )
+        
+        service_keys_to_service_tag_import_options = { CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY : service_tag_import_options }
+        
+        tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )
+        
+        import_options_container = ImportOptionsContainer()
+        
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAGS, tag_import_options )
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_POST_URLS, import_options_container )
+        
+        #
+        
+        tag_import_options = TagImportOptions.TagImportOptions()
+        
+        import_options_container = ImportOptionsContainer()
+        
+        import_options_container.SetImportOptions( IMPORT_OPTIONS_TYPE_TAGS, tag_import_options )
+        
+        import_options_manager.SetDefaultImportOptionsContainerForCallerType( IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS, import_options_container )
         
     
     @staticmethod
@@ -620,10 +711,17 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         )
         
     
+    @staticmethod
+    def STATICPopulateManagerWithDefaultURLClassDefaults( import_options_manager: "ImportOptionsManager" ):
+        
+        # no url class defaults right now
+        pass
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER ] = ImportOptionsManager
 
-ImportOptionsMetatype = PrefetchImportOptions | FileFilteringImportOptions | TagFilteringImportOptions | LocationImportOptions | TagImportOptions | NoteImportOptions | PresentationImportOptions
+ImportOptionsMetatype = PrefetchImportOptions.PrefetchImportOptions | FileFilteringImportOptions.FileFilteringImportOptions | TagFilteringImportOptions.TagFilteringImportOptions | LocationImportOptions.LocationImportOptions | TagImportOptions.TagImportOptions | NoteImportOptions.NoteImportOptions | PresentationImportOptions.PresentationImportOptions
 
 class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     
@@ -744,6 +842,39 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetFileFilteringImportOptions( self ) -> FileFilteringImportOptions.FileFilteringImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_FILE_FILTERING )
+        
+    
+    def GetImportOptions( self, import_options_type: int ) -> ImportOptionsMetatype:
+        
+        with self._lock:
+            
+            return self._GetImportOptions( import_options_type )
+            
+        
+    
+    def GetLocationImportOptions( self ) -> LocationImportOptions.LocationImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_LOCATIONS )
+        
+    
+    def GetNoteImportOptions( self ) -> NoteImportOptions.NoteImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_NOTES )
+        
+    
+    def GetPrefetchImportOptions( self ) -> PrefetchImportOptions.PrefetchImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_PREFETCH )
+        
+    
+    def GetPresentationImportOptions( self ) -> PresentationImportOptions.PresentationImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_PRESENTATION )
+        
+    
     def GetSourceLabel( self, import_options_type: int ) -> str:
         
         if self._should_be_full:
@@ -756,14 +887,6 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
         return self._import_option_types_to_source_labels.get( import_options_type, default_label )
-        
-    
-    def GetImportOptions( self, import_options_type: int ) -> ImportOptionsMetatype:
-        
-        with self._lock:
-            
-            return self._GetImportOptions( import_options_type )
-            
         
     
     def GetSummary( self, show_downloader_options: bool = True ):
@@ -800,6 +923,16 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
                 return ', '.join( short_summary_components )
                 
             
+        
+    
+    def GetTagFilteringImportOptions( self ) -> TagFilteringImportOptions.TagFilteringImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_TAG_FILTERING )
+        
+    
+    def GetTagImportOptions( self ) -> TagImportOptions.TagImportOptions:
+        
+        return self.GetImportOptions( IMPORT_OPTIONS_TYPE_TAGS )
         
     
     def HasImportOptions( self, import_options_type: int ):

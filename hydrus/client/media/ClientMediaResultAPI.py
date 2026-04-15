@@ -39,7 +39,7 @@ def PopulateMetadataAPIDict( metadata_list: list[ dict ], hashes: list[ bytes ],
     if not hide_service_keys_tags:
         
         warnings.warn(
-            'Hey, the hide_service_keys_tags parameter is deprecated, but a Client API script you are using it just relied on it! That script may stop working in v668 if it is not updated to use the newer "tags" structure!',
+            'Hey, the hide_service_keys_tags parameter is deprecated, but a Client API script you are using it just relied on it! It would be better to use the newer "tags" structure!',
             FutureWarning,
             stacklevel = 2
         )

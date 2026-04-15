@@ -310,7 +310,7 @@ def ShowAboutWindow( win: QW.QWidget ):
         
     else:
         
-        hydrus_license = 'no licence file found!'
+        hydrus_license = 'no license file found!'
         
     
     developers = [ 'Anonymous' ]

@@ -17,6 +17,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainerMigration
 from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientTags
@@ -228,9 +229,18 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
         note_import_options.SetIsDefault( True )
         
+        import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+            self._file_import_options,
+            FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+            tag_import_options,
+            note_import_options,
+            file_seed.GetReferralURL(),
+            file_seed.file_seed_data
+        )
+        
         try:
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, tag_import_options, note_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, import_options_container )
             
         except HydrusExceptions.NetworkException as e:
             
@@ -1078,11 +1088,20 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         url = file_seed.file_seed_data
         
+        import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+            self._file_import_options,
+            FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+            self._tag_import_options,
+            self._note_import_options,
+            file_seed.GetReferralURL(),
+            file_seed.file_seed_data
+        )
+        
         try:
             
             status_hook = lambda s: s # do nothing for now
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, import_options_container )
             
             real_presentation_import_options = FileImportOptionsLegacy.GetRealPresentationImportOptions( self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
             
@@ -1137,7 +1156,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                 return ClientImporting.UpdateFileSeedCacheWithFileSeeds( self._file_seed_cache, file_seeds )
                 
             
-            gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
+            gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory )
             
         except HydrusExceptions.NetworkException as e:
             

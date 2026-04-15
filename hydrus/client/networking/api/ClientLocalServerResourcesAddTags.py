@@ -370,7 +370,8 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResou
         
         body_dict = {
             'tags' : tags_dict,
-            'services' : ClientLocalServerCore.GetServicesDict()
+            'services' : ClientLocalServerCore.GetServicesDict(),
+            'services_v2' : ClientLocalServerCore.GetServicesList()
         }
         
         body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )

@@ -78,9 +78,9 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         license_textedit.setPlainText( license_text )
         license_textedit.setReadOnly( True )
         
-        text_width = ClientGUIFunctions.ConvertTextToPixelWidth( license_textedit, 64 )
+        text_width = ClientGUIFunctions.ConvertTextToPixelWidth( license_textedit, 80 )
         
-        license_textedit.setFixedWidth( text_width )
+        license_textedit.setMinimumWidth( text_width )
         
         tabwidget.addTab( desc_label, 'Description' )
         tabwidget.addTab( availability_label, 'Optional Libraries' )
@@ -94,7 +94,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, name_label, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( vbox, version_label, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( vbox, url_label, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( vbox, tabwidget, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, tabwidget, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         

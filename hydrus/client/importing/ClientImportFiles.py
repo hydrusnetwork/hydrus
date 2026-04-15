@@ -13,8 +13,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.files import ClientFiles
 from hydrus.client.files.images import ClientImagePerceptualHashes
-from hydrus.client.importing.options import FileFilteringImportOptions
-from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainer
 
 class FileImportStatus( object ):
     
@@ -41,7 +40,7 @@ class FileImportStatus( object ):
         return FileImportStatus( self.status, self.hash, mime = self.mime, note = self.note )
         
     
-    def ShouldImport( self, file_filtering_import_options: FileFilteringImportOptions.FileFilteringImportOptions ):
+    def ShouldImport( self, import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
         if self.status == CC.STATUS_UNKNOWN:
             
@@ -50,7 +49,7 @@ class FileImportStatus( object ):
         
         if self.status == CC.STATUS_DELETED:
             
-            if not file_filtering_import_options.ExcludesDeleted():
+            if not import_options_container.GetFileFilteringImportOptions().ExcludesDeleted():
                 
                 return True
                 
@@ -105,20 +104,15 @@ def CheckFileImportStatus( file_import_status: FileImportStatus ) -> FileImportS
     
 class FileImportJob( object ):
     
-    def __init__( self, temp_path: str, file_import_options: FileImportOptionsLegacy.FileImportOptionsLegacy, human_file_description = None ):
+    def __init__( self, temp_path: str, import_options_container: ImportOptionsContainer.ImportOptionsContainer, human_file_description = None ):
         
         if HG.file_import_report_mode:
             
             HydrusData.ShowText( f'File import job created:\nSource: {human_file_description}\nRaw import path: {temp_path}.' )
             
         
-        if file_import_options.IsDefault():
-            
-            file_import_options = FileImportOptionsLegacy.GetRealFileImportOptions( file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD )
-            
-        
         self._temp_path = temp_path
-        self._file_import_options = file_import_options
+        self._import_options_container = import_options_container
         self._human_file_description = human_file_description
         
         self._pre_import_file_status = FileImportStatus.STATICGetUnknownStatus()
@@ -146,9 +140,7 @@ class FileImportJob( object ):
         
         ( size, mime, width, height, duration_ms, num_frames, has_audio, num_words ) = self._file_info
         
-        file_filtering_import_options = self._file_import_options.GetFileFilteringImportOptions()
-        
-        file_filtering_import_options.CheckFileIsValid( size, mime, width, height )
+        self._import_options_container.GetFileFilteringImportOptions().CheckFileIsValid( size, mime, width, height )
         
     
     def DoWork( self, status_hook = None ) -> FileImportStatus:
@@ -160,7 +152,7 @@ class FileImportJob( object ):
         
         self.GeneratePreImportHashAndStatus( status_hook = status_hook )
         
-        if self._pre_import_file_status.ShouldImport( self._file_import_options.GetFileFilteringImportOptions() ):
+        if self._pre_import_file_status.ShouldImport( self._import_options_container ):
             
             self.GenerateInfo( status_hook = status_hook )
             
@@ -199,7 +191,7 @@ class FileImportJob( object ):
                     status_hook( 'importing to database' )
                     
                 
-                self._file_import_options.GetLocationImportOptions().CheckReadyToImport()
+                self._import_options_container.GetLocationImportOptions().CheckReadyToImport()
                 
                 self._post_import_file_status = CG.client_controller.WriteSynchronous( 'import_file', self )
                 
@@ -278,9 +270,7 @@ class FileImportJob( object ):
         
         new_options = CG.client_controller.new_options
         
-        file_filtering_import_options = self._file_import_options.GetFileFilteringImportOptions()
-        
-        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not file_filtering_import_options.AllowsDecompressionBombs():
+        if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._import_options_container.GetFileFilteringImportOptions().AllowsDecompressionBombs():
             
             if HG.file_import_report_mode:
                 
@@ -465,11 +455,6 @@ class FileImportJob( object ):
         return self._extra_hashes
         
     
-    def GetFileImportOptions( self ):
-        
-        return self._file_import_options
-        
-    
     def GetFileInfo( self ):
         
         return self._file_info
@@ -483,6 +468,11 @@ class FileImportJob( object ):
     def GetHash( self ):
         
         return self._pre_import_file_status.hash
+        
+    
+    def GetImportOptionsContainer( self ) -> ImportOptionsContainer.ImportOptionsContainer:
+        
+        return self._import_options_container
         
     
     def GetMime( self ):
@@ -531,9 +521,12 @@ class FileImportJob( object ):
             
             media_result = CG.client_controller.Read( 'media_result', self._post_import_file_status.hash )
             
-            content_update_package = self._file_import_options.GetLocationImportOptions().GetAlreadyInDBPostImportContentUpdatePackage( media_result )
+            content_update_package = self._import_options_container.GetLocationImportOptions().GetAlreadyInDBPostImportContentUpdatePackage( media_result )
             
-            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            if content_update_package.HasContent():
+                
+                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                
             
         
     

@@ -16,6 +16,7 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportControl
+from hydrus.client.importing.options import ImportOptionsContainerMigration
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
@@ -262,7 +263,16 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, self._tag_import_options, self._note_import_options )
+            import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+                self._file_import_options,
+                FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+                self._tag_import_options,
+                self._note_import_options,
+                file_seed.GetReferralURL(),
+                file_seed.file_seed_data
+            )
+            
+            did_substantial_work = file_seed.WorkOnURL( self._file_seed_cache, status_hook, self._NetworkJobFactory, self._FileNetworkJobPresentationContextFactory, import_options_container )
             
             with self._lock:
                 
@@ -376,7 +386,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason ) = gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory, self._file_import_options )
+            ( num_urls_added, num_urls_already_in_file_seed_cache, num_urls_total, result_404, added_new_gallery_pages, can_search_for_more_files, stop_reason ) = gallery_seed.WorkOnURL( 'download page', self._gallery_seed_log, file_seeds_callable, status_hook, title_hook, self._NetworkJobFactory, self._GalleryNetworkJobPresentationContextFactory )
             
             self._num_new_urls_found += num_urls_added
             self._num_urls_found += num_urls_total

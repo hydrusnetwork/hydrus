@@ -169,7 +169,8 @@ class HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( HydrusRes
         body_dict = {
             'old_options' : old_options,
             'options' : options_dict,
-            'services' : ClientLocalServerCore.GetServicesDict()
+            'services' : ClientLocalServerCore.GetServicesDict(),
+            'services_v2' : ClientLocalServerCore.GetServicesList()
         }
         
         body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )

@@ -262,6 +262,7 @@ class HydrusResourceClientAPIRestrictedGetServices( ClientLocalServerResources.H
             
         
         body_dict[ 'services' ] = ClientLocalServerCore.GetServicesDict()
+        body_dict[ 'services_v2' ] = ClientLocalServerCore.GetServicesList()
         
         body = ClientLocalServerCore.Dumps( body_dict, request.preferred_mime )
         

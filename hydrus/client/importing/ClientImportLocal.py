@@ -26,6 +26,8 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FilenameTaggingOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
+from hydrus.client.importing.options import ImportOptionsContainerMigration
+from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
@@ -202,7 +204,20 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_LOUD, status_hook = status_hook )
+        tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
+        note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+        note_import_options.SetIsDefault( True )
+        
+        import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+            self._file_import_options,
+            FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+            tag_import_options,
+            note_import_options,
+            file_seed.GetReferralURL(),
+            file_seed.file_seed_data
+        )
+        
+        file_seed.ImportPath( self._file_seed_cache, import_options_container, status_hook = status_hook )
         
         if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
             
@@ -781,7 +796,20 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                file_seed.ImportPath( self._file_seed_cache, self._file_import_options, FileImportOptionsLegacy.IMPORT_TYPE_QUIET )
+                tag_import_options = TagImportOptionsLegacy.TagImportOptionsLegacy( is_default = True )
+                note_import_options = NoteImportOptionsLegacy.NoteImportOptionsLegacy()
+                note_import_options.SetIsDefault( True )
+                
+                import_options_container = ImportOptionsContainerMigration.ConvertLegacyOptionsToContainerPipelineBridge(
+                    self._file_import_options,
+                    FileImportOptionsLegacy.IMPORT_TYPE_LOUD,
+                    tag_import_options,
+                    note_import_options,
+                    file_seed.GetReferralURL(),
+                    file_seed.file_seed_data
+                )
+                
+                file_seed.ImportPath( self._file_seed_cache, import_options_container )
                 
                 if file_seed.status in CC.SUCCESSFUL_IMPORT_STATES:
                     

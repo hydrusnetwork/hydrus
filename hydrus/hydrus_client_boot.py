@@ -164,7 +164,7 @@ try:
     
 except Exception as e:
     
-    title = 'Critical boot error occurred! Details written to crash.log in either your db dir, userdir, or desktop!'
+    title = 'Critical boot error occurred! Details written to hydrus_crash.log in either your db dir, userdir, or desktop!'
     
     import traceback
     

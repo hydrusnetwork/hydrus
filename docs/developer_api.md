@@ -184,57 +184,67 @@ Also, note that all users can now copy their service keys from _review services_
 
 Hydrus manages its different available domains and actions with what it calls _services_. If you are a regular user of the program, you will know about _review services_ and _manage services_. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.
 
-When it does this, it gives you this structure, typically under a `services` key right off the root node:
+When the client tells you about the available services, it gives you the following structure, typically under a `services_v2` key right off the root node.
 
-```json title="Services Object"
-{
-  "c6f63616c2074616773" : {
+```json title="Services Object (actually a List)"
+[
+  {
     "name" : "my tags",
+    "service_key" : "c6f63616c2074616773",
     "type": 5,
     "type_pretty" : "local tag domain"
   },
-  "5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d" : {
+  {
     "name" : "example tag repo",
+    "service_key" : "5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d",
     "type" : 0,
     "type_pretty" : "hydrus tag repository"
   },
-  "6c6f63616c2066696c6573" : {
+  {
     "name" : "my files",
+    "service_key" : "6c6f63616c2066696c6573",
     "type" : 2,
     "type_pretty" : "local file domain"
   },
-  "7265706f7369746f72792075706461746573" : {
+  {
     "name" : "repository updates",
+    "service_key" : "7265706f7369746f72792075706461746573",
     "type" : 20,
     "type_pretty" : "local update file domain"
   },
-  "ae7d9a603008919612894fc360130ae3d9925b8577d075cd0473090ac38b12b6" : {
+  {
     "name": "example file repo",
+    "service_key" : "ae7d9a603008919612894fc360130ae3d9925b8577d075cd0473090ac38b12b6",
     "type" : 1,
     "type_pretty" : "hydrus file repository"
   },
-  "616c6c206c6f63616c2066696c6573" : {
+  {
     "name" : "hydrus local file storage",
+    "service_key" : "616c6c206c6f63616c2066696c6573",
     "type": 15,
     "type_pretty" : "virtual combined local file domain"
   },
-  "616c6c206c6f63616c206d65646961" : {
+  {
     "name" : "combined local file domains",
+    "service_key" : "616c6c206c6f63616c206d65646961",
     "type" : 21,
     "type_pretty" : "virtual combined local media domain"
   },
-  "616c6c206b6e6f776e2066696c6573" : {
+  {
     "name" : "all known files",
+    "service_key" : "616c6c206b6e6f776e2066696c6573",
     "type" : 11,
     "type_pretty" : "virtual combined file domain"
   },
-  "616c6c206b6e6f776e2074616773" : {
+  {
     "name" : "all known tags",
+    "service_key" : "616c6c206b6e6f776e2074616773",
     "type": 10,
     "type_pretty" : "virtual combined tag domain"
   },
-  "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : {
+  {
     "name" : "example local rating like service",
+    "service_key" : "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c",
     "type" : 7,
     "type_pretty" : "local like/dislike rating service",
     "star_shape" : "svg",
@@ -259,8 +269,9 @@ When it does this, it gives you this structure, typically under a `services` key
       }
     },
   },
-  "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : {
+  {
     "name": "example local rating numerical service",
+    "service_key" : "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf",
     "type": 6,
     "type_pretty": "local numerical rating service",
     "star_shape": "fat star",
@@ -288,8 +299,9 @@ When it does this, it gives you this structure, typically under a `services` key
       }
     }
   },
-  "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : {
+  {
     "name": "example local rating inc/dec service",
+    "service_key" : "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106",
     "type": 22,
     "type_pretty": "local inc/dec rating service",
     "show_in_thumbnail": false,
@@ -305,21 +317,22 @@ When it does this, it gives you this structure, typically under a `services` key
       }
     }
   },
-  "7472617368" : {
+  {
     "name" : "trash",
+    "service_key" : "7472617368",
     "type" : 14,
     "type_pretty" : "local trash file domain"
   }
-}
+]
 ```
 
-I hope you recognise some of the information here. But what's that hex key on each section? It is the `service_key`.
+You will likely see an older, uglier format, under a `services` key--you can ignore this.
 
 All services have these properties:
 
 - `name` - A mutable human-friendly name like 'my tags'. You can use this to present the service to the user--they should recognise it.
 - `type` - An integer enum saying whether the service is a local tag domain or like/dislike rating or whatever. This cannot change.
-- `service_key` - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases 64 characters. This cannot change, and it is how we will refer to different services.
+- `service_key` - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases sixty-four characters. This cannot change, and it is how we will refer to different services.
 
 This `service_key` is important. A user can rename their services, so `name` is not an excellent identifier, and definitely not something you should save to any permanent config file.
 
@@ -358,7 +371,7 @@ Rating services have some extra data:
 
 If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a 4/5, select from a dropdown list, do whatever you like!
 
-If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure has recently been added to [/get\_files/file\_metadata](#get_files_file_metadata) for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.
+If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure appears in a few other calls for convenience, like [/get\_files/file\_metadata](#get_files_file_metadata), since that refers to many different services when it is talking about file locations and ratings and so on.
 
 Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _review services_.
 
@@ -592,7 +605,7 @@ Response:
 This now primarily uses [The Services Object](#services_object).
 
 !!! note
-    If you do the request and look at the actual response, you will see a lot more data under different keys--this is deprecated, and will be deleted in 2024. If you use the old structure, please move over!
+    If you do the request and look at the actual response, you will see a lot more data under different keys. This call has evolved a bunch over the years, and I never had the heart to properly deprecate and delete things (it would break an old script).
 
 ### **GET `/get_service_rating_svg`** { id="get_service_rating_svg" }
 
