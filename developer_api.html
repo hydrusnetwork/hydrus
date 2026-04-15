@@ -5431,55 +5431,65 @@ Accept: application/json
 <p>Also, note that all users can now copy their service keys from <em>review services</em>.</p>
 <h2 id="services_object">The Services Object<a class="headerlink" href="#services_object" title="Permanent link">&para;</a></h2>
 <p>Hydrus manages its different available domains and actions with what it calls <em>services</em>. If you are a regular user of the program, you will know about <em>review services</em> and <em>manage services</em>. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.</p>
-<p>When it does this, it gives you this structure, typically under a <code>services</code> key right off the root node:</p>
-<div class="highlight"><span class="filename">Services Object</span><pre><span></span><code><span class="p">{</span>
-<span class="w">  </span><span class="nt">&quot;c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<p>When the client tells you about the available services, it gives you the following structure, typically under a <code>services_v2</code> key right off the root node.</p>
+<div class="highlight"><span class="filename">Services Object (actually a List)</span><pre><span></span><code><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my tags&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;c6f63616c2074616773&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local tag domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example tag repo&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;5674450950748cfb28778b511024cfbf0f9f67355cf833de632244078b5a6f8d&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus tag repository&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;6c6f63616c2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;my files&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;6c6f63616c2066696c6573&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;7265706f7369746f72792075706461746573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;repository updates&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7265706f7369746f72792075706461746573&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local update file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;ae7d9a603008919612894fc360130ae3d9925b8577d075cd0473090ac38b12b6&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example file repo&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ae7d9a603008919612894fc360130ae3d9925b8577d075cd0473090ac38b12b6&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus file repository&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;616c6c206c6f63616c2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hydrus local file storage&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;616c6c206c6f63616c2066696c6573&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">15</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;616c6c206c6f63616c206d65646961&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;combined local file domains&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;616c6c206c6f63616c206d65646961&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined local media domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;616c6c206b6e6f776e2066696c6573&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all known files&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;616c6c206b6e6f776e2066696c6573&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">11</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined file domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;616c6c206b6e6f776e2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;all known tags&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;616c6c206b6e6f776e2074616773&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;virtual combined tag domain&quot;</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating like service&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local like/dislike rating service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;svg&quot;</span><span class="p">,</span>
@@ -5504,8 +5514,9 @@ Accept: application/json
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">},</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating numerical service&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local numerical rating service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;star_shape&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fat star&quot;</span><span class="p">,</span>
@@ -5533,8 +5544,9 @@ Accept: application/json
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;example local rating inc/dec service&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">22</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local inc/dec rating service&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;show_in_thumbnail&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
@@ -5550,19 +5562,20 @@ Accept: application/json
 <span class="w">      </span><span class="p">}</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">},</span>
-<span class="w">  </span><span class="nt">&quot;7472617368&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">  </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;trash&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7472617368&quot;</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span>
 <span class="w">    </span><span class="nt">&quot;type_pretty&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;local trash file domain&quot;</span>
 <span class="w">  </span><span class="p">}</span>
-<span class="p">}</span>
+<span class="p">]</span>
 </code></pre></div>
-<p>I hope you recognise some of the information here. But what's that hex key on each section? It is the <code>service_key</code>.</p>
+<p>You will likely see an older, uglier format, under a <code>services</code> key--you can ignore this.</p>
 <p>All services have these properties:</p>
 <ul>
 <li><code>name</code> - A mutable human-friendly name like 'my tags'. You can use this to present the service to the user--they should recognise it.</li>
 <li><code>type</code> - An integer enum saying whether the service is a local tag domain or like/dislike rating or whatever. This cannot change.</li>
-<li><code>service_key</code> - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases 64 characters. This cannot change, and it is how we will refer to different services.</li>
+<li><code>service_key</code> - The true 'id' of the service. It is a string of hex, sometimes just twenty or so characters but in many cases sixty-four characters. This cannot change, and it is how we will refer to different services.</li>
 </ul>
 <p>This <code>service_key</code> is important. A user can rename their services, so <code>name</code> is not an excellent identifier, and definitely not something you should save to any permanent config file.</p>
 <p>If we want to search some files on a particular file and tag domain, we should expect to be saying something like <code>file_service_key=6c6f63616c2066696c6573</code> and <code>tag_service_key=f032e94a38bb9867521a05dc7b189941a9c65c25048911f936fc639be2064a4b</code> somewhere in the request.</p>
@@ -5597,7 +5610,7 @@ Accept: application/json
 <li>Numerical services have <code>min_stars</code> (0 or 1) and <code>max_stars</code> (1 to 20). <code>allows_zero</code> lines up with <code>min_stars</code> and is for your convenience.</li>
 </ul>
 <p>If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a &#8536;, select from a dropdown list, do whatever you like!</p>
-<p>If you want to know the services in a client, hit up <a href="#get_services">/get_services</a>, which simply gives the above. The same structure has recently been added to <a href="#get_files_file_metadata">/get_files/file_metadata</a> for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.</p>
+<p>If you want to know the services in a client, hit up <a href="#get_services">/get_services</a>, which simply gives the above. The same structure appears in a few other calls for convenience, like <a href="#get_files_file_metadata">/get_files/file_metadata</a>, since that refers to many different services when it is talking about file locations and ratings and so on.</p>
 <p>Note: If you need to do some quick testing, you should be able to copy the <code>service_key</code> of any service by hitting the 'copy service key' button in <em>review services</em>.</p>
 <h2 id="CDPP">Current Deleted Pending Petitioned<a class="headerlink" href="#CDPP" title="Permanent link">&para;</a></h2>
 <p>The content storage and update pipeline systems in hydrus consider content (e.g. 'on file service x, file y exists', 'on tag service x, file y has tag z', or 'on rating service x, file y has rating z') as existing within a blend of four states:</p>
@@ -5870,7 +5883,7 @@ Accept: application/json
 <p>This now primarily uses <a href="#services_object">The Services Object</a>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>If you do the request and look at the actual response, you will see a lot more data under different keys--this is deprecated, and will be deleted in 2024. If you use the old structure, please move over!</p>
+<p>If you do the request and look at the actual response, you will see a lot more data under different keys. This call has evolved a bunch over the years, and I never had the heart to properly deprecate and delete things (it would break an old script).</p>
 </div>
 <h3 id="get_service_rating_svg"><strong>GET <code>/get_service_rating_svg</code></strong><a class="headerlink" href="#get_service_rating_svg" title="Permanent link">&para;</a></h3>
 <p><em>Ask the client for the SVG star shape for a ratings service. Use this when a rating service in <a href="#services_object">The Services Object</a> has a <code>star_shape</code> of <code>svg</code>.</em></p>
@@ -9495,7 +9508,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 8, 2026 20:20:55 UTC">April 8, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 15, 2026 20:58:27 UTC">April 15, 2026</span>
   </span>
 
     
