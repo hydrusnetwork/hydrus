@@ -35,7 +35,7 @@ jobs:
       -
         name: Download and Extract mpv-dev
         run: |
-          Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
+          Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20240818-git-a3baf94.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
           7z e mpv-dev-x86_64.7z -ohydrus "libmpv-2.dll"
       -
         name: Download and Extract FFmpeg

@@ -224,7 +224,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'lxml', ClientParsing.LXML_IS_OK, not ClientParsing.LXML_IS_OK, '' ) )
     availability_lines.append( render_availability_line( 'lz4', HydrusCompression.LZ4_OK, not HydrusCompression.LZ4_OK, '' ) )
     availability_lines.append( render_availability_line( 'olefile', HydrusOLEHandling.OLEFILE_OK, not HydrusOLEHandling.OLEFILE_OK, '' ) )
-    availability_lines.append( render_availability_line( 'tldextract (under testing)', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
+    availability_lines.append( render_availability_line( 'tldextract', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
     
     #
     
