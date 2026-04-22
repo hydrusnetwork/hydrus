@@ -260,14 +260,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
     
     def ToString( self ) -> str:
         
-        try:
-            
-            name = CG.client_controller.services_manager.GetName( self._service_key )
-            
-        except Exception as e:
-            
-            name = 'unknown service'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         if self._string_processor.MakesChanges():
             

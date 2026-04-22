@@ -192,7 +192,8 @@ class ResizingScrolledPanel( QW.QScrollArea ):
                 
             
         
-    
+
+
 class EditPanel( ResizingScrolledPanel ):
     
     def GetValue( self ):
@@ -206,6 +207,7 @@ class EditPanel( ResizingScrolledPanel ):
         self.GetValue()
         
     
+
 class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
     
     def __init__( self, parent, ok_on_these_commands = None, message = None ):

@@ -22,7 +22,7 @@ def ConvertDomainIntoSecondLevelDomain( domain: str ):
         raise Exception( 'Sorry, this client needs tldextract in its venv! You should not see this message!' )
         
     
-    # this guy offers '_under_registry_suffix', which is like blogspot.com, not the 'strict' TLD we are looking for atm
+    # this guy offers '_under_registry_suffix' too, which is like blogspot.com, not the 'strict' TLD we are looking for atm
     return tldextract.extract( domain ).top_domain_under_public_suffix
     
 

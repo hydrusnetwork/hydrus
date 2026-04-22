@@ -1058,7 +1058,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                         
                         ipfs_service_key = hacky_ipfs_dict[ 'ipfs_service_key' ]
                         
-                        name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+                        name = CG.client_controller.services_manager.GetNameSafe( ipfs_service_key )
                         
                     except Exception as e:
                         
@@ -1142,16 +1142,9 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     
                 elif content_type == HC.CONTENT_TYPE_FILES and value is not None:
                     
-                    try:
-                        
-                        from_name = CG.client_controller.services_manager.GetName( value )
-                        
-                        value_string = '(from {})'.format( from_name )
-                        
-                    except Exception as e:
-                        
-                        value_string = ''
-                        
+                    from_name = CG.client_controller.services_manager.GetNameSafe( value )
+                    
+                    value_string = '(from {})'.format( from_name )
                     
                 elif value is not None:
                     
@@ -1172,18 +1165,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     components.append( 'for' )
                     
                 
-                services_manager = CG.client_controller.services_manager
-                
-                if services_manager.ServiceExists( service_key ):
-                    
-                    service = services_manager.GetService( service_key )
-                    
-                    components.append( service.GetName() )
-                    
-                else:
-                    
-                    components.append( 'unknown service!' )
-                    
+                components.append( CG.client_controller.services_manager.GetNameSafe( service_key ) )
                 
                 return ' '.join( components )
                 

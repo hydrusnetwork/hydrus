@@ -3639,7 +3639,7 @@ class ListBoxTags( ListBox ):
                     num_parents = len( parents_to_service_keys )
                     num_children = len( children_to_service_keys )
                     
-                    service_keys_to_service_names = { service_key : CG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
+                    service_keys_to_service_names = { service_key : CG.client_controller.services_manager.GetNameSafe( service_key ) for service_key in service_keys_in_order }
                     
                     ALL_SERVICES_LABEL = 'all services'
                     
@@ -5297,7 +5297,9 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
             
             if service_key != CC.COMBINED_TAG_SERVICE_KEY:
                 
-                title = '{} for {}'.format( title, CG.client_controller.services_manager.GetName( service_key ) )
+                name = CG.client_controller.services_manager.GetNameSafe( service_key )
+                
+                title = '{} for {}'.format( title, name )
                 
             
         

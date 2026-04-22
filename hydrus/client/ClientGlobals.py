@@ -6,3 +6,5 @@ if typing.TYPE_CHECKING:
     
 
 client_controller: "ClientController.Controller | None" = None
+
+NO_QT_MULTIMEDIA = False

@@ -248,11 +248,7 @@ class EditSingleFileMetadataExporterWidget( QW.QWidget ):
         
         if self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags:
             
-            try:
-                
-                CG.client_controller.services_manager.GetName( self._service_key )
-                
-            except HydrusExceptions.DataMissing:
+            if not CG.client_controller.services_manager.ServiceExists( self._service_key ):
                 
                 raise HydrusExceptions.VetoException( 'Sorry, your exporter needs a valid tag service! The selected one is missing!' )
                 
@@ -417,14 +413,7 @@ class EditSingleFileMetadataExporterWidget( QW.QWidget ):
     
     def _UpdateServiceKeyButtonLabel( self ):
         
-        try:
-            
-            name = CG.client_controller.services_manager.GetName( self._service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            name = 'unknown'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         self._service_selection_button.setText( name )
         

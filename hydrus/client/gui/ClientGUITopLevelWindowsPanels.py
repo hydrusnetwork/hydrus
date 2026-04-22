@@ -192,7 +192,7 @@ class DialogManage( DialogApplyCancel ):
 
 class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
     
-    def __init__( self, parent, title, frame_key = 'regular_center_dialog' ):
+    def __init__( self, parent, title, frame_key = 'quick_yesno_dialog' ):
         
         super().__init__( parent, title, frame_key = frame_key )
         

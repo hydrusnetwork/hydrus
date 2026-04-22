@@ -414,6 +414,12 @@ def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
             desired_position = parent_window.frameGeometry().center() - tlw.rect().center()
             
         
+    elif default_position == 'mouse':
+        
+        current_mouse_pos = QG.QCursor.pos()
+        
+        desired_position = current_mouse_pos - tlw.rect().center()
+        
     
     ( safe_position, position_message ) = GetSafePosition( desired_position, frame_key )
     

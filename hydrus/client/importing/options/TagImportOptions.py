@@ -1,7 +1,6 @@
 import collections.abc
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -368,14 +367,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if len( sub_statements ) > 0:
                 
-                try:
-                    
-                    name = CG.client_controller.services_manager.GetName( service_key )
-                    
-                except HydrusExceptions.DataMissing:
-                    
-                    continue
-                    
+                name = CG.client_controller.services_manager.GetNameSafe( service_key )
                 
                 service_statement = f'{name}:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( sub_statements, no_trailing_whitespace = True )}'
                 

@@ -249,11 +249,6 @@ class Controller( HydrusController.HydrusController ):
         return QP.isValid
         
     
-    def _GetUPnPServices( self ):
-        
-        return self.services_manager.GetServices( ( HC.CLIENT_API_SERVICE, ) )
-        
-    
     def _GetWakeDelayPeriodMS( self ):
         
         return HydrusTime.MillisecondiseS( self.new_options.GetInteger( 'wake_delay_period' ) )
@@ -2275,12 +2270,6 @@ class Controller( HydrusController.HydrusController ):
     def SetServices( self, services ):
         
         with HG.dirty_object_lock:
-            
-            previous_services = self.services_manager.GetServices()
-            
-            upnp_services = [ service for service in services if service.GetServiceType() in ( HC.CLIENT_API_SERVICE, ) ]
-            
-            self.CallToThreadLongRunning( self.services_upnp_manager.SetServices, upnp_services )
             
             self.WriteSynchronous( 'update_services', services )
             

@@ -4,7 +4,6 @@ import random
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
@@ -539,7 +538,7 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
     def ToString( self ):
         
         s_list = list( self.namespaces )
-        s_list.extend( [ CG.client_controller.services_manager.GetName( service_key ) for service_key in self.rating_service_keys if CG.client_controller.services_manager.ServiceExists( service_key ) ] )
+        s_list.extend( [ CG.client_controller.services_manager.GetNameSafe( service_key ) for service_key in self.rating_service_keys if CG.client_controller.services_manager.ServiceExists( service_key ) ] )
         
         if len( s_list ) == 0:
             
@@ -1283,6 +1282,11 @@ class MediaList( object ):
         
     
     def MoveMedia( self, medias: list[ Media ], insertion_index: int ):
+        
+        if len( medias ) == 0:
+            
+            return
+            
         
         self._sorted_media.move_items( medias, insertion_index )
         
@@ -2872,16 +2876,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             service_key = sort_data
             
-            try:
-                
-                service = CG.client_controller.services_manager.GetService( service_key )
-                
-                name = service.GetName()
-                
-            except HydrusExceptions.DataMissing:
-                
-                name = 'unknown service'
-                
+            name = CG.client_controller.services_manager.GetNameSafe( service_key )
             
             sort_string += 'rating: {}'.format( name )
             

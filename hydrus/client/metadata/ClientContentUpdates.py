@@ -436,7 +436,7 @@ class ContentUpdatePackage( object ):
             
             if len( content_updates ) > 0:
                 
-                name = CG.client_controller.services_manager.GetName( service_key )
+                name = CG.client_controller.services_manager.GetNameSafe( service_key )
                 
                 locations.add( name )
                 

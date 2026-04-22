@@ -492,6 +492,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._service_key = service_key
             self._present_for_accompanying_file_list = present_for_accompanying_file_list
             
+            self._selected_paths = []
+            
             #
             
             self._tags_panel = ClientGUICommon.StaticBox( self, 'tags for all' )
@@ -1180,14 +1182,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
                     
-                    try:
-                        
-                        service_name = CG.client_controller.services_manager.GetName( exporter.GetServiceKey() )
-                        
-                    except HydrusExceptions.DataMissing:
-                        
-                        service_name = 'unknown tag service!'
-                        
+                    service_name = CG.client_controller.services_manager.GetNameSafe( exporter.GetServiceKey() )
                     
                     clean_tags = list( HydrusTags.CleanTags( processed_strings ) )
                     

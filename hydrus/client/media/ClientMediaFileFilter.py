@@ -388,7 +388,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
             file_service_key = self.filter_data
             
-            s = CG.client_controller.services_manager.GetName( file_service_key )
+            s = CG.client_controller.services_manager.GetNameSafe( file_service_key )
             
         elif self.filter_type == FILE_FILTER_TAGS:
             
@@ -398,7 +398,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
             if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
                 
-                s = '{} on {}'.format( s, CG.client_controller.services_manager.GetName( tag_service_key ) )
+                s = '{} on {}'.format( s, CG.client_controller.services_manager.GetNameSafe( tag_service_key ) )
                 
             
             s = HydrusText.ElideText( s, 64 )

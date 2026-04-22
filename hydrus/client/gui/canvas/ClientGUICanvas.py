@@ -1716,7 +1716,6 @@ class CanvasPanel( Canvas ):
     def ClearMedia( self ):
         
         self._hidden_page_current_media = None
-        self._hidden_splitter_current_media = None
         
         Canvas.ClearMedia( self )
         
@@ -1814,7 +1813,7 @@ class CanvasPanel( Canvas ):
                     
                     file_service_key = local_file_service_keys_we_are_in[0]
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                     
                 else:
                     
@@ -1822,7 +1821,7 @@ class CanvasPanel( Canvas ):
                     
                     for file_service_key in local_file_service_keys_we_are_in:
                         
-                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )
@@ -4573,7 +4572,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     file_service_key = local_file_service_keys_we_are_in[0]
                     
-                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                     
                 else:
                     
@@ -4581,7 +4580,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     
                     for file_service_key in local_file_service_keys_we_are_in:
                         
-                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                        ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                         
                     
                     ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )

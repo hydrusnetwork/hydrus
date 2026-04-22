@@ -123,6 +123,7 @@ class FavSearchesSearchProvider( HydrusSearchProvider ):
         
         self.result_id_counter = 0
         self.result_ids_to_fav_searches = {}
+        self.result_ids_to_pages = {}
         
     
     def title( self ):

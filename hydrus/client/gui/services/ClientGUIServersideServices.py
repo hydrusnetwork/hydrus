@@ -88,7 +88,6 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             self._name = QW.QLineEdit( self )
             self._port = ClientGUICommon.BetterSpinBox( self, min=1, max=65535 )
-            self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 55555, message = 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
             
             self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
@@ -96,10 +95,6 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             self._name.setText( name )
             self._port.setValue( port )
-            
-            upnp_port = dictionary[ 'upnp_port' ]
-            
-            self._upnp_port.SetValue( upnp_port )
             
             bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
             
@@ -113,7 +108,6 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             rows.append( ( 'name: ', self._name ) )
             rows.append( ( 'port: ', self._port ) )
-            rows.append( ( 'upnp port: ', self._upnp_port ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
@@ -127,10 +121,6 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             name = self._name.text()
             port = self._port.value()
-            
-            upnp_port = self._upnp_port.GetValue()
-            
-            dictionary_part[ 'upnp_port' ] = upnp_port
             
             return ( name, port, dictionary_part )
             

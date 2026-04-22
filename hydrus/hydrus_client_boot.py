@@ -68,6 +68,7 @@ try:
     argparser.add_argument( '--profile_mode', action='store_true', help = 'start the program with profile mode (db) on, capturing boot performance' )
     argparser.add_argument( '--pause_network_traffic', action='store_true', help = 'start the program with all new network traffic paused' )
     argparser.add_argument( '--win_qt_darkmode_test', action='store_true', help = 'Windows only: Try Qt\'s automatic darkmode recognition.' )
+    argparser.add_argument( '--no_qt_multimedia', action='store_true', help = 'Do not attempt to load QtMedia.' )
     argparser.add_argument( '--no_wal', action='store_true', help = 'OBSOLETE: run using TRUNCATE db journaling' )
     argparser.add_argument( '--db_memory_journaling', action='store_true', help = 'OBSOLETE: run using MEMORY db journaling (DANGEROUS)' )
     
@@ -122,6 +123,13 @@ try:
         
     
     HG.no_db_temp_files = result.no_db_temp_files
+    
+    if result.no_qt_multimedia:
+        
+        from hydrus.client import ClientGlobals as CG
+        
+        CG.NO_QT_MULTIMEDIA = True
+        
     
     HG.boot_debug = result.boot_debug
     

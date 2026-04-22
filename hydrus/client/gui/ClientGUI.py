@@ -7690,7 +7690,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def ForgetPending( self, service_key ):
         
-        service_name = self._controller.services_manager.GetName( service_key )
+        service_name = self._controller.services_manager.GetNameSafe( service_key )
         
         message = 'Are you sure you want to delete the pending data for {}?'.format( service_name )
         

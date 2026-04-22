@@ -272,14 +272,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
             
             if self.timestamp_type in FILE_SERVICE_TIMESTAMP_TYPES:
                 
-                try:
-                    
-                    service_string = CG.client_controller.services_manager.GetName( self.location )
-                    
-                except Exception as e:
-                    
-                    service_string = 'unknown service'
-                    
+                service_string = CG.client_controller.services_manager.GetNameSafe( self.location )
                 
                 type_base = '"{}" {}'.format( service_string, HC.timestamp_type_str_lookup[ self.timestamp_type ] )
                 

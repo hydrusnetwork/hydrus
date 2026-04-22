@@ -1288,7 +1288,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._service_key = service_key
         self._show_downloader_options = show_downloader_options
         
-        name = CG.client_controller.services_manager.GetName( self._service_key )
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         main_box = ClientGUICommon.StaticBox( self, name )
         

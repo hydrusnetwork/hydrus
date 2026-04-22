@@ -98,7 +98,7 @@ import_options_type_desc_lookup = {
     IMPORT_OPTIONS_TYPE_LOCATIONS : 'If you have multiple local file services, you can choose to place incoming files in a different location than your default (probably "my files"). You can also send them to multiple locations.',
     IMPORT_OPTIONS_TYPE_TAGS : 'A file may pick up tags through the downloading and parsing process. Here you choose where to send any parsed tags.',
     IMPORT_OPTIONS_TYPE_NOTES : 'A file may pick up notes through the downloading and parsing process. Here you choose what to do with these notes. Default options are usually fine unless you have particular needs.',
-    IMPORT_OPTIONS_TYPE_PRESENTATION : 'When files are imported, the associated downloader or subscription will want to show them, whether than is adding thumbnails to a page or publishing items to a popup button. You can shape which files are actually "presented". Selecting "only new" or "only inbox" are often useful to remove clutter.',
+    IMPORT_OPTIONS_TYPE_PRESENTATION : 'When files are imported, the associated downloader or subscription will want to show them, whether that is adding thumbnails to a page or publishing files to a popup button. Here you can filter which files are actually presented. Selecting "only new" or "only inbox" are often useful to remove clutter.',
 }
 
 IMPORT_OPTIONS_TYPES_DOWNLOADER_ONLY = {
@@ -229,20 +229,20 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
         preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS ] )
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
         preference_stack.append( 'any matching URL Class' )
-        preference_stack.append( 'specific import options for the particular subscription' )
+        preference_stack.append( 'any custom import options for the particular subscription' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_POST_URLS:
         
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
         preference_stack.append( 'maybe "subscription"' )
         preference_stack.append( 'any matching URL Class' )
-        preference_stack.append( 'specific import options for the particular downloader page or subscription' )
+        preference_stack.append( 'any custom import options for the particular downloader page or subscription' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS:
         
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
         preference_stack.append( 'any matching URL Class' )
-        preference_stack.append( 'specific import options for the particular watcher page' )
+        preference_stack.append( 'any custom import options for the particular watcher page' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS:
         
@@ -277,14 +277,14 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
                 
                 preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_WATCHER_URLS ] )
                 preference_stack.append( url_class_name )
-                preference_stack.append( 'specific import options for the particular watcher page' )
+                preference_stack.append( 'any custom import options for the particular watcher page' )
                 
             else:
                 
                 preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_POST_URLS ] )
                 preference_stack.append( 'maybe "subscription"' )
                 preference_stack.append( url_class_name )
-                preference_stack.append( 'specific import options for the particular downloader page or subscription' )
+                preference_stack.append( 'any custom import options for the particular downloader page or subscription' )
                 
             
         else:
@@ -292,14 +292,14 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
             preference_stack.append( 'a gallery/post or watcher url' )
             preference_stack.append( 'maybe "subscription", if it is a gallery/post url class' )
             preference_stack.append( url_class_name )
-            preference_stack.append( 'specific import options for the particular watcher page, downloader page, or subscription' )
+            preference_stack.append( 'any custom import options for the particular watcher page, downloader page, or subscription' )
             
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT_FOLDER:
         
         preference_stack.append( import_options_caller_type_str_lookup[ IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT ] )
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
-        preference_stack.append( 'specific import options for the particular import folder' )
+        preference_stack.append( 'any custom import options for the particular import folder' )
         
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_CLIENT_API:
         
@@ -308,7 +308,7 @@ def GetImportOptionsCallerTypesPreferenceOrderDescription( import_options_caller
     elif import_options_caller_type == IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT:
         
         preference_stack.append( import_options_caller_type_str_lookup[ import_options_caller_type ] )
-        preference_stack.append( 'specific import options for the particular local import page' )
+        preference_stack.append( 'any custom import options for the particular local import page' )
         
     
     preference_stack.reverse()
@@ -842,12 +842,34 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetDuplicateWithJustTheseOptionTypes( self, import_options_types: list[ int ] ):
+        
+        with self._lock:
+            
+            new_import_options_container = ImportOptionsContainer()
+            
+            for import_options_type in import_options_types:
+                
+                import_options = self._GetImportOptions( import_options_type )
+                
+                if import_options is not None:
+                    
+                    source_label = self._import_option_types_to_source_labels.get( import_options_type, None )
+                    
+                    new_import_options_container.SetImportOptions( import_options_type, self._GetImportOptions( import_options_type ), source_label = source_label )
+                    
+                
+            
+        
+        return new_import_options_container
+        
+    
     def GetFileFilteringImportOptions( self ) -> FileFilteringImportOptions.FileFilteringImportOptions:
         
         return self.GetImportOptions( IMPORT_OPTIONS_TYPE_FILE_FILTERING )
         
     
-    def GetImportOptions( self, import_options_type: int ) -> ImportOptionsMetatype:
+    def GetImportOptions( self, import_options_type: int ) -> ImportOptionsMetatype | None:
         
         with self._lock:
             
@@ -877,16 +899,19 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
     
     def GetSourceLabel( self, import_options_type: int ) -> str:
         
-        if self._should_be_full:
+        with self._lock:
             
-            default_label = 'global'
+            if self._should_be_full:
+                
+                default_label = 'global'
+                
+            else:
+                
+                default_label = 'not a default; specifically set; you should not see this'
+                
             
-        else:
+            return self._import_option_types_to_source_labels.get( import_options_type, default_label )
             
-            default_label = 'not a default; specifically set; you should not see this'
-            
-        
-        return self._import_option_types_to_source_labels.get( import_options_type, default_label )
         
     
     def GetSummary( self, show_downloader_options: bool = True ):
@@ -941,6 +966,29 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
             return import_options_type in self._import_options_types_to_import_options
             
+        
+    
+    def ImportOptionsDiffer( self, other_import_options_container: "ImportOptionsContainer", import_options_type: int ):
+        
+        my_import_options = self.GetImportOptions( import_options_type )
+        other_import_options = other_import_options_container.GetImportOptions( import_options_type )
+        
+        if my_import_options is None or other_import_options is None:
+            
+            if my_import_options is not None or other_import_options is not None:
+                
+                return True
+                
+            
+        else:
+            
+            if my_import_options.DumpToString() != other_import_options.DumpToString():
+                
+                return True
+                
+            
+        
+        return False
         
     
     def IsEmpty( self ):

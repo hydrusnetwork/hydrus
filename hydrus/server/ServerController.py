@@ -182,11 +182,6 @@ class Controller( HydrusController.HydrusController ):
         self.CallToThreadLongRunning( self.DAEMONPubSub )
         
     
-    def _GetUPnPServices( self ):
-        
-        return self._services
-        
-    
     def _InitDB( self ):
         
         self.db = ServerDB.DB( self, self.db_dir, 'server' )
@@ -583,8 +578,6 @@ class Controller( HydrusController.HydrusController ):
         #
         
         self._services = services
-        
-        self.CallToThread( self.services_upnp_manager.SetServices, self._services )
         
         [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
         

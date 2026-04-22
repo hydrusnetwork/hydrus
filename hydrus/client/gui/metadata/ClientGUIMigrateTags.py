@@ -435,7 +435,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             needs_count_service_key = self._migration_source_have_count_service.GetValue()
             
-            needs_count_service_name = CG.client_controller.services_manager.GetName( needs_count_service_key )
+            needs_count_service_name = CG.client_controller.services_manager.GetNameSafe( needs_count_service_key )
             
             if content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
                 

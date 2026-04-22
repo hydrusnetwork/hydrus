@@ -881,13 +881,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'regular_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'review_services' ] = ( False, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'deeply_nested_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'topleft', False, False )
-        self._dictionary[ 'frame_locations' ][ 'regular_center_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         self._dictionary[ 'frame_locations' ][ 'file_history_chart' ] = ( True, True, ( 960, 720 ), None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'mr_bones' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_urls_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_times_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'manage_notes_dialog' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
         self._dictionary[ 'frame_locations' ][ 'export_files_frame' ] = ( True, True, None, None, ( -1, -1 ), 'topleft', False, False )
+        self._dictionary[ 'frame_locations' ][ 'quick_select_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
+        self._dictionary[ 'frame_locations' ][ 'quick_yesno_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
+        self._dictionary[ 'frame_locations' ][ 'quick_entry_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         
         #
         
@@ -1218,6 +1220,19 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 self._dictionary[ 'custom_default_predicates' ] = new_custom_default_predicates
                 
                 return
+                
+            
+        
+    
+    def DeleteFrameLocation( self, frame_key ):
+        
+        with self._lock:
+            
+            frame_locations = self._dictionary[ 'frame_locations' ]
+            
+            if frame_key in frame_locations:
+                
+                del frame_locations[ frame_key ]
                 
             
         

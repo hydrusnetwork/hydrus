@@ -204,7 +204,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
                 if services_manager.ServiceExists( service_key ):
                     
-                    name = services_manager.GetName( service_key )
+                    name = services_manager.GetNameSafe( service_key )
                     
                 else:
                     

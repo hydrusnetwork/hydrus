@@ -40,13 +40,11 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         #
         
-        # TODO: wangle archived time so it can set time to null-time medias that are nonetheless not hasinbox
-        # it'll have to do one of those 'do you want to set this changed value for just the files that already have a time, or all of them?'
-        self._archived_time = ClientGUITime.DateTimesButton( self, milliseconds_allowed = True, only_past_dates = True )
-        self._file_modified_time = ClientGUITime.DateTimesButton( self, milliseconds_allowed = True, only_past_dates = True )
+        self._archived_time = ClientGUITime.DateTimesButtonWithCopyPaste( self, milliseconds_allowed = True, only_past_dates = True )
+        self._file_modified_time = ClientGUITime.DateTimesButtonWithCopyPaste( self, milliseconds_allowed = True, only_past_dates = True )
         
-        self._last_viewed_media_viewer_time = ClientGUITime.DateTimesButton( self, milliseconds_allowed = True, only_past_dates = True )
-        self._last_viewed_preview_viewer_time = ClientGUITime.DateTimesButton( self, milliseconds_allowed = True, only_past_dates = True )
+        self._last_viewed_media_viewer_time = ClientGUITime.DateTimesButtonWithCopyPaste( self, milliseconds_allowed = True, only_past_dates = True )
+        self._last_viewed_preview_viewer_time = ClientGUITime.DateTimesButtonWithCopyPaste( self, milliseconds_allowed = True, only_past_dates = True )
         
         self._file_modified_time_warning_st = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
         self._file_modified_time_warning_st.setObjectName( 'HydrusWarning' )
@@ -255,15 +253,31 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'all times', 'Copy every time here for pasting in another file\'s dialog.', self._Copy ) )
         
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_MODIFIED_FILE, ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'file modified time', 'Copy file modified time here for pasting in another file\'s dialog.', c ) )
+        
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_ARCHIVED, ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'archived time', 'Copy any archived time here for pasting in another file\'s dialog.', c ) )
+        
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_LAST_VIEWED, ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'last viewed times', 'Copy any last viewed times here for pasting in another file\'s dialog.', c ) )
+        
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'web domain times', 'Copy all the domain modified times here for pasting in another file\'s dialog.', c ) )
+        
         c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ) )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
         
         self._copy_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().copy, menu_template_items )
-        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamps to the clipboard.' ) )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamps to the clipboard. This copies rich data that includes the type of timestamp. You can paste it via the button beside and it will go into the correct slot.' ) )
         
         self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
-        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamps from another timestamps dialog.\n\nCannot be simple strings, this needs to be rich data from another dialog. It also cannot create new web domain entries if the new file does not share entries which what was copied!' ) )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamps from another timestamps dialog.\n\nCannot be simple strings, this needs to be rich data from another dialog. Generally needs to share an existing slot--it will not create a new web domain time, for instance, nor archive an inboxed file.' ) )
         
         #
         
@@ -335,14 +349,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         ( hashes, datetime_value_range, user_has_edited ) = self._file_services_list_ctrl_data_dict[ row ]
         
-        try:
-            
-            pretty_name = CG.client_controller.services_manager.GetName( file_service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            pretty_name = 'unknown service!'
-            
+        pretty_name = CG.client_controller.services_manager.GetNameSafe( file_service_key )
         
         pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_type ]
         pretty_timestamp = datetime_value_range.ToString()
@@ -358,14 +365,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         ( hashes, datetime_value_range, user_has_edited ) = self._file_services_list_ctrl_data_dict[ row ]
         
-        try:
-            
-            pretty_name = CG.client_controller.services_manager.GetName( file_service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            pretty_name = 'unknown service!'
-            
+        pretty_name = CG.client_controller.services_manager.GetNameSafe( file_service_key )
         
         sort_name = pretty_name
         
@@ -618,7 +618,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         #
         
-        if self._archived_time.isEnabled() and ( self._archived_time.HasChanges() or not only_changes ):
+        if self._archived_time.HasChanges() or not only_changes:
             
             datetime_value_range = self._archived_time.GetValue()
             
@@ -628,13 +628,16 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 hashes = [ media.GetHash() for media in self._ordered_medias if not media.HasInbox() and media.GetTimesManager().GetArchivedTimestampMS() is not None ]
                 
-                result_tuples.append( ( hashes, ClientTime.TimestampData.STATICArchivedTime( archive_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                if len( hashes ) > 0:
+                    
+                    result_tuples.append( ( hashes, ClientTime.TimestampData.STATICArchivedTime( archive_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                    
                 
             
         
         #
         
-        if self._last_viewed_media_viewer_time.isEnabled() and ( self._last_viewed_media_viewer_time.HasChanges() or not only_changes ):
+        if self._last_viewed_media_viewer_time.HasChanges() or not only_changes:
             
             datetime_value_range = self._last_viewed_media_viewer_time.GetValue()
             
@@ -644,11 +647,14 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 hashes = [ media.GetHash() for media in self._ordered_medias if media.GetTimesManager().GetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER ) is not None ]
                 
-                result_tuples.append( ( hashes, ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_MEDIA_VIEWER, last_viewed_media_viewer_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                if len( hashes ) > 0:
+                    
+                    result_tuples.append( ( hashes, ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_MEDIA_VIEWER, last_viewed_media_viewer_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                    
                 
             
         
-        if self._last_viewed_preview_viewer_time.isEnabled() and ( self._last_viewed_preview_viewer_time.HasChanges() or not only_changes ):
+        if self._last_viewed_preview_viewer_time.HasChanges() or not only_changes:
             
             datetime_value_range = self._last_viewed_preview_viewer_time.GetValue()
             
@@ -658,7 +664,10 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 hashes = [ media.GetHash() for media in self._ordered_medias if media.GetTimesManager().GetLastViewedTimestampMS( CC.CANVAS_PREVIEW ) is not None ]
                 
-                result_tuples.append( ( hashes, ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_PREVIEW, last_viewed_preview_viewer_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                if len( hashes ) > 0:
+                    
+                    result_tuples.append( ( hashes, ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_PREVIEW, last_viewed_preview_viewer_timestamp_ms ), datetime_value_range.GetStepMS() ) )
+                    
                 
             
         
@@ -773,6 +782,11 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     continue
                     
                 
+                if not self._archived_time.isVisible():
+                    
+                    continue
+                    
+                
                 self._archived_time.SetValue( self._archived_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
                 
             elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
@@ -793,17 +807,21 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 if timestamp_data.location == CC.CANVAS_MEDIA_VIEWER:
                     
-                    if not self._last_viewed_media_viewer_time.isHidden():
+                    if not self._last_viewed_media_viewer_time.isVisible():
                         
-                        self._last_viewed_media_viewer_time.SetValue( self._last_viewed_media_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
+                        continue
                         
+                    
+                    self._last_viewed_media_viewer_time.SetValue( self._last_viewed_media_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
                     
                 elif timestamp_data.location == CC.CANVAS_PREVIEW:
                     
-                    if not self._last_viewed_preview_viewer_time.isHidden():
+                    if not self._last_viewed_preview_viewer_time.isVisible():
                         
-                        self._last_viewed_preview_viewer_time.SetValue( self._last_viewed_preview_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
+                        continue
                         
+                    
+                    self._last_viewed_preview_viewer_time.SetValue( self._last_viewed_preview_viewer_time.GetValue().DuplicateWithNewTimestampMS( timestamp_data.timestamp_ms ), from_user = from_user )
                     
                 
             elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:

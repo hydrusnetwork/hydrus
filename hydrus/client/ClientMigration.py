@@ -244,7 +244,7 @@ class MigrationDestinationTagService( MigrationDestination ):
     
     def __init__( self, controller, tag_service_key, content_action ):
         
-        name = controller.services_manager.GetName( tag_service_key )
+        name = controller.services_manager.GetNameSafe( tag_service_key )
         
         super().__init__( controller, name )
         
@@ -711,7 +711,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
     
     def __init__( self, controller, tag_service_key, location_context, desired_hash_type, hashes, tag_filter, content_statuses ):
         
-        name = controller.services_manager.GetName( tag_service_key )
+        name = controller.services_manager.GetNameSafe( tag_service_key )
         
         super().__init__( controller, name )
         
@@ -753,7 +753,7 @@ class MigrationSourceTagServicePairs( MigrationSource ):
     
     def __init__( self, controller, tag_service_key, content_type, left_tag_filter, right_tag_filter, content_statuses, left_side_needs_count, right_side_needs_count, either_side_needs_count, needs_count_service_key ):
         
-        name = controller.services_manager.GetName( tag_service_key )
+        name = controller.services_manager.GetNameSafe( tag_service_key )
         
         super().__init__( controller, name )
         

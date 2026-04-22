@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 669](https://github.com/hydrusnetwork/hydrus/releases/tag/v669)
+
+### misc
+
+* thanks to a user, the Paper Dark QSSes now have colours to stand in for the stuff in `options->colours`
+* thanks to a user, fixed some bad shortcut enums that probably broke 'media-next' and 'volume-up/down' as mappable keys
+* the 'manage times' dialog now has copy/paste buttons beside the file modified time, archived time, and last viewed times. works the same as the copy/paste buttons inside the smaller edit dialogs. they'll copy a float like `1776805484.252` but will eat pretty much anything
+* the rich copy button menu at the bottom of on 'edit times' now lets you copy just the: file modified time; archived time; last viewed times; and web domain times
+* fixed a traceback when hitting certain 'move thumbnail' shortcuts on an empty page/selection
+* added info to 'big updates' and 'running from source' help regarding how to checkout a particular tag with `git` and how to discard and stash changes when pulling
+* added a `--no_qt_multimedia` debug launch argument to disallow any attempt to import `QtMultimedia`, which drives the QtMediaPlayer. in certain environments, this guy will cause a segfault, either on boot or when opening `file->options` and my newer audio device check hits it, let's go
+
+### some window options
+
+* the 'regular_center_dialog' entry in `options->gui` is now split into `quick_select_dialog`, `quick_yesno_dialog`, and `quick_entry_dialog`. all defaulting to 'center on parent window'
+* more of the 'select from a list of buttons'-style dialogs now have definitions, usually the new `quick_select_dialog`
+* `regular_center_dialog` is removed, and also, if you have it, a `deeply_nested_dialogs`, note the plural, stub that was never used
+* in `options->gui` you can now set that a non-remember-position window spawn centered on the current mouse cursor position. I daresay this is kino for mouse-centric users on the new quick-dialog entries, but try it for yourself
+* gave the list in `options->gui` a label brush-up. hope it is easier to pick out what is going on now
+
+### boring import options overhaul
+
+* I made it more pleasant to load and paste import options around the upcoming UI (which you can preview under `options->import options` while in `advanced mode`)--
+* wrote a 'custom paste' dialog that shows you the source and the incoming paste as two checkbox lists and a clear preview of the pending result. this dialog sets up a merge-paste by default but has buttons to quickly set up fill-in-gaps-paste or replace-paste. it has special labels for when the incoming paste makes no changes and also a couple commentary labels if the paste makes no changes at all or if the source is 'global' and thus has special rules
+* added 'custom paste' to the top of the paste button menus around here as the default way users should handle pastes while still allowing quicker mass-pastes with the old entries
+* the old entries in the paste menus now have simple labels to reflect what the 'custom paste' dialog uses, pushing spurious explanation to tooltips. also, the safe and 'what users want to happen most of the time' `merge-paste` is now the top of the three
+* hooked up a new 'load favourite' menu off the star button to the custom paste dialog, so you can now load without having to juggle via your clipboard and you get a nice clean preview of what is about to happen
+* added a star button to the url class list too
+* the individual import options panel now has a copy button, so you can just copy a single set of options nice and quick
+* the rules around pasting to 'global' are tightened up
+* when pasting an import options container into an 'edit import options container' panel that is in 'simple mode' and has a limited set of viewable options, the paste object is now filtered to that sub-selection of available import options types
+
+### removal of UPnP
+
+* as has been long-planned, hydrus no longer does anything UPnP related. this is old port-forwarding tech that could apply to the Client API or a Server service if you jumped through several hoops and put 'upnpc' in the `install_dir/bin` dir, but for most users it never fired. I removed the exe from regular installs years ago, removed a upnp mapping dialog two months ago, and am clearing out the last server port forwarding tech today. if you want to set up port forwarding, run your own solution particular to your hardware, not my old garbage!
+* specifically--
+* the client api service and serverside services no longer offer a 'upnp port' value to edit in their UI panels
+* upnp readme is removed from `install_dir/bin`
+* the primary controllers of the client and server no longer spin up a upnp manager/daemon to serve these jobs
+* removed `HydrusNATPunch` and `TestHydrusNATPunch`
+
+### other boring cleanup
+
+* the way service names are fetched has a new safe variant that recovers from a missing (e.g. recently deleted) service properly, and every call for a service name is now safe across the program. this fixes an issue with deleting a tag service that is currently in focus in a search page (and likely several other similar issues, and some general skipped summaries and such for missing services. now it'll explicitly say "unknown service" universally when this happens)
+* cleaned up the copy/paste logic in 'manage times' dialog. it was all good before, but a little ugly in how it decided whether to grab/push times wrt non-visible widgets
+* decoupled some datetime copy/paste code so different datetime widgets can share the timestamp parsing
+* KISSed a domain-umbrella checking trick that helps us migrate to `tldextract`
+* did a touch of misc linting
+
 ## [Version 668](https://github.com/hydrusnetwork/hydrus/releases/tag/v668)
 
 ### mistakes
@@ -514,24 +563,3 @@ title: Changelog
 
 * I deleted a bunch of very old 'running from source' help from the pre-everything-is-a-wheel days that is no longer pertinent
 * deleted some ancient unused client service UI code
-
-## [Version 659](https://github.com/hydrusnetwork/hydrus/releases/tag/v659)
-
-### misc
-
-* certain PNGs that would load very slowly now load about ten times faster! specifically, any PNG with gamma/chromaticity information in its header now has that converted to a bespoke ICC Profile, and the normal ICC Profile translation code is applied to convert to sRGB. my hacky (and possibly unstable) manual conversion is no longer used. typically, a big ~50 megapixel PNG (7,000x8,000) would render in about ten seconds with lots of memory churn; now it renders in one, with far less. this fix brought to you by ChatGPT, which understands ICC Profile header construction, `r/g/bTRC` gamma curves, and D50/D65 `wtpt` and `chad` applicability across ICC Profile engine versions far better than it did last year. thanks for your patience, those who submitted weird big PNGs in. if you have any PNGs (or any other file of course) that suddenly render with the wrong colour, I'm interested to see them
-* the `network->downloaders` menu has new 'user-run downloader repository' and 'help: random 403 errors' items. the former links to https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, the latter opens a little help window that talks about the infrastructure changes that are slowly breaking some of the original default downloaders. this help window is now linked off any downloader 'retry' icon button that has 'ignored' stuff to retry, and I replicated it in the 'getting started with downloaders' help, so I hope anyone who gets perplexed by a 403 will now see what's going on. there is no excellent solution here, but I am thinking about it (issue #1963)
-
-### fixes
-
-* fixed the new unified directory picker to always return a path with backslashes on Windows. it was producing one with forward slashes, which in certain listdir operations (like 'add folder' in the import files dialog) was generating paths with mixed slashes and backslashes(!!). python handles this situation well and it didn't break anything, but it is ugly, unwise, and caused some path duplicates since you could add the same path to certain lists with both slashes and backslashes. the various 'add filename(s)' dialogs were already normalising correctly, so I believe we are fully covered here now. thank you to the users who reported this
-* fixed a stupid bug that meant if you renamed an import folder, it would always be renamed as a non-duplicate 'import folder name (1)' alternate
-* I think I have fixed the issue where the new QtMediaPlayer could sometimes 'scroll inside' the viewport of the player on a mouse wheel event. this seemed to be aggravated by the aspect ratio changes caused by having the `TEST: Use the same QtMediaPlayer through media transitions` checkbox on. I was going to force everyone out of this test mode (it is currently default), but I think I fixed it correct so I won't yet. let me know how things are now--if we are good, then I think it is time to formalise this test into a real thing
-* fixed some bad reset code in the duplicate potential pair search when you have the 'try to state a final estimate' setting on. it was possible for it to do some confidence math on a hitrate of over 100% and it got into trouble when generating the count. the reset code is nicer and the math now checks for and handles non-sensible input (issue #1960)
-
-### client api
-
-* fixed the 'fetch SVG file for rating service' routine when the SVG file is a user override in their `db/static` dir
-* fixed the 'this service doesn't use an SVG rating' 404 when fetching SVG files for rating services--it was 500ing previously. added a unit test for this too
-* fixed the error handling in this SVG fetch routine to handle certain other error cases better
-* client api version is now 88
