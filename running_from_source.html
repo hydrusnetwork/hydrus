@@ -1699,6 +1699,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Simple Updating Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#selecting_version_tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing a particular version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stashing_changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stashing changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -2981,6 +3009,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Simple Updating Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#selecting_version_tag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Installing a particular version
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stashing_changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stashing changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -3430,6 +3486,7 @@
 <h3 id="have_fun">Have Fun<a class="headerlink" href="#have_fun" title="Permanent link">&para;</a></h3>
 <p>If everything boots ok, great! Have a play around with the client and make sure file imports work ok and, if you are not macOS, that mpv is all correct. Hitting <code>help-&gt;about</code> will show if the optional libraries are all available and will give you error popups detailing any problems.</p>
 <p>Don't forget to create a nice shortcut to your <code>hydrus_client</code> or <code>hydrus_client-user</code> launch script. If you can, set a custom icon--there are several <code>hydrus...</code> files in <code>install_dir/static</code> that are suitable.</p>
+<p>I recommend putting your hydrus database outside of your install dir with the <code>-d</code> launch parameter. The <code>.gitignore</code> rules make it all safe, but it is wiser to place it outside.</p>
 <details class="note">
 <summary>System Qt styles</summary>
 <p>If you have a system Qt with several styles but do not see them under <code>options-&gt;style</code>, it is probably that your venv cannot "see" your system Qt.</p>
@@ -3440,6 +3497,48 @@
 <p>Updating is simple. If you installed with <code>git</code>, it takes about three seconds: just close the client, open the base install directory in a terminal, and type <code>git pull</code>. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat'). </p>
 <p>If you installed by extracting the source zip, update just as you would with the built extract: download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</p>
 <p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.</p>
+<h4 id="selecting_version_tag">Installing a particular version<a class="headerlink" href="#selecting_version_tag" title="Permanent link">&para;</a></h4>
+<p>If you need to do a <a href="getting_started_installing.html#big_updates">big update</a>, or if you just want to install a particular version, <code>git pull</code>, which gets the latest updates, will not do it. You want to say to the repository 'hey, I need the source as it was at v615'. The command for this is:</p>
+<p><code>git checkout v615</code></p>
+<p>I use the same tagging format for all releases, with the exception that hotfixes will be called <code>v615a</code> or <code>v615b</code>. The text matches up exactly with that in the URL <code>https://github.com/hydrusnetwork/hydrus/releases/tag/v615</code>, if you are uncertain.</p>
+<p>Thus, if you are doing a big update, you might be looking at something like this in your terminal:</p>
+<div class="highlight"><pre><span></span><code>MAKE A BACKUP
+git checkout v558
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v571
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v603
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v652
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v662
+./hydrus_client.sh
+(have fun)
+</code></pre></div>
+<p>If I need you to switch branch, the command is:</p>
+<div class="highlight"><pre><span></span><code>git switch dev
+git switch master
+git switch future-2026-04
+etc..
+</code></pre></div>
+<h4 id="stashing_changes">Stashing changes<a class="headerlink" href="#stashing_changes" title="Permanent link">&para;</a></h4>
+<p>If you alter any of the files in the install (often by accident), git may well hesitate, not wanting to delete your work by accident. This can be confusing if you just want to 'get the new stuff'. Running <code>git status</code> can be useful to see more.</p>
+<p>If you don't care about the changes and are ok with them being deleted/undone:</p>
+<div class="highlight"><pre><span></span><code>git reset --hard HEAD
+</code></pre></div>
+<p>If you want to keep the changes:</p>
+<div class="highlight"><pre><span></span><code>git stash push
+git pull
+git stash apply
+(everything works out great and nothing goes wrong)
+git stash drop
+</code></pre></div>
+<p>This retracts the changes and then attempts to re-apply them to the new code. If I edited something you also edited enough that your patch is now ambiguous, the <code>apply</code> step will halt and tell you about merge conflicts. If you do not know what to do next, it is time to open up an LLM and have a conversation.</p>
+<p>Note that your database, if you keep it inside <code>install_dir/db</code>, is covered by the <code>.gitignore</code> rules and should not be affected by the above commands. It is still wise to make a backup before any significant changes, and in general it is a wise idea to keep the database out of a source install using the <code>-d</code> launch parameter.</p>
 <h3 id="migrating_from_an_existing_install">Migrating from an Existing Install<a class="headerlink" href="#migrating_from_an_existing_install" title="Permanent link">&para;</a></h3>
 <p>Many users start out using one of the official built releases and decide to move to source. There is a full document <a href="database_migration.html">here</a> about how to migrate a database, but for your purposes, the simple method is:</p>
 <p><strong>If you never moved your database to another place and do not use -d/--db_dir launch parameter</strong></p>
@@ -3593,7 +3692,7 @@ python hydrus_client.py -d=&quot;/path/to/database&quot;
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="March 11, 2026 20:27:32 UTC">March 11, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 22, 2026 20:57:18 UTC">April 22, 2026</span>
   </span>
 
     

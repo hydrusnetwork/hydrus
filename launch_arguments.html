@@ -2943,6 +2943,8 @@
 <p>This starts the program with <code>network-&gt;pause-&gt;all new network traffic</code> on. Useful for debugging a downloader in your boot session that is going crazy or stopping a problem subscription from launching.</p>
 <h2 id="--win_qt_darkmode_test"><strong><code>--win_qt_darkmode_test</code></strong><a class="headerlink" href="#--win_qt_darkmode_test" title="Permanent link">&para;</a></h2>
 <p><strong>Windows only:</strong> This starts the program with Qt's 'darkmode' detection enabled, as <a href="https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments">here</a>, set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to <code>windows</code>, and can't handle switches between light and dark mode.</p>
+<h2 id="--no_qt_multimedia"><strong><code>--no_qt_multimedia</code></strong><a class="headerlink" href="#--no_qt_multimedia" title="Permanent link">&para;</a></h2>
+<p>This stops the program from attempting to load the QtMultimedia libraries. Some environments have damaged or unstable QtMultimedia packages that appear to exist but cause segfaults on import; this resolves it.</p>
 <h1 id="server-specific_arguments">server-specific arguments<a class="headerlink" href="#server-specific_arguments" title="Permanent link">&para;</a></h1>
 <p>The server also takes an optional <em>positional</em> argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.</p>
 
@@ -2965,7 +2967,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="January 21, 2026 21:35:39 UTC">January 21, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 22, 2026 20:57:18 UTC">April 22, 2026</span>
   </span>
 
     
