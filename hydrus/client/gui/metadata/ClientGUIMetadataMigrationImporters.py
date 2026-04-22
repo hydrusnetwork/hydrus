@@ -408,14 +408,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateServiceKeyButtonLabel( self ):
         
-        try:
-            
-            name = CG.client_controller.services_manager.GetName( self._service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            name = 'unknown'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         self._service_selection_button.setText( name )
         

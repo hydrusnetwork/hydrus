@@ -1751,6 +1751,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._default_position.addItem( 'by default, position off the top-left corner of parent', 'topleft')
         self._default_position.addItem( 'by default, position centered on the parent', 'center')
+        self._default_position.addItem( 'by default, position centered on the mouse cursor', 'mouse')
         
         self._maximised = QW.QCheckBox( 'start maximised', self )
         self._fullscreen = QW.QCheckBox( 'start fullscreen', self )

@@ -523,7 +523,7 @@ class RatingIncDec( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = CG.client_controller.services_manager.GetName( self._service_key )
+            text = CG.client_controller.services_manager.GetNameSafe( self._service_key )
             
             try:
                 
@@ -1063,7 +1063,7 @@ class RatingNumerical( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = CG.client_controller.services_manager.GetName( self._service_key )
+            text = CG.client_controller.services_manager.GetNameSafe( self._service_key )
             
             try:
                 

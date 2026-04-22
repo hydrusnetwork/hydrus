@@ -586,6 +586,121 @@ class DateTimeWidgetValueRange( object ):
         
     
 
+def CopyDateTimeValueRangeToClipboard( datetime_value_range: DateTimeWidgetValueRange ):
+    
+    best_qt_datetime = datetime_value_range.GetBestVisualValue()
+    
+    if best_qt_datetime is None:
+        
+        timestamp = None
+        
+    else:
+        
+        timestamp = HydrusTime.SecondiseMSFloat( best_qt_datetime.toMSecsSinceEpoch() )
+        
+    
+    text = json.dumps( timestamp )
+    
+    CG.client_controller.pub( 'clipboard', 'text', text )
+    
+
+def GetQtDateTimeFromClipboard( win: QW.QWidget ):
+    
+    try:
+        
+        raw_text = CG.client_controller.GetClipboardText()
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        HydrusData.PrintException( e )
+        
+        ClientGUIDialogsMessage.ShowCritical( win, 'Problem pasting!', str(e) )
+        
+        raise HydrusExceptions.CancelledException()
+        
+    
+    timestamp = None
+    timestamp_set = False
+    
+    if not timestamp_set:
+        
+        try:
+            
+            timestamp = json.loads( raw_text )
+            
+            timestamp_set = True
+            
+            if isinstance( timestamp, str ):
+                
+                try:
+                    
+                    timestamp = float( timestamp )
+                    
+                except ValueError as e:
+                    
+                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem pasting!', str(e) )
+                    
+                    raise HydrusExceptions.CancelledException()
+                    
+                
+            
+        except Exception as e:
+            
+            pass
+            
+        
+    
+    if not timestamp_set:
+        
+        try:
+            
+            timestamp = ClientTime.ParseDate( raw_text )
+            
+            timestamp_set = True
+            
+        except Exception as e:
+            
+            pass
+            
+        
+    
+    if not timestamp_set:
+        
+        ClientGUIDialogsMessage.ShowWarning( win, f'Sorry, I did not understand that! I am looking for a simple timestamp integer or parseable datestring, but I got:\n\n{raw_text}' )
+        
+        raise HydrusExceptions.CancelledException()
+        
+    
+    try:
+        
+        looks_good = timestamp is None or isinstance( timestamp, ( int, float ) )
+        
+        if not looks_good:
+            
+            raise Exception( 'Not a timestamp!' )
+            
+        
+        if timestamp is None:
+            
+            qt_datetime = None
+            
+        else:
+            
+            timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
+            
+            qt_datetime = QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, QC.QTimeZone.systemTimeZone() )
+            
+        
+    except Exception as e:
+        
+        ClientGUIDialogsQuick.PresentClipboardParseError( win, raw_text, 'A parseable timestamp string', e )
+        
+        return
+        
+    
+    return qt_datetime
+    
+
 class DateTimesButton( ClientGUICommon.BetterButton ):
     
     dateTimeChanged = QC.Signal()
@@ -666,10 +781,88 @@ class DateTimesButton( ClientGUICommon.BetterButton ):
             
             self._UpdateLabel()
             
-            self._has_user_changes = from_user
+            if from_user:
+                
+                self._has_user_changes = True
+                
             
             self.dateTimeChanged.emit()
             
+        
+    
+
+class DateTimesButtonWithCopyPaste( QW.QWidget ):
+    
+    dateTimeChanged = QC.Signal()
+    
+    def __init__( self, parent, time_allowed = True, milliseconds_allowed = False, none_allowed = False, only_past_dates = False ):
+        
+        super().__init__( parent )
+        
+        self._datetimes_button = DateTimesButton( self, time_allowed = time_allowed, milliseconds_allowed = milliseconds_allowed, none_allowed = none_allowed, only_past_dates = only_past_dates )
+        
+        self._copy_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._Copy )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamp to the clipboard.' ) )
+        
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a timestamp. Needs to be a simple string but can handle pretty much anything.' ) )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._datetimes_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        self.setLayout( hbox )
+        
+        self._datetimes_button.dateTimeChanged.connect( self.dateTimeChanged )
+        
+    
+    def _Copy( self ):
+        
+        datetime_value_range = self.GetValue()
+        
+        CopyDateTimeValueRangeToClipboard( datetime_value_range )
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            qt_datetime = GetQtDateTimeFromClipboard( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        current_datetime_value_range = self.GetValue()
+        
+        datetime_value_range = current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
+        
+        self.SetValue( datetime_value_range, from_user = True )
+        
+    
+    def GetValue( self ):
+        
+        return self._datetimes_button.GetValue()
+        
+    
+    def HasChanges( self ):
+        
+        return self._datetimes_button.HasChanges()
+        
+    
+    def setText( self, *args, **kwargs ):
+        
+        self._datetimes_button.setText( *args, **kwargs )
+        
+    
+    def SetValue( self, datetime_value_range: DateTimeWidgetValueRange, from_user = False ):
+        
+        return self._datetimes_button.SetValue( datetime_value_range, from_user = from_user )
         
     
 
@@ -802,20 +995,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         datetime_value_range = self.GetValue()
         
-        best_qt_datetime = datetime_value_range.GetBestVisualValue()
-        
-        if best_qt_datetime is None:
-            
-            timestamp = None
-            
-        else:
-            
-            timestamp = HydrusTime.SecondiseMSFloat( best_qt_datetime.toMSecsSinceEpoch() )
-            
-        
-        text = json.dumps( timestamp )
-        
-        CG.client_controller.pub( 'clipboard', 'text', text )
+        CopyDateTimeValueRangeToClipboard( datetime_value_range )
         
     
     def _NoneClicked( self ):
@@ -830,95 +1010,14 @@ class DateTimesCtrl( QW.QWidget ):
         
         try:
             
-            raw_text = CG.client_controller.GetClipboardText()
+            qt_datetime = GetQtDateTimeFromClipboard( self )
             
-        except HydrusExceptions.DataMissing as e:
-            
-            HydrusData.PrintException( e )
-            
-            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
+        except HydrusExceptions.CancelledException:
             
             return
             
         
-        timestamp = None
-        timestamp_set = False
-        
-        if not timestamp_set:
-            
-            try:
-                
-                timestamp = json.loads( raw_text )
-                
-                timestamp_set = True
-                
-                if isinstance( timestamp, str ):
-                    
-                    try:
-                        
-                        timestamp = float( timestamp )
-                        
-                    except ValueError:
-                        
-                        raise Exception( 'Does not look like a number!' )
-                        
-                    
-                
-            except Exception as e:
-                
-                pass
-                
-            
-        
-        if not timestamp_set:
-            
-            try:
-                
-                timestamp = ClientTime.ParseDate( raw_text )
-                
-                timestamp_set = True
-                
-            except Exception as e:
-                
-                pass
-                
-            
-        
-        if not timestamp_set:
-            
-            ClientGUIDialogsMessage.ShowWarning( self, f'Sorry, I did not understand that! I am looking for a simple timestamp integer or parseable datestring, but I got:\n\n{raw_text}' )
-            
-            return
-            
-        
-        try:
-            
-            looks_good = timestamp is None or isinstance( timestamp, ( int, float ) )
-            
-            if not looks_good:
-                
-                raise Exception( 'Not a timestamp!' )
-                
-            
-            if timestamp is None:
-                
-                qt_datetime = None
-                
-            else:
-                
-                timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
-                
-                qt_datetime = QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, QC.QTimeZone.systemTimeZone() )
-                
-            
-            datetime_value_range = self._current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
-            
-        except Exception as e:
-            
-            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A parseable timestamp string', e )
-            
-            return
-            
+        datetime_value_range = self._current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
         
         self.SetValue( datetime_value_range )
         

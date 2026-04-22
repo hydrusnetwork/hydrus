@@ -324,6 +324,7 @@ class RecentTagsPanel( QW.QWidget ):
         self._recent_tags.TakeFocusForUser()
         
     
+
 class RelatedTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()

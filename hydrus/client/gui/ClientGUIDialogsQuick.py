@@ -22,7 +22,7 @@ def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, 
     
     title = 'Enter Text'
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'regular_center_dialog' ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_entry_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsTextEntry.EditTextPanel( dlg, message, default, placeholder, allow_blank, suggestions, max_chars, password_entry, min_char_width = min_char_width )
         
@@ -45,7 +45,7 @@ def GetDeleteFilesJobs( win: QW.QWidget, media, default_reason, suggested_file_s
     
     title = 'Delete files?'
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'regular_center_dialog' ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_select_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsEdit.EditDeleteFilesPanel( dlg, media, default_reason, suggested_file_service_key = suggested_file_service_key )
         
@@ -297,7 +297,7 @@ def SelectFromList( win: QW.QWidget, title: str, choice_tuples, value_to_select 
         return data
         
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_select_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsSelectFromList.EditSelectFromListPanel( dlg, choice_tuples, value_to_select = value_to_select, sort_tuples = sort_tuples )
         
@@ -325,7 +325,7 @@ def SelectFromListButtons( win: QW.QWidget, title: str, choice_tuples, message =
         return data
         
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True, frame_key = 'quick_select_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsSelectFromList.EditSelectFromListButtonsPanel( dlg, choice_tuples, message = message )
         
@@ -346,7 +346,7 @@ def SelectFromListButtons( win: QW.QWidget, title: str, choice_tuples, message =
 
 def SelectMultipleFromList( win: QW.QWidget, title: str, choice_tuples ):
     
-    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_select_dialog' ) as dlg:
         
         panel = ClientGUIScrolledPanelsSelectFromList.EditSelectMultiple( dlg, choice_tuples )
         

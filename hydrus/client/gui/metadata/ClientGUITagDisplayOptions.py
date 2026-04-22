@@ -30,11 +30,11 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._write_autocomplete_tag_domain = ClientGUICommon.BetterChoice( self )
         self._write_autocomplete_tag_domain.setToolTip( ClientGUIFunctions.WrapToolTip( 'A manage tags autocomplete will start with this domain. Typically only useful with this service or "all known tags".' ) )
         
-        self._write_autocomplete_tag_domain.addItem( services_manager.GetName( CC.COMBINED_TAG_SERVICE_KEY ), CC.COMBINED_TAG_SERVICE_KEY )
+        self._write_autocomplete_tag_domain.addItem( services_manager.GetNameSafe( CC.COMBINED_TAG_SERVICE_KEY ), CC.COMBINED_TAG_SERVICE_KEY )
         
         for service_key in all_real_tag_service_keys:
             
-            self._write_autocomplete_tag_domain.addItem( services_manager.GetName( service_key ), service_key )
+            self._write_autocomplete_tag_domain.addItem( services_manager.GetNameSafe( service_key ), service_key )
             
         
         self._override_write_autocomplete_location_context = QW.QCheckBox( self )

@@ -322,14 +322,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         
-        try:
-            
-            service_name = CG.client_controller.services_manager.GetName( service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            service_name = 'missing service!'
-            
+        service_name = CG.client_controller.services_manager.GetNameSafe( service_key )
         
         pretty_action = HC.content_merge_string_lookup[ action ]
         pretty_tag_filter = tag_filter.ToFilterString()

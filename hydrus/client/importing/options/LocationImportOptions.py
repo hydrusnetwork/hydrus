@@ -141,15 +141,13 @@ class LocationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        try:
+        destination_names = sorted( CG.client_controller.services_manager.GetNameSafe( service_key ) for service_key in self._import_destination_location_context.current_service_keys )
+        
+        statements.append( 'imports to ' + ', '.join( destination_names ) )
+        
+        if False in ( CG.client_controller.services_manager.ServiceExists( service_key ) for service_key in self._import_destination_location_context.current_service_keys ):
             
-            destination_names = sorted( CG.client_controller.services_manager.GetName( service_key ) for service_key in self._import_destination_location_context.current_service_keys )
-            
-            statements.append( 'imports to ' + ', '.join( destination_names ) )
-            
-        except:
-            
-            statements.append( 'problem with destination: wants to import to a location that no longer exists?' )
+            statements.append( 'problem: seems to want to import to a location that no longer exists!' )
             
         
         if self._automatically_archives:

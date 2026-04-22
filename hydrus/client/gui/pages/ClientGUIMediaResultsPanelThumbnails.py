@@ -1454,7 +1454,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 file_service_key = local_file_service_keys_we_are_in[0]
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                 
             else:
                 
@@ -1462,7 +1462,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 for file_service_key in local_file_service_keys_we_are_in:
                     
-                    ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( CG.client_controller.services_manager.GetNameSafe( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
                     
                 
                 ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
@@ -1681,6 +1681,11 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
     
     def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
+        
+        if len( medias ) == 0:
+            
+            return
+            
         
         super().MoveMedia( medias, insertion_index )
         

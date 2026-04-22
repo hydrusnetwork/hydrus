@@ -515,6 +515,8 @@ class BetterCheckBoxList( QW.QListWidget ):
         
         self._ItemCheckStateChanged( item )
         
+        return item
+        
     
     def Check( self, index: int, value: bool = True ):
         

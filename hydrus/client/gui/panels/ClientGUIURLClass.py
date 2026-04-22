@@ -1732,7 +1732,7 @@ class EditURLDomainMaskWidget( ClientGUICommon.StaticBox ):
         
         title = 'Enter domain regex.'
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key = 'regular_center_dialog' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key = 'quick_entry_dialog' ) as dlg:
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             

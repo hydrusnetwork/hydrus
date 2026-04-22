@@ -476,3 +476,28 @@ QPushButton#HydrusCollapseArrowUp, QPushButton#HydrusCollapseArrowDown {
     padding-left: 4px;
     padding-right: 4px;
 }
+
+QWidget#HydrusMediaList {
+  qproperty-hmrp_background: #202020;
+  qproperty-hmrp_thumbnail_local_background_normal: #202020;
+  qproperty-hmrp_thumbnail_local_background_selected: #202020;
+  qproperty-hmrp_thumbnail_local_border_normal: #141414;
+  qproperty-hmrp_thumbnail_local_border_selected: #ffffff;
+  qproperty-hmrp_thumbnail_not_local_background_normal: #202020;
+  qproperty-hmrp_thumbnail_not_local_background_selected: #202020;
+  qproperty-hmrp_thumbnail_not_local_border_normal: #141414;
+  qproperty-hmrp_thumbnail_not_local_border_selected: #ffffff;
+}
+
+QWidget#HydrusMediaViewer {
+  qproperty-hmv_background: #202020;
+  qproperty-hmv_text: #cdd6f4;
+}
+
+QWidget#HydrusTagAutocomplete {
+  qproperty-hta_background: #141414;
+}
+
+QWidget#HydrusTagList {
+  qproperty-htl_background: #141414;
+}

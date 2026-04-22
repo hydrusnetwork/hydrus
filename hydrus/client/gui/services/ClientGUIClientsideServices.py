@@ -1122,8 +1122,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._use_normie_eris = QW.QCheckBox( self._client_server_options_panel )
         self._use_normie_eris.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use alternate ASCII art on the root page of the server.' ) )
         
-        self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 55555, none_phrase = 'do not forward port', max = 65535 )
-        
         self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'https' )
         self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'host.com' )
         self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, '12345' )
@@ -1135,7 +1133,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         #
         
         self._port.setValue( default_port )
-        self._upnp.SetValue( default_port )
         
         self._run_the_service.setChecked( dictionary[ 'port' ] is not None )
         
@@ -1143,8 +1140,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
             
             self._port.setValue( dictionary[ 'port' ] )
             
-        
-        self._upnp.SetValue( dictionary[ 'upnp_port' ] )
         
         self._allow_non_local_connections.setChecked( dictionary[ 'allow_non_local_connections' ] )
         self._use_https.setChecked( dictionary[ 'use_https' ] )
@@ -1167,7 +1162,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         rows.append( ( 'support CORS headers', self._support_cors ) )
         rows.append( ( 'log requests', self._log_requests ) )
         rows.append( ( 'normie-friendly welcome page', self._use_normie_eris ) )
-        rows.append( ( 'upnp port', self._upnp ) )
         
         if False: # some old local booru gubbins--maybe delete?
             
@@ -1205,24 +1199,9 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._support_cors.setEnabled( service_running )
         self._log_requests.setEnabled( service_running )
         self._use_normie_eris.setEnabled( service_running )
-        self._upnp.setEnabled( service_running )
         self._external_scheme_override.setEnabled( service_running )
         self._external_host_override.setEnabled( service_running )
         self._external_port_override.setEnabled( service_running )
-        
-        if service_running:
-            
-            if self._allow_non_local_connections.isChecked():
-                
-                self._upnp.SetValue( None )
-                
-                self._upnp.setEnabled( False )
-                
-            else:
-                
-                self._upnp.setEnabled( True )
-                
-            
         
     
     def GetValue( self ):
@@ -1240,7 +1219,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         
         dictionary_part[ 'port' ] = port
         
-        dictionary_part[ 'upnp_port' ] = self._upnp.GetValue()
         dictionary_part[ 'allow_non_local_connections' ] = self._allow_non_local_connections.isChecked()
         dictionary_part[ 'use_https' ] = self._use_https.isChecked()
         dictionary_part[ 'support_cors' ] = self._support_cors.isChecked()
@@ -2263,13 +2241,6 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         else:
             
             status = 'The client api should be running on port {}.'.format( port )
-            
-            upnp_port = self._service.GetUPnPPort()
-            
-            if upnp_port is not None:
-                
-                status += ' It should be open via UPnP on external port {}.'.format( upnp_port )
-                
             
         
         self._service_status.setText( status )

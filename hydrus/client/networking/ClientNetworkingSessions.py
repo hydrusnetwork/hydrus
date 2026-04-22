@@ -214,17 +214,17 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         # if we have previously put session info in a larger, higher-level bucket, we'll use (keep using) that instead
         if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
             
-            second_level_domain = network_context.context_data
+            larger_umbrella_domain = network_context.context_data
             
-            if second_level_domain.count( '.' ) > 1:
+            while larger_umbrella_domain.count( '.' ) > 1:
                 
-                top_level_domain = ClientNetworkingFunctions.ConvertDomainIntoTopLevelDomain( second_level_domain )
+                larger_umbrella_domain = ClientNetworkingFunctions.ConvertDomainIntoNextLevelDomain( larger_umbrella_domain )
                 
-                top_level_domain_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, top_level_domain ) 
+                larger_umbrella_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, larger_umbrella_domain ) 
                 
-                if top_level_domain_network_context in self._network_contexts_to_session_containers:
+                if larger_umbrella_network_context in self._network_contexts_to_session_containers:
                     
-                    return top_level_domain_network_context
+                    return larger_umbrella_network_context
                     
                 
             

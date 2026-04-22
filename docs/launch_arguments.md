@@ -88,6 +88,11 @@ This starts the program with `network->pause->all new network traffic` on. Usefu
 
 **Windows only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
 
+##**`--no_qt_multimedia`**
+
+This stops the program from attempting to load the QtMultimedia libraries. Some environments have damaged or unstable QtMultimedia packages that appear to exist but cause segfaults on import; this resolves it.
+
+
 # server-specific arguments
 
 The server also takes an optional _positional_ argument of 'start' (start the server, the default), 'stop' (stop any existing server), or 'restart' (do a stop, then a start), which should go before any of the above arguments.

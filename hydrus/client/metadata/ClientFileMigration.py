@@ -36,7 +36,7 @@ def DoMoveOrDuplicateLocalFiles( dest_service_key: bytes, action: int, media_res
         return
         
     
-    dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
+    dest_service_name = CG.client_controller.services_manager.GetNameSafe( dest_service_key )
     
     job_status = ClientThreading.JobStatus( cancellable = True )
     

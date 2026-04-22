@@ -28,7 +28,6 @@ def GenerateDefaultServiceDictionary( service_type ):
     
     dictionary = HydrusSerialisable.SerialisableDictionary()
     
-    dictionary[ 'upnp_port' ] = None
     dictionary[ 'bandwidth_tracker' ] = HydrusNetworking.BandwidthTracker()
     
     if service_type in HC.RESTRICTED_SERVICES:
@@ -2665,7 +2664,6 @@ class ServerService( object ):
         
         dictionary = HydrusSerialisable.SerialisableDictionary()
         
-        dictionary[ 'upnp_port' ] = self._upnp_port
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         
         return dictionary
@@ -2673,7 +2671,6 @@ class ServerService( object ):
     
     def _LoadFromDictionary( self, dictionary ):
         
-        self._upnp_port = dictionary[ 'upnp_port' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         
     
@@ -2725,14 +2722,6 @@ class ServerService( object ):
         with self._lock:
             
             return self._port
-            
-        
-    
-    def GetUPnPPort( self ):
-        
-        with self._lock:
-            
-            return self._upnp_port
             
         
     

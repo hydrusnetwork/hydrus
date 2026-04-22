@@ -173,17 +173,17 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             service_key = page.GetServiceKey()
             
-            service_name = CG.client_controller.services_manager.GetServiceName( service_key )
+            name = CG.client_controller.services_manager.GetNameSafe( service_key )
             
             num_tags = page.GetTagCount()
             
             if num_tags > 0:
                 
-                tab_name = f'{service_name} ({num_tags})'
+                tab_name = f'{name} ({num_tags})'
                 
             else:
                 
-                tab_name = service_name
+                tab_name = name
                 
             
             if page.HasChanges():
@@ -369,6 +369,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._tag_presentation_location = tag_presentation_location
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
+            self._media = set()
             
             self._pending_content_update_packages = []
             

@@ -14,7 +14,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
-from hydrus.core.networking import HydrusNATPunch
 from hydrus.core.processes import HydrusProcess
 from hydrus.core.processes import HydrusSubprocess
 from hydrus.core.processes import HydrusThreading
@@ -153,11 +152,6 @@ class HydrusController( object ):
             
             return self._slow_job_scheduler
             
-        
-    
-    def _GetUPnPServices( self ):
-        
-        return []
         
     
     def _GetWakeDelayPeriodMS( self ):
@@ -637,14 +631,6 @@ class HydrusController( object ):
         job = self.CallRepeating( 10.0, 300.0, self.MaintainMemorySlow )
         
         self._daemon_jobs[ 'maintain_memory_slow' ] = job
-        
-        upnp_services = self._GetUPnPServices()
-        
-        self.services_upnp_manager = HydrusNATPunch.ServicesUPnPManager( upnp_services )
-        
-        job = self.CallRepeating( 10.0, 43200.0, self.services_upnp_manager.RefreshUPnP )
-        
-        self._daemon_jobs[ 'services_upnp' ] = job
         
     
     def IsFirstStart( self ):

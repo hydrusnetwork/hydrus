@@ -2318,16 +2318,7 @@ class PredicateSystemRatingIncDec( PanelPredicateSystemSingle ):
         
         self._service_key = service_key
         
-        try:
-            
-            service = CG.client_controller.services_manager.GetService( self._service_key )
-            
-            name = service.GetName()
-            
-        except Exception as e:
-            
-            name = 'unknown service'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         name_st = ClientGUICommon.BetterStaticText( self, name )
         
@@ -2441,16 +2432,7 @@ class PredicateSystemRatingLike( PanelPredicateSystemSingle ):
         
         self._service_key = service_key
         
-        try:
-            
-            service = CG.client_controller.services_manager.GetService( self._service_key )
-            
-            name = service.GetName()
-            
-        except HydrusExceptions.DataMissing:
-            
-            name = 'unknown service'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         name_st = ClientGUICommon.BetterStaticText( self, name )
         
@@ -2596,16 +2578,7 @@ class PredicateSystemRatingNumerical( PanelPredicateSystemSingle ):
         
         self._service_key = service_key
         
-        try:
-            
-            service = CG.client_controller.services_manager.GetService( self._service_key )
-            
-            name = service.GetName()
-            
-        except HydrusExceptions.DataMissing:
-            
-            name = 'unknown service'
-            
+        name = CG.client_controller.services_manager.GetNameSafe( self._service_key )
         
         name_st = ClientGUICommon.BetterStaticText( self, name )
         

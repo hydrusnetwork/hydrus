@@ -3047,7 +3047,7 @@ class DB( HydrusDB.HydrusDB ):
         return ( results_dict, we_stopped_early )
         
     
-    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None, other_tags_to_exclude = None ):
+    def _GetRelatedTags( self, file_service_key, tag_service_key, search_tags, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None, other_tags_to_exclude = None ):
         
         # a user provided the basic idea here
         
@@ -3082,8 +3082,6 @@ class DB( HydrusDB.HydrusDB ):
             
             return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
             
-        
-        tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
         
         tag_service_id = self.modules_services.GetServiceId( tag_service_key )
         file_service_id = self.modules_services.GetServiceId( file_service_key )
@@ -3206,14 +3204,14 @@ class DB( HydrusDB.HydrusDB ):
         if other_tags_to_exclude is not None:
             
             # this is the list of all tags in the list, don't want them either
-            other_tag_ideals = self.modules_tag_siblings.GetIdeals( tag_display_type, tag_service_key, other_tags_to_exclude )
+            other_tag_ideals = self.modules_tag_siblings.GetIdeals( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_key, other_tags_to_exclude )
             
             other_tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = other_tag_ideals ).keys() )
             
             tag_ids_to_exclude.update( other_tag_ids )
             
         
-        for ( search_tag_id, parent_tag_ids ) in self.modules_tag_parents.GetTagsToAncestors( tag_display_type, tag_service_id, set( tag_ids_to_exclude ) ).items():
+        for ( search_tag_id, parent_tag_ids ) in self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, set( tag_ids_to_exclude ) ).items():
             
             # we don't want any of their parents either!
             tag_ids_to_exclude.update( parent_tag_ids )
@@ -8293,6 +8291,27 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 668:
+            
+            try:
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options.DeleteFrameLocation( 'regular_center_dialog' )
+                new_options.DeleteFrameLocation( 'deeply_nested_dialogs' )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -8315,6 +8334,7 @@ class DB( HydrusDB.HydrusDB ):
         for serverside_service in serverside_services:
             
             service_key = serverside_service.GetServiceKey()
+            port = serverside_service.GetPort()
             
             if service_key in current_service_keys:
                 
@@ -8324,18 +8344,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 credentials = service.GetCredentials()
                 
-                upnp_port = serverside_service.GetUPnPPort()
-                
-                if upnp_port is None:
-                    
-                    port = serverside_service.GetPort()
-                    
-                    credentials.SetAddress( host, port )
-                    
-                else:
-                    
-                    credentials.SetAddress( host, upnp_port )
-                    
+                credentials.SetAddress( host, port )
                 
                 service.SetCredentials( credentials )
                 
@@ -8354,18 +8363,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     credentials = service.GetCredentials()
                     
-                    upnp_port = serverside_service.GetUPnPPort()
-                    
-                    if upnp_port is None:
-                        
-                        port = serverside_service.GetPort()
-                        
-                        credentials.SetAddress( host, port )
-                        
-                    else:
-                        
-                        credentials.SetAddress( host, upnp_port )
-                        
+                    credentials.SetAddress( host, port )
                     
                     credentials.SetAccessKey( access_key )
                     

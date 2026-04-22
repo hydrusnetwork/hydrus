@@ -679,7 +679,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
         
         for ( s_k, count ) in local_file_service_keys.items():
             
-            label = f'{CG.client_controller.services_manager.GetName( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            label = f'{CG.client_controller.services_manager.GetNameSafe( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
             description = label
             call = None
             
@@ -702,7 +702,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
                 data = ( s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, None )
             )
             
-            label = f'{CG.client_controller.services_manager.GetName( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            label = f'{CG.client_controller.services_manager.GetNameSafe( s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
             description = 'Duplicate the files to this local file domain.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
@@ -725,7 +725,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
                 data = ( dest_s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_MOVE_MERGE, source_s_k )
             )
             
-            label = f'from {CG.client_controller.services_manager.GetName( source_s_k )} to {CG.client_controller.services_manager.GetName( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            label = f'from {CG.client_controller.services_manager.GetNameSafe( source_s_k )} to {CG.client_controller.services_manager.GetNameSafe( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
             description = 'Add the files to the destination and delete from the source. Works when files are already in the destination.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
@@ -748,7 +748,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
                 data = ( dest_s_k, HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_MOVE, source_s_k )
             )
             
-            label = f'from {CG.client_controller.services_manager.GetName( source_s_k )} to {CG.client_controller.services_manager.GetName( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
+            label = f'from {CG.client_controller.services_manager.GetNameSafe( source_s_k )} to {CG.client_controller.services_manager.GetNameSafe( dest_s_k )} ({HydrusNumbers.ToHumanInt(count)} files)'
             description = 'Add the files to the destination and delete from the source. Only works on files not already in the destination.'
             call = HydrusData.Call( process_application_command_call, application_command )
             
@@ -887,7 +887,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
         
         ( service_key, ) = service_keys
         
-        name = services_manager.GetName( service_key )
+        name = services_manager.GetNameSafe( service_key )
         
         label = phrase + ' ' + name
         
@@ -899,7 +899,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
         
         for service_key in service_keys:
             
-            name = services_manager.GetName( service_key )
+            name = services_manager.GetNameSafe( service_key )
             
             ClientGUIMenus.AppendMenuLabel( submenu, name )
             
@@ -916,7 +916,7 @@ def AddServiceKeysToMenu( menu, service_keys, submenu_name, description, bare_ca
     
     for service_key in service_keys:
         
-        label = services_manager.GetName( service_key )
+        label = services_manager.GetNameSafe( service_key )
         
         this_call = HydrusData.Call( bare_call, service_key )
         
@@ -1011,7 +1011,7 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
         
         for ipfs_service_key in ipfs_service_keys_in_order:
             
-            name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+            name = CG.client_controller.services_manager.GetNameSafe( ipfs_service_key )
             
             hacky_ipfs_dict = HydrusSerialisable.SerialisableDictionary()
             
@@ -1064,7 +1064,7 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
         
         for ipfs_service_key in ipfs_service_keys.intersection( focused_media.GetLocationsManager().GetCurrent() ):
             
-            name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+            name = CG.client_controller.services_manager.GetNameSafe( ipfs_service_key )
             
             multihash = focused_media.GetLocationsManager().GetServiceFilename( ipfs_service_key )
             

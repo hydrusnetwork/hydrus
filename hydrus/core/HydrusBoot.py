@@ -9,7 +9,7 @@ try:
     # obviously change this if we ever drop yaml from the requirements lol
     import yaml
     
-except Exception as e:
+except Exception as e_yaml:
     
     message = 'Hey, hydrus could not see one of the third-party libraries it needs. If you have a venv, this usually means the venv did not install correctly or was not activated before program start. It can also happen if the OS updates and a new python version is introduced (perhaps invalidating the existing venv). If you are running from source with a venv, please try rebuilding it (just run the "setup_venv" script again).'
     message += '\n\n'
@@ -17,7 +17,7 @@ except Exception as e:
     message += '\n\n'
     message += 'If you are running a built release, not from source, then the build did not include everything it needed or you have a dll problem. If it is not a "my anti-virus went crazy" problem, hydev probably needs to know about this.'
     
-    raise Exception( message ) from e
+    raise Exception( message ) from e_yaml
     
 
 ORIGINAL_PATH = None

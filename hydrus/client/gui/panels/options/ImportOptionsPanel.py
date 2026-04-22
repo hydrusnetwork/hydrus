@@ -42,7 +42,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         self._simple_mode = QW.QCheckBox( self )
-        self._simple_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'The options system allows you to set any options type anywhere. You can make a particular URL Class "present" differently to other Post URLs or set up subscription-only note parsing if you really want, but by default, I hide options that are crazy and a waste of time. Uncheck this to see everything and implement your options mind palace.' ) )
+        self._simple_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'The options system allows you to set any options type anywhere. You can make a particular URL Class "present" differently to other Post URLs or set up subscription-only note parsing if you really want, but by default, I hide options that are crazy and generally a waste of time. Uncheck this to see everything and implement your options mind palace.' ) )
         
         self._simple_mode.setChecked( self._new_options.GetBoolean( 'import_options_simple_mode' ) )
         
@@ -66,14 +66,16 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: clear selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefault ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteDefaultMerge ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste onto what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'custom paste: choose what you want', 'Open a dialog with the current options and what is in your clipboard and choose what to keep and overwrite.', self._PasteDefaultCustom ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste', 'Replace what is selected with what you have in the clipboard that is non-default.', self._PasteDefault ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteDefaultMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
         
         default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
-        self._favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_container_manager, edit_allowed = True )
-        default_import_options_list_panel.AddWindow( self._favourites_button )
+        self._default_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_container_manager, edit_allowed = True )
+        default_import_options_list_panel.AddWindow( self._default_favourites_button )
         
         default_import_options_list_panel.AddButton( 'edit', self._EditDefault, enabled_only_on_single_selection = True )
         default_import_options_list_panel.AddButton( 'clear', self._ClearDefault, enabled_only_on_selection = True )
@@ -98,11 +100,17 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         menu_template_items = []
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste: clear selected and paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClass ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste: paste onto what is selected, overwriting on conflicts', 'Overwrite what is selected with what you have in the clipboard.', self._PasteURLClassMerge ) )
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste: paste only what is selected, but set only where currently default', 'Fill in what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'custom paste: choose what you want', 'Open a dialog with the current options and what is in your clipboard and choose what to keep and overwrite.', self._PasteURLClassCustom ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste', 'Replace what is selected with what you have in the clipboard that is non-default.', self._PasteURLClass ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteURLClassMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
         
         url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        
+        self._url_class_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_container_manager, edit_allowed = True )
+        url_class_import_options_list_panel.AddWindow( self._url_class_favourites_button )
+        
         url_class_import_options_list_panel.AddButton( 'edit', self._EditURLClass, enabled_only_on_single_selection = True )
         url_class_import_options_list_panel.AddButton( 'clear', self._ClearURLClass, enabled_only_on_selection = True )
         
@@ -141,6 +149,9 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         QP.AddToLayout( vbox, url_class_import_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
+        
+        self._default_favourites_button.loadFavourite.connect( self._LoadFavouriteDefault )
+        self._url_class_favourites_button.loadFavourite.connect( self._LoadFavouriteURLClass )
         
     
     def _ClearDefault( self ):
@@ -375,6 +386,95 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
     
+    def _LoadFavouriteDefault( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        selected = self._default_import_options_list.GetTopSelectedData()
+        
+        if selected is None:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the default list--select something and try loading again.' )
+            
+            return
+            
+        
+        if not self._default_import_options_list.HasOneSelected():
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Hey, multiple items in the default list are selected. I am only going to do this on the topmost selected.' )
+            
+        
+        import_options_caller_type = selected
+        
+        current_import_options_container = self._import_options_container_manager.GetDefaultImportOptionsContainerForCallerType( import_options_caller_type )
+        
+        try:
+            
+            final_import_options_container = ClientGUIImportOptionsContainer.DoCustomOverwrite(
+                self,
+                self._simple_mode.isChecked(),
+                import_options_caller_type,
+                current_import_options_container,
+                incoming_import_options_container
+            )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._import_options_container_manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, final_import_options_container )
+        
+        self._default_import_options_list.UpdateDatas( ( selected, ) )
+        
+    
+    def _LoadFavouriteURLClass( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        selected = self._url_class_import_options_list.GetTopSelectedData()
+        
+        if selected is None:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the URL Class list--select something and try loading again.' )
+            
+            return
+            
+        
+        if not self._url_class_import_options_list.HasOneSelected():
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Hey, multiple items in the URL Class list are selected. I am only going to do this on the topmost selected. If you need to do this to multiple entries, set up one exactly how you want and then copy/replace-paste to the rest.' )
+            
+        
+        url_class = selected
+        
+        url_class_key = url_class.GetClassKey()
+        
+        current_import_options_container = self._import_options_container_manager.GetDefaultImportOptionsContainerForURLClass( url_class_key )
+        
+        if current_import_options_container is None:
+            
+            current_import_options_container = ImportOptionsContainer.ImportOptionsContainer()
+            
+        
+        import_options_caller_type = ImportOptionsContainer.IMPORT_OPTIONS_CALLER_TYPE_URL_CLASS
+        
+        try:
+            
+            final_import_options_container = ClientGUIImportOptionsContainer.DoCustomOverwrite(
+                self,
+                self._simple_mode.isChecked(),
+                import_options_caller_type,
+                current_import_options_container,
+                incoming_import_options_container
+            )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._import_options_container_manager.SetDefaultImportOptionsContainerForURLClass( url_class_key, final_import_options_container )
+        
+        self._url_class_import_options_list.UpdateDatas( ( selected, ) )
+        
+    
     def _PasteDefault( self, paste_type = PASTE_REPLACE ):
         
         try:
@@ -428,6 +528,20 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         self._default_import_options_list.UpdateDatas( import_options_caller_types )
+        
+    
+    def _PasteDefaultCustom( self ):
+        
+        try:
+            
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._LoadFavouriteDefault( pasted_import_options_container )
         
     
     def _PasteDefaultFillIn( self ):
@@ -488,6 +602,20 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         self._url_class_import_options_list.UpdateDatas( url_classes )
+        
+    
+    def _PasteURLClassCustom( self ):
+        
+        try:
+            
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._LoadFavouriteURLClass( pasted_import_options_container )
         
     
     def _PasteURLClassFillIn( self ):
@@ -602,7 +730,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
     
     def _ShowHelp( self ):
-        message = '''tl;dr: Go into "global" and set every panel how you want. Set "gallery/post urls" to parse tags where you want. Never touch this again, and rarely set a "specific" import options override on a specific downloader.
+        message = '''tl;dr: Go into "global" and set every panel how you want. Set "gallery/post urls" to parse tags where you want. Never touch this again, and rarely set a "custom" import options override on a specific downloader.
 
 ------
 
@@ -618,11 +746,11 @@ Atop "global" sits a stack of increasingly specific contexts, for instance, for 
 - the general "local hard drive import" import options
 - the global import options
 
-When the import engine needs to check the "file filtering" options, it checks the top-most layer to see if it has anything set. If that layer has those options, that is what is used. If the layer is set to "use the default", the import engine goes down a layer and checks again. This is how the specific import options on a particular page can override anything else while global will act as the final backstop.
+When the import engine needs to check the "file filtering" options, it checks the top-most layer to see if it has anything set. If that layer has those options, that is what is used. If the layer is set to "use the default", the import engine goes down a layer and checks again. This is how the custom import options on a particular page can override anything else while global will act as the final backstop.
 
-Most of the time, just set what sounds correct. If you want subscriptions to generally only publish "new inbox files" to their buttons/pages, then set up "presentation" options for your subs, easy as that. If you want to override that setting on some specific sub, then set it so on that specific sub in the "edit subscriptions" dialog.
+Most of the time, just set what sounds correct. If you want subscriptions to generally only publish "new inbox files" to their buttons/pages, then set up "presentation" options for your subs, easy as that. If you want to override that setting on some specific subscription, then set it so on that sub in the "edit subscriptions" dialog.
 
-Every edit panel has a short description of the context being edited and which options are appropriate to edit for it. The one wrinkle to watch out for is the "url class" settings, which generally override the other layers, which allows you to set a specific tag blacklist for a particular domain. Click "show stack" to see exactly how a particular import context stacks up.
+Every edit panel has a short description of the context being edited and which options are appropriate to edit for it. The one wrinkle to watch out for is the "url class" settings, which generally override the other layers, which allows you to set a tag blacklist for a particular domain. Click "show stack" to see exactly how a particular import context stacks up.
 
 Keep things simple and deliberate!'''
         

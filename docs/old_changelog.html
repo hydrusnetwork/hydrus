@@ -35,6 +35,48 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_669"><a href="#version_669">version 669</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, the Paper Dark QSSes now have colours to stand in for the stuff in `options-&gt;colours`</li>
+                        <li>thanks to a user, fixed some bad shortcut enums that probably broke 'media-next' and 'volume-up/down' as mappable keys</li>
+                        <li>the 'manage times' dialog now has copy/paste buttons beside the file modified time, archived time, and last viewed times. works the same as the copy/paste buttons inside the smaller edit dialogs. they'll copy a float like `1776805484.252` but will eat pretty much anything</li>
+                        <li>the rich copy button menu at the bottom of on 'edit times' now lets you copy just the: file modified time; archived time; last viewed times; and web domain times</li>
+                        <li>fixed a traceback when hitting certain 'move thumbnail' shortcuts on an empty page/selection</li>
+                        <li>added info to 'big updates' and 'running from source' help regarding how to checkout a particular tag with `git` and how to discard and stash changes when pulling</li>
+                        <li>added a `--no_qt_multimedia` debug launch argument to disallow any attempt to import `QtMultimedia`, which drives the QtMediaPlayer. in certain environments, this guy will cause a segfault, either on boot or when opening `file-&gt;options` and my newer audio device check hits it, let's go</li>
+                        <li><h3>some window options</h3></li>
+                        <li>the 'regular_center_dialog' entry in `options-&gt;gui` is now split into `quick_select_dialog`, `quick_yesno_dialog`, and `quick_entry_dialog`. all defaulting to 'center on parent window'</li>
+                        <li>more of the 'select from a list of buttons'-style dialogs now have definitions, usually the new `quick_select_dialog`</li>
+                        <li>`regular_center_dialog` is removed, and also, if you have it, a `deeply_nested_dialogs`, note the plural, stub that was never used</li>
+                        <li>in `options-&gt;gui` you can now set that a non-remember-position window spawn centered on the current mouse cursor position. I daresay this is kino for mouse-centric users on the new quick-dialog entries, but try it for yourself</li>
+                        <li>gave the list in `options-&gt;gui` a label brush-up. hope it is easier to pick out what is going on now</li>
+                        <li><h3>boring import options overhaul</h3></li>
+                        <li>I made it more pleasant to load and paste import options around the upcoming UI (which you can preview under `options-&gt;import options` while in `advanced mode`)--</li>
+                        <li>wrote a 'custom paste' dialog that shows you the source and the incoming paste as two checkbox lists and a clear preview of the pending result. this dialog sets up a merge-paste by default but has buttons to quickly set up fill-in-gaps-paste or replace-paste. it has special labels for when the incoming paste makes no changes and also a couple commentary labels if the paste makes no changes at all or if the source is 'global' and thus has special rules</li>
+                        <li>added 'custom paste' to the top of the paste button menus around here as the default way users should handle pastes while still allowing quicker mass-pastes with the old entries</li>
+                        <li>the old entries in the paste menus now have simple labels to reflect what the 'custom paste' dialog uses, pushing spurious explanation to tooltips. also, the safe and 'what users want to happen most of the time' `merge-paste` is now the top of the three</li>
+                        <li>hooked up a new 'load favourite' menu off the star button to the custom paste dialog, so you can now load without having to juggle via your clipboard and you get a nice clean preview of what is about to happen</li>
+                        <li>added a star button to the url class list too</li>
+                        <li>the individual import options panel now has a copy button, so you can just copy a single set of options nice and quick</li>
+                        <li>the rules around pasting to 'global' are tightened up</li>
+                        <li>when pasting an import options container into an 'edit import options container' panel that is in 'simple mode' and has a limited set of viewable options, the paste object is now filtered to that sub-selection of available import options types</li>
+                        <li><h3>removal of UPnP</h3></li>
+                        <li>as has been long-planned, hydrus no longer does anything UPnP related. this is old port-forwarding tech that could apply to the Client API or a Server service if you jumped through several hoops and put 'upnpc' in the `install_dir/bin` dir, but for most users it never fired. I removed the exe from regular installs years ago, removed a upnp mapping dialog two months ago, and am clearing out the last server port forwarding tech today. if you want to set up port forwarding, run your own solution particular to your hardware, not my old garbage!</li>
+                        <li>specifically--</li>
+                        <li>the client api service and serverside services no longer offer a 'upnp port' value to edit in their UI panels</li>
+                        <li>upnp readme is removed from `install_dir/bin`</li>
+                        <li>the primary controllers of the client and server no longer spin up a upnp manager/daemon to serve these jobs</li>
+                        <li>removed `HydrusNATPunch` and `TestHydrusNATPunch`</li>
+                        <li><h3>other boring cleanup</h3></li>
+                        <li>the way service names are fetched has a new safe variant that recovers from a missing (e.g. recently deleted) service properly, and every call for a service name is now safe across the program. this fixes an issue with deleting a tag service that is currently in focus in a search page (and likely several other similar issues, and some general skipped summaries and such for missing services. now it'll explicitly say "unknown service" universally when this happens)</li>
+                        <li>cleaned up the copy/paste logic in 'manage times' dialog. it was all good before, but a little ugly in how it decided whether to grab/push times wrt non-visible widgets</li>
+                        <li>decoupled some datetime copy/paste code so different datetime widgets can share the timestamp parsing</li>
+                        <li>KISSed a domain-umbrella checking trick that helps us migrate to `tldextract`</li>
+                        <li>did a touch of misc linting</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_668"><a href="#version_668">version 668</a></h2>
                     <ul>
                         <li><h3>mistakes</h3></li>

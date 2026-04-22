@@ -604,7 +604,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, filename_tagging_options ) = data
         
-        name = CG.client_controller.services_manager.GetName( service_key )
+        name = CG.client_controller.services_manager.GetNameSafe( service_key )
         
         display_tuple = ( name, )
         

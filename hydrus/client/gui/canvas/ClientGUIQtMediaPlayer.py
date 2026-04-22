@@ -9,16 +9,27 @@ QT_MULTIMEDIA_IS_AVAILABLE = True
 QT_MULTIMEDIA_MODULE_NOT_FOUND = False
 QT_MULTIMEDIA_IMPORT_ERROR = 'QtMultimedia seems fine!'
 
-try:
-    
-    from qtpy import QtMultimediaWidgets as QMW
-    from qtpy import QtMultimedia as QM
-    
-except Exception as e_qt_m:
+from hydrus.client import ClientGlobals as CG
+
+if CG.NO_QT_MULTIMEDIA:
     
     QT_MULTIMEDIA_IS_AVAILABLE = False
-    QT_MULTIMEDIA_MODULE_NOT_FOUND = isinstance( e_qt_m, ModuleNotFoundError )
-    QT_MULTIMEDIA_IMPORT_ERROR = traceback.format_exc()
+    QT_MULTIMEDIA_MODULE_NOT_FOUND = False
+    QT_MULTIMEDIA_IMPORT_ERROR = 'QtMedia is disabled by launch arguments.'
+    
+else:
+    
+    try:
+        
+        from qtpy import QtMultimediaWidgets as QMW
+        from qtpy import QtMultimedia as QM
+        
+    except Exception as e_qt_m:
+        
+        QT_MULTIMEDIA_IS_AVAILABLE = False
+        QT_MULTIMEDIA_MODULE_NOT_FOUND = isinstance( e_qt_m, ModuleNotFoundError )
+        QT_MULTIMEDIA_IMPORT_ERROR = traceback.format_exc()
+        
     
 
 from hydrus.core import HydrusConstants as HC
@@ -26,7 +37,6 @@ from hydrus.core import HydrusData
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP

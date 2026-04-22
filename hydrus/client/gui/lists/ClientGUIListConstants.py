@@ -138,7 +138,7 @@ class COLUMN_LIST_MANAGE_UPNP_MAPPINGS( COLUMN_LIST_DEFINITION ):
     PROTOCOL = 4
     LEASE = 5
     
-    
+
 column_list_type_name_lookup[ COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID ] = 'upnp mappings'
 
 register_column_type( COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, COLUMN_LIST_MANAGE_UPNP_MAPPINGS.DESCRIPTION, 'description', False, 36, True )

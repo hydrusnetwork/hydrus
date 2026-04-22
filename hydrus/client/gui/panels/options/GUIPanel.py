@@ -284,16 +284,54 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
         
     
-    def _GetPrettyFrameLocationInfo( self, listctrl_list ):
+    def _GetPrettyFrameLocationInfo( self, listctrl_gubbins ):
         
-        pretty_listctrl_list = []
+        ( name, remember_size, remember_position, last_size, last_pos, default_gravity, default_position, maximised, fullscreen ) = listctrl_gubbins
         
-        for item in listctrl_list:
+        pretty_name = name
+        pretty_remember_size = 'yes' if remember_size else ''
+        pretty_remember_position = 'yes' if remember_position else ''
+        pretty_last_size = str( last_size ) if last_size is not None else ''
+        pretty_last_pos = str( last_pos ) if last_pos is not None else ''
+        
+        ( x, y ) = default_gravity
+        
+        if x < 0 and y < 0:
             
-            pretty_listctrl_list.append( str( item ) )
+            pretty_default_gravity = 'free to expand'
+            
+        else:
+            
+            gravs = []
+            
+            if x > 0:
+                
+                gravs.append( 'width' )
+                
+            
+            if y > 0:
+                
+                gravs.append( 'height' )
+                
+            
+            pretty_default_gravity = ', '.join( gravs ) + ' constrained'
             
         
-        return pretty_listctrl_list
+        pretty_default_position = default_position
+        pretty_maximised = 'yes' if maximised else ''
+        pretty_fullscreen = 'yes' if fullscreen else ''
+        
+        return (
+            pretty_name,
+            pretty_remember_size,
+            pretty_remember_position,
+            pretty_last_size,
+            pretty_last_pos,
+            pretty_default_gravity,
+            pretty_default_position,
+            pretty_maximised,
+            pretty_fullscreen
+        )
         
     
     def EditFrameLocations( self ):
@@ -309,7 +347,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         title = 'set frame location information'
         
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title, frame_key = 'quick_entry_dialog' ) as dlg:
             
             panel = ClientGUIScrolledPanelsEdit.EditFrameLocationPanel( dlg, listctrl_list )
             

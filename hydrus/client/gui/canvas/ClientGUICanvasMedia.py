@@ -388,6 +388,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._num_frames = 1
         
         self._frame_durations_ms = None
+        self._duration_ms = None
         
         self._stop_for_slideshow = False
         
@@ -929,6 +930,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+
 class AnimationBar( QW.QWidget ):
     
     def __init__( self, parent ):

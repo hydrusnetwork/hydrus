@@ -806,7 +806,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
 
 def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], source_service_key: bytes | None = None ):
     
-    dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
+    dest_service_name = CG.client_controller.services_manager.GetNameSafe( dest_service_key )
     
     applicable_media = [ m for m in media if m.GetLocationsManager().IsInCombinedLocalFileDomains() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
@@ -885,7 +885,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 for potential_source_service_key in potential_move_source_service_keys:
                     
-                    potential_source_service_name = CG.client_controller.services_manager.GetName( potential_source_service_key )
+                    potential_source_service_name = CG.client_controller.services_manager.GetNameSafe( potential_source_service_key )
                     
                     if action == HC.CONTENT_UPDATE_MOVE:
                         
@@ -920,7 +920,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
             
         
-        source_service_name = CG.client_controller.services_manager.GetName( source_service_key )
+        source_service_name = CG.client_controller.services_manager.GetNameSafe( source_service_key )
         
         # source service name is done, now let's see if we have a merge/move difference
         

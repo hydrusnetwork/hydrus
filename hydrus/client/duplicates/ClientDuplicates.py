@@ -352,7 +352,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             ( 'B', b_work )
         ]:
             
-            work_flat = sorted( [ ( CG.client_controller.services_manager.GetName( service_key ), sorted( summary_strings ) ) for ( service_key, summary_strings ) in work.items() ] )
+            work_flat = sorted( [ ( CG.client_controller.services_manager.GetNameSafe( service_key ), sorted( summary_strings ) ) for ( service_key, summary_strings ) in work.items() ] )
             
             gubbins = '|'.join( [ name + ': ' + ', '.join( summary_strings ) for ( name, summary_strings ) in work_flat ] )
             

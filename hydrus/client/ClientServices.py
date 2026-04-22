@@ -91,7 +91,6 @@ def GenerateDefaultServiceDictionary( service_type ):
     if service_type == HC.CLIENT_API_SERVICE:
         
         dictionary[ 'port' ] = None
-        dictionary[ 'upnp_port' ] = None
         dictionary[ 'bandwidth_tracker' ] = HydrusNetworking.BandwidthTracker()
         dictionary[ 'bandwidth_rules' ] = HydrusNetworking.BandwidthRules()
         
@@ -321,16 +320,9 @@ class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
             
             if len( self._service_keys ) == 1:
                 
-                try:
-                    
-                    ( service_key, ) = self._service_keys
-                    
-                    name = CG.client_controller.services_manager.GetServiceName( service_key )
-                    
-                except Exception as e:
-                    
-                    name = 'unknown service'
-                    
+                ( service_key, ) = self._service_keys
+                
+                name = CG.client_controller.services_manager.GetNameSafe( service_key )
                 
             else:
                 
@@ -534,7 +526,6 @@ class ServiceLocalServerService( Service ):
         dictionary = Service._GetSerialisableDictionary( self )
         
         dictionary[ 'port' ] = self._port
-        dictionary[ 'upnp_port' ] = self._upnp_port
         dictionary[ 'allow_non_local_connections' ] = self._allow_non_local_connections
         dictionary[ 'support_cors' ] = self._support_cors
         dictionary[ 'log_requests' ] = self._log_requests
@@ -554,7 +545,6 @@ class ServiceLocalServerService( Service ):
         Service._LoadFromDictionary( self, dictionary )
         
         self._port = dictionary[ 'port' ]
-        self._upnp_port = dictionary[ 'upnp_port' ]
         self._allow_non_local_connections = dictionary[ 'allow_non_local_connections' ]
         self._support_cors = dictionary[ 'support_cors' ]
         self._log_requests = dictionary[ 'log_requests' ]
@@ -582,14 +572,6 @@ class ServiceLocalServerService( Service ):
         with self._lock:
             
             return self._bandwidth_rules.CanStartRequest( self._bandwidth_tracker )
-            
-        
-    
-    def GetUPnPPort( self ):
-        
-        with self._lock:
-            
-            return self._upnp_port
             
         
     
@@ -3459,6 +3441,18 @@ class ServicesManager( object ):
             
         
     
+    def GetNameSafe( self, service_key: bytes ):
+        
+        try:
+            
+            return self.GetName( service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            return 'unknown service'
+            
+        
+    
     def GetRemoteFileServiceKeys( self ):
         
         with self._lock:
@@ -3480,14 +3474,6 @@ class ServicesManager( object ):
         with self._lock:
             
             return { service_key : service.GetName() for ( service_key, service ) in self._keys_to_services.items() }
-            
-        
-    
-    def GetServiceName( self, service_key: bytes ) -> str:
-        
-        with self._lock:
-            
-            return self._GetService( service_key ).GetName()
             
         
     

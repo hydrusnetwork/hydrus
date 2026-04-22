@@ -354,6 +354,7 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
     
     `/path/to/your/Hydrus/venv/bin/python /path/to/your/Hydrus/hydrus_client.py`
     
+
 The first start will take a little longer (it has to compile all the code into something your computer understands). Once up, it will operate just like a normal build with the same folder structure and so on.
 
 !!! warning "Missing a Library"
@@ -391,6 +392,8 @@ If everything boots ok, great! Have a play around with the client and make sure 
 
 Don't forget to create a nice shortcut to your `hydrus_client` or `hydrus_client-user` launch script. If you can, set a custom icon--there are several `hydrus...` files in `install_dir/static` that are suitable.
 
+I recommend putting your hydrus database outside of your install dir with the `-d` launch parameter. The `.gitignore` rules make it all safe, but it is wiser to place it outside.
+
 ??? note "System Qt styles"
     
     If you have a system Qt with several styles but do not see them under `options->style`, it is probably that your venv cannot "see" your system Qt.
@@ -406,6 +409,68 @@ Updating is simple. If you installed with `git`, it takes about three seconds: j
 If you installed by extracting the source zip, update just as you would with the built extract: download the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) source zip and extract it over the top of the folder you have, overwriting the existing source files.
 
 If you get a library version error when you try to boot, run the venv setup again. It is worth doing this every 3-6 months, just to stay up to date. I mention in the release posts when there are important changes, usually right after a 'future build' test.
+
+#### Installing a particular version { id="selecting_version_tag" }
+
+If you need to do a [big update](getting_started_installing.md#big_updates), or if you just want to install a particular version, `git pull`, which gets the latest updates, will not do it. You want to say to the repository 'hey, I need the source as it was at v615'. The command for this is:
+
+`git checkout v615`
+
+I use the same tagging format for all releases, with the exception that hotfixes will be called `v615a` or `v615b`. The text matches up exactly with that in the URL `https://github.com/hydrusnetwork/hydrus/releases/tag/v615`, if you are uncertain.
+
+Thus, if you are doing a big update, you might be looking at something like this in your terminal:
+
+```
+MAKE A BACKUP
+git checkout v558
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v571
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v603
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v652
+./hydrus_client.sh
+(wait for it to boot and update, close it down)
+git checkout v662
+./hydrus_client.sh
+(have fun)
+```
+
+If I need you to switch branch, the command is:
+
+```
+git switch dev
+git switch master
+git switch future-2026-04
+etc..
+```
+
+#### Stashing changes
+
+If you alter any of the files in the install (often by accident), git may well hesitate, not wanting to delete your work by accident. This can be confusing if you just want to 'get the new stuff'. Running `git status` can be useful to see more.
+
+If you don't care about the changes and are ok with them being deleted/undone:
+
+```
+git reset --hard HEAD
+```
+
+If you want to keep the changes:
+
+```
+git stash push
+git pull
+git stash apply
+(everything works out great and nothing goes wrong)
+git stash drop
+```
+
+This retracts the changes and then attempts to re-apply them to the new code. If I edited something you also edited enough that your patch is now ambiguous, the `apply` step will halt and tell you about merge conflicts. If you do not know what to do next, it is time to open up an LLM and have a conversation.
+
+Note that your database, if you keep it inside `install_dir/db`, is covered by the `.gitignore` rules and should not be affected by the above commands. It is still wise to make a backup before any significant changes, and in general it is a wise idea to keep the database out of a source install using the `-d` launch parameter.
 
 ### Migrating from an Existing Install
 

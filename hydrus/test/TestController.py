@@ -77,7 +77,6 @@ from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
 from hydrus.test import TestGlobals as TG
 from hydrus.test import TestHydrusData
-from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
 from hydrus.test import TestHydrusPaths
 from hydrus.test import TestHydrusSerialisable
@@ -1005,10 +1004,6 @@ class Controller( object ):
         
         module_lookup[ 'duplicates_auto_resolution_objects' ] = [
             TestClientDuplicatesAutoResolution
-        ]
-        
-        module_lookup[ 'nat' ] = [
-            TestHydrusNATPunch
         ]
         
         module_lookup[ 'networking' ] = [

@@ -2152,6 +2152,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 ordered_selected_media = self._GetSelectedMediaOrdered()
                 
+                if len( ordered_selected_media ) == 0:
+                    
+                    return True
+                    
+                
                 ( rearrange_type, rearrange_data ) = command.GetSimpleData()
                 
                 insertion_index = None
@@ -2209,7 +2214,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 if insertion_index is None:
                     
-                    return
+                    return True
                     
                 
                 self.MoveMedia( ordered_selected_media, insertion_index = insertion_index )
@@ -2570,7 +2575,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                             
                         else:
                             
-                            return
+                            return True
                             
                         
                     
