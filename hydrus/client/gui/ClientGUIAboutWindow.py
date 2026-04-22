@@ -224,7 +224,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'lxml', ClientParsing.LXML_IS_OK, not ClientParsing.LXML_IS_OK, '' ) )
     availability_lines.append( render_availability_line( 'lz4', HydrusCompression.LZ4_OK, not HydrusCompression.LZ4_OK, '' ) )
     availability_lines.append( render_availability_line( 'olefile', HydrusOLEHandling.OLEFILE_OK, not HydrusOLEHandling.OLEFILE_OK, '' ) )
-    availability_lines.append( render_availability_line( 'tldextract', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
     
     #
     
@@ -296,6 +295,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'pympler', HydrusMemory.PYMPLER_OK, not HydrusMemory.PYMPLER_OK, '' ) )
     availability_lines.append( render_availability_line( 'pyopenssl', HydrusEncryption.OPENSSL_OK, not HydrusEncryption.OPENSSL_OK, '' ) )
     availability_lines.append( render_availability_line( 'show-in-file-manager', ClientPaths.SHOW_IN_FILE_MANAGER_OK, not ClientPaths.SHOW_IN_FILE_MANAGER_OK, '' ) )
+    availability_lines.append( render_availability_line( 'tldextract', ClientNetworkingDomainTLDExtract.TLDEXTRACT_OK, ClientNetworkingDomainTLDExtract.TLDEXTRACT_MODULE_NOT_FOUND, ClientNetworkingDomainTLDExtract.TLDEXTRACT_IMPORT_ERROR ) )
     
     description_availability = '\n'.join( availability_lines )
     
