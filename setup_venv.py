@@ -155,7 +155,7 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ] ):
         
     elif qt == 't':
         
-        requirements_dict[ 'pyside6' ] = '==6.10.1'
+        requirements_dict[ 'pyside6' ] = '==6.10.3'
         requirements_dict[ 'qtpy' ] = '==2.4.3'
         
     elif qt == 'q':
@@ -217,10 +217,10 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ] ):
         
     elif opencv == 't':
         
-        requirements_dict[ 'opencv-python-headless' ] = '==4.13.0.90'
+        requirements_dict[ 'opencv-python-headless' ] = '==4.13.0.92'
         requirements_dict[ 'numpy' ] = '==2.4.1'
         
-    
+    '''
     # Future libraries
     print()
     print( 'Future Libraries' )
@@ -231,7 +231,7 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ] ):
         
         requirements_dict[ 'tldextract' ] = '==5.3.1'
         
-    
+    '''
     # Dev mode
     print()
     print( 'Development Tools' )
@@ -326,9 +326,8 @@ def main():
         requirements_dict = {
             'beautifulsoup4' : '>=4.0.0',
             'cbor2' : '>=5.6.5',
-            'chardet' : '>=3.0.4,<6',
+            'chardet' : '>=3.0.4,<8',
             'cryptography' : '>=44.0.0',
-            'dateparser' : '==1.2.1',
             'html5lib' : '>=1.0.1',
             'lxml' : '>=4.5.0',
             'lz4' : '>=3.0.0',
@@ -346,10 +345,12 @@ def main():
             'service-identity' : '>=18.1.0',
             'show-in-file-manager' : '>=1.1.5',
             'twisted[http2,tls]' : '>=20.3.0',
-            'requests' : '==2.32.5',
             'mpv' : '==1.0.8',
-            'opencv-python-headless' : '==4.11.0.86',
+            'opencv-python-headless' : '==4.12.0.88',
             'numpy' : '<=2.3.1',
+            'dateparser' : '==1.4.0',
+            'tldextract' : '==5.3.1',
+            'requests' : '==2.33.1',
             'pyside6' : '==6.9.3',
             'qtpy' : '==2.4.3',
         }

@@ -12,9 +12,8 @@ requires-python = ">=3.10,<3.15"
 dependencies = [
     "beautifulsoup4>=4.0.0",
     "cbor2>=5.6.5",
-    "chardet>=3.0.4,<6", # requests 2.32.5 unhappy with 6.0.0, and pyinstaller too perhaps
+    "chardet>=3.0.4,<8",
     "cryptography>=44.0.0",
-    "dateparser==1.2.1",
     "html5lib>=1.0.1",
     "lxml>=4.5.0",
     "lz4>=3.0.0",
@@ -32,7 +31,9 @@ dependencies = [
     "service-identity>=18.1.0",
     "show-in-file-manager>=1.1.5",
     "twisted[http2,tls]>=20.3.0",
-    "requests==2.32.5",
+    "dateparser==1.4.0",
+	"tldextract==5.3.1",
+    "requests==2.33.1",
     "pyobjc-core>=10.1 ; sys_platform == 'darwin'",
     "pyobjc-framework-cocoa>=10.1 ; sys_platform == 'darwin'",
     "pyobjc-framework-quartz>=10.1 ; sys_platform == 'darwin'",
@@ -82,11 +83,11 @@ mpv-test = [
     "mpv==1.0.8",
 ]
 opencv-new = [
-    "opencv-python-headless==4.11.0.86",
+    "opencv-python-headless==4.12.0.88",
     "numpy<=2.3.1",
 ]
 opencv-normal = [
-    "opencv-python-headless==4.11.0.86",
+    "opencv-python-headless==4.12.0.88",
     "numpy<=2.3.1",
 ]
 opencv-old = [
@@ -94,11 +95,10 @@ opencv-old = [
     "numpy<=2.3.1",
 ]
 opencv-test = [
-    "opencv-python-headless==4.13.0.90",
+    "opencv-python-headless==4.13.0.92",
     "numpy==2.4.1 ; python_version >= '3.11'",
 ]
 other-future = [
-    "tldextract==5.3.1",
 ]
 other-normal = [
 ]
@@ -120,15 +120,14 @@ qt6-older = [
     "qtpy==2.3.1",
 ]
 qt6-test = [
-    "pyside6==6.10.1",
+    "pyside6==6.10.3",
     "qtpy==2.4.3",
 ]
 dev = [
     # Common dev tools
     "httmock>=1.4.0",
     "mkdocs-material==9.7.1",
-    #"setuptools==78.1.1",
-    #"PyInstaller==6.14.1", # py 3.14 issue here, so when you bring this back, test it
+    #"PyInstaller==6.16.0", # py 3.14 issue with an older version but should be fine now, so when you bring this back, test it
     # Windows-specific build tools
     #"pefile ; sys_platform == 'win32'",
     # macOS-specific build tools
