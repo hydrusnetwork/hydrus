@@ -13,7 +13,7 @@ from hydrus.client.gui.pages import ClientGUIMediaResultsPanel
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.search import ClientGUIACDropdown
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaCollect
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchPredicate
 from hydrus.client.search import ClientSearchTagContext
@@ -188,7 +188,7 @@ class Sidebar( QW.QScrollArea ):
             
         else:
             
-            media_collect = ClientMedia.MediaCollect()
+            media_collect = ClientMediaCollect.MediaCollect()
             
         
         self._media_collect_widget = ClientGUIMediaResultsPanelSortCollect.MediaCollectControl( self, media_collect = media_collect )
@@ -293,7 +293,7 @@ class Sidebar( QW.QScrollArea ):
             
         else:
             
-            return ClientMedia.MediaCollect()
+            return ClientMediaCollect.MediaCollect()
             
         
     

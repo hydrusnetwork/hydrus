@@ -1,4 +1,3 @@
-import http.cookiejar
 import re
 
 import unicodedata
@@ -67,28 +66,6 @@ def ensure_path_component_is_encoded( path_component: str ) -> str:
     """
     
     return ensure_component_is_encoded( path_component, PATH_EXCEPTION_CHARS )
-    
-
-def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
-    
-    version = 0
-    port = None
-    port_specified = False
-    domain_specified = True
-    domain_initial_dot = domain.startswith( '.' )
-    path_specified = True
-    discard = False
-    comment = None
-    comment_url = None
-    
-    if rest is None:
-        
-        rest = {}
-        
-    
-    cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
-    
-    session.cookies.set_cookie( cookie )
     
 
 def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):

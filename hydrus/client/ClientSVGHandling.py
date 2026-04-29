@@ -6,7 +6,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusSVGHandling
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIFunctionsImage
 
 def QtLoadSVGRenderer( path: str ):
     
@@ -54,7 +54,7 @@ def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: tuple[int, 
             
             painter.end()
             
-            numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+            numpy_image = ClientGUIFunctionsImage.ConvertQtImageToNumPy( qt_image )
             
             thumbnail_numpy_image = numpy_image
             

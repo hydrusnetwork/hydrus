@@ -23,7 +23,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core.files import HydrusPDFHandling
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIFunctionsImage
 
 def QtLoadPDF( path: str ):
     
@@ -87,10 +87,10 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: tuple[int, 
             
             qt_image = document.render(0, resolution)
             
-            # ClientGUIFunctions.ConvertQtImageToNumPy doesn't handle other formats well
+            # ClientGUIFunctionsImage.ConvertQtImageToNumPy doesn't handle other formats well
             qt_image.convertToFormat( QG.QImage.Format.Format_RGBA8888 )
             
-            numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+            numpy_image = ClientGUIFunctionsImage.ConvertQtImageToNumPy( qt_image )
             
             document.close()
             

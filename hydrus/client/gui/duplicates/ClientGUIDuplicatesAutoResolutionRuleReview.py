@@ -28,7 +28,7 @@ from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 
 class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -693,7 +693,7 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         canvas_frame.SetCanvas( canvas_window )
         
     
-    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
         
         hashes = [ m.GetHash() for m in media ]
         

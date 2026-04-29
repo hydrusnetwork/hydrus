@@ -885,7 +885,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         return network_job
         
     
-    def GetHash( self ):
+    def GetHash( self ) -> bytes | None:
         
         if 'sha256' in self._hashes:
             
@@ -3282,27 +3282,27 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             
             file_seeds_to_indices = self._GetFileSeedsToIndices()
             
-            file_seeds_to_delete = { file_seed for file_seed in file_seeds_to_delete if file_seed in file_seeds_to_indices }
+            file_seeds_to_delete_set = { file_seed for file_seed in file_seeds_to_delete if file_seed in file_seeds_to_indices }
             
-            if len( file_seeds_to_delete ) == 0:
+            if len( file_seeds_to_delete_set ) == 0:
                 
                 return
                 
             
-            earliest_affected_index = min( ( file_seeds_to_indices[ file_seed ] for file_seed in file_seeds_to_delete ) )
+            earliest_affected_index = min( ( file_seeds_to_indices[ file_seed ] for file_seed in file_seeds_to_delete_set ) )
             
-            self._file_seeds = HydrusSerialisable.SerialisableList( [ file_seed for file_seed in self._file_seeds if file_seed not in file_seeds_to_delete ] )
+            self._file_seeds = HydrusSerialisable.SerialisableList( [ file_seed for file_seed in self._file_seeds if file_seed not in file_seeds_to_delete_set ] )
             
             self._SetFileSeedsToIndicesDirty()
             
             self._SetStatusDirty()
             
-            self._FixStatusesToFileSeeds( file_seeds_to_delete )
+            self._FixStatusesToFileSeeds( file_seeds_to_delete_set )
             
             index_shuffled_file_seeds = self._file_seeds[ earliest_affected_index : ]
             
         
-        updated_file_seeds = file_seeds_to_delete.union( index_shuffled_file_seeds )
+        updated_file_seeds = file_seeds_to_delete_set.union( index_shuffled_file_seeds )
         
         self._NotifyFileSeedsUpdated( updated_file_seeds )
         

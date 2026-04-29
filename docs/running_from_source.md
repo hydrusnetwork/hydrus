@@ -193,6 +193,8 @@ There are three special external libraries. You just have to get them and put th
         
         You should already have ffmpeg, but we should double-check: just type `ffmpeg` into a new terminal, and it should give a basic version response. If you don't have it, check your package manager.
         
+        If you are on a 'LTS'-style Linux flavour, your system ffmpeg may be pinned to an older version to guarantee stability. There's a couple guys who make regular new Linux builds, such as [here](https://github.com/BtbN/FFmpeg-Builds/releases). If you like, you can download that and extract the internal `ffmpeg` executable into `install_dir/bin`, and hydrus will use that instead. Unless you know better, you probably want the `linux64 gpl non-shared`.
+        
 
 === "macOS"
 
@@ -442,7 +444,7 @@ git checkout v662
 If I need you to switch branch, the command is:
 
 ```
-git switch dev
+git switch develop
 git switch master
 git switch future-2026-04
 etc..

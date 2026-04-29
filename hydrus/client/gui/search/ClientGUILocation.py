@@ -78,7 +78,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         location_context = self._GetValue()
         
-        location_context.ClearSurplusLocalFilesServices( CG.client_controller.services_manager.GetServiceType )
+        location_context.ClearSurplusLocalFilesServices( CG.client_controller.services_manager )
         
         if set( location_context.GetStatusesAndServiceKeysList() ) != set( self._location_list.GetValue() ):
             

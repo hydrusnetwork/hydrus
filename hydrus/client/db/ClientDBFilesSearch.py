@@ -30,7 +30,7 @@ from hydrus.client.db import ClientDBSimilarFiles
 from hydrus.client.db import ClientDBTagSearch
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBURLMap
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientNumberTest
 from hydrus.client.search import ClientSearchFileSearchContext
@@ -2773,8 +2773,8 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         job_status: ClientThreading.JobStatus | None = None,
         query_hash_ids: set[ int ] | None = None,
         apply_implicit_limit: bool = True,
-        sort_by: ClientMedia.MediaSort | None = None,
-        limit_sort_by: ClientMedia.MediaSort | None = None
+        sort_by: ClientMediaSort.MediaSort | None = None,
+        limit_sort_by: ClientMediaSort.MediaSort | None = None
     ) -> list[ int ]:
         
         if job_status is None:
@@ -3028,7 +3028,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         return query_hash_ids
         
     
-    def TryToSortHashIds( self, location_context: ClientLocation.LocationContext, hash_ids, sort_by: ClientMedia.MediaSort ):
+    def TryToSortHashIds( self, location_context: ClientLocation.LocationContext, hash_ids, sort_by: ClientMediaSort.MediaSort ):
         
         did_sort = False
         
@@ -3360,7 +3360,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 reverse = sort_order == CC.SORT_DESC
                 
-                blurhash_converter = ClientMedia.GetBlurhashToSortableCall( sort_data )
+                blurhash_converter = ClientMediaSort.GetBlurhashToSortableCall( sort_data )
                 
                 hash_ids = sorted( list( hash_ids_to_blurhashes.keys() ), key = lambda hash_id: blurhash_converter( hash_ids_to_blurhashes[ hash_id ], reverse ), reverse = reverse )
                 

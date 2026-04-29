@@ -39,13 +39,14 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchTagContext
 
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: list[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: list[ ClientMediaSingle.MediaSingle ], immediate_commit = False, canvas_key = None ):
         
         super().__init__( parent )
         
@@ -360,7 +361,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         showNext = QC.Signal()
         valueChanged = QC.Signal()
         
-        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: list[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
+        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: list[ ClientMediaSingle.MediaSingle ], immediate_commit, canvas_key = None ):
             
             super().__init__( parent )
             

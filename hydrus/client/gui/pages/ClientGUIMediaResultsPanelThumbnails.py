@@ -36,7 +36,9 @@ from hydrus.client.gui.pages import ClientGUIMediaResultsPanelMenus
 from hydrus.client.gui.widgets import ClientGUIPainterShapes
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResultPrettyInfo
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientRatings
 
@@ -322,14 +324,14 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
-            display_media = thumbnail.GetDisplayMedia()
+            display_media_result = thumbnail.GetDisplayMediaResult()
             
-            if display_media is None:
+            if display_media_result is None:
                 
                 continue
                 
             
-            hash = display_media.GetHash()
+            hash = display_media_result.GetHash()
             
             if hash in self._hashes_faded and thumbnail_cache.HasThumbnailCached( thumbnail ):
                 
@@ -375,9 +377,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         for thumbnail in thumbnails:
             
-            display_media = thumbnail.GetDisplayMedia()
+            display_media_result = thumbnail.GetDisplayMediaResult()
             
-            if display_media is None:
+            if display_media_result is None:
                 
                 continue
                 
@@ -398,7 +400,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 continue
                 
             
-            hash = display_media.GetHash()
+            hash = display_media_result.GetHash()
             
             self._hashes_faded.add( hash )
             
@@ -428,9 +430,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         return ThumbnailMediaCollection( self._location_context, media_results )
         
     
-    def _GenerateMediaSingleton( self, media_result ):
+    def _GenerateMediaSingle( self, media_result ):
         
-        return ThumbnailMediaSingleton( media_result )
+        return ThumbnailMediaSingle( media_result )
         
     
     def _GetMediaCoordinates( self, media ):
@@ -952,7 +954,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 old_drag_pos = self._drag_init_coordinates
                 
-                global_mouse_pos = QG.QCursor.pos()
+                global_mouse_pos = ClientGUIFunctions.GetMousePos()
                 
                 delta_pos = global_mouse_pos - old_drag_pos
                 
@@ -1043,9 +1045,9 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def GetMenu( self ) -> QW.QMenu:
         
-        flat_selected_medias = ClientMedia.FlattenMedia( self._selected_media )
+        flat_selected_medias = ClientMediaList.FlattenMedia( self._selected_media )
         
-        all_locations_managers = [ media.GetLocationsManager() for media in ClientMedia.FlattenMedia( self._sorted_media ) ]
+        all_locations_managers = [ media.GetLocationsManager() for media in ClientMediaList.FlattenMedia( self._sorted_media ) ]
         selected_locations_managers = [ media.GetLocationsManager() for media in flat_selected_medias ]
         
         selection_has_local_file_domain = True in ( locations_manager.IsLocal() and not locations_manager.IsTrashed() for locations_manager in selected_locations_managers )
@@ -2007,7 +2009,8 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         def mousePressEvent( self, event ):
             
-            self._parent._drag_init_coordinates = QG.QCursor.pos()
+            # TODO: this is ugly. make it event.pos rather than global mouse pos, but since we are dancing between inner and parent, fix that too
+            self._parent._drag_init_coordinates = ClientGUIFunctions.GetMousePos()
             self._parent._drag_click_timestamp_ms = HydrusTime.GetNowMS()
             
             thumb = self._parent._GetThumbnailUnderMouse( event )
@@ -2218,13 +2221,15 @@ class Thumbnail( Selectable ):
         # we don't really want to mess around with DPR here, we just want to draw thumbs
         # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
         
-        if media.GetDisplayMedia() is None:
+        display_media_result = media.GetDisplayMediaResult()
+        
+        if display_media_result is None:
             
             thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
             
         else:
             
-            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetThumbnail( display_media_result )
             
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
@@ -2335,7 +2340,18 @@ class Thumbnail( Selectable ):
             
         except Exception as e:
             
-            HydrusData.ShowText( f'Failed to render thumbnail for file {media.GetDisplayMedia().GetHash().hex()}!' )
+            display_media_result = media.GetDisplayMediaResult()
+            
+            if display_media_result is None:
+                
+                hash_hex = 'unknown file--probably an empty list somehow'
+                
+            else:
+                
+                hash_hex = display_media_result.GetHash().hex()
+                
+            
+            HydrusData.ShowText( f'Failed to render thumbnail for file {hash_hex}!' )
             HydrusData.ShowException( e, do_wait = False )
             
             thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
@@ -2793,14 +2809,14 @@ class Thumbnail( Selectable ):
     
 
 # TODO: This is another area of OOD inheritance garbage. just rewrite the whole damn thing, stop trying to do everything in one class, decouple and you'll lose the linter freakout over GetQtImage's references and related __init__ headaches
-class ThumbnailMediaCollection( Thumbnail, ClientMedia.MediaCollection ):
+class ThumbnailMediaCollection( Thumbnail, ClientMediaList.MediaCollection ):
     
     def __init__( self, location_context, media_results ):
         
         super().__init__( location_context, media_results )
         
     
-class ThumbnailMediaSingleton( Thumbnail, ClientMedia.MediaSingleton ):
+class ThumbnailMediaSingle( Thumbnail, ClientMediaSingle.MediaSingle ):
     
     def __init__( self, media_result ):
         

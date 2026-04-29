@@ -635,17 +635,17 @@ class ThumbnailCache( object ):
             
             ( page_key, media ) = item
             
-            display_media = media.GetDisplayMedia()
+            display_media_result = media.GetDisplayMediaResult()
             
-            if display_media is None:
+            if display_media_result is None:
                 
                 magic_score = self._magic_mime_thumbnail_ease_score_lookup[ None ]
                 hash = ''
                 
             else:
                 
-                magic_score = self._magic_mime_thumbnail_ease_score_lookup[ display_media.GetMime() ]
-                hash = display_media.GetHash()
+                magic_score = self._magic_mime_thumbnail_ease_score_lookup[ display_media_result.GetMime() ]
+                hash = display_media_result.GetHash()
                 
             
             return ( magic_score, hash )
@@ -700,11 +700,9 @@ class ThumbnailCache( object ):
             
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
-            cancelled_display_medias = { media.GetDisplayMedia() for media in medias }
+            cancelled_media_results = { media.GetDisplayMediaResult() for media in medias }
             
-            cancelled_display_medias.discard( None )
-            
-            cancelled_media_results = { media.GetMediaResult() for media in cancelled_display_medias }
+            cancelled_media_results.discard( None )
             
             outstanding_delayed_hashes = { media_result.GetHash() for media_result in cancelled_media_results if media_result in self._delayed_regeneration_queue_quick }
             
@@ -870,22 +868,20 @@ class ThumbnailCache( object ):
     
     def HasThumbnailCached( self, media ):
         
-        display_media = media.GetDisplayMedia()
+        display_media_result = media.GetDisplayMediaResult()
         
-        if display_media is None:
+        if display_media_result is None:
             
             return True
             
         
-        media_result = display_media.GetMediaResult()
-        
-        mime = media_result.GetMime()
+        mime = display_media_result.GetMime()
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            if self._ShouldBeAbleToProvideThumb( media_result ):
+            if self._ShouldBeAbleToProvideThumb( display_media_result ):
                 
-                hash = media_result.GetHash()
+                hash = display_media_result.GetHash()
                 
                 return self._data_cache.HasData( hash )
                 
@@ -979,9 +975,11 @@ class ThumbnailCache( object ):
                 
                 ( page_key, media ) = result
                 
-                if media.GetDisplayMedia() is not None:
+                display_media_result = media.GetDisplayMediaResult()
+                
+                if display_media_result is not None:
                     
-                    self.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+                    self.GetThumbnail( display_media_result )
                     
                     page_keys_to_rendered_medias[ page_key ].append( media )
                     

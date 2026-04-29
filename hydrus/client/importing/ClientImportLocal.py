@@ -559,7 +559,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._search_subdirectories = search_subdirectories
         self._file_import_options = file_import_options
         self._tag_import_options = tag_import_options
-        self._metadata_routers = metadata_routers
+        self._metadata_routers = HydrusSerialisable.SerialisableList( metadata_routers )
         self._tag_service_keys_to_filename_tagging_options = tag_service_keys_to_filename_tagging_options
         self._actions = actions
         self._action_locations = action_locations

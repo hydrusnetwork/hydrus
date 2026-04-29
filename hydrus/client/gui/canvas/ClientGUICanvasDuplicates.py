@@ -29,6 +29,8 @@ from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 
 def CommitDecision(
@@ -157,7 +159,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self._my_shortcuts_handler.AddWindowToFilter( self._duplicates_right_hover )
         
-        self._media_list = ClientMedia.MediaList( location_context, [] )
+        self._media_list = ClientMediaList.MediaList( location_context, [] )
         
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         self._my_shortcuts_handler.AddShortcuts( 'duplicate_filter' )
@@ -218,7 +220,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
     def _CommitProcessed( self, blocking = True ):
         
         self.ClearMedia()
-        self._media_list = ClientMedia.MediaList( self._location_context, [] )
+        self._media_list = ClientMediaList.MediaList( self._location_context, [] )
         
         self._num_items_to_commit = 0
         
@@ -718,7 +720,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self.ClearMedia()
         
-        self._media_list = ClientMedia.MediaList( self._location_context, [] )
+        self._media_list = ClientMediaList.MediaList( self._location_context, [] )
         
         if self._potential_duplicate_pair_factory.SearchWorkIsDone():
             
@@ -754,7 +756,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             return []
             
         
-        other_media: ClientMedia.MediaSingleton = self._media_list.GetNext( self._current_media )
+        other_media: ClientMediaSingle.MediaSingle = self._media_list.GetNext( self._current_media )
         
         media_results_to_prefetch = [ other_media.GetMediaResult() ]
         
@@ -825,7 +827,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
             
         
         media_a = self._current_media
-        media_b = typing.cast( ClientMedia.MediaSingleton, self._media_list.GetNext( media_a ) )
+        media_b = typing.cast( ClientMediaSingle.MediaSingle, self._media_list.GetNext( media_a ) )
         
         if duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
             
@@ -969,7 +971,7 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
         
         self._current_pair_score = ClientDuplicatesComparisonStatements.GetDuplicateComparisonScoreFast( media_result_1, media_result_2 )
         
-        self._media_list = ClientMedia.MediaList( self._location_context, ( media_result_1, media_result_2 ) )
+        self._media_list = ClientMediaList.MediaList( self._location_context, ( media_result_1, media_result_2 ) )
         
         # reset zoom gubbins
         self.SetMedia( None )
@@ -1026,8 +1028,8 @@ class CanvasFilterDuplicates( ClientGUICanvas.CanvasWithHovers ):
                 return False
                 
             
-            media_1 = ClientMedia.MediaSingleton( media_result_1 )
-            media_2 = ClientMedia.MediaSingleton( media_result_2 )
+            media_1 = ClientMediaSingle.MediaSingle( media_result_1 )
+            media_2 = ClientMediaSingle.MediaSingle( media_result_2 )
             
             if not ClientMedia.CanDisplayMedia( media_1 ) or not ClientMedia.CanDisplayMedia( media_2 ):
                 

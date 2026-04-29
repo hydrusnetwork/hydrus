@@ -160,9 +160,9 @@ def ImportURLs( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.Gall
 
 def ExportGallerySeedsToClipboard( gallery_seeds: collections.abc.Collection[ ClientImportGallerySeeds.GallerySeed ] ):
     
-    gallery_seeds = HydrusSerialisable.SerialisableList( gallery_seeds )
+    gallery_seeds_serialisable = HydrusSerialisable.SerialisableList( gallery_seeds )
     
-    payload = gallery_seeds.DumpToString()
+    payload = gallery_seeds_serialisable.DumpToString()
     
     CG.client_controller.pub( 'clipboard', 'text', payload )
     

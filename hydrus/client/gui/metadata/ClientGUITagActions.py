@@ -663,6 +663,8 @@ class TagPairActionContext( object ):
     def GetPertinentPairsForTags( self, tags: collections.abc.Collection[ str ], show_all: bool, show_pending_and_petitioned: bool, pursue_whole_chain: bool ) -> set[ tuple[ str, str ] ]:
         """This guy can take a long time to return, so call it on a thread!"""
         
+        tags_set = set( tags )
+        
         if show_all and not self._have_fetched_all:
             
             statuses_to_pairs = self._FetchStatusToPairs()
@@ -691,24 +693,22 @@ class TagPairActionContext( object ):
                 self._have_fetched_pending_and_petitioned = True
                 
             
-            tags = set( tags )
-            
             for ( a, b ) in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                 
-                tags.add( a )
-                tags.add( b )
+                tags_set.add( a )
+                tags_set.add( b )
                 
             
             for ( a, b ) in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                 
-                tags.add( a )
-                tags.add( b )
+                tags_set.add( a )
+                tags_set.add( b )
                 
             
         
         with self._lock:
             
-            to_fetch = self._GetTagsToFetch( tags )
+            to_fetch = self._GetTagsToFetch( tags_set )
             
         
         if len( to_fetch ) > 0:
@@ -744,7 +744,7 @@ class TagPairActionContext( object ):
                     pertinent_pairs.update( pairs )
                     
                 
-            elif len( tags ) == 0:
+            elif len( tags_set ) == 0:
                 
                 pass
                 
@@ -752,7 +752,7 @@ class TagPairActionContext( object ):
                 
                 if pursue_whole_chain:
                     
-                    next_pertinent_tags = tags
+                    next_pertinent_tags = tags_set
                     
                     seen_pertinent_tags = set()
                     
@@ -800,8 +800,8 @@ class TagPairActionContext( object ):
                     # at the moment this is only pertinent to parent searching, but we'll try and write it neutral anyway
                     
                     # start off searching in all directions, even if we disallow 'cousins' later
-                    next_pertinent_as = set( tags )
-                    next_pertinent_bs = set( tags )
+                    next_pertinent_as = set( tags_set )
+                    next_pertinent_bs = set( tags_set )
                     
                     seen_pertinent_tags = set()
                     

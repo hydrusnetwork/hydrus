@@ -840,7 +840,7 @@ class ButtonWithMenuArrow( QW.QToolButton ):
             
             if event.type() == QC.QEvent.Type.Show and watched == self._menu:
                 
-                pos = QG.QCursor.pos()
+                pos = ClientGUIFunctions.GetMousePos()
                 
                 self._menu.move( pos )
                 

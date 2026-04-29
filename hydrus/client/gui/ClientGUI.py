@@ -1984,7 +1984,51 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             HydrusData.ShowText( 'DO NOT PLAY ANYTHING WITH MPV WHILE CRASH REPORTING IS ON--IT WILL CAUSE A FAKE CRASH!' )
             
         
-
+    
+    def _FlipCurlCFFITestMode( self ):
+        
+        from hydrus.client.networking import ClientNetworkingCurlCFFI
+        from hydrus.client.networking import ClientNetworkingSessions
+        
+        if not ClientNetworkingCurlCFFI.CURL_CFFI_OK:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you do not seem to have curl_cffi! Check the _help->about_ window!' )
+            
+            return
+            
+        
+        if not ClientNetworkingSessions.DOING_CURL_CFFI_TEST:
+            
+            try:
+                
+                choice = ClientGUIDialogsQuick.EnterText( self, 'Enter a browser name as curl_cffi supports.', default = ClientNetworkingSessions.CURL_CFFI_DEFINITION, suggestions = [ 'chrome', 'edge', 'firefox', 'safari' ] )
+                
+                ClientNetworkingSessions.CURL_CFFI_DEFINITION = choice
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+            try:
+                
+                choice_tuples = [ ( text, data, text ) for ( data, text ) in sorted( ClientNetworkingCurlCFFI.curl_cffi_http_versions_to_str_lookup.items() ) ]
+                
+                choice = ClientGUIDialogsQuick.SelectFromListButtons( self, 'Select http version', choice_tuples )
+                
+                ClientNetworkingSessions.CURL_CFFI_HTTP_VERSION = choice
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        
+        ClientNetworkingSessions.DOING_CURL_CFFI_TEST = not ClientNetworkingSessions.DOING_CURL_CFFI_TEST
+        
+        CG.client_controller.network_engine.session_manager.ReinitialiseSessions()
+        
+    
     def _FlipMinimiseRestore( self ):
         
         if not self._currently_minimised_to_system_tray:
@@ -3693,6 +3737,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( network_actions, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
         ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
+        ClientGUIMenus.AppendSeparator( network_actions )
+        
+        from hydrus.client.networking import ClientNetworkingSessions
+        
+        ClientGUIMenus.AppendMenuCheckItem( network_actions, 'curl_cffi test mode', 'Turn on the curl_cffi test mode!', ClientNetworkingSessions.DOING_CURL_CFFI_TEST, self._FlipCurlCFFITestMode )
         
         ClientGUIMenus.AppendMenu( debug_menu, network_actions, 'network actions' )
         

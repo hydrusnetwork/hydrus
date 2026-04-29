@@ -20,6 +20,7 @@ from hydrus.client import ClientServices
 from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIFunctionsImage
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
@@ -2875,7 +2876,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 qt_image = CG.client_controller.GetClipboardImage()
                 
-                numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+                numpy_image = ClientGUIFunctionsImage.ConvertQtImageToNumPy( qt_image )
                 
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 

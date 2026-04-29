@@ -8,7 +8,7 @@ from hydrus.client.gui.metadata import ClientGUITagsEditNamespaceSort
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelSortCollect
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientTags
 
 class FileSortCollectPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
@@ -27,7 +27,7 @@ class FileSortCollectPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if self._default_media_sort.GetSort() != default_sort:
             
-            media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            media_sort = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             
             self._default_media_sort.SetSort( media_sort )
             
@@ -38,7 +38,7 @@ class FileSortCollectPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if self._fallback_media_sort.GetSort() != fallback_sort:
             
-            media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+            media_sort = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
             
             self._fallback_media_sort.SetSort( media_sort )
             
@@ -117,7 +117,7 @@ class FileSortCollectPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'save_page_sort_on_change', self._save_page_sort_on_change.isChecked() )
         self._new_options.SetDefaultCollect( self._default_media_collect.GetValue() )
         
-        namespace_sorts = [ ClientMedia.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_file_sort_by.GetData() ]
+        namespace_sorts = [ ClientMediaSort.MediaSort( sort_type = ( 'namespaces', sort_data ) ) for sort_data in self._namespace_file_sort_by.GetData() ]
         
         self._new_options.SetDefaultNamespaceSorts( namespace_sorts )
         

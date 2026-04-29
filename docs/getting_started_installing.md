@@ -300,6 +300,19 @@ If you do not already have a backup routine for your files, this is a great time
 
 I use [ToDoList](http://abstractspoon.com/) to remind me of my jobs for the day, including backup tasks, and [FreeFileSync](http://sourceforge.net/projects/freefilesync/) to actually mirror over to an external usb drive. I recommend both highly (and for ToDoList, I recommend hiding the complicated columns, stripping it down to a simple interface). It isn't a huge expense to get a couple-TB usb drive either--it is **absolutely** worth it for the peace of mind.
 
+??? note "ToDoList on Wine"
+    ToDoList only has a Windows build, but it works with a couple minor UI bugs on Wine. I have found success with a different setup than what they recommend:
+    
+    - Install `wine` and `winetricks`
+    - Boot `winetricks` from the terminal and create a new prefix called `wine_todo`. This will be at `/home/you/.local/share/wineprefixes/wine_todo`
+    - `WINEPREFIX=/home/you/.local/share/wineprefixes/wine_todo/ winecfg` and make sure it looks ok
+    - `WINEPREFIX=/home/you/.local/share/wineprefixes/wine_todo/ winetricks mfc42`
+    - `WINEPREFIX=/home/you/.local/share/wineprefixes/wine_todo/ winetricks mfc140`
+    - `WINEPREFIX=/home/you/.local/share/wineprefixes/wine_todo/ winetricks dotnet48` (takes a while and may spam some errors, you are fine)
+    - Extract todolist to `.../wine_todo/drive_c/todolist` or similar
+    - Your command for a .sh/.desktop launcher is `WINEPREFIX=/home/you/.local/share/wineprefixes/wine_todo/ wine /home/you/.local/share/wineprefixes/wine_todo/drive_c/todolist/ToDoList.exe`
+    - Back up the whole 'todolist' folder regularly.
+
 By default, hydrus stores all your user data in one location, so backing up is simple:
 
 #### The simple way - inside the client

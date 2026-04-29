@@ -32,12 +32,14 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResultPrettyInfo
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientFileMigration
 from hydrus.client.metadata import ClientTags
 
-def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.ApplicationCommand, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.ApplicationCommand, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
     
     if not command.IsContentCommand():
         
@@ -194,7 +196,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: collections.
     
     desired_hashes = []
     
-    flat_media = ClientMedia.FlattenMedia( medias )
+    flat_media = ClientMediaList.FlattenMedia( medias )
     
     sha256_hashes = [ media.GetHash() for media in flat_media ]
     
@@ -283,7 +285,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: collections.
         
     
 
-def DoClearFileViewingStats( win: QW.QWidget, flat_medias: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def DoClearFileViewingStats( win: QW.QWidget, flat_medias: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
     
     if len( flat_medias ) == 0:
         
@@ -401,7 +403,7 @@ def EditDuplicateContentMergeOptions( win: QW.QWidget, duplicate_type: int ):
     
 
 
-def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_start_on = str | None ):
+def EditFileNotes( win: QW.QWidget, media: ClientMediaSingle.MediaSingle, name_to_start_on = str | None ):
     
     names_to_notes = media.GetNotesManager().GetNamesToNotes()
     
@@ -429,7 +431,7 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
         
     
 
-def EditFileTimestamps( win: QW.QWidget, ordered_medias: list[ ClientMedia.MediaSingleton ] ):
+def EditFileTimestamps( win: QW.QWidget, ordered_medias: list[ ClientMediaSingle.MediaSingle ] ):
     
     title = 'manage times'
     
@@ -502,7 +504,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: list[ ClientMedia.Media
 
 def ExportFiles( win: QW.QWidget, medias: collections.abc.Collection[ ClientMedia.Media ], do_export_and_then_quit = False ):
     
-    flat_media = ClientMedia.FlattenMedia( medias )
+    flat_media = ClientMediaList.FlattenMedia( medias )
     
     flat_media = [ m for m in flat_media if m.GetLocationsManager().IsLocal() ]
     
@@ -516,7 +518,7 @@ def ExportFiles( win: QW.QWidget, medias: collections.abc.Collection[ ClientMedi
         
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], rating: float | None, BLOCK_SIZE = None ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], rating: float | None, BLOCK_SIZE = None ):
     
     hashes = set()
     
@@ -571,7 +573,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_
     return content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], BLOCK_SIZE = None ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_key: bytes, action: int, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], BLOCK_SIZE = None ):
     
     if action == HC.CONTENT_UPDATE_INCREMENT:
         
@@ -620,7 +622,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_k
     return all_content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key: bytes, one_star_value: float, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], BLOCK_SIZE = None ):
+def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( service_key: bytes, one_star_value: float, action: int, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], BLOCK_SIZE = None ):
     
     if action == HC.CONTENT_UPDATE_INCREMENT:
         
@@ -683,7 +685,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( 
     return all_content_updates
     
 
-def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, service_key: bytes, service_type: int, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], tag: str, BLOCK_SIZE = None ):
+def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, service_key: bytes, service_type: int, action: int, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], tag: str, BLOCK_SIZE = None ):
     
     hashes = set()
     
@@ -804,7 +806,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( win: QW.QWidget, s
     return content_updates
     
 
-def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action: int, media: collections.abc.Collection[ ClientMedia.MediaSingleton ], source_service_key: bytes | None = None ):
+def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action: int, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], source_service_key: bytes | None = None ):
     
     dest_service_name = CG.client_controller.services_manager.GetNameSafe( dest_service_key )
     
@@ -1109,9 +1111,9 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: collections.abc.Collection
     # boot a panel, it shows the user what current mimes are, what forced mimes are, and they have the choice to set all to x
     # if it comes back yes, we save to db
     
-    medias = ClientMedia.FlattenMedia( medias )
+    single_medias = ClientMediaList.FlattenMedia( medias )
     
-    file_info_managers = [ media.GetFileInfoManager() for media in medias ]
+    file_info_managers = [ media.GetFileInfoManager() for media in single_medias ]
     
     original_mimes_count = collections.Counter( file_info_manager.GetOriginalMime() for file_info_manager in file_info_managers )
     forced_mimes_count = collections.Counter( file_info_manager.mime for file_info_manager in file_info_managers if file_info_manager.FiletypeIsForced() )
@@ -1136,12 +1138,12 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: collections.abc.Collection
                 
                 pauser = HydrusThreading.BigJobPauser()
                 
-                if len( medias ) > BLOCK_SIZE:
+                if len( single_medias ) > BLOCK_SIZE:
                     
                     CG.client_controller.pub( 'message', job_status )
                     
                 
-                for ( num_done, num_to_do, block_of_media ) in HydrusLists.SplitListIntoChunksRich( medias, BLOCK_SIZE ):
+                for ( num_done, num_to_do, block_of_media ) in HydrusLists.SplitListIntoChunksRich( single_medias, BLOCK_SIZE ):
                     
                     if job_status.IsCancelled():
                         
@@ -1200,7 +1202,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: collections.abc.Collection
         
     
 
-def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
+def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSingle ):
     
     info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( media.GetMediaResult() )
     

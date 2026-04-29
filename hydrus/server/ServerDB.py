@@ -1943,7 +1943,7 @@ class DB( HydrusDB.HydrusDB ):
             
             petitioner_account_ids_to_reason_ids = HydrusData.BuildKeyToListDict( petition_ids )
             
-            petition_ids = []
+            sampled_petition_ids = []
             
             num_rows = 0
             
@@ -1960,7 +1960,7 @@ class DB( HydrusDB.HydrusDB ):
                     reason_ids = reason_ids[ : num_to_add ]
                     
                 
-                petition_ids.extend( ( ( petition_account_id, reason_id ) for reason_id in reason_ids ) )
+                sampled_petition_ids.extend( ( ( petition_account_id, reason_id ) for reason_id in reason_ids ) )
                 
                 num_rows += len( reason_ids )
                 
@@ -1970,14 +1970,18 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+        else:
+            
+            sampled_petition_ids = list( petition_ids )
+            
         
-        petitioner_account_ids = { petitioner_account_id for ( petitioner_account_id, reason_id ) in petition_ids }
-        reason_ids = { reason_id for ( petitioner_account_id, reason_id ) in petition_ids }
+        petitioner_account_ids = { petitioner_account_id for ( petitioner_account_id, reason_id ) in sampled_petition_ids }
+        reason_ids = { reason_id for ( petitioner_account_id, reason_id ) in sampled_petition_ids }
         
         petitioner_account_ids_to_account_keys = { petitioner_account_id : self._GetAccountKeyFromAccountId( petitioner_account_id ) for petitioner_account_id in petitioner_account_ids }
         reason_ids_to_reasons = { reason_id : self._GetReason( reason_id ) for reason_id in reason_ids }
         
-        return HydrusSerialisable.SerialisableList( [ HydrusNetwork.PetitionHeader( content_type = content_type, status = status, account_key = petitioner_account_ids_to_account_keys[ petitioner_account_id ], reason = reason_ids_to_reasons[ reason_id ] ) for ( petitioner_account_id, reason_id ) in petition_ids ] )
+        return HydrusSerialisable.SerialisableList( [ HydrusNetwork.PetitionHeader( content_type = content_type, status = status, account_key = petitioner_account_ids_to_account_keys[ petitioner_account_id ], reason = reason_ids_to_reasons[ reason_id ] ) for ( petitioner_account_id, reason_id ) in sampled_petition_ids ] )
         
     
     def _RepositoryCreate( self, service_id ):

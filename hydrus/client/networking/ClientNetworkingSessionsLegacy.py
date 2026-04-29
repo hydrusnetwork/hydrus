@@ -46,8 +46,6 @@ class NetworkSessionManagerLegacy( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            session.cookies.clear_session_cookies()
-            
             self._network_contexts_to_sessions[ network_context ] = session
             
         
@@ -57,6 +55,7 @@ class NetworkSessionManagerLegacy( HydrusSerialisable.SerialisableBase ):
         return self._network_contexts_to_sessions
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_LEGACY ] = NetworkSessionManagerLegacy
 
 def ConvertLegacyToNewSessions( legacy_session_manager: NetworkSessionManagerLegacy ):

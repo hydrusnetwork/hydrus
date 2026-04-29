@@ -29,7 +29,7 @@ from hydrus.client.gui.pages import ClientGUISidebarCore
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.search import ClientSearchTagContext
 
 class FilterPanel( QW.QWidget ):
@@ -751,7 +751,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
         self._page_state = page_state
         
     
-    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
         
         media_results = [ m.GetMediaResult() for m in media ]
         

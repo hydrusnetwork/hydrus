@@ -10,7 +10,6 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusController
 from hydrus.core import HydrusData
@@ -32,12 +31,9 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
-from hydrus.client.caches import ClientCaches
-from hydrus.client.db import ClientDB
-from hydrus.client.files import ClientFilesMaintenance
-from hydrus.client.files import ClientFilesManager
 from hydrus.client.gui import ClientGUICallAfter
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
 
@@ -210,15 +206,14 @@ class Controller( HydrusController.HydrusController ):
         
         self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( QW.QApplication.instance() )
         
-        self.thumbnails_cache: ClientCaches.ThumbnailCache | None = None
-        
-        self.client_files_manager: ClientFilesManager.ClientFilesManager | None = None
-        self.services_manager: ClientServices.ServicesManager | None = None
+        self.thumbnails_cache = None
         
         Controller.my_instance = self
         
     
     def _InitDB( self ):
+        
+        from hydrus.client.db import ClientDB
         
         self.db = ClientDB.DB( self, self.db_dir, 'client' )
         
@@ -641,7 +636,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CheckMouseIdle( self ):
         
-        mouse_position = QG.QCursor.pos()
+        mouse_position = ClientGUIFunctions.GetMousePos()
         
         if self._last_mouse_position is None:
             
@@ -1188,6 +1183,8 @@ class Controller( HydrusController.HydrusController ):
     
     def InitClientFilesManager( self ):
         
+        from hydrus.client.files import ClientFilesManager
+        
         def qt_code( missing_subfolders ):
             
             from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -1261,6 +1258,7 @@ class Controller( HydrusController.HydrusController ):
     def InitModel( self ):
         
         from hydrus.client import ClientManagers
+        from hydrus.client.caches import ClientCaches
         
         self.frame_splash_status.SetTitleText( 'booting db' + HC.UNICODE_ELLIPSIS )
         
@@ -1532,7 +1530,9 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
         
-        self.files_maintenance_manager = ClientFilesMaintenance.FilesMaintenanceManager( self )
+        from hydrus.client.files import ClientFilesMaintenanceManager
+        
+        self.files_maintenance_manager = ClientFilesMaintenanceManager.FilesMaintenanceManager( self )
         
         self._managers_with_mainloops.append( self.files_maintenance_manager )
         
@@ -2572,14 +2572,14 @@ class Controller( HydrusController.HydrusController ):
             
             ( media, optional_target_resolution_tuple ) = data
             
-            display_media = media.GetDisplayMedia()
+            display_media_result = media.GetDisplayMediaResult()
             
-            if display_media is None:
+            if display_media_result is None:
                 
                 return
                 
             
-            image_renderer = self.images_cache.GetImageRenderer( display_media.GetMediaResult() )
+            image_renderer = self.images_cache.GetImageRenderer( display_media_result )
             
             def CopyToClipboard():
                 
@@ -2623,12 +2623,19 @@ class Controller( HydrusController.HydrusController ):
             
             media = data
             
-            if media.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+            display_media_result = media.GetDisplayMediaResult()
+            
+            if display_media_result is None:
                 
                 return
                 
             
-            thumbnail = self.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() )
+            if display_media_result.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+                
+                return
+                
+            
+            thumbnail = self.thumbnails_cache.GetThumbnail( display_media_result )
             
             qt_image = thumbnail.GetQtImage().copy()
             

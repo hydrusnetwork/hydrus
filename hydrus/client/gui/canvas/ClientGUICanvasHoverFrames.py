@@ -38,8 +38,8 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.gui.widgets import ClientGUIPainterShapes
-from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResultPrettyInfo
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 
@@ -441,7 +441,7 @@ class CanvasHoverFrame( QW.QFrame ):
     sendApplicationCommand = QC.Signal( CAC.ApplicationCommand )
     
     mediaCleared = QC.Signal()
-    mediaChanged = QC.Signal( ClientMedia.MediaSingleton )
+    mediaChanged = QC.Signal( ClientMediaSingle.MediaSingle )
     
     def __init__( self, parent: QW.QWidget, my_canvas, canvas_key ):
         
@@ -642,7 +642,7 @@ class CanvasHoverFrame( QW.QFrame ):
             return
             
         
-        mouse_pos = self.parentWidget().mapFromGlobal( QG.QCursor.pos() )
+        mouse_pos = self.parentWidget().mapFromGlobal( ClientGUIFunctions.GetMousePos() )
         
         mouse_x = mouse_pos.x()
         mouse_y = mouse_pos.y()
@@ -779,7 +779,7 @@ class CanvasHoverFrame( QW.QFrame ):
             
             self.mediaCleared.emit()
             
-        elif isinstance( self._current_media, ClientMedia.MediaSingleton ): # just to be safe on the delicate type def requirements here
+        elif isinstance( self._current_media, ClientMediaSingle.MediaSingle ): # just to be safe on the delicate type def requirements here
             
             self.mediaChanged.emit( self._current_media )
             
@@ -2953,7 +2953,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
     def wheelEvent( self, event ):
         
         # need the mouse test here since some weird event passing happens on mouse events on other stuff, I think because this hover is child 0 of the parent, it somehow gets 'focus'
-        if self.rect().contains( self.mapFromGlobal( QG.QCursor.pos() ) ):
+        if self.rect().contains( self.mapFromGlobal( ClientGUIFunctions.GetMousePos() ) ):
             
             # we do not want to send taglist wheel events up to the canvas lad
             

@@ -114,29 +114,29 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: collections.abc.Colle
     """
     The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
     """
-    texts = list( texts )
+    texts_list = list( texts )
     
     if do_sort:
         
-        HumanTextSort( texts )
+        HumanTextSort( texts_list )
         
     
-    if len( texts ) == 1:
+    if len( texts_list ) == 1:
         
         if no_trailing_whitespace:
             
-            return f' "{texts[0]}"'
+            return f' "{texts_list[0]}"'
             
         else:
             
-            return f' "{texts[0]}" '
+            return f' "{texts_list[0]}" '
             
         
     else:
         
-        if len( texts ) <= 4:
+        if len( texts_list ) <= 4:
             
-            t = '\n'.join( texts )
+            t = '\n'.join( texts_list )
             
         else:
             
@@ -146,7 +146,7 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: collections.abc.Colle
             lines = []
             line_under_construction = ''
             
-            texts_to_do = list( texts )
+            texts_to_do = list( texts_list )
             
             while len( texts_to_do ) > 0:
                 
@@ -214,18 +214,18 @@ def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: collections
         return f'0(?) {collective_description_noun}'
         
     
-    texts = list( texts )
+    texts_list = list( texts )
     
     if do_sort:
         
-        HumanTextSort( texts )
+        HumanTextSort( texts_list )
         
     
     LINE_NO_LONGER_THAN = 48
     
-    if len( texts ) == 1:
+    if len( texts_list ) == 1:
         
-        text = texts[0]
+        text = texts_list[0]
         
         if len( text ) + 2 > LINE_NO_LONGER_THAN:
             
@@ -238,7 +238,7 @@ def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: collections
         
     else:
         
-        full_result = ', '.join( ( f'"{text}"' for text in texts ) )
+        full_result = ', '.join( ( f'"{text}"' for text in texts_list ) )
         
         if len( full_result ) <= LINE_NO_LONGER_THAN:
             
@@ -246,8 +246,8 @@ def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: collections
             
         else:
             
-            first_text = texts[0]
-            num_texts = len( texts )
+            first_text = texts_list[0]
+            num_texts = len( texts_list )
             
             leading_example_result = f'"{first_text}" & {HydrusNumbers.ToHumanInt( num_texts - 1 )} other {collective_description_noun}'
             

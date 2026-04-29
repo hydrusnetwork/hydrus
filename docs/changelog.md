@@ -7,6 +7,66 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 670](https://github.com/hydrusnetwork/hydrus/releases/tag/v670)
+
+### misc
+
+* when you paste queries into the edit subscription window, it now shows you the pending changes, i.e. which are new/already in/DEAD,  _before_ you say yes/no. if you have DEAD, it asks with a yesyes/no if you want to revive or not
+* the 'rescue off-screen window' system now tries to slide windows down and/or right before falling back to 'topleft of primary screen'. for instance, if the off-screen dialog's originally proposed bottom-left corner would be in view on a particular screen, it now just slides the guy down a bit and adds any fuzzy padding. this makes the new 'put dialog over the mouse' mode nicer to work with near screen edges, although I need to do some more work to better handle particularly short dialogs and those that span across a multi-monitor border
+* for the new 'put the dialog over the mouse' mode, if the dialog would appear off-screen, it no longer gives you a 'woah, that was offscreen' popup
+* for the new 'put the dialog over the mouse' mode, if the current mouse cursor is so invalid it is seemingly not on any current screen, it falls back to 'topleft of parent mate'
+* if you run from source with a normal-looking 'venv' directory, any update that includes new package versions is now going to say, 'hey, looks like you are running from source. this is a good time to update your venv' when you update. this will happen in this release
+* thanks to a user, the F13-24 keys are now mappable in the shortcuts system
+
+### tag suggestions
+
+* in 'manage tags', on the 'related tags' panel, the 'do it just for my files/all known files' flipswitch is now visible on local tag services
+* the 'related tags' panel now has a tag service selector, so you can say 'hey provide related suggests from the PTR' for your 'my tags' and so on
+* the 'related tags' panel now has a 'searching through/not searching siblings and parents' button. this involves some black magic and I don't really know how well it works, but the tech seemed to be done db side so I just wired it up
+* this is mostly experimental. if you use this a lot, give it a go and let me know if any of it is useful. if you find you are setting something one way or another over and over, it might be nice to have it remember the last settings
+* the 'related tags' panel now displays sibling and parent relationships, like the other tag suggestion panels
+* if you hit either of the 'related tags' search-type buttons, or the media changes, the 'related tags' search now refreshes using the same duration that was last searched (or 'quick' if none has been done yet)
+* on tag menus, the 'favourites' sub-menu has been overhauled. for KISS, it now only appears when you have one tag selected, and it provides add/remove options for the general favourites _and_, now, all the 'most used' tag suggestion columns that appear in the manage tags dialog. ten points to anyone who can come up with a better names than 'most used tags' and 'favourite tags' that represents what they do while not confusing one for the other
+* on tag menus, an empty 'search' sub-menu no longer appears in contexts without any search-page stuff (e.g. manage tags was doing this)
+
+### curl_cffi test
+
+* a user pointed me at the `curl_cffi` library this week, which provides http/2 and http/3 support with a `requests`-like interface. I have written a very small and basic shim to test this out with our network engine, and a new test mode is under `help->debug->network actions->curl_cffi test mode`. it asks for some test details and then switches the whole network engine over.
+* very advanced source users can now add `curl_cffi` to their venvs and give it a whirl. if we discover it solves some problems that requests at http/1 can't handle, I'll formalise the test and plan out how to integrate this into a future domain manager so we can shape things to particular network contexts as needed
+* I cleaned a bunch of session code and figured out some nicer session switching/reinitialising-tech and cookie-migration tech. I feel even more optimistic about also playing with `httpx`, which is a comprehensive `requests`-like replacement that offers http/2
+
+### boring import options work
+
+* wrote out a draft of a help document for import options at `https://hydrusnetwork.github.io/hydrus/getting_started_import_options.html`. I'll populate this with nice diagrams and screenshots and insert it properly as this becomes real. if you have been following along here, feel free to have a look and let me know where I'm making mistakes
+
+### boring cleanup
+
+* added a little note to the 'running from source' help regarding ffmpeg on LTS Linux flavours--you probably have an old system ffmpeg, for good reason, so I now say how to find a newer one for hydrus if you like
+* added a small section to the backing up help on how to set up a wineprefix for ToDoList. if you try it, let me know if you have a different mfc experience
+* cleaned up how mouse coordinates are fetched across the program; everything now goes through one place. Wayland has some issues with this (generally, in Wayland, I only get the last place the mouse was seen over my UI panels), so I may end up inserting some DEBUG recoveries for when this gives crazy answers
+* decoupled a bunch of session and cookie code. the way cookies are fetched, inspected, and edited is a good bit cleaner and more centralised and abstract now
+* 'session' cookies are now cleared faster and each session maintains its connection pool less redundantly
+* misc refactoring to tidy up the initial import as the main controller boots. still lots to do
+* pulled `ClientMedia` apart and cleaned up some inheritance mess. this whole thing is still awful, but this was a good step
+* cleared out more linting issues with client media and friends, and in continuing a very long rewrite, a bunch of MediaSingle stuff is replaced with MediaResult, and a bunch of edge-case 'we wanted to show a collection, but it just lost its last member' bugs are fixed
+* fixed 'copy thumbnail bmp' for collections, which wasn't falling back to a nice default behaviour before
+
+### future build committed
+
+* This release commits the changes tested with the recent future build. The test went well, and there are no special instructions for the update. Source users are encouraged to rebuild their venvs this week. Update as normal, and you will get--
+* requests from `2.32.5` to `2.33.1` (security fix)
+* chardet from `chardet>=3.0.4,<6` to `chardet>=3.0.4,<8` (requests dependency issue resolved in the new version)
+* OpenCV from `4.11.0.86` to `4.12.0.88` (normal update)
+* dateparser from `1.2.1` to `1.4.0` (had a build problem before)
+* adds tldextract `5.3.1`, which provides for more sensible '.co.jp' top level domain recognition
+* setuptools no longer pinned at `78.1.1` for the builds (an old hack removed), seems to now be ~82.x
+* pyinstaller `6.14.1` to `6.16.0` for the builds (normal update, and by the hand of fate it worked)
+* test version of OpenCV from `4.13.0.90` to `4.13.0.92` (build dependency fix that'll hit us later)
+* test version of PySide6 (Qt) from `6.10.1` to `6.10.3` (normal update, but we discovered a fun bug yesterday in 6.10.1 that broke several lists and widgets)
+* Windows mpv dll from `2023-08-20` to `2024-08-18` (cautious update; we've had many issues trying newer mpv dlls over the years)
+* `action-gh-release` from v2 (Node 20) to v3 (Node 24) in the Linux and Windows build scripts
+* thanks to a user, the Docker package build files are also now Node 24 compatible
+
 ## [Version 669](https://github.com/hydrusnetwork/hydrus/releases/tag/v669)
 
 ### misc
@@ -506,60 +566,3 @@ title: Changelog
 * misc `HydrusConstants` cleanup
 * deleted the ancient UPnP dialog. I have no idea if any of it still worked, and I don't bundle the exe it relies on any more. I'll be clearing the optional upnp tech out from the servers similarly--this stuff is not my job and I'm not keeping up with the technical debt
 * fixed an issue with the location storage update code last week when the client being updated has two ideal storage locations set that are actually the same location. same deal for updating the locations in the 'move media files' dialog
-
-## [Version 660](https://github.com/hydrusnetwork/hydrus/releases/tag/v660)
-
-### misc
-
-* I cleaned up some internal layout logic in my new QtMediaPlayer. transitioning from certain landscape to portrait videos should no longer reposition the video to the right when you have 'use the same QtMediaPlayer' checkbox ticked. thank you for the reports. let's try one more time: if you are happy with this, I'll make it real
-* the new 'help: random 403 errors' menu items on every retry button were driving me nuts, so I moved them to the 'retry ignored' button selection dialog
-* fixed several issues when loading an Ugoira (or several other animation types) that has a faulty (0 or null) number of frames
-* the 'check database integrity' job is completely removed. this thing is only useful for detecting SQLite-level corruption, which we often see as a 'malformed' error, and really should be run from the command line interface, on one file at a time, when working through the 'help my db is broke.txt' document. several users have wasted time with this thing over the years hoping it would fix other bugs--unfortunately, it does not
-* added `database->db maintenance->clear orphan URL mappings`, a new job that helps resolve some 'system:num_urls' stuff if your client.master.db has been damaged
-
-### cleaner venv setup
-
-* _this only matters for users who run from source_
-* thanks to a user, the setup_venv scripts and general venv setup are simplified and improved. years of behind-the-scenes cruft is cleared
-* for a while, I've maintained both a scatter of old requirement.txts to handle the different choices you make in `setup_venv.blah` and a more modern `pyproject.toml` file that bundles everything in a nicer way and can be used by tools like `uv`. the setup_venv script routine is now updated to talk to that pyproject.toml, so all the old .txts are gone. this cleans up how your venv is installed, making it one atomic call and allowing easier editing of package choices in future (also removes the duplicate maintenance situation)
-* further, the three setup_venv scripts are converted into stubs that call one single multiplat `setup_venv.py` file. you can just run that `setup_venv.py` file on its own and it works, so that is now the recommendation for all platforms. this script now talks about how to launch the program after its 'Done!' message, too
-* I've updated the 'running from source' help to talk about this. also, anyone who manually pip-installs their venv is using a different command to hit the single `pyproject.toml` rather than the requirements.txts, and I added some stuff about the venv `activate` script, and I talked a bit about python vs pythonw in Windows
-* as I recently did with the setup_venv, I have decided to rename some of the groups in the `pyproject.toml`. the three groups `mpv-new`, `opencv-new`, and `qt6-new` are being renamed to `xxxx-normal`. I am achieving this today simply by duplicating the groups with new names, so using the old `xxxx-new` name will still work for now. I will be deleting the old group names in three months, v673, so if you have an automatic script that installs hydrus, please update it. since these are the default selections, I presume no one uses them and this doesn't really matter
-* I will also delete the old `setup_venv.bat/sh/command` stubs and the basedir `requirements.txt` in three months, in v673, to be clean. if you use them in an automated script, please switch over to the .py
-* I ran out of time, but I'll do the same for setup_help and git pull--it can all be multiplat .py soon
-
-### file storage granularity test
-
-* _for advanced users now, everyone else soon_
-* after much planning, I am rolling out a test for advanced users with fewer than 1 million files
-* that improves latency on file access and other maintenance operations for clients with many files
-* essentially, instead of storing files in just 256 "fxx" folders, the client can now use 4096 "fxx/x" folders. same for the "txx" thumbnails. this means 16x fewer files per subfolder, where big clients are pushing 10,000+, making for snappier folder scans and file access in the client and when you do something like 'open video externally' and the video player does a brief folder scan for subtitle files and such
-* this is all accessed through `database->move media files...` in a new panel. your client now reports if it is currently granularity 2 or 3 and offers to migrate you to 3. this process involves moving all your files, so it can take a while. my tests suggest about 5,000 files/s on an NVME, so thumbs will zip by, but the actual files on HDD may be a good bit slower, especially on funky USB or NAS connections where there's odd buffering. it is cancellable if it is taking too long
-* some first-draft help here too https://hydrusnetwork.github.io/hydrus/database_migration.html#granularity
-* one additional issue is that this storage rejigger makes a backup look completely different! we don't want to do a 100% backup run just to mirror file moves, so this panel offers a similar migration for a backup. the text and dialogs guide you through it all
-* if you are an advanced user with fewer than 1 million files and you definitely absolutely have a backup, I invite you to try this operation out. obviously let me know if there are any problems, but please also note the final dialog, which will say how long the migration took, and report to me something like, "500,000 files, thumbs on NVME, files on sata HDD, 21 minutes", which I hope to compile into nicer 'expect about x files/s on an HDD' estimates for the normal users
-* if you have 8 million files and really want to do this, you can, but bear in mind it might be a three hour migration
-
-### boring file storage work
-
-* the tables that track physical file storage have been updated to better handle 4096 rows rather than 256. all the tables now use a shared `location_id` table, with the same single read/write calls, ensuring all items here agree on portable vs absolute path storage and so on
-* the database now stores how 'granular' its file storage is, with default being 2 (2 hex chars, or 256 subfolders). if the stored file locations do not match this, it raises a serious error
-* the folder relocation code (when you do a 'move files now' run, and which will be replaced this year I hope by multi-location support and background migration) is more KISS and foolproof
-* the folder repair code (when you boot with a missing location) is similarly more KISS and foolproof
-* fixed a storage weight initialisation issue that could occur if the 'ideal thumbnail location' was specifically set and also in the media file storage locations list
-* all prefix-generating methods now always take an explicit prefix length/granularity. there is no longer a nebulous default anywhere
-* reworked my folder granularisation to be safer, to work both up and down, and added status reporting for an UI panel
-* wrote a routine that looks at an existing base storage location and guesses its current granularisation for job pre-checks
-* wrote a database granularisation routine and added 'aieeeee, it broke half way through, try and undo' code
-* the client files manager now only performs rigorous checks of all existing subfolder locations on startup. any migration or other re-init reason now just repopulates the subfolder store
-* when file subdirs of granularity 3 or more are migrated, if the intervening parent directory, for instance `f83` in a `f83/d` prefix, is empty afterwards, it is now deleted
-* the percentage usages in 'move media files' are now 2 sig figs since we are distributing 4096 things now and you'd get 0.0% sometimes
-* the mysterious 'empty_client_files' archive is updated regarding all this
-* wrote a 'help my db is the wrong granularity.txt' help document in the db dir for help recovering from big problems here
-* wrote unit tests for 2to3 and 3to2 granularisation and cancel tech
-* wrote unit tests for estimate folder granularity tech
-
-### boring cleanup
-
-* I deleted a bunch of very old 'running from source' help from the pre-everything-is-a-wheel days that is no longer pertinent
-* deleted some ancient unused client service UI code

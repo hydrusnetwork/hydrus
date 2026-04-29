@@ -56,28 +56,28 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         suggested_tags_favourites_panel.setMinimumWidth( 400 )
         
-        self._suggested_favourites_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
+        self._suggested_most_used_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
         
         tag_services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         for tag_service in tag_services:
             
-            self._suggested_favourites_services.addItem( tag_service.GetName(), tag_service.GetServiceKey() )
+            self._suggested_most_used_services.addItem( tag_service.GetName(), tag_service.GetServiceKey() )
             
         
-        self._suggested_favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
+        self._suggested_most_used = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( suggested_tags_favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
-        self._current_suggested_favourites_service = None
+        self._current_suggested_most_used_service = None
         
-        self._suggested_favourites_dict = {}
+        self._suggested_most_used_dict = {}
         
         default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
-        self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+        self._suggested_most_used_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_most_used.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
         
-        self._suggested_favourites.tagsChanged.connect( self._suggested_favourites_input.SetContextTags )
+        self._suggested_most_used.tagsChanged.connect( self._suggested_most_used_input.SetContextTags )
         
-        self._suggested_favourites_input.externalCopyKeyPressEvent.connect( self._suggested_favourites.keyPressEvent )
+        self._suggested_most_used_input.externalCopyKeyPressEvent.connect( self._suggested_most_used.keyPressEvent )
         
         #
         
@@ -197,13 +197,13 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'Tag service: ', self._suggested_favourites_services ) )
+        rows.append( ( 'Tag service: ', self._suggested_most_used_services ) )
         
         gridbox = ClientGUICommon.WrapInGrid( suggested_tags_favourites_panel, rows )
         
         QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( panel_vbox, self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( panel_vbox, self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._suggested_most_used, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( panel_vbox, self._suggested_most_used_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         suggested_tags_favourites_panel.setLayout( panel_vbox )
         
@@ -304,11 +304,11 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        self._suggested_favourites_services.currentIndexChanged.connect( self.EventSuggestedFavouritesService )
+        self._suggested_most_used_services.currentIndexChanged.connect( self.EventSuggestedMostUsedService )
         self._suggested_tags_layout.currentIndexChanged.connect( self._NotifyLayoutChanged )
         
         self._NotifyLayoutChanged()
-        self.EventSuggestedFavouritesService( None )
+        self.EventSuggestedMostUsedService( None )
         
     
     def _AddResultTagSliceWeight( self ):
@@ -475,35 +475,35 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._default_suggested_tags_notebook_page.setEnabled( enable_default_page )
         
     
-    def _SaveCurrentSuggestedFavourites( self ):
+    def _SaveCurrentSuggestedMostUsed( self ):
         
-        if self._current_suggested_favourites_service is not None:
+        if self._current_suggested_most_used_service is not None:
             
-            self._suggested_favourites_dict[ self._current_suggested_favourites_service ] = self._suggested_favourites.GetTags()
+            self._suggested_most_used_dict[ self._current_suggested_most_used_service ] = self._suggested_most_used.GetTags()
             
         
     
-    def EventSuggestedFavouritesService( self, index ):
+    def EventSuggestedMostUsedService( self, index ):
         
-        self._SaveCurrentSuggestedFavourites()
+        self._SaveCurrentSuggestedMostUsed()
         
-        self._current_suggested_favourites_service = self._suggested_favourites_services.GetValue()
+        self._current_suggested_most_used_service = self._suggested_most_used_services.GetValue()
         
-        if self._current_suggested_favourites_service in self._suggested_favourites_dict:
+        if self._current_suggested_most_used_service in self._suggested_most_used_dict:
             
-            favourites = self._suggested_favourites_dict[ self._current_suggested_favourites_service ]
+            favourites = self._suggested_most_used_dict[ self._current_suggested_most_used_service ]
             
         else:
             
-            favourites = self._new_options.GetSuggestedTagsFavourites( self._current_suggested_favourites_service )
+            favourites = self._new_options.GetSuggestedTagsMostUsed( self._current_suggested_most_used_service )
             
         
-        self._suggested_favourites.SetTagServiceKey( self._current_suggested_favourites_service )
+        self._suggested_most_used.SetTagServiceKey( self._current_suggested_most_used_service )
         
-        self._suggested_favourites.SetTags( favourites )
+        self._suggested_most_used.SetTags( favourites )
         
-        self._suggested_favourites_input.SetTagServiceKey( self._current_suggested_favourites_service )
-        self._suggested_favourites_input.SetDisplayTagServiceKey( self._current_suggested_favourites_service )
+        self._suggested_most_used_input.SetTagServiceKey( self._current_suggested_most_used_service )
+        self._suggested_most_used_input.SetDisplayTagServiceKey( self._current_suggested_most_used_service )
         
     
     def UpdateOptions( self ):
@@ -513,11 +513,11 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetString( 'default_suggested_tags_notebook_page', self._default_suggested_tags_notebook_page.GetValue() )
         
-        self._SaveCurrentSuggestedFavourites()
+        self._SaveCurrentSuggestedMostUsed()
         
-        for ( service_key, favourites ) in list(self._suggested_favourites_dict.items()):
+        for ( service_key, favourites ) in list(self._suggested_most_used_dict.items()):
             
-            self._new_options.SetSuggestedTagsFavourites( service_key, favourites )
+            self._new_options.SetSuggestedTagsMostUsed( service_key, favourites )
             
         
         self._new_options.SetBoolean( 'show_related_tags', self._show_related_tags.isChecked() )

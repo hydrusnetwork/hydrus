@@ -816,6 +816,8 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent | QG.QWheelEvent ):
         
     elif event.type() == QC.QEvent.Type.Wheel:
         
+        event = typing.cast( QG.QWheelEvent, event )
+        
         angle_delta_point = event.angleDelta()
         
         if angle_delta_point is None:
@@ -918,7 +920,7 @@ def IShouldCatchShortcutEvent( event_handler_owner: QC.QObject, event_catcher: Q
             # don't pass wheels that happen to legit controls that want to eat it, like a list, when the catcher is a window
             if event.type() == QC.QEvent.Type.Wheel:
                 
-                widget_under_mouse = event_catcher.childAt( event_catcher.mapFromGlobal( QG.QCursor.pos() ) )
+                widget_under_mouse = ClientGUIFunctions.GetMouseWidget()
                 
                 if widget_under_mouse is not None:
                     
@@ -1984,10 +1986,10 @@ class ShortcutsManager( QC.QObject ):
     def GetCommand( self, shortcuts_names: collections.abc.Iterable[ str ], shortcut: Shortcut ):
         
         # process more specific shortcuts with higher priority
-        shortcuts_names = list( shortcuts_names )
-        shortcuts_names.reverse()
+        shortcuts_names_list = list( shortcuts_names )
+        shortcuts_names_list.reverse()
         
-        for name in shortcuts_names:
+        for name in shortcuts_names_list:
             
             if name in self._names_to_shortcut_sets:
                 

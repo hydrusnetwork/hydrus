@@ -43,8 +43,10 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.widgets import ClientGUIPainterShapes
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultPrettyInfo
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
@@ -320,7 +322,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER
     
     mediaCleared = QC.Signal()
-    mediaChanged = QC.Signal( ClientMedia.MediaSingleton )
+    mediaChanged = QC.Signal( ClientMediaSingle.MediaSingle )
     haveDestroyedAllMediaWindows = QC.Signal()
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext ):
@@ -351,7 +353,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._service_keys_to_services = {}
         
-        self._current_media: ClientMedia.MediaSingleton | None = None
+        self._current_media: ClientMediaSingle.MediaSingle | None = None
         
         catch_mouse = True
         
@@ -694,7 +696,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        point = self.mapFromGlobal( QG.QCursor.pos() )
+        point = self.mapFromGlobal( ClientGUIFunctions.GetMousePos() )
         
         self._last_drag_pos = point
         self._current_drag_is_touch = False
@@ -830,22 +832,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         else:
             
             return self._media_container.MouseIsNearAnimationBar()
-            
-        
-    
-    def MouseIsOverMedia( self ):
-        
-        if self._current_media is None:
-            
-            return False
-            
-        else:
-            
-            media_mouse_pos = self._media_container.mapFromGlobal( QG.QCursor.pos() )
-            
-            media_rect = self._media_container.rect()
-            
-            return media_rect.contains( media_mouse_pos )
             
         
     
@@ -1491,7 +1477,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._location_context = location_context
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = None ):
+    def SetMedia( self, media: ClientMediaSingle.MediaSingle | None, start_paused = None ):
         
         if media is not None and not self.isVisible():
             
@@ -1569,7 +1555,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self.mediaCleared.emit()
                 
-            elif isinstance( self._current_media, ClientMedia.MediaSingleton ): # just to be safe on the delicate type def requirements here
+            elif isinstance( self._current_media, ClientMediaSingle.MediaSingle ): # just to be safe on the delicate type def requirements here
                 
                 self.mediaChanged.emit( self._current_media )
                 
@@ -3050,7 +3036,7 @@ class CanvasWithHovers( Canvas ):
         CC.CAN_HIDE_MOUSE = True
         
         # due to the mouse setPos below, the event pos can get funky I think due to out of order coordinate setting events, so we'll poll current value directly
-        event_pos = self.mapFromGlobal( QG.QCursor.pos() )
+        event_pos = self.mapFromGlobal( ClientGUIFunctions.GetMousePos() )
         
         mouse_currently_shown = self.cursor().shape() == QC.Qt.CursorShape.ArrowCursor
         
@@ -3256,7 +3242,7 @@ class CanvasMediaList( CanvasWithHovers ):
         
         super().__init__( parent, location_context )
         
-        self._media_list = ClientMedia.MediaList( location_context, media_results )
+        self._media_list = ClientMediaList.MediaList( location_context, media_results )
         
         self._page_key = page_key
         
@@ -4438,7 +4424,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             elif action == CAC.SIMPLE_SHOW_MENU:
                 
-                self.ShowMenuFromSignal( self.mapFromGlobal( QG.QCursor.pos() ) )
+                self.ShowMenuFromSignal( self.mapFromGlobal( ClientGUIFunctions.GetMousePos() ) )
                 
             else:
                 

@@ -18,6 +18,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.client.parsing import ClientParsing
 from hydrus.client.parsing import ClientParsingResults
 
@@ -996,17 +997,18 @@ class LoginProcessHydrus( LoginProcess ):
         self.login_script.Start( self.engine, self.network_context )
         
     
+
 class LoginScriptHydrus( object ):
     
     def _IsLoggedIn( self, engine, network_context ):
         
         session = engine.session_manager.GetSession( network_context )
         
-        cookies = session.cookies
+        ClientNetworkingSessions.ClearExpiredCookies( session )
         
-        cookies.clear_expired_cookies()
+        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
-        return 'session_key' in cookies
+        return 'session_key' in session.cookies
         
     
     def IsLoggedIn( self, engine, network_context ):
@@ -1160,7 +1162,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         session = engine.session_manager.GetSession( network_context )
         
-        cookies = session.cookies
+        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
         search_domain = network_context.context_data
         
@@ -1305,9 +1307,9 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         session = engine.session_manager.GetSession( network_context )
         
-        cookies = session.cookies
+        ClientNetworkingSessions.ClearExpiredCookies( session )
         
-        cookies.clear_expired_cookies()
+        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
         search_domain = network_context.context_data
         
@@ -1748,7 +1750,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             
             session = network_job.GetSession()
             
-            cookies = session.cookies
+            cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
             
             for ( cookie_name_string_match, string_match ) in list(self._required_cookies_info.items()):
                 

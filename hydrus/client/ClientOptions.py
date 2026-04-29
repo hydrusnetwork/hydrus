@@ -725,13 +725,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        from hydrus.client.media import ClientMedia
+        from hydrus.client.media import ClientMediaSort
         from hydrus.client.metadata import ClientTags
         
         default_namespace_sorts = HydrusSerialisable.SerialisableList()
         
-        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'series', 'creator', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
-        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
+        default_namespace_sorts.append( ClientMediaSort.MediaSort( sort_type = ( 'namespaces', ( ( 'series', 'creator', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
+        default_namespace_sorts.append( ClientMediaSort.MediaSort( sort_type = ( 'namespaces', ( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
         
         self._dictionary[ 'default_namespace_sorts' ] = default_namespace_sorts
         
@@ -923,12 +923,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        from hydrus.client.media import ClientMedia
+        from hydrus.client.media import ClientMediaCollect
+        from hydrus.client.media import ClientMediaSort
         
-        self._dictionary[ 'default_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-        self._dictionary[ 'fallback_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
+        self._dictionary[ 'default_sort' ] = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._dictionary[ 'fallback_sort' ] = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ), CC.SORT_ASC )
         
-        self._dictionary[ 'default_collect' ] = ClientMedia.MediaCollect()
+        self._dictionary[ 'default_collect' ] = ClientMediaCollect.MediaCollect()
         
         #
         
@@ -1746,7 +1747,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSuggestedTagsFavourites( self, service_key ):
+    def GetSuggestedTagsMostUsed( self, service_key ):
         
         with self._lock:
             
@@ -2186,7 +2187,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetSuggestedTagsFavourites( self, service_key, tags ):
+    def SetSuggestedTagsMostUsed( self, service_key, tags ):
         
         with self._lock:
             

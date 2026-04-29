@@ -24,7 +24,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasDuplicates
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ThumbnailPairList
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 
 class PreviewPanel( ClientGUICommon.StaticBox ):
     
@@ -515,7 +515,7 @@ class PreviewPanel( ClientGUICommon.StaticBox ):
         canvas_frame.SetCanvas( canvas_window )
         
     
-    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+    def _ShowPairInPage( self, media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
         
         hashes = [ m.GetHash() for m in media ]
         

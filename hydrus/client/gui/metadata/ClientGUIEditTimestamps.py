@@ -27,12 +27,12 @@ from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 
 class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, ordered_medias: list[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent: QW.QWidget, ordered_medias: list[ ClientMediaSingle.MediaSingle ] ):
         
         super().__init__( parent )
         

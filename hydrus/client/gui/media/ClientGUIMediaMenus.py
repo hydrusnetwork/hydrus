@@ -22,8 +22,10 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearchPredicate
@@ -440,7 +442,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
     
     if selected_media is not None:
         
-        selected_media = ClientMedia.FlattenMedia( selected_media )
+        selected_media = ClientMediaList.FlattenMedia( selected_media )
         
         if len( selected_media ) > 0:
             
@@ -761,7 +763,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_file_serv
         
     
 
-def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
     
     # add test here for if media actually has stats, edit them, all that
     
@@ -926,7 +928,7 @@ def AddServiceKeysToMenu( menu, service_keys, submenu_name, description, bare_ca
     ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
     
 
-def StartOtherHashMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton, menu_item: QW.QAction, hash_type: str ):
+def StartOtherHashMenuFetch( win: QW.QWidget, media: ClientMediaSingle.MediaSingle, menu_item: QW.QAction, hash_type: str ):
     
     hash = media.GetHash()
     
@@ -961,16 +963,19 @@ def StartOtherHashMenuFetch( win: QW.QWidget, media: ClientMedia.MediaSingleton,
     job.start()
     
 
-def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: ClientMedia.Media | None, selected_media: collections.abc.Collection[ ClientMedia.Media ] ):
+def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, focused_media: ClientMedia.Media | None, selected_media_mixed: collections.abc.Collection[ ClientMedia.Media ] ):
+    
+    focused_media_result = None
     
     if focused_media is not None:
         
         focused_media = focused_media.GetDisplayMedia()
+        focused_media_result = focused_media.GetDisplayMediaResult()
         
     
     ipfs_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.IPFS, ) ) )
     
-    selected_media = ClientMedia.FlattenMedia( selected_media )
+    selected_media = ClientMediaList.FlattenMedia( selected_media_mixed )
     
     focused_is_local = focused_media is not None and focused_media.GetLocationsManager().IsLocal()
     
@@ -1089,7 +1094,7 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
         StartOtherHashMenuFetch( copy_hash_menu, focused_media, sha1_menu_item, 'sha1' )
         StartOtherHashMenuFetch( copy_hash_menu, focused_media, sha512_menu_item, 'sha512' )
         
-        file_info_manager = focused_media.GetMediaResult().GetFileInfoManager()
+        file_info_manager = focused_media_result.GetFileInfoManager()
         
         if file_info_manager.blurhash is not None:
             
@@ -1103,7 +1108,7 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
         
         ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hash' )
         
-        hash_id_str = HydrusNumbers.ToHumanInt( focused_media.GetHashId() )
+        hash_id_str = HydrusNumbers.ToHumanInt( focused_media_result.GetHashId() )
         
         ClientGUIMenus.AppendMenuItem( share_menu, 'copy file id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
         

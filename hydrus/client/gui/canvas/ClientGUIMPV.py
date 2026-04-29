@@ -13,7 +13,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusAnimationHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -25,7 +24,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 
 MPV_IS_AVAILABLE = True
 MPV_MODULE_NOT_FOUND = False
@@ -1446,7 +1445,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = False ):
+    def SetMedia( self, media: ClientMediaSingle.MediaSingle | None, start_paused = False ):
         
         if media == self._media:
             
@@ -1551,6 +1550,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     mime = self._media.GetMime()
                     
                     if mime in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                        
+                        from hydrus.core.files import HydrusAnimationHandling
                         
                         if mime == HC.ANIMATION_APNG:
                             

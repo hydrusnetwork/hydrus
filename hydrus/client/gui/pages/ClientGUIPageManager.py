@@ -18,7 +18,8 @@ from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
 from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaCollect
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
@@ -219,8 +220,8 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseDefaults( self ):
         
-        self._variables[ 'media_sort' ] = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
-        self._variables[ 'media_collect' ] = ClientMedia.MediaCollect()
+        self._variables[ 'media_sort' ] = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+        self._variables[ 'media_collect' ] = ClientMediaCollect.MediaCollect()
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
@@ -440,7 +441,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
                     rating_service_keys = []
                     
                 
-                media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys )
+                media_collect = ClientMediaCollect.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys )
                 
                 serialisable_serialisables[ 'media_collect' ] = media_collect.GetSerialisableTuple()
                 

@@ -110,6 +110,12 @@ If you use [API-connected](client_api.md) programs such as the Hydrus Companion,
 The **simple downloader** will do very simple parsing for unusual jobs. If you want to download all the images in a page, or all the image link destinations, this is the one to use. There are a couple default parsing rules to choose from, and if you learn the downloader system yourself, it will be easy to make more.
 
 ## Import options
+
+!!! note "This is changing!"
+    Hey, this whole system is being migrated soon. The bulky file/tag/note import options are being split up, and a favourites/template system is being introduced.
+    
+    A draft of the help for this new options system is [here](getting_started_import_options.md).
+
 Every importer in Hydrus has some 'import options' that change what is allowed, what is blacklisted, and whether tags or notes should be saved.
 
 In previous versions these were split into completely different windows called `file import options` and `tag import options` so if you see those anywhere, this is what they're talking about and not some hidden menu anywhere.

@@ -33,7 +33,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIPathWidgets
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
@@ -452,7 +452,7 @@ If you select synchronise, be careful!'''
         
         def work_callable():
             
-            sort_by = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            sort_by = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             
             query_hash_ids = CG.client_controller.Read( 'file_query_ids', file_search_context, limit_sort_by = sort_by )
             

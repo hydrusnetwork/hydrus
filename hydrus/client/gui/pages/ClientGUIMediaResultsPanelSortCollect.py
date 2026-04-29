@@ -19,7 +19,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.metadata import ClientGUITagsEditNamespaceSort
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaCollect
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchTagContext
 
@@ -319,9 +320,9 @@ class CollectComboCtrl( QW.QComboBox ):
 
 class MediaCollectControl( QW.QWidget ):
     
-    collectChanged = QC.Signal( ClientMedia.MediaCollect )
+    collectChanged = QC.Signal( ClientMediaCollect.MediaCollect )
     
-    def __init__( self, parent, media_collect: ClientMedia.MediaCollect | None = None ):
+    def __init__( self, parent, media_collect: ClientMediaCollect.MediaCollect | None = None ):
         
         super().__init__( parent )
         
@@ -451,7 +452,7 @@ class MediaCollectControl( QW.QWidget ):
         
         ( namespaces, rating_service_keys, description ) = self._collect_comboctrl.GetValues()
         
-        self._media_collect = ClientMedia.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = self._collect_unmatched, tag_context = self._tag_context )
+        self._media_collect = ClientMediaCollect.MediaCollect( namespaces = namespaces, rating_service_keys = rating_service_keys, collect_unmatched = self._collect_unmatched, tag_context = self._tag_context )
         
         self._UpdateLabel()
         self._UpdateCogIconButton()
@@ -471,7 +472,7 @@ class MediaCollectControl( QW.QWidget ):
                     
                     if event.button() == QC.Qt.MouseButton.MiddleButton:
                         
-                        self.SetCollect( ClientMedia.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
+                        self.SetCollect( ClientMediaCollect.MediaCollect( collect_unmatched = self._media_collect.collect_unmatched ) )
                         
                         return True
                         
@@ -505,7 +506,7 @@ class MediaCollectControl( QW.QWidget ):
             
         
     
-    def SetCollect( self, media_collect: ClientMedia.MediaCollect, do_broadcast = True ):
+    def SetCollect( self, media_collect: ClientMediaCollect.MediaCollect, do_broadcast = True ):
         
         self._media_collect = media_collect
         
@@ -543,7 +544,7 @@ class MediaCollectControl( QW.QWidget ):
 
 class MediaSortControl( QW.QWidget ):
     
-    sortChanged = QC.Signal( ClientMedia.MediaSort )
+    sortChanged = QC.Signal( ClientMediaSort.MediaSort )
     
     def __init__( self, parent, media_sort = None ):
         
@@ -551,7 +552,7 @@ class MediaSortControl( QW.QWidget ):
         
         if media_sort is None:
             
-            media_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            media_sort = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             
         
         self._tag_context = media_sort.tag_context
@@ -590,7 +591,7 @@ class MediaSortControl( QW.QWidget ):
             
         except Exception as e:
             
-            default_sort = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            default_sort = ClientMediaSort.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
             
             self.SetSort( default_sort )
             
@@ -605,7 +606,7 @@ class MediaSortControl( QW.QWidget ):
         self.sortChanged.emit( media_sort )
         
     
-    def _GetCurrentSort( self ) -> ClientMedia.MediaSort:
+    def _GetCurrentSort( self ) -> ClientMediaSort.MediaSort:
         
         sort_order = self._sort_order_choice.GetValue()
         
@@ -614,7 +615,7 @@ class MediaSortControl( QW.QWidget ):
             sort_order = CC.SORT_ASC
             
         
-        media_sort = ClientMedia.MediaSort( sort_type = self._sort_type, sort_order = sort_order, tag_context = self._tag_context )
+        media_sort = ClientMediaSort.MediaSort( sort_type = self._sort_type, sort_order = sort_order, tag_context = self._tag_context )
         
         return media_sort
         
@@ -680,7 +681,7 @@ class MediaSortControl( QW.QWidget ):
             
             if menu is not None:
                 
-                example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                example_sort = ClientMediaSort.MediaSort( sort_type, CC.SORT_ASC )
                 
                 label = example_sort.GetSortTypeString()
                 
@@ -714,7 +715,7 @@ class MediaSortControl( QW.QWidget ):
                 
                 if menu is not None:
                     
-                    example_sort = ClientMedia.MediaSort( sort_type, CC.SORT_ASC )
+                    example_sort = ClientMediaSort.MediaSort( sort_type, CC.SORT_ASC )
                     
                     label = example_sort.GetSortTypeString()
                     
@@ -924,7 +925,7 @@ class MediaSortControl( QW.QWidget ):
     
     def _UpdateSortTypeLabel( self ):
         
-        example_sort = ClientMedia.MediaSort( self._sort_type, CC.SORT_ASC )
+        example_sort = ClientMediaSort.MediaSort( self._sort_type, CC.SORT_ASC )
         
         self._sort_type_button.setText( example_sort.GetSortTypeString() )
         
@@ -976,12 +977,12 @@ class MediaSortControl( QW.QWidget ):
         self._BroadcastSort()
         
     
-    def GetSort( self ) -> ClientMedia.MediaSort:
+    def GetSort( self ) -> ClientMediaSort.MediaSort:
         
         return self._GetCurrentSort()
         
     
-    def SetSort( self, media_sort: ClientMedia.MediaSort, do_sort = False ):
+    def SetSort( self, media_sort: ClientMediaSort.MediaSort, do_sort = False ):
         
         self._SetSortType( media_sort.sort_type )
         
@@ -1029,7 +1030,7 @@ class MediaSortControl( QW.QWidget ):
         
         if CG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ):
             
-            if self._sort_type_button.rect().contains( self._sort_type_button.mapFromGlobal( QG.QCursor.pos() ) ):
+            if ClientGUIFunctions.MouseIsOverWidget( self._sort_type_button ):
                 
                 if event.angleDelta().y() > 0:
                     

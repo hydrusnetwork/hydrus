@@ -42,8 +42,11 @@ from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaCollect
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResultPrettyInfo
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 
 MAC_QUARTZ_OK = True
@@ -60,7 +63,7 @@ if HC.PLATFORM_MACOS:
         
     
 
-class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
+class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.MediaList, QW.QScrollArea ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
@@ -136,6 +139,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         self.setWidget( self._InnerWidget( self ) )
         self.setWidgetResizable( True )
+        
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def __bool__( self ):
@@ -232,11 +238,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
             
         
-        media_to_delete = ClientMedia.FlattenMedia( self._selected_media )
+        media_to_delete = ClientMediaList.FlattenMedia( self._selected_media )
         
         if only_those_in_file_service_key is not None:
             
-            media_to_delete = ClientMedia.FlattenMedia( media_to_delete )
+            media_to_delete = ClientMediaList.FlattenMedia( media_to_delete )
             
             media_to_delete = [ m for m in media_to_delete if only_those_in_file_service_key in m.GetLocationsManager().GetCurrent() ]
             
@@ -335,7 +341,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         self._media_added_in_current_shift_select = set()
         
     
-    def _GetFocusSingleton( self ) -> ClientMedia.MediaSingleton:
+    def _GetFocusSingleton( self ) -> ClientMediaSingle.MediaSingle:
         
         if self._focused_media is not None:
             
@@ -350,7 +356,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         raise HydrusExceptions.DataMissing( 'No media singleton!' )
         
     
-    def _GetMediasForFileCommandTarget( self, file_command_target: int ) -> collections.abc.Collection[ ClientMedia.MediaSingleton ]:
+    def _GetMediasForFileCommandTarget( self, file_command_target: int ) -> collections.abc.Collection[ ClientMediaSingle.MediaSingle ]:
         
         if file_command_target == CAC.FILE_COMMAND_TARGET_FOCUSED_FILE:
             
@@ -367,7 +373,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 medias = self._GetSelectedMediaOrdered()
                 
-                return ClientMedia.FlattenMedia( medias )
+                return ClientMediaList.FlattenMedia( medias )
                 
             
         
@@ -428,7 +434,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
                 # TODO: Were I feeling clever, this guy would also emit a tooltip, which we can calculate here no prob
                 
-                singleton_media = ClientMedia.FlattenMedia( self._selected_media )[0]
+                singleton_media = ClientMediaList.FlattenMedia( self._selected_media )[0]
                 
                 lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( singleton_media.GetMediaResult(), only_interesting_lines = True )
                 
@@ -568,7 +574,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         sorted_selected_media = [ media for media in self._sorted_media if media in self._selected_media ]
         
-        flat_media = ClientMedia.FlattenMedia( sorted_selected_media )
+        flat_media = ClientMediaList.FlattenMedia( sorted_selected_media )
         
         flat_media = [ media for media in flat_media if media.MatchesDiscriminant( is_in_file_service_key = is_in_file_service_key, discriminant = discriminant, is_not_in_file_service_key = is_not_in_file_service_key ) ]
         
@@ -640,7 +646,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             if HC.APPLICATION_HYDRUS_CLIENT_COLLECTION in sorted_mimes:
                 
-                num_collections = len( [ media for media in self._sorted_media if isinstance( media, ClientMedia.MediaCollection ) ] )
+                num_collections = len( [ media for media in self._sorted_media if media.IsCollection() ] )
                 
             else:
                 
@@ -662,7 +668,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             if HC.APPLICATION_HYDRUS_CLIENT_COLLECTION in selected_mimes:
                 
-                num_collections = len( [ media for media in self._selected_media if isinstance( media, ClientMedia.MediaCollection ) ] )
+                num_collections = len( [ media for media in self._selected_media if media.IsCollection() ] )
                 
             else:
                 
@@ -965,7 +971,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def _ManageRatings( self ):
         
-        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        flat_media = ClientMediaList.FlattenMedia( self._selected_media )
         
         if len( flat_media ) > 0:
             
@@ -983,7 +989,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def _ManageTags( self ):
         
-        flat_media = ClientMedia.FlattenMedia( self._GetSelectedMediaOrdered() )
+        flat_media = ClientMediaList.FlattenMedia( self._GetSelectedMediaOrdered() )
         
         if len( flat_media ) > 0:
             
@@ -1009,7 +1015,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         ordered_selected_media = self._GetSelectedMediaOrdered()
         
-        ordered_selected_flat_media = ClientMedia.FlattenMedia( ordered_selected_media )
+        ordered_selected_flat_media = ClientMediaList.FlattenMedia( ordered_selected_media )
         
         if len( ordered_selected_flat_media ) > 0:
             
@@ -1021,7 +1027,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def _ManageURLs( self ):
         
-        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        flat_media = ClientMediaList.FlattenMedia( self._selected_media )
         
         if len( flat_media ) > 0:
             
@@ -1356,7 +1362,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         super()._RemoveMediaDirectly( singleton_media, collected_media )
         
-        flat_media = list( singleton_media ) + ClientMedia.FlattenMedia( collected_media )
+        flat_media = list( singleton_media ) + ClientMediaList.FlattenMedia( collected_media )
         
         hashes = [ m.GetHash() for m in flat_media ]
         
@@ -1497,7 +1503,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
             else:
                 
-                flat_media = ClientMedia.FlattenMedia( media_group )
+                flat_media = ClientMediaList.FlattenMedia( media_group )
                 
             
             num_files_str = HydrusNumbers.ToHumanInt( len( flat_media ) )
@@ -1891,7 +1897,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                 
             else:
                 
-                media_collect = ClientMedia.MediaCollect()
+                media_collect = ClientMediaCollect.MediaCollect()
                 
             
             ClientGUIMediaSimpleActions.ShowFilesInNewPage( hashes, self._location_context, media_sort = media_sort, media_collect = media_collect )
@@ -1957,11 +1963,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
             
             CG.client_controller.pub( 'refresh_page_name', self._page_key )
             
-            new_media = ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
+            new_media = ClientMediaList.MediaList.AddMediaResults( self, media_results )
             
             self.newMediaAdded.emit()
             
-            hashes = [ m.GetHash() for m in ClientMedia.FlattenMedia( new_media ) ]
+            hashes = [ m.GetHash() for m in ClientMediaList.FlattenMedia( new_media ) ]
             
             self.filesAdded.emit( hashes )
             
@@ -1987,7 +1993,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
         
         self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
         
-        ClientMedia.ListeningMediaList.Collect( self, media_collect = media_collect )
+        ClientMediaList.MediaList.Collect( self, media_collect = media_collect )
         
         self._RecalculateVirtualSize()
         
@@ -2399,7 +2405,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
                     
                     medias = self._GetSelectedMediaOrdered()
                     
-                    flat_media = ClientMedia.FlattenMedia( medias )
+                    flat_media = ClientMediaList.FlattenMedia( medias )
                     
                     ClientGUIMediaModalActions.ExportFiles( self, flat_media, do_export_and_then_quit = do_export_and_then_quit )
                     
@@ -2609,7 +2615,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
-        ClientMedia.ListeningMediaList.ProcessContentUpdatePackage( self, content_update_package )
+        ClientMediaList.MediaList.ProcessContentUpdatePackage( self, content_update_package )
         
         we_were_file_or_tag_affected = False
         
@@ -2641,7 +2647,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates: dict[ bytes, collections.abc.Collection[ ClientServices.ServiceUpdate ] ] ):
         
-        ClientMedia.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
+        ClientMediaList.MediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
@@ -2681,7 +2687,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.Liste
     
     def SetDuplicateStatusForAll( self, duplicate_type ):
         
-        media_group = ClientMedia.FlattenMedia( self._sorted_media )
+        media_group = ClientMediaList.FlattenMedia( self._sorted_media )
         
         return self._SetDuplicates( duplicate_type, media_group = media_group )
         

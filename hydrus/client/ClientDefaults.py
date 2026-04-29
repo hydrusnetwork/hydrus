@@ -808,7 +808,7 @@ def SetDefaultDomainManagerData( domain_manager ):
 
 def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
-    from hydrus.client.media import ClientMedia
+    from hydrus.client.media import ClientMediaSort
     from hydrus.client.search import ClientSearchFileSearchContext
     from hydrus.client.search import ClientSearchPredicate
     from hydrus.client.search import ClientSearchTagContext
@@ -839,7 +839,7 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     file_search_context = ClientSearchFileSearchContext.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
     
     synchronised = True
-    media_sort = ClientMedia.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
+    media_sort = ClientMediaSort.MediaSort( sort_type = ( 'system', CC.SORT_FILES_BY_FILESIZE ), sort_order = CC.SORT_DESC )
     media_collect = None
     
     rows.append( ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) )

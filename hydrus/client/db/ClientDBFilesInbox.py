@@ -105,16 +105,13 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
     
     def InboxFiles( self, hash_ids: collections.abc.Collection[ int ] ):
         
-        if not isinstance( hash_ids, set ):
-            
-            hash_ids = set( hash_ids )
-            
+        hash_ids_set = set( hash_ids )
         
         location_context = ClientLocation.LocationContext( current_service_keys = ( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ) )
         
-        hash_ids = self.modules_files_storage.FilterHashIds( location_context, hash_ids )
+        hash_ids_set = self.modules_files_storage.FilterHashIds( location_context, hash_ids_set )
         
-        inboxable_hash_ids = hash_ids.difference( self.inbox_hash_ids )
+        inboxable_hash_ids = hash_ids_set.difference( self.inbox_hash_ids )
         
         if len( inboxable_hash_ids ) > 0:
             

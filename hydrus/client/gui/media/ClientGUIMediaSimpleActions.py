@@ -17,7 +17,9 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearchPredicate
 
@@ -69,7 +71,7 @@ def CommitContentUpdatePackagesAsync( title: str, content_update_packages: list[
 
 def GetLocalMediaPaths( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
-    medias = ClientMedia.FlattenMedia( medias )
+    medias = ClientMediaList.FlattenMedia( medias )
     
     client_files_manager = CG.client_controller.client_files_manager
     
@@ -105,7 +107,7 @@ def CopyFilesToClipboard( medias: collections.abc.Collection[ ClientMedia.Media 
 
 def CopyFileIdsToClipboard( medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
-    flat_media = ClientMedia.FlattenMedia( medias )
+    flat_media = ClientMediaList.FlattenMedia( medias )
     
     ids = [ media.GetMediaResult().GetHashId() for media in flat_media ]
     
@@ -129,7 +131,7 @@ def CopyFilePathsToClipboard( medias: collections.abc.Collection[ ClientMedia.Me
         
     
 
-def CopyMediaBitmap( media: ClientMedia.MediaSingleton, bitmap_type: int ):
+def CopyMediaBitmap( media: ClientMediaSingle.MediaSingle, bitmap_type: int ):
     
     if bitmap_type == CAC.BITMAP_TYPE_THUMBNAIL:
         
@@ -222,7 +224,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
 
 def CopyServiceFilenamesToClipboard( service_key: bytes, medias: collections.abc.Collection[ ClientMedia.Media ] ):
     
-    flat_media = ClientMedia.FlattenMedia( medias )
+    flat_media = ClientMediaList.FlattenMedia( medias )
     
     flat_media = [ m for m in flat_media if service_key in m.GetLocationsManager().GetCurrent() ]
     
@@ -260,7 +262,7 @@ def CopyServiceFilenamesToClipboard( service_key: bytes, medias: collections.abc
         
     
 
-def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
     
     local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
     
@@ -304,7 +306,7 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
     return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys )
     
 
-def OpenExternally( media: ClientMedia.MediaSingleton | None ) -> bool:
+def OpenExternally( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
         
@@ -328,7 +330,7 @@ def OpenExternally( media: ClientMedia.MediaSingleton | None ) -> bool:
     return True
     
 
-def OpenFileLocation( media: ClientMedia.MediaSingleton | None ) -> bool:
+def OpenFileLocation( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
         
@@ -350,7 +352,7 @@ def OpenFileLocation( media: ClientMedia.MediaSingleton | None ) -> bool:
     return True
     
 
-def OpenInWebBrowser( media: ClientMedia.MediaSingleton | None ) -> bool:
+def OpenInWebBrowser( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
         
@@ -371,7 +373,7 @@ def OpenInWebBrowser( media: ClientMedia.MediaSingleton | None ) -> bool:
     
     return True
     
-def OpenNativeFileProperties( media: ClientMedia.MediaSingleton | None ) -> bool:
+def OpenNativeFileProperties( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
         
@@ -393,7 +395,7 @@ def OpenNativeFileProperties( media: ClientMedia.MediaSingleton | None ) -> bool
     return True
 
 
-def OpenFileWithDialog( media: ClientMedia.MediaSingleton | None ) -> bool:
+def OpenFileWithDialog( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
         
@@ -487,7 +489,7 @@ def ShowMediaResultsInNewPageWithAppropriateLocationContext( media_results: list
     ShowFilesInNewPage( hashes, location_context )
     
 
-def ShowSimilarFilesInNewPage( media: collections.abc.Collection[ ClientMedia.MediaSingleton ], location_context: ClientLocation.LocationContext, max_hamming: int ):
+def ShowSimilarFilesInNewPage( media: collections.abc.Collection[ ClientMediaSingle.MediaSingle ], location_context: ClientLocation.LocationContext, max_hamming: int ):
     
     hashes = set()
     

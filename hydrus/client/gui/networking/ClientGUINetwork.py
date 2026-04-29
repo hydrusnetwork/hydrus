@@ -37,6 +37,7 @@ from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingSessions
 
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -1487,10 +1488,12 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         pretty_network_context = network_context.ToString()
         
-        number_of_cookies = len( session.cookies )
+        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+        
+        number_of_cookies = len( cookies )
         pretty_number_of_cookies = HydrusNumbers.ToHumanInt( number_of_cookies )
         
-        expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
+        expires_numbers = [ c.expires for c in cookies if c.expires is not None ]
         
         if len( expires_numbers ) == 0:
             
@@ -1527,9 +1530,11 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         pretty_network_context = network_context.ToString()
         
-        number_of_cookies = len( session.cookies )
+        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
-        expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
+        number_of_cookies = len( cookies )
+        
+        expires_numbers = [ c.expires for c in cookies if c.expires is not None ]
         
         if len( expires_numbers ) == 0:
             
@@ -1569,9 +1574,11 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             session = self._session_manager.GetSession( network_context )
             
-            if len( session.cookies ) > 0:
+            this_session_cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+            
+            if len( this_session_cookies ) > 0:
                 
-                all_cookies.extend( session.cookies )
+                all_cookies.extend( this_session_cookies )
                 
             
         
@@ -1626,7 +1633,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 session = self._session_manager.GetSessionForDomain( cookie.domain )
                 
-                session.cookies.set_cookie( cookie )
+                ClientNetworkingSessions.AddCookieToSessionActualCookie( cookie )
                 
                 num_added += 1
                 
@@ -1689,23 +1696,9 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for ( name, value, domain, path, expires ) in cookie_data_flat:
                 
-                version = 0
-                port = None
-                port_specified = False
-                domain_specified = True
-                domain_initial_dot = domain.startswith( '.' )
-                path_specified = True
-                secure = False
-                discard = False
-                comment = None
-                comment_url = None
-                rest = {}
+                session = self._session_manager.GetSessionForDomain( domain )
                 
-                cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
-                
-                session = self._session_manager.GetSessionForDomain( cookie.domain )
-                
-                session.cookies.set_cookie( cookie )
+                ClientNetworkingSessions.AddCookieToSession( session, name, value, domain, path, expires )
                 
                 num_added += 1
                 
@@ -1750,7 +1743,9 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 session = self._session_manager.GetSession( network_context )
                 
-                if len( session.cookies ) > 0:
+                cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+                
+                if len( cookies ) > 0:
                     
                     non_empty_network_contexts.append( network_context )
                     
@@ -1915,7 +1910,11 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 path = cookie.path
                 name = cookie.name
                 
-                self._session.cookies.clear( domain, path, name )
+                requests_cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( self._session )
+                
+                requests_cookies.clear( domain = domain, path = path, name = name )
+                
+                ClientNetworkingSessions.EnsureSessionCookiesAreSynced( self._session, requests_cookies )
                 
                 self._session_manager.SetSessionDirty( self._network_context )
                 
@@ -2011,7 +2010,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for cookie in cj:
                 
-                self._session.cookies.set_cookie( cookie )
+                ClientNetworkingSessions.AddCookieToSessionActualCookie( self._session, cookie )
                 
                 num_added += 1
                 
@@ -2135,28 +2134,14 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _SetCookie( self, name, value, domain, path, expires ):
         
-        version = 0
-        port = None
-        port_specified = False
-        domain_specified = True
-        domain_initial_dot = domain.startswith( '.' )
-        path_specified = True
-        secure = False
-        discard = False
-        comment = None
-        comment_url = None
-        rest = {}
-        
-        cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
-        
-        self._session.cookies.set_cookie( cookie )
+        ClientNetworkingSessions.AddCookieToSession( self._session, name, value, domain, path, expires )
         
     
     def _Update( self ):
         
         self._session = self._session_manager.GetSession( self._network_context )
         
-        cookies = list( self._session.cookies )
+        cookies = list( ClientNetworkingSessions.GetRequestsSessionCookieJar( self._session ) )
         
         self._listctrl.SetData( cookies )
         

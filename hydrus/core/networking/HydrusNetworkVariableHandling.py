@@ -16,8 +16,6 @@ except Exception as e:
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
-from hydrus.core.files import HydrusFileHandling
-from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }
@@ -155,7 +153,10 @@ def DumpToGETQuery( args: dict[ str, object ] ):
     
 
 def ParseFileArguments( path, decompression_bombs_ok = False ):
-
+    
+    from hydrus.core.files import HydrusFileHandling
+    from hydrus.core.files.images import HydrusImageHandling
+    
     hash = HydrusFileHandling.GetHashFromPath( path )
     
     try:

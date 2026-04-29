@@ -48,11 +48,11 @@ class TagFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def CheckTagsVeto( self, tags: collections.abc.Collection[ str ], sibling_tags: collections.abc.Collection[ str ] ):
         
-        tags = set( tags )
+        tags_set = set( tags )
         
-        sibling_tags = set( sibling_tags )
+        sibling_tags_set = set( sibling_tags )
         
-        for test_tags in ( tags, sibling_tags ):
+        for test_tags in ( tags_set, sibling_tags_set ):
             
             ok_tags = self._tag_blacklist.Filter( test_tags, apply_unnamespaced_rules_to_namespaced_tags = True )
             
@@ -68,7 +68,7 @@ class TagFilteringImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( self._tag_whitelist ) > 0:
             
-            all_tags = tags.union( sibling_tags )
+            all_tags = tags_set.union( sibling_tags_set )
             
             for tag in list( all_tags ):
                 

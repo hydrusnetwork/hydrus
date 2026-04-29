@@ -11,7 +11,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 
@@ -127,7 +127,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetMediaListFileCount( self, media_list: ClientMedia.MediaList ):
+    def GetMediaListFileCount( self, media_list: ClientMediaList.MediaList ):
         
         if self.filter_type == FILE_FILTER_ALL:
             
@@ -199,7 +199,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
         return 0
         
     
-    def GetMediaListHashes( self, media_list: ClientMedia.MediaList ):
+    def GetMediaListHashes( self, media_list: ClientMediaList.MediaList ):
         
         if self.filter_type == FILE_FILTER_ALL:
             
@@ -282,7 +282,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetMediaListMedia( self, media_list: ClientMedia.MediaList ):
+    def GetMediaListMedia( self, media_list: ClientMediaList.MediaList ):
         
         if self.filter_type == FILE_FILTER_ALL:
             
@@ -344,7 +344,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def PopulateFilterCounts( self, media_list: ClientMedia.MediaList, filter_counts: dict ):
+    def PopulateFilterCounts( self, media_list: ClientMediaList.MediaList, filter_counts: dict ):
         
         if self not in filter_counts:
             
@@ -375,7 +375,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetCount( self, media_list: ClientMedia.MediaList, filter_counts: dict ):
+    def GetCount( self, media_list: ClientMediaList.MediaList, filter_counts: dict ):
         
         self.PopulateFilterCounts( media_list, filter_counts )
         
@@ -417,7 +417,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
         return s
         
     
-    def ToStringWithCount( self, media_list: ClientMedia.MediaList, filter_counts: dict ):
+    def ToStringWithCount( self, media_list: ClientMediaList.MediaList, filter_counts: dict ):
         
         s = self.ToString()
         

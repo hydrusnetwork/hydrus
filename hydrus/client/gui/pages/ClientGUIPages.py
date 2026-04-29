@@ -2376,11 +2376,20 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if event.type() in ( QC.QEvent.Type.MouseButtonDblClick, QC.QEvent.Type.MouseButtonRelease ):
                 
-                screen_position = QG.QCursor.pos()
+                event = typing.cast( QG.QMouseEvent, event )
+                
+                if isinstance( watched, QW.QWidget ):
+                    
+                    mouse_pos = watched.mapToGlobal( event.pos() )
+                    
+                else:
+                    
+                    mouse_pos = ClientGUIFunctions.GetMousePos()
+                    
                 
                 if watched == self.tabBar():
                     
-                    tab_pos = self.tabBar().mapFromGlobal( screen_position )
+                    tab_pos = self.tabBar().mapFromGlobal( mouse_pos )
                     
                     over_a_tab = self.tabBar().tabAt( tab_pos ) != -1
                     over_tab_greyspace = not over_a_tab
@@ -2389,7 +2398,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     over_a_tab = False
                     
-                    widget_under_mouse = typing.cast( QW.QApplication, QW.QApplication.instance() ).widgetAt( screen_position )
+                    widget_under_mouse = typing.cast( QW.QApplication, QW.QApplication.instance() ).widgetAt( mouse_pos )
                     
                     if widget_under_mouse is None:
                         
@@ -2414,7 +2423,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     if event.button() == QC.Qt.MouseButton.LeftButton and over_tab_greyspace and not over_a_tab:
                         
-                        self.EventNewPageFromScreenPosition( screen_position )
+                        self.EventNewPageFromScreenPosition( mouse_pos )
                         
                         return True
                         
@@ -2425,13 +2434,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     if event.button() == QC.Qt.MouseButton.RightButton and ( over_a_tab or over_tab_greyspace ):
                         
-                        self.ShowMenuFromScreenPosition( screen_position )
+                        self.ShowMenuFromScreenPosition( mouse_pos )
                         
                         return True
                         
                     elif event.button() == QC.Qt.MouseButton.MiddleButton and over_tab_greyspace and not over_a_tab:
                         
-                        self.EventNewPageFromScreenPosition( screen_position )
+                        self.EventNewPageFromScreenPosition( mouse_pos )
                         
                         return True
                         
@@ -3142,7 +3151,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         location_context = source_page_manager.GetLocationContext()
         
-        screen_position = QG.QCursor.pos()
+        screen_position = ClientGUIFunctions.GetMousePos()
         
         dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
         

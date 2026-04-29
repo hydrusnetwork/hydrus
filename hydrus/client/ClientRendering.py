@@ -20,7 +20,7 @@ from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.files.images import ClientImageHandling
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client import ClientUgoiraHandling
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
@@ -339,7 +339,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         painter.drawRect( 0, 0, width - 1, height - 1 )
         
-        from hydrus.client.gui import ClientGUIFunctions
+        from hydrus.client.gui import ClientGUIFunctionsImage
         
         font = painter.font()
         
@@ -361,7 +361,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         del painter
         
-        return ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+        return ClientGUIFunctionsImage.ConvertQtImageToNumPy( qt_image )
         
     
     def GetEstimatedMemoryFootprint( self ):
@@ -529,7 +529,7 @@ class ImageTile( ClientCachesBase.CacheableObject ):
 
 class RasterContainer( object ):
     
-    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None ):
+    def __init__( self, media: ClientMediaSingle.MediaSingle, target_resolution = None ):
         
         if target_resolution is None: target_resolution = media.GetResolution()
         
@@ -574,7 +574,7 @@ class RasterContainer( object ):
     
 class RasterContainerVideo( RasterContainer ):
     
-    def __init__( self, media: ClientMedia.MediaSingleton, target_resolution = None, init_position = 0, frame_durations_ms = None ):
+    def __init__( self, media: ClientMediaSingle.MediaSingle, target_resolution = None, init_position = 0, frame_durations_ms = None ):
         
         super().__init__( media, target_resolution )
         

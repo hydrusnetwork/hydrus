@@ -22,7 +22,8 @@ from hydrus.client.gui.pages import ClientGUISidebarCore
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
+from hydrus.client.media import ClientMediaSort
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
 
@@ -280,7 +281,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         self._page.SwapMediaResultsPanel( panel )
         
     
-    def _SortChanged( self, media_sort: ClientMedia.MediaSort ):
+    def _SortChanged( self, media_sort: ClientMediaSort.MediaSort ):
         
         super()._SortChanged( media_sort )
         
@@ -414,7 +415,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         do_yes_no = True
         
-        hashes = [ m.GetHash() for m in ClientMedia.FlattenMedia( self._page.GetMedia() ) ]
+        hashes = [ m.GetHash() for m in ClientMediaList.FlattenMedia( self._page.GetMedia() ) ]
         
         if len( predicates ) == 0:
             

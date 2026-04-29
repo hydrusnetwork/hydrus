@@ -33,8 +33,9 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import NoteImportOptionsLegacy
 from hydrus.client.importing.options import TagImportOptionsLegacy
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -519,7 +520,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             suggested_file_service_key = local_file_service_domains[0].GetServiceKey()
             
         
-        self._media = ClientMedia.FlattenMedia( media )
+        self._media = ClientMediaList.FlattenMedia( media )
         
         self._question_is_already_resolved = len( self._media ) == 0
         
@@ -2114,7 +2115,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, medias: collections.abc.Collection[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent, medias: collections.abc.Collection[ ClientMediaSingle.MediaSingle ] ):
         
         super().__init__( parent )
         

@@ -1229,11 +1229,11 @@ class StringSorter( StringProcessingStep ):
         
         try:
             
-            texts = list( texts )
+            texts_list = list( texts )
             
             if self._sort_type == CONTENT_PARSER_SORT_TYPE_REVERSE:
                 
-                texts.reverse()
+                texts_list.reverse()
                 
             else:
                 
@@ -1260,8 +1260,8 @@ class StringSorter( StringProcessingStep ):
                     
                     data_convert = d
                     
-                    invalid_data_convert_texts = [ text for text in texts if data_convert( text ) == '' ]
-                    texts = [ text for text in texts if data_convert( text ) != '' ]
+                    invalid_data_convert_texts = [ text for text in texts_list if data_convert( text ) == '' ]
+                    texts_list = [ text for text in texts_list if data_convert( text ) != '' ]
                     
                 
                 sort_convert = lambda s: s
@@ -1275,14 +1275,14 @@ class StringSorter( StringProcessingStep ):
                 
                 reverse = not self._asc
                 
-                texts.sort( key = key, reverse = reverse )
+                texts_list.sort( key = key, reverse = reverse )
                 
                 invalid_data_convert_texts.sort( key = sort_convert, reverse = reverse )
                 
-                texts.extend( invalid_data_convert_texts )
+                texts_list.extend( invalid_data_convert_texts )
                 
             
-            return texts
+            return texts_list
             
         except Exception as e:
             

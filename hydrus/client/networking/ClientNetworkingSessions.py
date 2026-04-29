@@ -1,7 +1,9 @@
 import collections.abc
+import http.cookiejar
 import pickle
 import requests
 import threading
+import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
@@ -9,6 +11,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.networking import ClientNetworkingCurlCFFI
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -23,6 +26,95 @@ except Exception as e:
     
     SOCKS_PROXY_OK = False
     
+
+DOING_CURL_CFFI_TEST = False
+CURL_CFFI_DEFINITION = ''
+CURL_CFFI_HTTP_VERSION = 0
+
+def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
+    
+    version = 0
+    port = None
+    port_specified = False
+    domain_specified = True
+    domain_initial_dot = domain.startswith( '.' )
+    path_specified = True
+    discard = False
+    comment = None
+    comment_url = None
+    
+    if rest is None:
+        
+        rest = {}
+        
+    
+    cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+    
+    AddCookieToSessionActualCookie( session, cookie )
+    
+
+def AddCookieToSessionActualCookie( session, cookie: http.cookiejar.Cookie ):
+    
+    AddCookiesToSessionActualCookies( session, [ cookie ] )
+    
+
+def AddCookiesToSessionActualCookies( session, list_of_cookies: list[ http.cookiejar.Cookie ] ):
+    
+    cookies = GetRequestsSessionCookieJar( session )
+    
+    for cookie in list_of_cookies:
+        
+        cookies.set_cookie( cookie )
+        
+    
+    EnsureSessionCookiesAreSynced( session, cookies )
+    
+
+def CleanseHeadersForSession( ambiguous_session, headers: dict[ str, str ] ):
+    
+    if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( ambiguous_session ):
+        
+        lower_to_actual = { key.lower() : key for key in headers.keys() }
+        
+        if 'user-agent' in lower_to_actual:
+            
+            del headers[ lower_to_actual[ 'user-agent' ] ]
+            
+        
+    
+
+def ClearExpiredCookies( ambiguous_session ):
+    
+    cookies = GetRequestsSessionCookieJar( ambiguous_session )
+    
+    cookies.clear_expired_cookies()
+    
+    EnsureSessionCookiesAreSynced( ambiguous_session, cookies )
+    
+
+def EnsureSessionCookiesAreSynced( ambiguous_session, requests_cookies: requests.sessions.RequestsCookieJar ):
+    """
+    User just altered the cookie jar. If this jar is actually some temp dupe, let's set it back.
+    """
+    
+    if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( ambiguous_session ):
+        
+        ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( ambiguous_session, requests_cookies )
+        
+    
+
+def GetRequestsSessionCookieJar( ambiguous_session ) -> requests.sessions.RequestsCookieJar:
+    
+    if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( ambiguous_session ):
+        
+        return ClientNetworkingCurlCFFI.GetRequestsCookiesFromCurlCFFISession( ambiguous_session )
+        
+    else:
+        
+        return ambiguous_session.cookies
+        
+    
+
 class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER
@@ -42,6 +134,12 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         super().__init__( name )
         
         self.network_context = network_context
+        
+        if session is None:
+            
+            session = self._CreateEmptySession()
+            
+        
         self.session = session
         self.last_touched_time = HydrusTime.GetNow()
         
@@ -49,23 +147,34 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         self.printed_connection_pool_error = False
         
     
-    def _InitialiseEmptySession( self ):
+    def _CreateEmptySession( self ):
         
-        self.session = requests.Session()
+        if DOING_CURL_CFFI_TEST:
+            
+            session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( 'chrome', ClientNetworkingCurlCFFI.curl_cffi.CurlHttpVersion.V2_0 )
+            
+        else:
+            
+            session = requests.Session()
+            
         
         if self.network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
             
-            self.session.verify = False
+            session.verify = False
             
+        
+        return session
         
     
     def _GetSerialisableInfo( self ):
         
         serialisable_network_context = self.network_context.GetSerialisableTuple()
         
-        self.session.cookies.clear_session_cookies()
+        cookies = GetRequestsSessionCookieJar( self.session )
         
-        pickled_cookies_hex = pickle.dumps( self.session.cookies ).hex()
+        cookies.clear_session_cookies()
+        
+        pickled_cookies_hex = pickle.dumps( cookies ).hex()
         
         return ( serialisable_network_context, pickled_cookies_hex )
         
@@ -76,20 +185,30 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
         
-        self._InitialiseEmptySession()
+        self.session = self._CreateEmptySession()
+        
+        # TODO: Replace with actual http.cookiejar inspection/reconstruction
+        # since we now know how what we are dealing with, we could replace this pickling with actual iteration of http.cookie objects if we were careful, even to the specific fields
         
         try:
             
-            cookies = pickle.loads( bytes.fromhex( pickled_cookies_hex ) )
+            cookies = typing.cast( requests.sessions.RequestsCookieJar, pickle.loads( bytes.fromhex( pickled_cookies_hex ) ) )
             
-            self.session.cookies = cookies
+            cookies.clear_session_cookies()
+            
+            if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
+                
+                ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( self.session, cookies )
+                
+            else:
+                
+                self.session.cookies = cookies
+                
             
         except Exception as e:
             
             HydrusData.Print( "Could not load and set cookies for session {}".format( self.network_context ) )
             
-        
-        self.session.cookies.clear_session_cookies()
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -107,7 +226,9 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                 session = requests.Session()
                 
             
-            pickled_cookies_hex = pickle.dumps( session.cookies ).hex()
+            cookies = GetRequestsSessionCookieJar( session )
+            
+            pickled_cookies_hex = pickle.dumps( cookies ).hex()
             
             new_serialisable_info = ( serialisable_network_context, pickled_cookies_hex )
             
@@ -116,6 +237,11 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
     
     def MaintainConnectionPool( self ):
+        
+        if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
+            
+            return
+            
         
         if not self.pool_is_cleared and HydrusTime.TimeHasPassed( self.last_touched_time + self.POOL_CONNECTION_TIMEOUT ):
             
@@ -134,6 +260,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                     
                 
                 self.pool_is_cleared = True
+                self.last_touched_time = HydrusTime.GetNow()
                 
             except Exception as e:
                 
@@ -150,17 +277,38 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
     
     def PrepareForNewWork( self ):
         
+        if HydrusTime.TimeHasPassed( self.last_touched_time + self.SESSION_TIMEOUT ):
+            
+            cookies = GetRequestsSessionCookieJar( self.session )
+            
+            cookies.clear_session_cookies()
+            
+            EnsureSessionCookiesAreSynced( self.session, cookies )
+            
+        
+        ClearExpiredCookies( self.session )
+        
         self.last_touched_time = HydrusTime.GetNow()
         self.pool_is_cleared = False
         
-        my_session_cookies = self.session.cookies
+    
+    def ReinitialiseSession( self ):
+        """
+        The server just rewangled the network connection settings on this domain, so we need to regen while preserving gubbins.
+        """
         
-        if HydrusTime.TimeHasPassed( self.last_touched_time + self.SESSION_TIMEOUT ):
-            
-            my_session_cookies.clear_session_cookies()
-            
+        old_session = self.session
         
-        my_session_cookies.clear_expired_cookies()
+        new_session = self._CreateEmptySession()
+        
+        cookies = GetRequestsSessionCookieJar( old_session )
+        
+        AddCookiesToSessionActualCookies( new_session, [ cookie for cookie in cookies ] )
+        
+        new_session.verify = old_session.verify
+        new_session.proxies = old_session.proxies
+        
+        self.session = new_session
         
     
 
@@ -184,8 +332,8 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         self._session_container_names = set()
         
-        self._session_container_names_to_session_containers = {}
-        self._network_contexts_to_session_containers = {}
+        self._session_container_names_to_session_containers: dict[ str, NetworkSessionManagerSessionContainer ] = {}
+        self._network_contexts_to_session_containers: dict[ ClientNetworkingContexts.NetworkContext, NetworkSessionManagerSessionContainer ] = {}
         
         self._proxies_dict = {}
         
@@ -239,16 +387,9 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseSessionContainer( self, network_context ):
         
-        session = requests.Session()
-        
-        if network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
-            
-            session.verify = False
-            
-        
         session_container_name = HydrusData.GenerateKey().hex()
         
-        session_container = NetworkSessionManagerSessionContainer( session_container_name, network_context = network_context, session = session )
+        session_container = NetworkSessionManagerSessionContainer( session_container_name, network_context = network_context )
         
         self._session_container_names_to_session_containers[ session_container_name ] = session_container
         self._network_contexts_to_session_containers[ network_context ] = session_container
@@ -409,6 +550,18 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._ReinitialiseProxies()
+            
+        
+    
+    def ReinitialiseSessions( self ):
+        
+        # TODO: This could take a list of network contexts, optionally, so you could filter it just to those with changes
+        with self._lock:
+            
+            for session_container in self._network_contexts_to_session_containers.values():
+                
+                session_container.ReinitialiseSession()
+                
             
         
     

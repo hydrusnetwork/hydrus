@@ -1100,15 +1100,6 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _PasteQueries( self ):
         
-        message = 'This will add new queries by pulling them from your clipboard. It assumes they are currently in your clipboard and newline separated. Queries that are already in the subscription (with any combination of upper/lower case) will not be duplicated, but if they are DEAD, they can be revived. Sound good?'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result != QW.QDialog.DialogCode.Accepted:
-            
-            return
-            
-        
         try:
             
             raw_text = CG.client_controller.GetClipboardText()
@@ -1161,53 +1152,178 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        revive_dead = True
-        
         DEAD_query_headers = { query_header for query_header in self._query_headers.GetData() if query_header.GetQueryText().lower() in already_existing_query_header_texts and query_header.IsDead() }
         
+        DEAD_human_names = sorted( [ query_header.GetFullHumanName() for query_header in DEAD_query_headers ], key = HydrusText.HumanTextSortKey )
+        
         already_existing_human_names = sorted( already_existing_human_names, key = HydrusText.HumanTextSortKey )
+        
+        non_DEAD_already_existing_human_names = [ name for name in already_existing_human_names if name not in DEAD_human_names ]
+        
         new_query_texts = sorted( new_query_texts, key = HydrusText.HumanTextSortKey )
         
-        #
-        
-        paste_message_components = []
-        
-        if len( already_existing_human_names ) > 0:
+        if len( pasted_query_texts ) == 1:
             
-            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(already_existing_human_names)}were already in the subscription.' )
+            yesno_message = 'I pulled one text from the clipboard. '
             
-            if len( DEAD_query_headers ) > 0:
-                
-                DEAD_human_names = sorted( [ query_header.GetFullHumanName() for query_header in DEAD_query_headers ], key = HydrusText.HumanTextSortKey )
-                
-                DEAD_revive_message = f'Some of the queries you pasted already exist in the subscription but are DEAD. Do you want to revive them? They are:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_human_names)}'
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, DEAD_revive_message )
-                
-                if result == QW.QDialog.DialogCode.Accepted:
-                    
-                    revive_dead = True
-                    
-                    paste_message_components.append( f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_human_names)}were revived.' )
-                    
-                else:
-                    
-                    revive_dead = False
-                    
-                
+        else:
+            
+            yesno_message = f'I pulled {HydrusNumbers.ToHumanInt( len( pasted_query_texts ) )} texts from the clipboard.'
+            yesno_message += '\n\n'
             
         
         if len( new_query_texts ) > 0:
             
-            paste_message_components.append( f'The queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(new_query_texts)}were added.' )
+            if len( non_DEAD_already_existing_human_names ) + len( DEAD_human_names ) == 0:
+                
+                if len( new_query_texts ) == 1:
+                    
+                    yesno_message += 'It is new:'
+                    
+                else:
+                    
+                    yesno_message += 'They are all new:'
+                    
+                
+            else:
+                
+                if len( new_query_texts ) == 1:
+                    
+                    yesno_message += 'This is new:'
+                    
+                else:
+                    
+                    yesno_message += 'These are new:'
+                    
+                
+            
+            yesno_message += HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(new_query_texts, no_trailing_whitespace = True )
+            yesno_message += '\n\n'
             
         
-        if len( paste_message_components ) > 0:
+        if len( non_DEAD_already_existing_human_names ) > 0:
             
-            message = '\n\n'.join( paste_message_components )
+            if len( new_query_texts ) + len( DEAD_human_names ) == 0:
+                
+                if len( non_DEAD_already_existing_human_names ) == 1:
+                    
+                    yesno_message += 'It is already working in the subscription:'
+                    
+                else:
+                    
+                    yesno_message += 'They are all already working in the subscription:'
+                    
+                
+            else:
+                
+                if len( non_DEAD_already_existing_human_names ) == 1:
+                    
+                    yesno_message += 'This is already working in the subscription:'
+                    
+                else:
+                    
+                    yesno_message += 'These are already working in the subscription:'
+                    
+                
             
-            ClientGUIDialogsMessage.ShowInformation( self, message )
+            yesno_message += HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( non_DEAD_already_existing_human_names, no_trailing_whitespace = True )
+            yesno_message += '\n\n'
             
+        
+        if len( DEAD_human_names ) > 0:
+            
+            if len( new_query_texts ) + len( non_DEAD_already_existing_human_names ) == 0:
+                
+                if len( DEAD_human_names ) == 1:
+                    
+                    yesno_message += 'It is already in the subscription but is DEAD:'
+                    
+                else:
+                    
+                    yesno_message += 'They are all already in the subscription but are DEAD:'
+                    
+                
+            else:
+                
+                if len( DEAD_human_names ) == 1:
+                    
+                    yesno_message += 'This is already in the subscription but is DEAD:'
+                    
+                else:
+                    
+                    yesno_message += 'These are already in the subscription but are DEAD:'
+                    
+                
+            
+            yesno_message += HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( DEAD_human_names, no_trailing_whitespace = True )
+            yesno_message += '\n\n'
+            
+        
+        if len( new_query_texts ) > 0:
+            
+            if len( DEAD_human_names ) > 0:
+                
+                summary_question = 'Would you like to add the new queries and revive the DEAD?'
+                
+                yes_tuples = [ ( 'do it', True ), ( 'add the new, but do not revive the DEAD', False ) ]
+                
+            else:
+                
+                summary_question = 'Would you like to add these new queries?'
+                yes_tuples = [ ( 'do it', True ) ]
+                
+            
+        else:
+            
+            if len( DEAD_human_names ) > 0:
+                
+                summary_question = 'Would you like to revive these DEAD?'
+                yes_tuples = [ ( 'do it', True ) ]
+                
+            else:
+                
+                summary_question = 'So there are no actions to take.'
+                yes_tuples = []
+                
+            
+        
+        yesno_message += summary_question
+        
+        if len( yes_tuples ) == 0:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, yesno_message )
+            
+            return
+            
+        else:
+            
+            if len( yes_tuples ) == 1:
+                
+                ( yes_label, revive_dead ) = yes_tuples[0]
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, yesno_message, yes_label = yes_label, no_label = 'hold off' )
+                
+                if result != QW.QDialog.DialogCode.Accepted:
+                    
+                    return
+                    
+                
+            else:
+                
+                try:
+                    
+                    result = ClientGUIDialogsQuick.GetYesYesNo( self, yesno_message, yes_tuples = yes_tuples, no_label = 'hold off' )
+                    
+                except HydrusExceptions.CancelledException:
+                    
+                    return
+                    
+                
+                revive_dead = result
+                
+            
+        
+        #
         
         new_query_headers = []
         
@@ -1226,6 +1342,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._names_to_edited_query_log_containers[ query_log_container_name ] = query_log_container
             
         
+        if len( new_query_headers ) > 0:
+            
+            self._query_headers.AddDatas( new_query_headers, select_sort_and_scroll = True )
+            
+        
         if revive_dead:
             
             for query_header in DEAD_query_headers:
@@ -1233,10 +1354,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 query_header.CheckNow()
                 
             
-        
-        self._query_headers.AddDatas( new_query_headers, select_sort_and_scroll = True )
-        
-        self._query_headers.UpdateDatas( DEAD_query_headers )
+            if len( DEAD_query_headers ) > 0:
+                
+                self._query_headers.UpdateDatas( DEAD_query_headers )
+                
+            
         
     
     def _PausePlay( self ):

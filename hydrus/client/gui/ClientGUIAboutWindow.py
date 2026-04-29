@@ -63,6 +63,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     from hydrus.client.gui.canvas import ClientGUIMPV
     from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
     from hydrus.client.networking import ClientNetworkingDomainTLDExtract
+    from hydrus.client.networking import ClientNetworkingCurlCFFI
     from hydrus.client.parsing import ClientParsing
 
     name = 'hydrus client'
@@ -218,6 +219,7 @@ def ShowAboutWindow( win: QW.QWidget ):
     availability_lines.append( render_availability_line( 'cbor2', CBOR_AVAILABLE, not CBOR_AVAILABLE, '' ) )
     availability_lines.append( render_availability_line( 'chardet', HydrusText.CHARDET_OK, not HydrusText.CHARDET_OK, '' ) )
     availability_lines.append( render_availability_line( 'cryptography', HydrusEncryption.CRYPTO_OK, not HydrusEncryption.CRYPTO_OK, '' ) )
+    availability_lines.append( render_availability_line( 'curl_cffi (under testing)', ClientNetworkingCurlCFFI.CURL_CFFI_OK, ClientNetworkingCurlCFFI.CURL_CFFI_MODULE_NOT_FOUND, ClientNetworkingCurlCFFI.CURL_CFFI_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'dateparser', ClientTime.DATEPARSER_OK, ClientTime.DATEPARSER_MODULE_NOT_FOUND, ClientTime.DATEPARSER_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'dateutil', ClientTime.DATEUTIL_OK, ClientTime.DATEUTIL_MODULE_NOT_FOUND, ClientTime.DATEUTIL_IMPORT_ERROR ) )
     availability_lines.append( render_availability_line( 'html5lib', ClientParsing.HTML5LIB_IS_OK, not ClientParsing.HTML5LIB_IS_OK, '' ) )

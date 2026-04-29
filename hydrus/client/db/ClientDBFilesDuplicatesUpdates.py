@@ -245,19 +245,19 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             return
             
         
-        deletee_pairs = set( deletee_pairs )
+        deletee_pairs_set = set( deletee_pairs )
         
         for location_context in all_pertinent_location_contexts:
             
             if location_context.IsOneDomain():
                 
-                valid_pairs = deletee_pairs
+                valid_pairs = deletee_pairs_set
                 
             else:
                 
-                still_in_there_pairs = self.modules_files_duplicates_storage.FilterMediaIdPairs( location_context, deletee_pairs ) # some complicated multi-domain guy where files are still in some other domain
+                still_in_there_pairs = self.modules_files_duplicates_storage.FilterMediaIdPairs( location_context, deletee_pairs_set ) # some complicated multi-domain guy where files are still in some other domain
                 
-                valid_pairs = deletee_pairs.difference( still_in_there_pairs )
+                valid_pairs = deletee_pairs_set.difference( still_in_there_pairs )
                 
             
             if len( valid_pairs ) == 0:

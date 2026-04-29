@@ -13,13 +13,13 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, service_key: bytes, medias: list[ ClientMedia.MediaSingleton ] ):
+    def __init__( self, parent: QW.QWidget, service_key: bytes, medias: list[ ClientMediaSingle.MediaSingle ] ):
         
         super().__init__( parent )
         
@@ -125,7 +125,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         return 1
         
     
-    def _GetMediaAndTagPairs( self ) -> list[ tuple[ ClientMedia.MediaSingleton, str ] ]:
+    def _GetMediaAndTagPairs( self ) -> list[ tuple[ ClientMediaSingle.MediaSingle, str ] ]:
         
         tag_template = self._GetTagTemplate()
         start = self._start.value()

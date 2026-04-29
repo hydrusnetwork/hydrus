@@ -20,12 +20,14 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
+from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.parsing import ClientParsingLegacy
 from hydrus.client.search import ClientSearchPredicate
+from hydrus.client.search import ClientSearchTagContext
 
 def FilterSuggestedPredicatesForMedia( predicates: collections.abc.Sequence[ ClientSearchPredicate.Predicate ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ ClientSearchPredicate.Predicate ]:
     
@@ -33,9 +35,9 @@ def FilterSuggestedPredicatesForMedia( predicates: collections.abc.Sequence[ Cli
     
     filtered_tags = FilterSuggestedTagsForMedia( tags, medias, service_key )
     
-    predicates = [ predicate for predicate in predicates if predicate.GetValue() in filtered_tags ]
+    filtered_predicates = [ predicate for predicate in predicates if predicate.GetValue() in filtered_tags ]
     
-    return predicates
+    return filtered_predicates
     
 
 def FilterSuggestedTagsForMedia( tags: collections.abc.Sequence[ str ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ str ]:
@@ -67,6 +69,7 @@ def FilterSuggestedTagsForMedia( tags: collections.abc.Sequence[ str ], medias: 
     
     return tags_filtered
     
+
 class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def __init__( self, parent, service_key, activate_callable, sort_tags = True ):
@@ -118,6 +121,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
+
 class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
     def __init__( self, parent, service_key, activate_callable ):
@@ -168,7 +172,8 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         self.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
-class FavouritesTagsPanel( QW.QWidget ):
+
+class MostUsedTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
@@ -192,10 +197,12 @@ class FavouritesTagsPanel( QW.QWidget ):
         
         self._favourite_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
         
+        CG.client_controller.sub( self, 'NotifyNewMostUsedTags', 'notify_new_most_used_tags' )
+        
     
     def _UpdateTagDisplay( self ):
         
-        favourites = list( CG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
+        favourites = list( CG.client_controller.new_options.GetSuggestedTagsMostUsed( self._service_key ) )
         
         ClientTagSorting.SortTags( CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location ), favourites )
         
@@ -205,6 +212,11 @@ class FavouritesTagsPanel( QW.QWidget ):
         
     
     def MediaUpdated( self ):
+        
+        self._UpdateTagDisplay()
+        
+    
+    def NotifyNewMostUsedTags( self ):
         
         self._UpdateTagDisplay()
         
@@ -338,7 +350,8 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._last_fetched_predicates = []
         
-        self._have_done_search_with_this_media = False
+        self._have_done_search_with_this_search_context = False
+        self._last_max_time_to_take = None
         
         self._selected_tags = set()
         
@@ -348,8 +361,15 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._status_label = ClientGUICommon.BetterStaticText( self, label = 'ready' )
         
+        tag_context = ClientSearchTagContext.TagContext( service_key = self._service_key, display_service_key = self._service_key )
+        
+        self._tag_context_button = ClientGUISearch.TagContextButton( self, tag_context, combined_tags_ok = False )
+        
         self._just_do_local_files = ClientGUICommon.OnOffButton( self, on_label = 'just for my files', off_label = 'for all known files', start_on = True )
         self._just_do_local_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select how big the search is. Searching across all known files on a repository produces high quality results but takes a long time.' ) )
+        
+        self._tag_display_type = ClientGUICommon.OnOffButton( self, on_label = 'searching through siblings and parents', off_label = 'not searching siblings and parents', start_on = True )
+        self._tag_display_type.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select whether to search through the "display" tag store, which is connected and merged by sibling and parent data, or the "storage" store, which just has the raw mappings as they are edited.' ) )
         
         tt = 'If you select some tags, this will search using only those as reference!'
         
@@ -368,12 +388,7 @@ class RelatedTagsPanel( QW.QWidget ):
         self._button_3.setMinimumWidth( 30 )
         self._button_3.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        if CG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
-            
-            self._just_do_local_files.setVisible( False )
-            
-        
-        self._related_tags = ListBoxTagsSuggestionsRelated( self, service_key, activate_callable )
+        self._related_tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = False )
         
         button_hbox = QP.HBoxLayout()
         
@@ -382,7 +397,9 @@ class RelatedTagsPanel( QW.QWidget ):
         QP.AddToLayout( button_hbox, self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         QP.AddToLayout( vbox, self._status_label, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_context_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._just_do_local_files, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_display_type, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._related_tags, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -390,10 +407,14 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._related_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
         
+        self._tag_context_button.valueChanged.connect( self._NotifyChangesToSearchContext )
+        self._just_do_local_files.valueChanged.connect( self._NotifyChangesToSearchContext )
+        self._tag_display_type.valueChanged.connect( self._NotifyChangesToSearchContext )
+        
     
     def _FetchRelatedTagsNew( self, max_time_to_take ):
         
-        def do_it( file_service_key, tag_service_key, search_tags, other_tags_to_exclude ):
+        def do_it( file_service_key, tag_service_key, tag_display_type, search_tags, other_tags_to_exclude ):
             
             def qt_code( predicates, num_done, num_to_do, num_skipped, total_time_took ):
                 
@@ -423,7 +444,7 @@ class RelatedTagsPanel( QW.QWidget ):
                 
                 self._UpdateTagDisplay()
                 
-                self._have_done_search_with_this_media = True
+                self._have_done_search_with_this_search_context = True
                 
             
             start_time = HydrusTime.GetNowPrecise()
@@ -454,11 +475,14 @@ class RelatedTagsPanel( QW.QWidget ):
                 result_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100
                 
             
+            tag_context = self._tag_context_button.GetValue()
+            
             ( num_done, num_to_do, num_skipped, predicates ) = CG.client_controller.Read(
                 'related_tags',
                 file_service_key,
-                tag_service_key,
+                tag_context,
                 search_tags,
+                tag_display_type = tag_display_type,
                 max_time_to_take = max_time_to_take,
                 concurrence_threshold = concurrence_threshold,
                 search_tag_slices_weight_dict = search_tag_slices_weight_dict,
@@ -473,7 +497,9 @@ class RelatedTagsPanel( QW.QWidget ):
             CG.client_controller.CallAfterQtSafe( self, qt_code, predicates, num_done, num_to_do, num_skipped, total_time_took )
             
         
-        self._related_tags.SetPredicates( [] )
+        self._last_max_time_to_take = max_time_to_take
+        
+        self._related_tags.SetTags( [] )
         
         if len( self._selected_tags ) == 0:
             
@@ -508,14 +534,48 @@ class RelatedTagsPanel( QW.QWidget ):
         
         tag_service_key = self._service_key
         
-        CG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags, other_tags_to_exclude )
+        if self._tag_display_type.IsOn():
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
+            
+        else:
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
+            
+        
+        CG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, tag_display_type, search_tags, other_tags_to_exclude )
+        
+    
+    def _NotifyChangesToSearchContext( self ):
+        
+        self._have_done_search_with_this_search_context = False
+        
+        if self.isVisible():
+            
+            self._RepeatLastSearch()
+            
+        
+    
+    def _RepeatLastSearch( self ):
+        
+        if self._last_max_time_to_take is None:
+            
+            self.RefreshQuick()
+            
+        else:
+            
+            self._FetchRelatedTagsNew( self._last_max_time_to_take )
+            
         
     
     def _UpdateTagDisplay( self ):
         
-        predicates = FilterSuggestedPredicatesForMedia( self._last_fetched_predicates, self._media, self._service_key )
+        tags = [ predicate.GetValue() for predicate in self._last_fetched_predicates ]
         
-        self._related_tags.SetPredicates( predicates )
+        filtered_tags = FilterSuggestedTagsForMedia( tags, self._media, self._service_key )
+        #predicates = FilterSuggestedPredicatesForMedia( self._last_fetched_predicates, self._media, self._service_key )
+        
+        self._related_tags.SetTags( filtered_tags )
         
     
     def RefreshQuick( self ):
@@ -546,9 +606,9 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def NotifyUserLooking( self ):
         
-        if not self._have_done_search_with_this_media:
+        if not self._have_done_search_with_this_search_context:
             
-            self.RefreshQuick()
+            self._RepeatLastSearch()
             
         
     
@@ -558,9 +618,9 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._status_label.setText( 'ready' )
         
-        self._related_tags.SetPredicates( [] )
+        self._related_tags.SetTags( [] )
         
-        self._have_done_search_with_this_media = False
+        self._NotifyChangesToSearchContext()
         
     
     def SetSelectedTags( self, tags ):
@@ -573,6 +633,7 @@ class RelatedTagsPanel( QW.QWidget ):
         self._related_tags.TakeFocusForUser()
         
     
+
 class FileLookupScriptTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
@@ -806,11 +867,11 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         self._favourite_tags = None
         
-        favourites = CG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
+        favourites = CG.client_controller.new_options.GetSuggestedTagsMostUsed( self._service_key )
         
         if len( favourites ) > 0:
             
-            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, self._tag_presentation_location, activate_callable )
+            self._favourite_tags = MostUsedTagsPanel( panel_parent, service_key, self._tag_presentation_location, activate_callable )
             
             self._favourite_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             

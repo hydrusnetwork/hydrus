@@ -31,6 +31,7 @@ from hydrus.client.gui.canvas import ClientGUITransparency
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.media import ClientMediaSingle
 
 ZOOM_CENTERPOINT_MEDIA_CENTER = 0
 ZOOM_CENTERPOINT_VIEWER_CENTER = 1
@@ -771,7 +772,7 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._stop_for_slideshow = value
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton | None, start_paused = False ):
+    def SetMedia( self, media: ClientMediaSingle.MediaSingle | None, start_paused = False ):
         
         if media == self._media:
             
@@ -1164,7 +1165,7 @@ class AnimationBar( QW.QWidget ):
         
         my_width = self.size().width()
         
-        mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+        mouse_pos = self.mapFromGlobal( ClientGUIFunctions.GetMousePos() )
         
         animated_scanbar_nub_width = CG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
@@ -2034,7 +2035,7 @@ class MediaContainer( QW.QWidget ):
                 
             elif zoom_center_type == ZOOM_CENTERPOINT_MOUSE:
                 
-                mouse_pos = self.parentWidget().mapFromGlobal( QG.QCursor.pos() )
+                mouse_pos = self.parentWidget().mapFromGlobal( ClientGUIFunctions.GetMousePos() )
                 
                 if self.parent().rect().contains( mouse_pos ):
                     
@@ -2351,16 +2352,14 @@ class MediaContainer( QW.QWidget ):
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
-            canvas_widget = self.parentWidget()
-            
-            if not ClientGUIFunctions.MouseIsOverWidget( canvas_widget ):
+            if not ClientGUIFunctions.MouseIsOverWidget( self._canvas ):
                 
                 return False
                 
             
             # there's some minor update stuff here now the scanbar can be hidden. its geometry may not update until later, so we need to map coordinates from widgets we know are in view instead!
             
-            container_mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
+            container_mouse_pos = self.mapFromGlobal( ClientGUIFunctions.GetMousePos() )
             
             controls_bar_rect = self.GetIdealControlsBarRect()
             
@@ -2512,7 +2511,7 @@ class MediaContainer( QW.QWidget ):
         self._static_image_window.SetBackgroundColourGenerator( self._background_colour_generator )
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton, maintain_zoom, maintain_zoom_type, maintain_pan, start_paused = None ):
+    def SetMedia( self, media: ClientMediaSingle.MediaSingle, maintain_zoom, maintain_zoom_type, maintain_pan, start_paused = None ):
         
         if not self.ReadyToSwitchMedia():
             
@@ -2708,7 +2707,7 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def ZoomMaintainingZoom( self, previous_media: ClientMedia.MediaSingleton ):
+    def ZoomMaintainingZoom( self, previous_media: ClientMediaSingle.MediaSingle ):
         
         if self._media is None:
             
@@ -3232,13 +3231,22 @@ class EmbedButton( QW.QWidget ):
         
         if needs_thumb:
             
-            thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( self._media.GetDisplayMedia().GetMediaResult() )
+            display_media_result = self._media.GetDisplayMediaResult()
             
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
-            
-            self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
-            
-            self.update()
+            if display_media_result is None:
+                
+                self._thumbnail_qt_pixmap = None
+                
+            else:
+                
+                thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( display_media_result )
+                
+                thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+                
+                self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
+                
+                self.update()
+                
             
         else:
             
@@ -3261,23 +3269,28 @@ class OpenExternallyPanel( QW.QWidget ):
         
         if self._media.GetLocationsManager().IsLocal():
             
-            qt_pixmap = CG.client_controller.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult() ).GetQtPixmap()
+            display_media_result = media.GetDisplayMediaResult()
             
-            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
-            
-            if thumbnail_dpr_percent != 100:
+            if display_media_result is not None:
                 
-                qt_pixmap.setDevicePixelRatio( thumbnail_dpr_percent / 100 )
+                qt_pixmap = CG.client_controller.thumbnails_cache.GetThumbnail( display_media_result ).GetQtPixmap()
                 
-            
-            if qt_pixmap.width() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0] or qt_pixmap.height() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1]:
+                thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
-                qt_pixmap.scaled( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0], OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], QC.Qt.AspectRatioMode.KeepAspectRatio, QC.Qt.TransformationMode.SmoothTransformation )
+                if thumbnail_dpr_percent != 100:
+                    
+                    qt_pixmap.setDevicePixelRatio( thumbnail_dpr_percent / 100 )
+                    
                 
-            
-            thumbnail_window = QW.QLabel( self, pixmap = qt_pixmap )
-            
-            QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
+                if qt_pixmap.width() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0] or qt_pixmap.height() > OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1]:
+                    
+                    qt_pixmap.scaled( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0], OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], QC.Qt.AspectRatioMode.KeepAspectRatio, QC.Qt.TransformationMode.SmoothTransformation )
+                    
+                
+                thumbnail_window = QW.QLabel( self, pixmap = qt_pixmap )
+                
+                QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
+                
             
         
         m_text = HC.mime_string_lookup[ media.GetMime() ]

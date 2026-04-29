@@ -19,6 +19,7 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIFunctionsImage
 
 # ok, the serialised png format is:
 
@@ -114,7 +115,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     del painter
     
-    top_image_rgb = ClientGUIFunctions.ConvertQtImageToNumPy( top_qt_image )
+    top_image_rgb = ClientGUIFunctionsImage.ConvertQtImageToNumPy( top_qt_image )
     
     top_image = cv2.cvtColor( top_image_rgb, cv2.COLOR_RGB2GRAY )
     
@@ -234,7 +235,7 @@ def GetPayloadDescriptionAndBytes( payload_obj ):
 
 def LoadFromQtImage( qt_image: QG.QImage ):
     
-    numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
+    numpy_image = ClientGUIFunctionsImage.ConvertQtImageToNumPy( qt_image )
     
     return LoadFromNumPyImage( numpy_image )
     

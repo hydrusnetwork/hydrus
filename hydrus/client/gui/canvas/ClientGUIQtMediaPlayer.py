@@ -42,7 +42,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUITransparency
 from hydrus.client.gui.media import ClientGUIMediaVolume
-from hydrus.client.media import ClientMedia
+from hydrus.client.media import ClientMediaSingle
 
 if typing.TYPE_CHECKING:
     
@@ -643,7 +643,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._background_colour_generator = background_colour_generator
         
     
-    def SetMedia( self, media: ClientMedia.MediaSingleton, start_paused = False ):
+    def SetMedia( self, media: ClientMediaSingle.MediaSingle, start_paused = False ):
         
         if media == self._media:
             
