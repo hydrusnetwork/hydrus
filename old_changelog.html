@@ -35,6 +35,57 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_670"><a href="#version_670">version 670</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>when you paste queries into the edit subscription window, it now shows you the pending changes, i.e. which are new/already in/DEAD,  _before_ you say yes/no. if you have DEAD, it asks with a yesyes/no if you want to revive or not</li>
+                        <li>the 'rescue off-screen window' system now tries to slide windows down and/or right before falling back to 'topleft of primary screen'. for instance, if the off-screen dialog's originally proposed bottom-left corner would be in view on a particular screen, it now just slides the guy down a bit and adds any fuzzy padding. this makes the new 'put dialog over the mouse' mode nicer to work with near screen edges, although I need to do some more work to better handle particularly short dialogs and those that span across a multi-monitor border</li>
+                        <li>for the new 'put the dialog over the mouse' mode, if the dialog would appear off-screen, it no longer gives you a 'woah, that was offscreen' popup</li>
+                        <li>for the new 'put the dialog over the mouse' mode, if the current mouse cursor is so invalid it is seemingly not on any current screen, it falls back to 'topleft of parent mate'</li>
+                        <li>if you run from source with a normal-looking 'venv' directory, any update that includes new package versions is now going to say, 'hey, looks like you are running from source. this is a good time to update your venv' when you update. this will happen in this release</li>
+                        <li>thanks to a user, the F13-24 keys are now mappable in the shortcuts system</li>
+                        <li><h3>tag suggestions</h3></li>
+                        <li>in 'manage tags', on the 'related tags' panel, the 'do it just for my files/all known files' flipswitch is now visible on local tag services</li>
+                        <li>the 'related tags' panel now has a tag service selector, so you can say 'hey provide related suggests from the PTR' for your 'my tags' and so on</li>
+                        <li>the 'related tags' panel now has a 'searching through/not searching siblings and parents' button. this involves some black magic and I don't really know how well it works, but the tech seemed to be done db side so I just wired it up</li>
+                        <li>this is mostly experimental. if you use this a lot, give it a go and let me know if any of it is useful. if you find you are setting something one way or another over and over, it might be nice to have it remember the last settings</li>
+                        <li>the 'related tags' panel now displays sibling and parent relationships, like the other tag suggestion panels</li>
+                        <li>if you hit either of the 'related tags' search-type buttons, or the media changes, the 'related tags' search now refreshes using the same duration that was last searched (or 'quick' if none has been done yet)</li>
+                        <li>on tag menus, the 'favourites' sub-menu has been overhauled. for KISS, it now only appears when you have one tag selected, and it provides add/remove options for the general favourites _and_, now, all the 'most used' tag suggestion columns that appear in the manage tags dialog. ten points to anyone who can come up with a better names than 'most used tags' and 'favourite tags' that represents what they do while not confusing one for the other</li>
+                        <li>on tag menus, an empty 'search' sub-menu no longer appears in contexts without any search-page stuff (e.g. manage tags was doing this)</li>
+                        <li><h3>curl_cffi test</h3></li>
+                        <li>a user pointed me at the `curl_cffi` library this week, which provides http/2 and http/3 support with a `requests`-like interface. I have written a very small and basic shim to test this out with our network engine, and a new test mode is under `help-&gt;debug-&gt;network actions-&gt;curl_cffi test mode`. it asks for some test details and then switches the whole network engine over.</li>
+                        <li>very advanced source users can now add `curl_cffi` to their venvs and give it a whirl. if we discover it solves some problems that requests at http/1 can't handle, I'll formalise the test and plan out how to integrate this into a future domain manager so we can shape things to particular network contexts as needed</li>
+                        <li>I cleaned a bunch of session code and figured out some nicer session switching/reinitialising-tech and cookie-migration tech. I feel even more optimistic about also playing with `httpx`, which is a comprehensive `requests`-like replacement that offers http/2</li>
+                        <li><h3>boring import options work</h3></li>
+                        <li>wrote out a draft of a help document for import options at `https://hydrusnetwork.github.io/hydrus/getting_started_import_options.html`. I'll populate this with nice diagrams and screenshots and insert it properly as this becomes real. if you have been following along here, feel free to have a look and let me know where I'm making mistakes</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>added a little note to the 'running from source' help regarding ffmpeg on LTS Linux flavours--you probably have an old system ffmpeg, for good reason, so I now say how to find a newer one for hydrus if you like</li>
+                        <li>added a small section to the backing up help on how to set up a wineprefix for ToDoList. if you try it, let me know if you have a different mfc experience</li>
+                        <li>cleaned up how mouse coordinates are fetched across the program; everything now goes through one place. Wayland has some issues with this (generally, in Wayland, I only get the last place the mouse was seen over my UI panels), so I may end up inserting some DEBUG recoveries for when this gives crazy answers</li>
+                        <li>decoupled a bunch of session and cookie code. the way cookies are fetched, inspected, and edited is a good bit cleaner and more centralised and abstract now</li>
+                        <li>'session' cookies are now cleared faster and each session maintains its connection pool less redundantly</li>
+                        <li>misc refactoring to tidy up the initial import as the main controller boots. still lots to do</li>
+                        <li>pulled `ClientMedia` apart and cleaned up some inheritance mess. this whole thing is still awful, but this was a good step</li>
+                        <li>cleared out more linting issues with client media and friends, and in continuing a very long rewrite, a bunch of MediaSingle stuff is replaced with MediaResult, and a bunch of edge-case 'we wanted to show a collection, but it just lost its last member' bugs are fixed</li>
+                        <li>fixed 'copy thumbnail bmp' for collections, which wasn't falling back to a nice default behaviour before</li>
+                        <li><h3>future build committed</h3></li>
+                        <li>This release commits the changes tested with the recent future build. The test went well, and there are no special instructions for the update. Source users are encouraged to rebuild their venvs this week. Update as normal, and you will get--</li>
+                        <li>requests from `2.32.5` to `2.33.1` (security fix)</li>
+                        <li>chardet from `chardet&gt;=3.0.4,&lt;6` to `chardet&gt;=3.0.4,&lt;8` (requests dependency issue resolved in the new version)</li>
+                        <li>OpenCV from `4.11.0.86` to `4.12.0.88` (normal update)</li>
+                        <li>dateparser from `1.2.1` to `1.4.0` (had a build problem before)</li>
+                        <li>adds tldextract `5.3.1`, which provides for more sensible '.co.jp' top level domain recognition</li>
+                        <li>setuptools no longer pinned at `78.1.1` for the builds (an old hack removed), seems to now be ~82.x</li>
+                        <li>pyinstaller `6.14.1` to `6.16.0` for the builds (normal update, and by the hand of fate it worked)</li>
+                        <li>test version of OpenCV from `4.13.0.90` to `4.13.0.92` (build dependency fix that'll hit us later)</li>
+                        <li>test version of PySide6 (Qt) from `6.10.1` to `6.10.3` (normal update, but we discovered a fun bug yesterday in 6.10.1 that broke several lists and widgets)</li>
+                        <li>Windows mpv dll from `2023-08-20` to `2024-08-18` (cautious update; we've had many issues trying newer mpv dlls over the years)</li>
+                        <li>`action-gh-release` from v2 (Node 20) to v3 (Node 24) in the Linux and Windows build scripts</li>
+                        <li>thanks to a user, the Docker package build files are also now Node 24 compatible</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_669"><a href="#version_669">version 669</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -3223,7 +3274,7 @@
                         <li>rewrote the 'always show iso time' solution from the old BaseMethod-to-Method replace trick to a simpler and saner global bool, as I recently did with some PIL/ICC settings</li>
                         <li>import folders now 'action' their original files immediately after import is done. previously they would do it in batches of ten, and if the import folder were interrupted by something like program shutdown, they'd have to wait for the next run to be cleared. I'm not totally sure, but I also think import folders set to 'ignore, not try again' on a large number of files may run a bit faster now</li>
                         <li>clarified the additional ways to import downloaders in the Lain import dialog. Lain's paste button now also accepts URI-aware file paths (i.e. if you select some files in your file explorer and tell your OS to 'copy') as the clipboard source</li>
-                        <li>converted some duplicates processing code, and, relatedly, some delete-lock reporting stuff, from the being-overhauled `MediaSingleton` to `MediaResult`. this allowed me to clean up some wew code in duplicates auto-resolution, the duplicates filter, test code, and the Client API</li>
+                        <li>converted some duplicates processing code, and, relatedly, some delete-lock reporting stuff, from the being-overhauled `MediaSingle` to `MediaResult`. this allowed me to clean up some wew code in duplicates auto-resolution, the duplicates filter, test code, and the Client API</li>
                         <li>updated the running from source help to talk about mpv/libmpv on Linux</li>
                         <li>fixed some bad panel/dialog calls into nicer Qt signals</li>
                         <li>added some typedefs to clear out about a hundred more PyUnresolvedReferences that PyCharm found. mostly custom widget calls</li>
