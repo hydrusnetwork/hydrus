@@ -29,7 +29,7 @@ except Exception as e:
 
 DOING_CURL_CFFI_TEST = False
 CURL_CFFI_DEFINITION = ''
-CURL_CFFI_HTTP_VERSION = 0
+CURL_CFFI_HTTP_VERSION = -1
 
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
@@ -151,7 +151,12 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         if DOING_CURL_CFFI_TEST:
             
-            session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( 'chrome', ClientNetworkingCurlCFFI.curl_cffi.CurlHttpVersion.V2_0 )
+            if CURL_CFFI_DEFINITION == '' or CURL_CFFI_HTTP_VERSION == -1:
+                
+                raise Exception( 'The curl cffi test was engaged without correct initialisation??' )
+                
+            
+            session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( CURL_CFFI_DEFINITION, CURL_CFFI_HTTP_VERSION )
             
         else:
             
