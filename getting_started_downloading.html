@@ -16,7 +16,7 @@
         <link rel="prev" href="getting_started_more_tags.html">
       
       
-        <link rel="next" href="getting_started_ratings.html">
+        <link rel="next" href="getting_started_import_options.html">
       
       
         
@@ -907,17 +907,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#file_import_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File import options
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#tag_parsing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1010,6 +999,34 @@
   
   
     <li class="md-nav__item">
+      <a href="getting_started_import_options.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Import Options
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="getting_started_ratings.html" class="md-nav__link">
         
   
@@ -1054,10 +1071,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
         
           
-          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="">
             
   
   
@@ -1075,8 +1092,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1201,10 +1218,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_14" >
         
           
-          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="">
+          <label class="md-nav__link" for="__nav_2_14" id="__nav_2_14_label" tabindex="">
             
   
   
@@ -1222,8 +1239,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_13">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_14_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_14">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -3007,17 +3024,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#file_import_options" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        File import options
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#tag_parsing" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -3144,6 +3150,10 @@
 <dd>Advanced. Intended for simple one-off jobs with a single simple parsing rule, like 'get all the linked images from this page'.</dd>
 </dl>
 <h3 id="gallery_download">Gallery download<a class="headerlink" href="#gallery_download" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The file limit and import options on the upper panel of a gallery or watcher page, if changed, will only apply to <strong>new</strong> queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.</p>
+</div>
 <p><img alt="" src="images/downloader_page.png" /></p>
 <p>The gallery page can download from multiple sources at the same time. Each entry in the list represents a basic combination of two things:</p>
 <dl>
@@ -3192,48 +3202,14 @@
 <h3 id="simple_downloader">Simple downloader<a class="headerlink" href="#simple_downloader" title="Permanent link">&para;</a></h3>
 <p>The <strong>simple downloader</strong> will do very simple parsing for unusual jobs. If you want to download all the images in a page, or all the image link destinations, this is the one to use. There are a couple default parsing rules to choose from, and if you learn the downloader system yourself, it will be easy to make more.</p>
 <h2 id="import_options">Import options<a class="headerlink" href="#import_options" title="Permanent link">&para;</a></h2>
-<div class="admonition note">
-<p class="admonition-title">This is changing!</p>
-<p>Hey, this whole system is being migrated soon. The bulky file/tag/note import options are being split up, and a favourites/template system is being introduced.</p>
-<p>A draft of the help for this new options system is <a href="getting_started_import_options.html">here</a>.</p>
-</div>
-<p>Every importer in Hydrus has some 'import options' that change what is allowed, what is blacklisted, and whether tags or notes should be saved.</p>
-<p>In previous versions these were split into completely different windows called <code>file import options</code> and <code>tag import options</code> so if you see those anywhere, this is what they're talking about and not some hidden menu anywhere.</p>
-<p>Importers that download from websites rely on a flexible 'defaults' system, so you do not have to set them up every time you start a new downloader. While you should play around with your import options, once you know what works for you, you should set that as the default under <em>network-&gt;downloaders-&gt;manage default import options</em>. You can set them for all file posts generally, all watchers, and for specific sites as well.</p>
-<h3 id="file_import_options">File import options<a class="headerlink" href="#file_import_options" title="Permanent link">&para;</a></h3>
-<p>This deals with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode.</p>
-<p><img alt="" src="images/file_import.png" /></p>
-<dl>
-<dt><strong>pre-import checks</strong></dt>
-<dd>Pretty self-explanatory for the most part. If you want to redownload previously deleted files turning off <code>exclude previously deleted files</code> will have Hydrus ignore deletion status.<br />
-A few of the options have more information if you hover over them.</dd>
-<dt><strong>import destinations</strong></dt>
-<dd>See <a href="advanced_multiple_local_file_services.html">multiple file services</a>, an advanced feature.</dd>
-<dt><strong>post import actions</strong></dt>
-<dd>See the <a href="getting_started_files.html#inbox_and_archive">files section on filtering</a> for the first option, the other two have information if you hover over them.</dd>
-</dl>
+<p>Every import in Hydrus operates under a flexible set of 'import options' that change what is allowed, what file properties or tags are blacklisted, and whether metadata like tags or notes should be saved. The defaults for this system are fine, but if you wish to read more, the full help is <a href="getting_started_import_options.html">here</a>.</p>
 <h3 id="tag_parsing">Tag Parsing<a class="headerlink" href="#tag_parsing" title="Permanent link">&para;</a></h3>
-<p>By default, hydrus now starts with a local tag domain called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click <code>import options</code>:</p>
-<p><img alt="" src="images/tag_import_options_default.png" /></p>
-<p>This is an important dialog, although you will not need to use it much. It governs which tags are parsed and where they go. To keep things easy to manage, a new downloader will refer to the 'default' tag import options for a website, but for now let's set some values just for this downloader:</p>
-<p><img alt="" src="images/tag_import_options_specific.png" /></p>
-<p>You can see that each tag service on your client has a separate section. If you add the PTR, that will get a new box too. A new client is set to <em>get all tags</em> for 'downloader tags' service. Things can get much more complicated. Have a play around with the options here as you figure things out. Most of the controls have tooltips or longer explainers in sub-dialogs, so don't be afraid to try things.</p>
-<p>It is easy to get tens of thousands of tags by downloading this way. Different sites offer different kinds and qualities of tags, and the client's downloaders (which were designed by me, the dev, or a user) may parse all or only some of them. Many users like to just get everything on offer, but others only ever want, say, <code>creator</code>, <code>series</code>, and <code>character</code> tags. Once you feel comfortable with tags, try clicking that 'adding: all tags' button, which will take you into hydrus's advanced 'tag filter', which allows you to select which of the incoming tags will be added.</p>
-<p>The 'additional tags' adds some fixed personal tags to all files coming in--for instance, you might like to add 'this came from the xxxxx subscription' or 'process into favourites' to your 'my tags' so you can find those files again later. That little 'cog' icon button can also do some advanced things.</p>
-<p>The blacklist button will let you skip downloading files that have certain tags, again using the tag filter, while the whitelist enables you to only allow files that have at least one of a set of tags.</p>
-<p><img alt="" src="images/tag_filter_blacklist_example.png" /></p>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
-<p>The file limit and import options on the upper panel of a gallery or watcher page, if changed, will only apply to <strong>new</strong> queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.</p>
-</div>
+<p>By default, hydrus starts with a local tag domain called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and perhaps decide you want them to go to different areas. Revisit the import options help when you are ready to make decisions here.</p>
 <h4 id="force_page_fetch">Force Page Fetch<a class="headerlink" href="#force_page_fetch" title="Permanent link">&para;</a></h4>
-<p>By default, hydrus will not revisit web pages or API endpoints for URLs it knows A) refer to one known file only, and B) that file is already in your database or has previously been deleted. The way it navigates this can be a complicated mix of hash and URL data, and in certain logical situations hydrus will determine its own records are untrustworthy and decide to check the source again. This saves bandwidth and time as you run successive queries that include the same results. You should not disable the capability for normal operation.</p>
-<p>But if you mess up your tag import options somewhere and need to re-run a download with forced tag re-fetching, how to do it?</p>
-<p>At the moment, this is in tag import options, the <code>force page fetch even if...</code> checkboxes. You can either set up a one-time downloader page with specific tag import options that check both of these checkboxes and then paste URLs in, or you can right-click a selection of thumbnails and have hydrus create the page for you under the <em>urls-&gt;force metadata refetch</em> menu. Once you are done with the downloader page, delete it and do not use it for normal jobs--again, this method of downloading is inefficient and should not be used for repeating, long-term, or speculative jobs. Only use it to fill in specific holes.</p>
+<p>By default, hydrus will not revisit web pages or API endpoints for URLs it knows A) refer to one known file only, and B) that file is already in your database or has previously been deleted. This means if you run a normal download twice, hydrus will not fetch the tags that second time.</p>
+<p>If you mess up your tag import options the first time and need to re-run a download, right-click a selection of thumbnails and hit <code>urls-&gt;force metadata refetch</code>. This creates a new page with special Prefetch Import Options allowing for refetching the tags (while still skipping the actual file redownload)!</p>
 <h3 id="note_parsing">Note Parsing<a class="headerlink" href="#note_parsing" title="Permanent link">&para;</a></h3>
-<p>Hydrus also parses 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.</p>
-<p><img alt="" src="images/note_import_options_normal.png" /></p>
-<p>Most of the controls here ensure that successive parses do not duplicate existing notes. The default settings are fine for all normal purposes, and you can leave them alone unless you know you want something special (e.g. turning note parsing off completely).</p>
+<p>Hydrus also parses 'notes' from some sites. This generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.</p>
 <h2 id="bandwidth">Bandwidth<a class="headerlink" href="#bandwidth" title="Permanent link">&para;</a></h2>
 <p><strong>Hydrus deals with very large numbers of files, and its file store is expected to last many years. Its downloaders are designed to run a marathon, not a sprint.</strong></p>
 <p>It will not be too long until you see a "bandwidth free in xxxxx..." message. As a long-term storage solution, hydrus is designed to be polite in its downloading--both to the source server and your computer. It has complicated bandwidth rules that can operate in several different domains, and the default rules are capped conservatively to stop big mistakes and spread out larger jobs. For instance, at a bare minimum, no domain will be hit more than once a second.</p>
@@ -3292,7 +3268,7 @@ A few of the options have more information if you hover over them.</dd>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 29, 2026 20:43:19 UTC">April 29, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 13, 2026 19:09:20 UTC">May 13, 2026</span>
   </span>
 
     

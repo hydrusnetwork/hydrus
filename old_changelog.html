@@ -35,6 +35,94 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_671"><a href="#version_671">version 671</a></h2>
+                    <ul>
+                        <li><h3>import options overhaul</h3></li>
+                        <li>the frontend and object storage is moved to the new import options system! there's a bunch going on here, but in brief--</li>
+                        <li>the old file/tag/note import options are split into seven smaller types: prefetch, file filtering, tag filtering, locations, tags, notes, presentation</li>
+                        <li>your old options have been converted to the new system and it should all work as before, with only minor logical changes. you do not have to do anything</li>
+                        <li>all the defaults are now edited in `file-&gt;options-&gt;import options`. the system is richer and supports favourites/templates for quick-load</li>
+                        <li>all the 'import options' buttons across the program use some slightly newer UI and offer quick 'load from favourites'</li>
+                        <li>the 'edit subscriptions' dialog now has a column to show a summary for any custom import options you have set</li>
+                        <li>the 'edit subscription' dialog now has a column to show a summary for any queries that have 'additional tags' set up</li>
+                        <li>full help, now with screenshots, is here: https://hydrusnetwork.github.io/hydrus/getting_started_import_options.html</li>
+                        <li><h3>misc</h3></li>
+                        <li>the pretty media info lines that appear on a single media right-click flyout menu and some other places now includes a `approx bitrate: 1.4MB/s` line. it is pretty similar to the 'sort by approx bitrate' sort but only appears for stuff with an actual duration (the sort also puts big static images before small ones). it is just a naive `size / duration` and it'll do `1.4MB/s` with existing display tech rather than `7,200KBps` as you otherwise usually see, so I may revisit when I eventually get around to 1000/1024 byte-count presentation options and such</li>
+                        <li>renamed the shortcut labels 'close page' and 'restore the most recently closed page', to 'pages: close current' and 'pages: unclose the most recently closed'</li>
+                        <li>added a 'pages: rename current' shortcut to 'the main window' set</li>
+                        <li>fixed the setting of referral urls to child import objects in two cases: A) when a file import produced multiple child urls with the note `Found x new URLs in one post` and B) when a gallery url in the search phase produced an unexpected non-gallery url because of 3XX or api url class redirection with note `was redirected to a non-gallery url, which has been queued as a file import`.. the referral url was not being set correctly because of a regression in v664. thank you to the enterprising user who ran this through Codex to find the solution</li>
+                        <li>fixed a foolish typo that broke importing a cookies.txt (issue #2011)</li>
+                        <li>when loading a cookies.txt, if the file includes some complicated utf-8 encoding that the current default locale cannot decode, I now catch the decoding failure and try to recover with a newly encoded temp file (also issue #2011)</li>
+                        <li>fixed a bit of page counting logic that would turn up in some 'hey do you want to close the x pages?' labels and some 'do to current page' logic, where a page of pages was not counting child page of pages</li>
+                        <li>updated the base `requirements.txt` to match the future build stuff we folded in recently. missed this guy by accident; he'll be deleted in v673 in lieu of the cleaner `pyproject.toml` that's coming up</li>
+                        <li>did a quick hotfix patch to master for the curl_cffi test, which was frozen by accident at chrome/http2</li>
+                        <li>added a note to the installation help, Linux specifically: if you get a crash on any keypress after booting the client, you probably need to run from source (issue #2010)</li>
+                        <li>added some careful typedefs and imports to fix a deferred import that was causing certain recent database updates to fail out when trying to load the core options object</li>
+                        <li><b>normal users do not pass this line</b></li>
+                        <li><h3>import options detailed changes</h3></li>
+                        <li>an import options manager with default settings is now created with a new db</li>
+                        <li>on update from v671, your existing quiet/loud file import options, post/watcher tag/note import options, and all the url class tag/note import options are converted into a new import options manager. the old settings are deleted from your options and domain manager objects once it is all done and clear</li>
+                        <li>a new button-with-a-dropdown-menu-arrow to handles the import options container of a specific import context. its arrow menu offers a detailed review of what it currently holds and supports quick 'favourites/template' loading</li>
+                        <li>the 'fetch page metadata even if hash/url recognised and file appears "already in db" stuff is moved from tag import options to the new 'prefetch import options'. this is the only movement of options; everything else has been separated into the sub-panels you've seen in recent weeks</li>
+                        <li>updated the new system's freeze routine to consult both the given url of the import object _and_ any referral url, _and_ if either is an API redirect, to look up every url class in the api redirect chain and select the first for which there is a custom import options entry. previously, referral url lookup was spotty, and it would only ever look at the final place in the api redirect chain. very sophisticated setups can now have separate per-url-class import options that nonetheless connect to the same final api url class</li>
+                        <li>import folders and subscription queries now add 'additional tags' even if the file ends up 'previously deleted' (all imports generally apply new content updates to a 'previously deleted' result, so this brings these supplementary tags into normal behaviour.) I may add an option around which import statuses quality for a post-import content update commit, now everything is on the same page</li>
+                        <li>if you hop skip and jump, you can now set 'additional tags' to a local file import that is entirely adjunct to the normal filename tagging system. there's probably some weird edge undesired behaviour now, because of odd new capabilities like this, so I'm interested in error reports or 'hey you should probably hide this by default here' reports</li>
+                        <li>made some svgs and screenshots for the new import options help, removed the old help, integrated it all into the 'gettting started - downloading' help, and added it to the main index</li>
+                        <li><h3>import options detailed fixes</h3></li>
+                        <li>fixed some import situations (usually when the import object had no other tags to add) where 'additional tags' in a tag import options might not be added</li>
+                        <li>if a file import results in 'ignored' but somehow gets an sha256 hash (local imports hit by file filtering rules would get this), no post-job content updates like urls or tags will be added to the file</li>
+                        <li>in edit subscriptions, the 'set file/tag/note import options' stuff is merged into one and there are copy/paste/favourite buttons like in `options-&gt;import options` with the same clever paste-merge tech. there is also a new column to see which subs have custom import options set. just a bit easier to mass-manage custom options here now</li>
+                        <li>fixed a bug with adding a _watchable_ URL with a custom import destination (via Client API); previously, it would just to the first watchable page. now it checks and creates a new one with the desired custom location import options as needed</li>
+                        <li>tag import options now present a single-line summary (they'd spill over to multiple lines when things got complicated), with some tighter syntax</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `get_client_options` call no longer presents a `default_file_import_options` summary row</li>
+                        <li>Client API version is now 91</li>
+                        <li><b>non-hydev do not pass this line</b></li>
+                        <li><h3>some last-minute fixes and tweaks</h3></li>
+                        <li>added some repair code for if your 'global' options container set is missing or missing a sub-option type. the holes are filled in and the fixed structure is saved back</li>
+                        <li>wrote some more safety code to ensure a non-full global options container cannot be set to the core options structure with the issue reported nicely to the user</li>
+                        <li>I didn't like how the favourite buttons were still loading up the complicated custom-merge dialog on 'load', so I made a quick-multi-load 'load' and slow-single-load 'custom load' menus. if you just want to set x to a big selection somewhere, no problem</li>
+                        <li>same deal with the new general 'import options button'--I added a submenu to pull from the favourites, and you can 'load' in one click or 'custom load' if you need something like 'hey I just need the prefetch options from this template'</li>
+                        <li>in the main edit panel, updated the options summary strings, which were in the form `file filtering: default/stuff` to `default file filtering` and `&gt; file filtering: stuff`. this makes the non-default stuff stand out better, but maybe we can do more here. maybe this guy could evolve into a checklist or a multi-column list</li>
+                        <li>the new vertically stacked listbook now disables horizontal scrollbar too (the scrollbar was drawing over the bottom item, let's go)</li>
+                        <li>fixed an issue with my migration routine where a new container would not contain prefetch import options with the 'force refetch' stuff from tag import options when the original file import options was missing/default</li>
+                        <li>updated the migration routine to abstain from adding prefetch stuff if it was uninteresting</li>
+                        <li>updated all my importer migration code to safely attempt to determine the already-migrated defaults for this importer before migration so the 'if we don't disagree with our parent's defaults, we can set that sub-options to default' logic can kick in. this eases the transition and ensures we don't end up with a bunch of importers with default 'tag filter: allows everything' stubs because the user only changed the parsing rules</li>
+                        <li>fixed a little thing in the import options manager initialisation where the defaults set the 'quiet' presentation rules to the Client API setting--the Client API import does not publish files anywhere, so no need for that</li>
+                        <li>fixed an issue where the 'panel types to load for this import caller type' CONST reference was being unintentionally updated and thus poisoning later dialog opens</li>
+                        <li>ditched the 'set and check full' system as too brittle with bad error handling</li>
+                        <li><h3>boring import options data migration log</h3></li>
+                        <li>all importers' storage and final pipeline: hdd imports, import folders, simple downloaders, url downloader pages; a couple of misc 'download these urls' routines used by stuff like IPFS, hydrus file repository download, gallery imports, the multiple gallery import container, watcher imports, the multiple watcher import container, client api imports, and subscriptions</li>
+                        <li>subscription query 'additional tags'</li>
+                        <li>migrated some network report mode stuff over to the new system as a frozen import options container is assembled with potential URL data</li>
+                        <li>ancient legacy subscription update routine</li>
+                        <li>subscription serialisation unit test</li>
+                        <li><h3>boring cleanup and refactoring</h3></li>
+                        <li>the import options manager now tracks if it is dirty and needs saving, and the main client controller consults that in the normal maintenance and shutdown cycle</li>
+                        <li>removed the default file import options from `options-&gt;importing` and tag/note stuff from `network-&gt;downloaders-&gt;default import options`</li>
+                        <li>deleted the old system's legacy edit panels and widgets</li>
+                        <li>removed some hackery that made gallery/watcher list selection-inspection a little faster but was too beardy</li>
+                        <li>the old `show_downloader_options` display option is replaced by direct `import_options_caller_type` inspection in all situations</li>
+                        <li>wrote an `ImportOptionsMetatype` for our seven new sub-options to help some typing inference. all these guys now know their own `import_options_type` too, and some `Set` stuff is a bit simpler</li>
+                        <li>moved the subscription query 'additional tags' button to a simpler single-panel-dialog solution</li>
+                        <li>updated the UI for all importers to use the new import options container button</li>
+                        <li>figured out some default/display fixes for the newer container edit UI panels to show the correct 'this defers to default type x' whether editing a default, global, favourite, or a specific importer</li>
+                        <li>cleaned up some prefetch options juggling</li>
+                        <li>improved some edge cases in the process by which paged importers figure out their best-guess current location context</li>
+                        <li>moved some legacy presentation import options consultation in the gallery/watcher sidebar list menu is over to the new system</li>
+                        <li>when a new url import page call wants to queue up urls with a custom import destination or, now, prefetch import options, this is merged into an import options container. as an edge-case logical change here, such jobs will no longer be added to pre-existing pages that have the same import destination and prefetch settings but other options differences. this is really in the weeds, but I may change this behaviour and just merge them into existing pages but with different import options; we'll see</li>
+                        <li>a check that regularly goes 'hey are we still good to import stuff?' in all importers that reviews the validity of the destination import location (generally checking if we want to import to a local file domain that has since been deleted) has been cleaned up, refactored into one central location, and now consults the next-pending object for specific options. if someone sets all x url classes to import to 'cool places' and then deletes that, the queue now pauses ahead of time rather than spitting out a hundred errors. the actual exception raised here has an improved typedef, too, that the veto system catches easier</li>
+                        <li>moved the new system's constants to their own `ImportOptionsConstants.py`, `as IOC`, so stuff can see them better</li>
+                        <li>moved the new system's manager to its own `ImportOptionsManager.py`</li>
+                        <li>moved some 'filter these pending tags this way' from the now-defunct `ClientImportOptions` to `TagImportOptions`</li>
+                        <li>the various edit/custom-paste UI now obeys the 'simple mode :^)' set in `options-&gt;import options`</li>
+                        <li>renamed the old `ClientImportOptions` to `CheckerImportOptions`, since that is all it does now</li>
+                        <li>cleaned up some old rubbish `subscription.ToTuple` mess</li>
+                        <li>cleaned up some misc bad code in hdd importers</li>
+                        <li>deleted all the legacy UI code for the old system</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_670"><a href="#version_670">version 670</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
