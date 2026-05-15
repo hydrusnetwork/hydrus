@@ -167,6 +167,12 @@ class Predicate( Enum ):
     NUM_NOTES = auto()
     HAS_NOTE_NAME = auto()
     NO_NOTE_NAME = auto()
+    MATCHES_NOTE_CONTENT = auto()
+    NO_MATCHES_NOTE_CONTENT = auto()
+    CONTAINS_NOTE_CONTENT = auto()
+    NO_CONTAINS_NOTE_CONTENT = auto()
+    CONTAINS_NOTE_WORDS = auto()
+    NO_CONTAINS_NOTE_WORDS = auto()
     RATING_SPECIFIC_NUMERICAL = auto()
     RATING_SPECIFIC_LIKE_DISLIKE = auto()
     RATING_SPECIFIC_INCDEC = auto()
@@ -325,6 +331,12 @@ SYSTEM_PREDICATES = {
     r'has tag': (Predicate.TAG_ADVANCED_INCLUSIVE, Operators.TAG_ADVANCED_GUBBINS, Value.TAG_ADVANCED_TAG, None ),
     r'does not have tag': (Predicate.TAG_ADVANCED_EXCLUSIVE, Operators.TAG_ADVANCED_GUBBINS, Value.TAG_ADVANCED_TAG, None ),
     r'(all|any|only).+rated': (Predicate.RATING_ADVANCED, None, Value.RATING_ADVANCED, None ),
+    '(has (a )?)?note ((that )?matches)|((with )?content)': (Predicate.MATCHES_NOTE_CONTENT, None, Value.ANY_STRING, None),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) note ((that )?matches)|((with )?content)': (Predicate.NO_MATCHES_NOTE_CONTENT, None, Value.ANY_STRING, None),
+    '(has (a )?)?note (that )?contains (the )?words?': (Predicate.CONTAINS_NOTE_WORDS, None, Value.ANY_STRING, None),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) note (that )?contains (the )?words?': (Predicate.NO_CONTAINS_NOTE_WORDS, None, Value.ANY_STRING, None),
+    '(has (a )?)?note (that )?contains': (Predicate.CONTAINS_NOTE_CONTENT, None, Value.ANY_STRING, None),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) note (that )?contains': (Predicate.NO_CONTAINS_NOTE_CONTENT, None, Value.ANY_STRING, None),
 }
 
 def string_looks_like_date( string ):

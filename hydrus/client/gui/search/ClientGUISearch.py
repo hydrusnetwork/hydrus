@@ -352,6 +352,14 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemHasNoteName( self, predicate ) )
                 
+            elif predicate_type in (
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS,
+            ):
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemNoteContent( self, predicate ) )
+                
             elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemNumWords( self, predicate ) )
@@ -770,13 +778,20 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTES:
             
-            recent_predicate_types = [ ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME ]
+            recent_predicate_types = [
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT,
+                ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS,
+            ]
             
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '>', 0 ) ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ClientNumberTest.NumberTest.STATICCreateFromCharacters( '=', 0 ) ), ), show_remove_button = False ) )
             
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumNotes, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemHasNoteName, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNoteContent, predicate ) )
             
         elif predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NUM_WORDS:
             
