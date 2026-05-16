@@ -96,7 +96,6 @@ mpv_allow_crashy_files_silently = False
 fake_petition_mode = False
 
 force_idle_mode = False
-thumbnail_debug_mode = False
 autocomplete_delay_mode = False
 
 blurhash_mode = False

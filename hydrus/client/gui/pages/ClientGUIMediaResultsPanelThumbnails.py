@@ -1,14 +1,13 @@
-import random
 import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+import hydrus.core.HydrusData
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
@@ -21,12 +20,10 @@ from hydrus.client import ClientServices
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
-from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUIThumbnailLayouts
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaMenus
@@ -38,140 +35,40 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResultPrettyInfo
-from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientRatings
 
 FRAME_DURATION_60FPS = 1.0 / 60
 
-WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = False
-
-class ThumbnailWaitingToBeDrawn( object ):
-    
-    def __init__( self, hash, thumbnail, thumbnail_index, bitmap ):
-        
-        self.hash = hash
-        self.thumbnail = thumbnail
-        self.thumbnail_index = thumbnail_index
-        self.bitmap = bitmap
-        
-        self._draw_complete = False
-        
-    
-    def DrawComplete( self ) -> bool:
-        
-        return self._draw_complete
-        
-    
-    def DrawDue( self ) -> bool:
-        
-        return True
-        
-    
-    def DrawToPainter( self, x: int, y: int, painter: QG.QPainter ):
-        
-        painter.drawImage( x, y, self.bitmap )
-        
-        self._draw_complete = True
-        
-    
-
-class ThumbnailWaitingToBeDrawnAnimated( ThumbnailWaitingToBeDrawn ):
-    
-    FADE_DURATION_S = 0.5
-    
-    def __init__( self, hash, thumbnail, thumbnail_index, bitmap ):
-        
-        super().__init__( hash, thumbnail, thumbnail_index, bitmap )
-        
-        self.num_frames_drawn = 0
-        self.num_frames_to_draw = max( int( self.FADE_DURATION_S // FRAME_DURATION_60FPS ), 1 ) 
-        
-        opacity_factor = max( 0.05, 1 / ( self.num_frames_to_draw / 3 ) )
-        
-        self.alpha_bmp = QP.AdjustOpacity( self.bitmap, opacity_factor )
-        
-        self.animation_started_precise = HydrusTime.GetNowPrecise()
-        
-    
-    def _GetNumFramesOutstanding( self ):
-        
-        now_precise = HydrusTime.GetNowPrecise()
-        
-        num_frames_to_now = int( ( now_precise - self.animation_started_precise ) // FRAME_DURATION_60FPS )
-        
-        return min( num_frames_to_now, self.num_frames_to_draw - self.num_frames_drawn )
-        
-    
-    def DrawDue( self ) -> bool:
-        
-        return self._GetNumFramesOutstanding() > 0
-        
-    
-    def DrawToPainter( self, x: int, y: int, painter: QG.QPainter ):
-        
-        num_frames_to_draw = self._GetNumFramesOutstanding()
-        
-        if self.num_frames_drawn + num_frames_to_draw >= self.num_frames_to_draw:
-            
-            painter.drawImage( x, y, self.bitmap )
-            
-            self.num_frames_drawn = self.num_frames_to_draw
-            self._draw_complete = True
-            
-        else:
-            
-            for i in range( num_frames_to_draw ):
-                
-                painter.drawImage( x, y, self.alpha_bmp )
-                
-            
-            self.num_frames_drawn += num_frames_to_draw
-            
-        
-    
-
 class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel ):
     
     def __init__( self, parent, page_key, page_manager: ClientGUIPageManager.PageManager, media_results ):
         
-        self._clean_canvas_pages = {}
-        self._dirty_canvas_pages = []
-        self._num_rows_per_canvas_page = 1
-        self._num_rows_per_actual_page = 1
-        
-        self._last_size = QC.QSize( 20, 20 )
-        self._num_columns = 1
-        
         self._drag_init_coordinates = None
         self._drag_click_timestamp_ms = 0
         self._drag_prefire_event_count = 0
-        self._hashes_to_thumbnails_waiting_to_be_drawn: dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
-        self._hashes_faded = set()
+        
+        self._media_to_thumbnails = {} # associates medias with their Thumbnails (which are Qt GraphicsItems and live in the QGraphicsScene)
+        self._possibly_visible_thumbnails = set() # this is a quick cache-like thing to keep a list of thumbnails that might be in the viewport, for animation/drawing purposes
+        
+        # this should come from the application settings, and then the page's own settings (so each page can have its separate layout),
+        # but for now it's hardcoded
+        # leaving a few options here commented out for demo purposes
+        self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.MasonryLayout( ClientGUIThumbnailLayouts.MasonryLayout.VariableDimension.HEIGHT )
+        #self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.MasonryLayout( ClientGUIThumbnailLayouts.MasonryLayout.VariableDimension.WIDTH )
+        #self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.RegularGridLayout()
+        
+        self._last_animation_update_time = HydrusTime.GetNowPrecise()
         
         super().__init__( parent, page_key, page_manager, media_results )
         
+        self.visibleRectChanged.connect( self._OnVisibleRectChanged )
+        
         self._my_current_drag_object = None
         
-        self._last_device_pixel_ratio = self.devicePixelRatio()
+        self._ArrangeThumbnails()
         
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        thumbnail_scroll_rate = float( CG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
-        
-        self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
-        
-        self._widget_event_filter = QP.WidgetEventFilter( self.widget() )
-        self._widget_event_filter.EVT_LEFT_DCLICK( self.EventMouseFullScreen )
-        self._widget_event_filter.EVT_MIDDLE_DOWN( self.EventMouseFullScreen )
-        
-        # notice this is on widget, not myself. fails to set up scrollbars if just moved up
-        # there's a job in qt to-do to sort all this out and fix other scroll issues
-        self._widget_event_filter.EVT_SIZE( self.EventResize )
-        
-        self.widget().setMinimumSize( 50, 50 )
-        
-        self._UpdateScrollBars()
+        self._ResetThumbnailScrollSingleStep()
         
         CG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
         CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
@@ -183,26 +80,18 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
         self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
         
+        CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+        
     
-    def _CalculateVisiblePageIndices( self ):
+    def _ArrangeThumbnails( self ):
         
-        y_start = self._GetYStart()
+        new_scene_rect = self._thumbnail_layout.ArrangeThumbnails( self._media_to_thumbnails.values(), self._CollectLayoutParams() )
         
-        earliest_y = y_start
+        self.setSceneRect( new_scene_rect )
         
-        last_y = earliest_y + QP.ScrollAreaVisibleRect( self ).size().height()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
-        
-        first_visible_page_index = earliest_y // page_height
-        
-        last_visible_page_index = last_y // page_height
-        
-        page_indices = list( range( first_visible_page_index, last_visible_page_index + 1 ) )
-        
-        return page_indices
+        # do a forced update here, since even if the visible rect of the scene itself hasn't changed, new thumbs might have appeared / removed ones disappeared
+        # without this newly appearing thumbs on e.g. a download page would not be visible until a scene rect update happens for some other reason
+        self._VisibleRectUpdate( force = True )
         
     
     def _CheckDnDIsOK( self, drag_object ):
@@ -228,356 +117,97 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             self._my_current_drag_object.cancel()
             
             self._my_current_drag_object = None
-            
         
     
-    def _CreateNewDirtyPage( self ):
+    def _CollectLayoutParams( self ) -> ClientGUIThumbnailLayouts.LayoutParams:
         
-        my_width = self.size().width()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        dpr = self.devicePixelRatio()
-        
-        canvas_width = int( my_width * dpr )
-        canvas_height = int( self._num_rows_per_canvas_page * thumbnail_span_height * dpr )
-        
-        canvas_page = CG.client_controller.bitmap_manager.GetQtImage( canvas_width, canvas_height, 32 )
-        
-        canvas_page.setDevicePixelRatio( dpr )
-        
-        self._dirty_canvas_pages.append( canvas_page )
-        
-    
-    def _DeleteAllDirtyPages( self ):
-        
-        self._dirty_canvas_pages = []
-        
-    
-    def _DirtyAllPages( self ):
-        
-        clean_indices = list( self._clean_canvas_pages.keys() )
-        
-        for clean_index in clean_indices:
-            
-            self._DirtyPage( clean_index )
-            
-        
-    
-    def _DirtyPage( self, clean_index ):
-
-        canvas_page = self._clean_canvas_pages[ clean_index ]
-        
-        del self._clean_canvas_pages[ clean_index ]
-        
-        thumbnails = [ thumbnail for ( thumbnail_index, thumbnail ) in self._GetThumbnailsFromPageIndex( clean_index ) ]
-        
-        if len( thumbnails ) > 0:
-            
-            CG.client_controller.thumbnails_cache.CancelWaterfall( self._page_key, thumbnails )
-            
-        
-        self._dirty_canvas_pages.append( canvas_page )
-        
-    
-    def _DrawCanvasPage( self, page_index, canvas_page ):
-        
-        painter = QG.QPainter( canvas_page )
-        
-        new_options = CG.client_controller.new_options
-        
-        bg_colour = self.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-        
-        if HG.thumbnail_debug_mode and page_index % 2 == 0:
-            
-            bg_colour = ClientGUIFunctions.GetLighterDarkerColour( bg_colour )
-            
-        
-        comp_mode = painter.compositionMode()
-        
-        painter.setCompositionMode( QG.QPainter.CompositionMode.CompositionMode_Source )
-        
-        if new_options.GetNoneableString( 'media_background_bmp_path' ) is not None:
-            
-            painter.setBackground( QG.QBrush( QC.Qt.GlobalColor.transparent ) )
-            
-        else: 
-            
-            painter.setBackground( QG.QBrush( bg_colour ) )
-            
-        
-        painter.eraseRect( painter.viewport() )
-        
-        painter.setCompositionMode( comp_mode )
-        
-        #
-        
-        page_thumbnails = self._GetThumbnailsFromPageIndex( page_index )
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        thumbnails_to_render_later = []
-        
-        thumbnail_cache = CG.client_controller.thumbnails_cache
-        
+        thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
+        thumb_width, thumb_height = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
+        thumb_content_width, thumb_content_height = HC.options[ 'thumbnail_dimensions' ]
         thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
-        for ( thumbnail_index, thumbnail ) in page_thumbnails:
-            
-            display_media_result = thumbnail.GetDisplayMediaResult()
-            
-            if display_media_result is None:
-                
-                continue
-                
-            
-            hash = display_media_result.GetHash()
-            
-            if hash in self._hashes_faded and thumbnail_cache.HasThumbnailCached( thumbnail ):
-                
-                self._StopFading( hash )
-                
-                thumbnail_col = thumbnail_index % self._num_columns
-                
-                thumbnail_row = thumbnail_index // self._num_columns
-                
-                x = thumbnail_col * thumbnail_span_width + thumbnail_margin
-                
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
-                
-                painter.drawImage( x, y, thumbnail.GetQtImage( thumbnail, self, self.devicePixelRatio() ) )
-                
-            else:
-                
-                thumbnails_to_render_later.append( thumbnail )
-                
-            
-        
-        if len( thumbnails_to_render_later ) > 0:
-            
-            CG.client_controller.thumbnails_cache.Waterfall( self._page_key, thumbnails_to_render_later )
-            
+        # this is now mostly hardcoded for demo purposes, but should come from:
+        # 1. settings / application-widge defaults
+        # 2. each page could also have some config GUI to change these parameters,
+        #    e.g. would be cool to have a quick zoom slider or something to change zoom, or a switch between horizontal/vertical scrolling etc. 
+        return ClientGUIThumbnailLayouts.LayoutParams(
+            viewport_width = self.viewport().width(),
+            viewport_height = self.viewport().height(),
+            thumb_width = thumb_width,
+            thumb_height = thumb_height,
+            thumb_content_width = thumb_content_width,
+            thumb_content_height = thumb_content_height,
+            thumb_margin_vertical = thumbnail_margin,
+            thumb_margin_horizontal = thumbnail_margin,
+            scene_margin_vertical = 0,
+            scene_margin_horizontal = 0,
+            scroll_direction = ClientGUIThumbnailLayouts.ScrollDirection.HORIZONTAL,
+            content_alignment = QC.Qt.AlignmentFlag.AlignHCenter, # layouts will ignore alignments that don't make sense for them or with the selected scroll direction
+            zoom = 1.0
+        )
         
     
-    def _FadeThumbnails( self, thumbnails ):
+    def _FadeThumbnails( self, media ):
         
-        if len( thumbnails ) == 0:
-            
-            return
-            
+        fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
         
-        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._DirtyAllPages()
-            
-            return
-            
-        
-        now_precise = HydrusTime.GetNowPrecise()
-        
-        for thumbnail in thumbnails:
-            
-            display_media_result = thumbnail.GetDisplayMediaResult()
-            
-            if display_media_result is None:
-                
-                continue
-                
-            
-            try:
-                
-                thumbnail_index = self._sorted_media.index( thumbnail )
-                
-            except HydrusExceptions.DataMissing:
-                
-                # probably means a collect happened during an ongoing waterfall or whatever
-                
-                continue
-                
-            
-            if self._GetPageIndexFromThumbnailIndex( thumbnail_index ) not in self._clean_canvas_pages:
-                
-                continue
-                
-            
-            hash = display_media_result.GetHash()
-            
-            self._hashes_faded.add( hash )
-            
-            self._StopFading( hash )
-            
-            bitmap = thumbnail.GetQtImage( thumbnail, self, self.devicePixelRatio() )
-            
-            fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
+        for m in media:
             
             if fade_thumbnails:
                 
-                thumbnail_draw_object = ThumbnailWaitingToBeDrawnAnimated( hash, thumbnail, thumbnail_index, bitmap )
+                self._media_to_thumbnails[ m ].StartFadeIn()
                 
             else:
                 
-                thumbnail_draw_object = ThumbnailWaitingToBeDrawn( hash, thumbnail, thumbnail_index, bitmap )
+                self._media_to_thumbnails[ m ].update()
                 
             
-            self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ] = thumbnail_draw_object
-            
-        
-        CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
     
-    def _GenerateMediaCollection( self, media_results ):
+    def _IsMediaInRect( self, rect, media ):
         
-        return ThumbnailMediaCollection( self._location_context, media_results )
-        
-    
-    def _GenerateMediaSingle( self, media_result ):
-        
-        return ThumbnailMediaSingle( media_result )
+        return self._media_to_thumbnails[ media ].sceneBoundingRect().intersects( rect )
         
     
-    def _GetMediaCoordinates( self, media ):
+    def _IsMediaSelected( self, media: ClientMedia.Media ) -> bool:
         
-        try: index = self._sorted_media.index( media )
-        except Exception as e: return ( -1, -1 )
+        thumb = self._media_to_thumbnails.get( media )
         
-        row = index // self._num_columns
-        column = index % self._num_columns
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
-        
-        ( x, y ) = ( column * thumbnail_span_width + thumbnail_margin, row * thumbnail_span_height + thumbnail_margin )
-        
-        return ( x, y )
+        if thumb is not None:
+            
+            return thumb.isSelected()
+            
+        return False
         
     
-    def _GetPageIndexFromThumbnailIndex( self, thumbnail_index ):
+    def _MaintainMediaAssociatedGraphics( self, media ):
         
-        thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
-        
-        page_index = thumbnail_index // thumbnails_per_page
-        
-        return page_index
-        
-    
-    def _GetThumbnailSpanDimensions( self ):
-        
-        thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
-        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
-        
-        return ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( thumbnail_border + thumbnail_margin ) * 2 )
-        
-    
-    def _GetThumbnailUnderMouse( self, mouse_event ):
-        
-        pos = mouse_event.position().toPoint()
-        
-        x = pos.x()
-        y = pos.y()
-        
-        ( t_span_x, t_span_y ) = self._GetThumbnailSpanDimensions()
-        
-        x_mod = x % t_span_x
-        y_mod = y % t_span_y
-        
-        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
-        
-        if x_mod <= thumbnail_margin or y_mod <= thumbnail_margin or x_mod > t_span_x - thumbnail_margin or y_mod > t_span_y - thumbnail_margin:
+        for m in media:
             
-            return None
-            
-        
-        column_index = x // t_span_x
-        row_index = y // t_span_y
-        
-        if column_index >= self._num_columns:
-            
-            return None
-            
-        
-        thumbnail_index = self._num_columns * row_index + column_index
-        
-        if thumbnail_index < 0:
-            
-            return None
-            
-        
-        if thumbnail_index >= len( self._sorted_media ):
-            
-            return None
-            
-        
-        return self._sorted_media[ thumbnail_index ]
-        
-    
-    def _GetThumbnailsFromPageIndex( self, page_index ):
-        
-        num_thumbnails_per_page = self._num_columns * self._num_rows_per_canvas_page
-        
-        start_index = num_thumbnails_per_page * page_index
-        
-        if start_index <= len( self._sorted_media ):
-            
-            end_index = min( len( self._sorted_media ), start_index + num_thumbnails_per_page )
-            
-            thumbnails = [ ( index, self._sorted_media[ index ] ) for index in range( start_index, end_index ) ]
-            
-        else:
-            
-            thumbnails = []
-            
-        
-        return thumbnails
-        
-    
-    def _MediaIsInCleanPage( self, thumbnail ):
-        
-        try:
-            
-            index = self._sorted_media.index( thumbnail )
-            
-        except HydrusExceptions.DataMissing:
-            
-            return False
-            
-        
-        if self._GetPageIndexFromThumbnailIndex( index ) in self._clean_canvas_pages:
-            
-            return True
-            
-        else:
-            
-            return False
+            if not m in self._sorted_media: # not in media list anymore -> was removed, so we need to remove the corresponding thumbnail
+                
+                thumb = self._media_to_thumbnails.get( m )
+                
+                if thumb is not None:
+                    
+                    self.scene().removeItem( thumb )
+                    self._possibly_visible_thumbnails.discard( thumb )
+                    del self._media_to_thumbnails[ m ]
+                    
+                
+            elif not m in self._media_to_thumbnails: # new media, make thumbnail
+                
+                thumb = Thumbnail( m, self )
+                self._media_to_thumbnails[ m ] = thumb
+                self.scene().addItem( thumb )
+                
             
         
     
-    def _MediaIsVisible( self, media ):
+    def _MediaToUseWhenMovingFocus( self ):
         
-        if media is not None:
-            
-            ( x, y ) = self._GetMediaCoordinates( media )
-            
-            visible_rect = QP.ScrollAreaVisibleRect( self )
-            
-            visible_rect_y = visible_rect.y()
-            
-            visible_rect_height = visible_rect.height()
-            
-            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-            
-            bottom_edge_below_top_of_view = visible_rect_y < y + thumbnail_span_height
-            top_edge_above_bottom_of_view = y < visible_rect_y + visible_rect_height
-            
-            is_visible = bottom_edge_below_top_of_view and top_edge_above_bottom_of_view
-            
-            return is_visible
-            
-        
-        return True
-        
-    
-    def _MoveThumbnailFocus( self, rows, columns, shift ):
+        media_to_use = None
+        next_best = False
         
         if self._last_hit_media is not None:
             
@@ -587,34 +217,16 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             media_to_use = self._next_best_media_if_focuses_removed
             
-            if columns == -1: # treat it as if the focused area is between this and the next
-                
-                columns = 0
-                
+            next_best = True
             
         elif len( self._sorted_media ) > 0:
             
             media_to_use = self._sorted_media[ 0 ]
             
-        else:
-            
-            media_to_use = None
-            
+        return media_to_use, next_best
         
-        if media_to_use is not None:
-            
-            try:
-                
-                current_position = self._sorted_media.index( media_to_use )
-                
-            except HydrusExceptions.DataMissing:
-                
-                self._SetFocusedMedia( None )
-                
-                return
-                
-            
-            new_position = current_position + columns + ( self._num_columns * rows )
+    
+    def _MoveThumbnailFocus( self, new_position, shift ):
             
             if new_position < 0:
                 
@@ -624,7 +236,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 new_position = len( self._sorted_media ) - 1
                 
-            
             new_media = self._sorted_media[ new_position ]
             
             self._HitMedia( new_media, False, shift )
@@ -635,110 +246,82 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def _NotifyThumbnailsHaveMoved( self ):
         
-        self._DirtyAllPages()
-        
-        self.widget().update()
+        self._ArrangeThumbnails()
         
     
-    def _RecalculateVirtualSize( self, called_from_resize_event = False ):
+    def _OnVisibleRectChanged( self, rect: QC.QRectF ) -> None:
         
-        my_size = QP.ScrollAreaVisibleRect( self ).size()
+        # Update the list of possibly visible items
         
-        my_width = my_size.width()
-        my_height = my_size.height()
+        # Leave some additional safety margin for extreme situations like if we decide to paint outside the bounding rect of a thumbnail in its paint function (which kinda works),
+        # or some other unforeseen circumstance
+        SAFETY_MARGIN_PX = 64 # 512
         
-        if my_width > 0 and my_height > 0:
+        rect = rect.marginsAdded( QC.QMarginsF( SAFETY_MARGIN_PX, SAFETY_MARGIN_PX, SAFETY_MARGIN_PX, SAFETY_MARGIN_PX ) )
+        
+        new_possibly_visible_thumbnails = set( self.scene().items( rect, QC.Qt.ItemSelectionMode.IntersectsItemBoundingRect ) )
+        
+        no_longer_visible_thumbnails = self._possibly_visible_thumbnails.difference( new_possibly_visible_thumbnails )
+        
+        for thumb in no_longer_visible_thumbnails:
             
-            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+            thumb.possibly_visible = False
             
-            num_media = len( self._sorted_media )
+        
+        thumbnails_cache = CG.client_controller.thumbnails_cache
+        
+        thumbnails_cache.CancelWaterfall( self._page_key, [ thumb._media for thumb in no_longer_visible_thumbnails ] )
+        
+        self._possibly_visible_thumbnails = new_possibly_visible_thumbnails
+        
+        waterfall_needed = []
+        
+        for thumb in self._possibly_visible_thumbnails:
             
-            num_rows = max( 1, num_media // self._num_columns )
+            thumb.possibly_visible = True
             
-            if num_media % self._num_columns > 0:
+            if not thumbnails_cache.HasThumbnailCached( thumb._media, thumb._GetContentSize() ):
                 
-                num_rows += 1
-                
-            
-            virtual_width = my_width
-            
-            virtual_height = num_rows * thumbnail_span_height
-            
-            yUnit = self.verticalScrollBar().singleStep()
-            
-            excess = virtual_height % yUnit
-            
-            if excess > 0: # we want virtual height to fit exactly into scroll units, even if that puts some padding below bottom row
-                
-                top_up = yUnit - excess
-                
-                virtual_height += top_up
-                
-            
-            virtual_height = max( virtual_height, my_height )
-            
-            MAX_HEIGHT = getattr( QW, 'QWIDGETSIZE_MAX', 16777215 ) # 2^24-1
-            
-            if virtual_height > MAX_HEIGHT:
-                
-                global WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING
-                
-                if not WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING:
-                    
-                    # set true before showing the dialog, or the new event loop will allow more pages in session I think to spam the error
-                    WE_HAVE_SHOWN_THE_MAX_VIRTUAL_HEIGHT_WARNING = True
-                    
-                    if self.isVisible():
-                        
-                        message = 'Hey, it looks like this thumbnail view'
-                        
-                    else:
-                        
-                        message = 'Hey, it looks like one of the thumbnail views on a page not currently in view'
-                        
-                    
-                    message += f' is very very very tall. I want to make it {HydrusNumbers.ToHumanInt( virtual_height )} pixels tall, but Qt only supports a max virtual scroll height of {HydrusNumbers.ToHumanInt( MAX_HEIGHT )} pixels.'
-                    message += '\n\n'
-                    message += 'This page will handle ctrl+a and do its math correct (albeit slowly!), but you will not be able to scroll down all the way. This situation is probably not stable and you should rethink your query (e.g. adding a system:limit and doing the job in batches) before there is a real problem.'
-                    message += '\n\n'
-                    message += 'To stop spam, this message will only show one time per program boot. The error may happen again, silently.'
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, message )
-                    
+                waterfall_needed.append( thumb._media )
                 
             
-            virtual_size = QC.QSize( virtual_width, virtual_height )
+        if waterfall_needed:
             
-            if virtual_size != self.widget().size():
-                
-                self.widget().resize( QC.QSize( virtual_width, virtual_height ) )
-                
-                if not called_from_resize_event:
-                    
-                    self._UpdateScrollBars() # would lead to infinite recursion if called from a resize event
-                    
-                
+            thumbnails_cache.Waterfall( self._page_key, waterfall_needed )
             
         
     
-    def _RedrawMedia( self, thumbnails ):
+    def _RedrawMedia( self, media ):
         
-        visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._MediaIsInCleanPage( thumbnail ) ]
+        visible_thumbs = []
+        
+        for m in media:
+            
+            thumb = self._media_to_thumbnails[ m ]
+            
+            if thumb.possibly_visible:
+                
+                visible_thumbs.append( thumb )
+                
+            else:
+                
+                thumb.Invalidate() # not currently visible, but when it will become visible we'll want it to be redrawn
+                
         
         thumbnails_cache = CG.client_controller.thumbnails_cache
         
         thumbnails_to_render_now = []
         thumbnails_to_render_later = []
         
-        for thumbnail in visible_thumbnails:
+        for thumb in visible_thumbs:
             
-            if thumbnails_cache.HasThumbnailCached( thumbnail ):
+            if thumbnails_cache.HasThumbnailCached( thumb._media, thumb._GetContentSize() ):
                 
-                thumbnails_to_render_now.append( thumbnail )
+                thumbnails_to_render_now.append( thumb._media )
                 
             else:
                 
-                thumbnails_to_render_later.append( thumbnail )
+                thumbnails_to_render_later.append( thumb._media )
                 
             
         
@@ -750,46 +333,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         if len( thumbnails_to_render_later ) > 0:
             
             thumbnails_cache.Waterfall( self._page_key, thumbnails_to_render_later )
-            
-        
-    
-    def _ReinitialisePageCacheIfNeeded( self ):
-        
-        old_num_rows = self._num_rows_per_canvas_page
-        old_num_columns = self._num_columns
-        
-        old_width = self._last_size.width()
-        old_height = self._last_size.height()
-        
-        my_size = QP.ScrollAreaVisibleRect( self ).size()
-        
-        my_width = my_size.width()
-        my_height = my_size.height()
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        num_rows = ( my_height // thumbnail_span_height )
-        
-        self._num_rows_per_actual_page = max( 1, num_rows )
-        self._num_rows_per_canvas_page = max( 1, num_rows // 2 )
-        
-        self._num_columns = max( 1, my_width // thumbnail_span_width )
-        
-        dimensions_changed = old_width != my_width or old_height != my_height
-        thumb_layout_changed = old_num_columns != self._num_columns or old_num_rows != self._num_rows_per_canvas_page
-        
-        if dimensions_changed or thumb_layout_changed:
-            
-            width_got_bigger = old_width < my_width
-            
-            if thumb_layout_changed or width_got_bigger:
-                
-                self._DirtyAllPages()
-                
-                self._DeleteAllDirtyPages()
-                
-            
-            self.widget().update()
             
         
     
@@ -807,17 +350,13 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         
         self._EndShiftSelect()
         
-        self._RecalculateVirtualSize()
-        
-        self._DirtyAllPages()
+        self._ArrangeThumbnails()
         
         self._PublishSelectionChange()
         
         CG.client_controller.pub( 'refresh_page_name', self._page_key )
         
         CG.client_controller.pub( 'notify_new_pages_count' )
-        
-        self.widget().update()
         
     
     def _ScrollEnd( self, shift = False ):
@@ -844,64 +383,50 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
+    def _SetMediaSelected( self, media: ClientMedia.Media, selected: bool ) -> None:
+        
+        thumb = self._media_to_thumbnails.get( media )
+        
+        if thumb is not None:
+            
+            thumb.setSelected( selected )
+            
+        
+    
     def _ScrollToMedia( self, media ):
         
-        if media is not None:
-            
-            ( x, y ) = self._GetMediaCoordinates( media )
-            
-            visible_rect = QP.ScrollAreaVisibleRect( self )
-            
-            visible_rect_y = visible_rect.y()
-            
-            visible_rect_height = visible_rect.height()
-            
-            ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-            
-            new_options = CG.client_controller.new_options
-            
-            percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
-            
-            if y < visible_rect_y:
-                
-                self.ensureVisible( 0, y, 0, 0 )
-                
-            elif y > visible_rect_y + visible_rect_height - ( thumbnail_span_height * percent_visible ):
-                
-                self.ensureVisible( 0, y + thumbnail_span_height )
-                
-            
+        thumb = self._media_to_thumbnails.get( media )
         
-    
-    def _StopFading( self, hash ):
+        if thumb is None: return
         
-        if hash in self._hashes_to_thumbnails_waiting_to_be_drawn:
+        thumb_pos = thumb.scenePos()
+        
+        percent_visible = CG.client_controller.new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
+        
+        visible_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
+        
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_layout.ThumbnailSpanDimensions( thumb )
+        
+        ensure_x = thumb_pos.x()
+        ensure_y = thumb_pos.y()
+        
+        if thumb_pos.y() < visible_rect.y():
             
-            del self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
+            pass
             
-        
-    
-    def _UpdateBackgroundColour( self ):
-        
-        super()._UpdateBackgroundColour()
-        
-        self._DirtyAllPages()
-        
-        self._DeleteAllDirtyPages()
-        
-        self.widget().update()
-        
-    
-    def _UpdateScrollBars( self ):
-        
-        # The following call is officially a no-op since this property is already true, but it also triggers an update
-        # of the scroll area's scrollbars which we need.
-        # We need this since we are intercepting & doing work in resize events which causes
-        # event propagation between the scroll area and the scrolled widget to not work properly (since we are suppressing resize events of the scrolled widget - otherwise we would get an infinite loop).
-        # Probably the best would be to change how this work and not intercept any resize events.
-        # Originally this was wx event handling which got ported to Qt more or less unchanged, hence the hackiness.
-        
-        self.setWidgetResizable( True )
+        elif thumb_pos.y() > visible_rect.y() + visible_rect.height() - thumbnail_span_height * percent_visible:
+            
+            ensure_y = thumb_pos.y() + thumbnail_span_height
+            
+        if thumb_pos.x() < visible_rect.x():
+            
+            pass
+            
+        elif thumb_pos.x() > visible_rect.x() + visible_rect.width() - thumbnail_span_width * percent_visible:
+            
+            ensure_x = thumb_pos.x() + thumbnail_span_width
+            
+        self.ensureVisible( ensure_x, ensure_y, 0, 0 )
         
     
     def AddMediaResults( self, page_key, media_results ):
@@ -912,7 +437,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             if len( thumbnails ) > 0:
                 
-                self._RecalculateVirtualSize()
+                self._ArrangeThumbnails()
                 
                 CG.client_controller.thumbnails_cache.Waterfall( self._page_key, thumbnails )
                 
@@ -944,7 +469,56 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
     
-    def DoMouseMoveEvent( self, event ):
+    def CleanBeforeDestroy( self ):
+        
+        CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+        
+        # explicitly clear all references to thumbnail objects just in case, don't want any hanging around
+        self._media_to_thumbnails.clear()
+        CG.client_controller.thumbnails_cache.CancelWaterfall( self._page_key, [ thumb._media for thumb in self._possibly_visible_thumbnails ] )
+        self._possibly_visible_thumbnails.clear()
+        self.scene().clear()
+        
+        super().CleanBeforeDestroy()
+        
+    
+    def ShowMediaFullScreen( self, media ):
+        
+        if media is not None:
+            
+            locations_manager = media.GetLocationsManager()
+            
+            if locations_manager.IsLocal():
+                
+                self._LaunchMediaViewer( media )
+                
+            else:
+                
+                can_download = not locations_manager.GetCurrent().isdisjoint( CG.client_controller.services_manager.GetRemoteFileServiceKeys() )
+                
+                if can_download:
+                    
+                    self._DownloadHashes( media.GetHashes() )
+                    
+                
+            
+        
+    
+    def MaintainPageCache( self ):
+        
+        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
+            
+            # TODO
+            # I'm really not sure this is a good idea - fiddling with QGraphicsView's internal caching mechanism might hurt more than help...
+            # On the other hand, it CAN consume quite a bit of memory, but when exactly to clean caches is probably important for performance.
+            # Should decide based on real-world usage experience and a more through reading of the QGraphicsView docs, I leave it commented out for now.
+            # There are also some cache-related APIs on QGraphicsView (e.g. setCacheMode) that might be worth taking a look at in the future. 
+            # self.resetCachedContent()
+            pass
+            
+        
+    
+    def mouseMoveEvent( self, event ):
         
         if event.buttons() & QC.Qt.MouseButton.LeftButton:
             
@@ -1010,37 +584,197 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         event.ignore()
         
     
-    def EventMouseFullScreen( self, event ):
+    def mousePressEvent( self, event: QG.QMouseEvent ):
         
-        t = self._GetThumbnailUnderMouse( event )
+        # Mouse presses on graphics items will be handled by the items themselves so we are only interested in presses on the empty area here
+        if event.button() != QC.Qt.MouseButton.RightButton and self.itemAt( event.pos() ) is None:
+            
+            self._HitMedia( None, event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier, event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier )
+            
+            return
+            
         
-        if t is not None:
+        QW.QGraphicsView.mousePressEvent( self, event )
+        
+    
+    def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
+        
+        if len( medias ) == 0:
             
-            locations_manager = t.GetLocationsManager()
+            return
             
-            if locations_manager.IsLocal():
-                
-                self._LaunchMediaViewer( t )
-                
-            else:
-                
-                can_download = not locations_manager.GetCurrent().isdisjoint( CG.client_controller.services_manager.GetRemoteFileServiceKeys() )
-                
-                if can_download:
-                    
-                    self._DownloadHashes( t.GetHashes() )
-                    
-                
+        
+        super().MoveMedia( medias, insertion_index )
+        
+        self._NotifyThumbnailsHaveMoved()
+        
+        self._ScrollToMedia( medias[0] )
+        
+    
+    def NewThumbnails( self, hashes ):
+        
+        affected_thumbnails = self._GetMedia( hashes )
+        
+        if len( affected_thumbnails ) > 0:
+            
+            self._RedrawMedia( affected_thumbnails )
             
         
     
-    def EventResize( self, event ):
+    def NotifyFilesNeedRedraw( self, hashes ):
         
-        self._ReinitialisePageCacheIfNeeded()
+        affected_media = self._GetMedia( hashes )
         
-        self._RecalculateVirtualSize( called_from_resize_event = True )
+        for m in affected_media:
+            
+            self._media_to_thumbnails[ m ].Invalidate()
+            
         
-        self._last_size = QP.ScrollAreaVisibleRect( self ).size()
+        self._RedrawMedia( affected_media )
+        
+    
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        if command.IsSimpleCommand():
+            
+            action = command.GetSimpleAction()
+            
+            if action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                
+                ( move_direction, selection_status ) = command.GetSimpleData()
+                
+                shift = selection_status == CAC.SELECTION_STATUS_SHIFT
+                
+                if move_direction in ( CAC.MOVE_HOME, CAC.MOVE_END ):
+                    
+                    if move_direction == CAC.MOVE_HOME:
+                        
+                        self._ScrollHome( shift )
+                        
+                    else: # MOVE_END
+                        
+                        self._ScrollEnd( shift )
+                        
+                    
+                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
+                    
+                    if move_direction == CAC.MOVE_PAGE_UP:
+                        
+                        direction = -1
+                        
+                    else: # MOVE_PAGE_DOWN
+                        
+                        direction = 1
+                        
+                    focus_media, _ = self._MediaToUseWhenMovingFocus()
+                    
+                    if focus_media:
+                        
+                        scene_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
+                        media_index = self._sorted_media.index( focus_media )
+                        percent_visible = CG.client_controller.new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
+                        
+                        new_index = self._thumbnail_layout.JumpPage( scene_rect, media_index, direction, percent_visible )
+                        
+                        self._MoveThumbnailFocus( new_index, shift )
+                    
+                else:
+                    
+                    focus_media, is_next_best = self._MediaToUseWhenMovingFocus()
+                    
+                    if focus_media:
+                        
+                        # TODO
+                        # I expanded this check so rows & columns behave symmetrically (previously there was only an equivalent condition for columns i.e. the MOVE_LEFT case inside _MoveThumbnailFocus).
+                        # Symmetric behavior will be important when we have non-uniform grids or grids scrolling horizontally,
+                        # but honestly even after playing around with the original implementation, I still don't fully understand what this is supposed to achieve.
+                        # If this logic weren't needed we could remove this ugly is_next_best return value when determining the focus media...
+                        if is_next_best and ( move_direction == CAC.MOVE_LEFT or move_direction == CAC.MOVE_UP ): # treat it as if the focused area is between this and the next
+                            
+                            pass
+                            
+                        else:
+                            
+                            focus_media_index = self._sorted_media.index( focus_media )
+                            
+                            self._MoveThumbnailFocus( self._thumbnail_layout.MoveFromIndex( focus_media_index, move_direction ), shift )
+                            
+                        
+                    
+                
+            elif action == CAC.SIMPLE_SELECT_FILES:
+                
+                file_filter = command.GetSimpleData()
+                
+                self._Select( file_filter )
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            return super().ProcessApplicationCommand( command )
+            
+        else:
+            
+            return command_processed
+            
+        
+    
+    def RedrawAllThumbnails( self ):
+        
+        for m in self._collected_media:
+            
+            m.RecalcInternals()
+            
+        
+        for media in self._sorted_media:
+            
+            self._media_to_thumbnails[ media ].ClearCachesAndInvalidate()
+            
+        
+        self.scene().update()
+        
+    
+    def resizeEvent( self, event: QG.QResizeEvent ) -> None:
+        
+        super().resizeEvent( event )
+        
+        self._ArrangeThumbnails()
+        
+    
+    def SetFocusedMedia( self, media ):
+        
+        super().SetFocusedMedia( media )
+        
+        if media is None:
+            
+            self._SetFocusedMedia( None )
+            
+        else:
+            
+            try:
+                
+                my_media = self._GetMedia( media.GetHashes() )[0]
+                
+                self._HitMedia( my_media, False, False )
+                
+                self._ScrollToMedia( self._focused_media )
+                
+            except Exception as e:
+                
+                pass
+                
+            
         
     
     def GetMenu( self ) -> QW.QMenu:
@@ -1672,188 +1406,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         return sum( ( m.GetSize() for m in self._sorted_media ) )
         
     
-    def MaintainPageCache( self ):
-        
-        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._DirtyAllPages()
-            
-        
-        self._DeleteAllDirtyPages()
-        
-    
-    def MoveMedia( self, medias: list[ ClientMedia.Media ], insertion_index: int ):
-        
-        if len( medias ) == 0:
-            
-            return
-            
-        
-        super().MoveMedia( medias, insertion_index )
-        
-        self._NotifyThumbnailsHaveMoved()
-        
-        self._ScrollToMedia( medias[0] )
-        
-    
-    def NewThumbnails( self, hashes ):
-        
-        affected_thumbnails = self._GetMedia( hashes )
-        
-        if len( affected_thumbnails ) > 0:
-            
-            self._RedrawMedia( affected_thumbnails )
-            
-        
-    
-    def NotifyFilesNeedRedraw( self, hashes ):
-        
-        affected_media = self._GetMedia( hashes )
-        
-        self._RedrawMedia( affected_media )
-        
-    
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
-        
-        command_processed = True
-        
-        if command.IsSimpleCommand():
-            
-            action = command.GetSimpleAction()
-            
-            if action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
-                
-                ( move_direction, selection_status ) = command.GetSimpleData()
-                
-                shift = selection_status == CAC.SELECTION_STATUS_SHIFT
-                
-                if move_direction in ( CAC.MOVE_HOME, CAC.MOVE_END ):
-                    
-                    if move_direction == CAC.MOVE_HOME:
-                        
-                        self._ScrollHome( shift )
-                        
-                    else: # MOVE_END
-                        
-                        self._ScrollEnd( shift )
-                        
-                    
-                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
-                    
-                    if move_direction == CAC.MOVE_PAGE_UP:
-                        
-                        direction = -1
-                        
-                    else: # MOVE_PAGE_DOWN
-                        
-                        direction = 1
-                        
-                    
-                    self._MoveThumbnailFocus( self._num_rows_per_actual_page * direction, 0, shift )
-                    
-                else:
-                    
-                    if move_direction == CAC.MOVE_LEFT:
-                        
-                        rows = 0
-                        columns = -1
-                        
-                    elif move_direction == CAC.MOVE_RIGHT:
-                        
-                        rows = 0
-                        columns = 1
-                        
-                    elif move_direction == CAC.MOVE_UP:
-                        
-                        rows = -1
-                        columns = 0
-                        
-                    elif move_direction == CAC.MOVE_DOWN:
-                        
-                        rows = 1
-                        columns = 0
-                        
-                    else:
-                        
-                        raise NotImplementedError()
-                        
-                    
-                    self._MoveThumbnailFocus( rows, columns, shift )
-                    
-                
-            elif action == CAC.SIMPLE_SELECT_FILES:
-                
-                file_filter = command.GetSimpleData()
-                
-                self._Select( file_filter )
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        if not command_processed:
-            
-            return super().ProcessApplicationCommand( command )
-            
-        else:
-            
-            return command_processed
-            
-        
-    
-    def RedrawAllThumbnails( self ):
-        
-        self._DirtyAllPages()
-        
-        for m in self._collected_media:
-            
-            m.RecalcInternals()
-            
-        
-        for thumbnail in self._sorted_media:
-            
-            thumbnail.ClearTagSummaryCaches()
-            
-        
-        self.widget().update()
-        
-    
-    def SetFocusedMedia( self, media ):
-        
-        super().SetFocusedMedia( media )
-        
-        if media is None:
-            
-            self._SetFocusedMedia( None )
-            
-        else:
-            
-            try:
-                
-                my_media = self._GetMedia( media.GetHashes() )[0]
-                
-                self._HitMedia( my_media, False, False )
-                
-                self._ScrollToMedia( self._focused_media )
-                
-            except Exception as e:
-                
-                pass
-                
-            
-        
-    
-    def showEvent( self, event ):
-        
-        self._UpdateScrollBars()
-        
-    
     def ShowMenu( self ):
         
         menu = self.GetMenu()
@@ -1873,114 +1425,48 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         self._NotifyThumbnailsHaveMoved()
         
     
-    def ThumbnailsReset( self ):
+    def _ResetThumbnailScrollSingleStep( self ):
         
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
+        # No idea what to do if thumbnail height and/or width isn't constant.
+        # For now, use the "generic"/"average" thumbnail size for this purpose.
+        # This is probably fine...
+        ( thumbnail_span_width, thumbnail_span_height ) = self._thumbnail_layout.ThumbnailSpanDimensions( None )
         
         thumbnail_scroll_rate = float( CG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
-        self._hashes_to_thumbnails_waiting_to_be_drawn = {}
-        self._hashes_faded = set()
+        self.horizontalScrollBar().setSingleStep( int( round( thumbnail_span_width * thumbnail_scroll_rate ) ) )
         
-        self._ReinitialisePageCacheIfNeeded()
+    
+    def ThumbnailsReset( self ):
         
-        self._RecalculateVirtualSize()
+        for m in self._collected_media:
+            
+            m.RecalcInternals()
+            
         
-        self.RedrawAllThumbnails()
+        for media in self._sorted_media:
+            
+            self._media_to_thumbnails[ media ].ClearCachesAndInvalidate()
+            
+        
+        self._ResetThumbnailScrollSingleStep()
+        
+        self._ArrangeThumbnails()
+        
+        self.scene().update()
         
     
     def TIMERAnimationUpdate( self ):
         
-        loop_should_break_time = HydrusTime.GetNowPrecise() + ( FRAME_DURATION_60FPS / 2 )
-        
-        ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
-        
-        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
-        
-        hashes = list( self._hashes_to_thumbnails_waiting_to_be_drawn.keys() )
-        
-        page_indices_to_painters = {}
-        
-        page_height = self._num_rows_per_canvas_page * thumbnail_span_height
-        
-        for hash in HydrusLists.IterateListRandomlyAndFast( hashes ):
+        if HydrusTime.GetNowPrecise() - self._last_animation_update_time < FRAME_DURATION_60FPS: return
             
-            thumbnail_draw_object = self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
+        for thumb in self._possibly_visible_thumbnails:
             
-            delete_entry = False
+            if thumb.is_animating: thumb.AnimationUpdate()
             
-            if thumbnail_draw_object.DrawDue():
-                
-                thumbnail_index = thumbnail_draw_object.thumbnail_index
-                
-                try:
-                    
-                    expected_thumbnail = self._sorted_media[ thumbnail_index ]
-                    
-                except Exception as e:
-                    
-                    expected_thumbnail = None
-                    
-                
-                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
-                
-                if expected_thumbnail != thumbnail_draw_object.thumbnail:
-                    
-                    delete_entry = True
-                    
-                elif page_index not in self._clean_canvas_pages:
-                    
-                    delete_entry = True
-                    
-                else:
-                    
-                    thumbnail_col = thumbnail_index % self._num_columns
-                    
-                    thumbnail_row = thumbnail_index // self._num_columns
-                    
-                    x = thumbnail_col * thumbnail_span_width + thumbnail_margin
-                    
-                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
-                    
-                    if page_index not in page_indices_to_painters:
-                        
-                        canvas_page = self._clean_canvas_pages[ page_index ]
-                        
-                        painter = QG.QPainter( canvas_page )
-                        
-                        page_indices_to_painters[ page_index ] = painter
-                        
-                    
-                    painter = page_indices_to_painters[ page_index ]
-                    
-                    thumbnail_draw_object.DrawToPainter( x, y, painter )
-                    
-                    #
-                    
-                    page_virtual_y = page_height * page_index
-                    
-                    self.widget().update( QC.QRect( x, page_virtual_y + y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
-                    
-                
-            
-            if thumbnail_draw_object.DrawComplete() or delete_entry:
-                
-                del self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
-                
-            
-            if HydrusTime.TimeHasPassedPrecise( loop_should_break_time ):
-                
-                break
-                
-            
-        
-        if len( self._hashes_to_thumbnails_waiting_to_be_drawn ) == 0:
-            
-            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
-            
-        
+        self._last_animation_update_time = HydrusTime.GetNowPrecise()
         
     
     def WaterfallThumbnails( self, page_key, thumbnails ):
@@ -1990,155 +1476,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             self._FadeThumbnails( thumbnails )
             
         
-    
-    class _InnerWidget( QW.QWidget ):
-        
-        def __init__( self, parent: "MediaResultsPanelThumbnails" ):
-            
-            super().__init__( parent )
-            
-            self.setMouseTracking( True )
-            
-            self._parent = parent
-            
-        
-        def mouseMoveEvent( self, event ):
-            
-            self._parent.DoMouseMoveEvent( event )
-            
-        
-        def mousePressEvent( self, event ):
-            
-            # TODO: this is ugly. make it event.pos rather than global mouse pos, but since we are dancing between inner and parent, fix that too
-            self._parent._drag_init_coordinates = ClientGUIFunctions.GetMousePos()
-            self._parent._drag_click_timestamp_ms = HydrusTime.GetNowMS()
-            
-            thumb = self._parent._GetThumbnailUnderMouse( event )
-            
-            right_on_whitespace = event.button() == QC.Qt.MouseButton.RightButton and thumb is None
-            
-            if not right_on_whitespace:
-                
-                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier, event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier )
-                
-            
-            # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
-            
-        
-        def paintEvent( self, event ):
-            
-            try:
-                
-                if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
-                    
-                    self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
-                    
-                    self._parent._DirtyAllPages()
-                    self._parent._DeleteAllDirtyPages()
-                    
-                
-                painter = QG.QPainter( self )
-                
-                ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
-                
-                page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
-                
-                page_indices_to_display = self._parent._CalculateVisiblePageIndices()
-                
-                earliest_page_index_to_display = min( page_indices_to_display )
-                last_page_index_to_display = max( page_indices_to_display )
-                
-                page_indices_to_draw = list( page_indices_to_display )
-                
-                if earliest_page_index_to_display > 0:
-                    
-                    page_indices_to_draw.append( earliest_page_index_to_display - 1 )
-                    
-                
-                page_indices_to_draw.append( last_page_index_to_display + 1 )
-                
-                page_indices_to_draw.sort()
-                
-                potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
-                
-                random.shuffle( potential_clean_indices_to_steal )
-                
-                y_start = self._parent._GetYStart()
-                
-                bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-                
-                painter.setBackground( QG.QBrush( bg_colour ) )
-                
-                painter.eraseRect( painter.viewport() )
-                
-                background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
-                
-                if background_pixmap is not None:
-                    
-                    my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
-                    
-                    pixmap_size = background_pixmap.size()
-                    
-                    painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
-                    
-                
-                for page_index in page_indices_to_draw:
-                    
-                    if page_index not in self._parent._clean_canvas_pages:
-                        
-                        if len( self._parent._dirty_canvas_pages ) == 0:
-                            
-                            if len( potential_clean_indices_to_steal ) > 0:
-                                
-                                index_to_steal = potential_clean_indices_to_steal.pop()
-                                
-                                self._parent._DirtyPage( index_to_steal )
-                                
-                            else:
-                                
-                                self._parent._CreateNewDirtyPage()
-                                
-                            
-                        
-                        canvas_page = self._parent._dirty_canvas_pages.pop()
-                        
-                        self._parent._DrawCanvasPage( page_index, canvas_page )
-                        
-                        self._parent._clean_canvas_pages[ page_index ] = canvas_page
-                        
-                    
-                    if page_index in page_indices_to_display:
-                        
-                        canvas_page = self._parent._clean_canvas_pages[ page_index ]
-                        
-                        page_virtual_y = page_height * page_index
-                        
-                        painter.drawImage( 0, page_virtual_y, canvas_page )
-                        
-                    
-                
-            except Exception as e:
-                
-                ClientGUIExceptionHandling.HandlePaintEventException( self, e )
-                
-            
-        
-    
-
-class Selectable( object ):
-    
-    def __init__( self, *args, **kwargs ):
-        
-        self._selected = False
-        
-        super().__init__( *args, **kwargs )
-        
-    
-    def Deselect( self ): self._selected = False
-    
-    def IsSelected( self ): return self._selected
-    
-    def Select( self ): self._selected = True
     
 
 def ShouldShowRatingInThumbnail( media: ClientMedia.Media, service_key: bytes ) -> bool:
@@ -2193,59 +1530,277 @@ def ShouldShowRatingInThumbnail( media: ClientMedia.Media, service_key: bytes ) 
         
     
 
-class Thumbnail( Selectable ):
+# TODO: should be moved to a separate file but leaving this here for the time being to minimize code changes
+class Thumbnail( QW.QGraphicsItem ):
     
-    def __init__( self, *args, **kwargs ):
+    FADE_DURATION_S = 0.5
+    
+    def __init__( self, media: ClientMedia.Media, panel: MediaResultsPanelThumbnails ):
         
-        super().__init__( *args, **kwargs )
+        super().__init__()
+        
+        self._media = media
+        
+        # These will be accessed by the layouting code
+        # I leave them as properties instead of having a GetResolution() method
+        # to reduce access overhead (the layouting code is VERY performance-sensitive for more complex layouts if the number of thumbnails is large)
+        # TODO: what if the media has no/weird/invalid resolution values? This is not handled currently, as it is not appearent to me
+        # what all the possibilites are or if this is even a problem.
+        # Probably easy enough to handle by using default thumb size or something here if no proper resolution is available.
+        # TODO: what if the media resolution changes? Is that possible? Invalidate() already re-sets this at least but this is untested.
+        self.res_x, self.res_y = media.GetResolution()
+        
+        self._view = panel
+        
+        self.setAcceptHoverEvents( True )
+        
+        # right now we do not really utilize the QGraphicsView/Scene functionality related to these flags,
+        # and just use the selected state for our own purposes, not the scene/view's own selecting/moving handling
+        # but this is ok. these functionalities could get used in the future
+        self.setFlag( QW.QGraphicsItem.GraphicsItemFlag.ItemIsMovable )
+        self.setFlag( QW.QGraphicsItem.GraphicsItemFlag.ItemIsSelectable )
+        
+        # # be SUPER careful to keep the thumb width/height as integers (when setting them in the layouting code or elsewhere),
+        # otherwise caching etc. will be fucked cause the stored width/height won't be exactly the same as the final thumb pixmap's (integer) width/height
+        # if width here somehow becomes 100.325 then everything will seem to work but the QPixmap will have width=100, so width != pixmap.width() and all checks
+        # based on this (like in paint()) are fucked
+        self.width: int = 0 # these will be set by the layouting code. perf sensitive access!!
+        self.height: int = 0
+        
+        # these are not as perf. sensitive as the res_x,y stuff above simply because there should be less thumbnails updated at a time when these change
+        # so some setter/getters COULD be used and be fine, I think
+        # But for the time being I think leaving it a simple bool variable is fine too.
+        self.possibly_visible = False
+        self.is_animating = False
+        
+        self._is_hovered = False
+        self._is_pressed = False
         
         self._last_tags = None
         
         self._last_upper_summary = None
         self._last_lower_summary = None
         
+        self._fade_in_started_at = None
+        
+        # Yes, this is another level of caching but I find it helps with performance, although investigating how big is the performance (vs. memory) hit really would be worth it.
+        # In addition to the image in the ThumbnailCache this already has the borders, tags, etc. drawn on it too and also it already in QPixmap format for fast painting!
+        # So overall we have the ThumbnailCache + caching the pixmap here + whatever Qt caches in QGraphicsView
+        # this is not quite as bad as it sounds, since in the old implementation with the manual "paging", the
+        # thumbs were also stored in the ThumbnailCache and also painted onto those "page" bitmaps and this basically replaces that...
+        # But if memory usage seems to be higher with the new impl. I would try not using this guy first.
+        # I do think that the whole thumbnail caching system should be revised from the ground-up eventually so it is better suited to the QGraphicsView/Scene
+        self._cached_pixmap = None
+        
+        self._cached_old_pixmap_for_fade = None
+        
     
-    def ClearTagSummaryCaches( self ):
+    def AnimationUpdate( self ):
         
-        self._last_tags = None
-        
-        self._last_upper_summary = None
-        self._last_lower_summary = None
-        
-    
-    def GetQtImage( self, media: ClientMedia.Media, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel, device_pixel_ratio ) -> QG.QImage:
-        
-        # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
-        # or just give the qt_image to be drawn to?
-        # or just give a painter and a rect and draw to that or something
-        # we don't really want to mess around with DPR here, we just want to draw thumbs
-        # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
-        
-        display_media_result = media.GetDisplayMediaResult()
-        
-        if display_media_result is None:
+        if not self.possibly_visible or not self.is_animating:
             
-            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
+            return
+        
+        self.update()
+        
+    
+    def boundingRect( self ) -> QC.QRectF:
+        
+        return QC.QRectF( 0, 0, self.width, self.height )
+        
+    
+    def ClearCachesAndInvalidate( self ):
+        
+        self._last_tags = None
+        
+        self._last_upper_summary = None
+        self._last_lower_summary = None
+        
+        self.Invalidate()
+        
+    
+    def hoverEnterEvent( self, event: QW.QGraphicsSceneHoverEvent ) -> None:
+        
+        self._is_hovered = True
+        
+        super().hoverEnterEvent( event )
+        
+    
+    def hoverLeaveEvent( self, event: QW.QGraphicsSceneHoverEvent ) -> None:
+        
+        self._is_hovered = False
+        
+        super().hoverLeaveEvent( event )
+        
+    
+    def hoverMoveEvent( self, event: QW.QGraphicsSceneHoverEvent ) -> None:
+        
+        super().hoverMoveEvent( event )
+        
+    
+    def Invalidate( self ) -> None:
+        
+        self.res_x, self.res_y = self._media.GetResolution() # TODO see the comment on these in __init__
+        
+        self._cached_pixmap = None
+        self._cached_old_pixmap_for_fade = None
+        
+    
+    def mouseDoubleClickEvent( self, event: QW.QGraphicsSceneMouseEvent ) -> None:
+        
+        self._view.ShowMediaFullScreen( self._media )
+        
+    
+    def mousePressEvent( self, event: QW.QGraphicsSceneMouseEvent ) -> None:
+        
+        self._is_pressed = True
+        
+        self._view._drag_init_coordinates = QG.QCursor.pos()
+        self._view._drag_click_timestamp_ms = HydrusTime.GetNowMS()
+        
+        if event.buttons() == QC.Qt.MouseButton.MiddleButton:
+            
+            self._view.ShowMediaFullScreen( self._media )
             
         else:
             
-            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetThumbnail( display_media_result )
+            # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
+            self._view._HitMedia( self._media, event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier, event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier )
             
+        
+    
+    def mouseReleaseEvent( self, event: QW.QGraphicsSceneMouseEvent ) -> None:
+        
+        self._is_pressed = False
+        
+    
+    def paint( self, painter: QG.QPainter, option: QW.QStyleOptionGraphicsItem, widget: QW.QWidget = None ) -> None:
+        
+        if not self._cached_pixmap or self.width != self._cached_pixmap.width() or self.height != self._cached_pixmap.height():
+            
+            if not CG.client_controller.thumbnails_cache.HasThumbnailCached( self._media, self._GetContentSize() ):
+                
+                painter.fillRect( self.boundingRect(), QC.Qt.GlobalColor.transparent )
+                
+                # TODO is this really OK? I guess this is the way to tell the cache to plz load the thumbnail but without blocking in the paint event
+                CG.client_controller.thumbnails_cache.Waterfall( self._view._page_key, ( self._media, ) )
+                
+                # TODO what if fade is not enabled? I think we don't need to check here for that since then StartFadeIn would never be called and
+                #_ cached_old_pixmap_for_fade would be None. Right??
+                if self._cached_old_pixmap_for_fade: # fade-in in progress, draw the old image first if available
+                    
+                    # if the size of the thumb changed in the meantime then probably don't want to draw
+                    if self.width == self._cached_old_pixmap_for_fade.width() and self.height == self._cached_old_pixmap_for_fade.height():
+                        
+                        painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
+                        
+                    
+                
+                return
+                
+            cached_image = QG.QImage( self.width, self.height, QG.QImage.Format.Format_ARGB32_Premultiplied )
+            
+            cached_image.setDevicePixelRatio( painter.device().devicePixelRatio() )
+            
+            cached_image.fill( QC.Qt.GlobalColor.transparent )
+            
+            image_painter = QG.QPainter( cached_image )
+            
+            self._PaintThumbnailContent( image_painter, self._media, self._view )
+            
+            image_painter.end()
+            
+            self._cached_pixmap = QG.QPixmap.fromImage( cached_image )
+            
+        
+        fade_opacity = self.GetFadeInOpacity()
+        
+        if fade_opacity < 1.0 and self._cached_old_pixmap_for_fade: # fade-in in progress, draw the old image first if available
+            
+            # if the size of the thumb changed in the meantime then probably don't want to draw
+            if self.width == self._cached_old_pixmap_for_fade.width() and self.height == self._cached_old_pixmap_for_fade.height():
+                
+                painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
+                
+            
+        
+        painter.setOpacity( fade_opacity )
+        
+        painter.drawPixmap( 0, 0, self._cached_pixmap )
+        
+    
+    def StartFadeIn( self ):
+        
+        # Instead of managing the opacity ourselves here and in paint(),
+        # we could just use QGraphicsItem::setOpacity and update that value in AnimationUpdate().
+        # However, that would cause the opacity value to get stuck when the item leaves the visible area,
+        # since we stop calling AnimationUpdate() then.
+        # So when it re-enters the visible area, it would still have the previous opacity value
+        # until the next AnimationUpdate().
+        # Could work around by revising the 'possibly visible' thumbnail tracking logic a bit,
+        # but other animations will most likely not have such nice corresponding properties anyway so
+        # if we want more animations in the future we won't be able to avoid having to roll our own logic.
+        # Nevermind actually I'm not sure about that, the scene/view stuff does have a whole system for animations afterall,
+        # so maybe we should take a harder look at that for future animations before rolling our own.
+        
+        self._fade_in_started_at = HydrusTime.GetNowPrecise()
+        
+        self._cached_old_pixmap_for_fade = self._cached_pixmap
+        self._cached_pixmap = None
+        
+        self.is_animating = True
+        
+        self.update()
+        
+    
+    def GetFadeInOpacity( self ) -> float:
+        
+        if self._fade_in_started_at is None: return 1.0
+            
+        passed = HydrusTime.GetNowPrecise() - self._fade_in_started_at
+        
+        if passed >= self.FADE_DURATION_S:
+            
+            self._fade_in_started_at = None
+            
+            self._cached_old_pixmap_for_fade = None
+            
+            self.is_animating = False # now this is great that the only possible animation we have is the fading but if in the future we have multiple types we can't just set it to False here
+            
+            return 1.0
+            
+        else:
+            
+            return passed / self.FADE_DURATION_S # linear transition from 0 to 1 opacity, maybe some other easing curve would look better?
+            
+        
+    def _GetContentSize( self ) -> tuple[int, int]:
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         
-        ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
+        # now if self.width/height haven't been set (by the layouting code) by this time we will be in for a lot of pain when this returns negative values,
+        # but since that happens in the layouting code at the same place where we make this thumb visible,
+        # before that the thumb should be hidden so none of the painting-related functions that need this should be called at all
+        # maybe return None or something in that case here? at least that would be easier to catch if it somehow happens anyway
+        return ( self.width - thumbnail_border * 2, self.height - thumbnail_border * 2 )
         
-        qt_image_width = int( width * device_pixel_ratio )
+    
+    def _PaintThumbnailContent( self, painter: QG.QPainter, media: ClientMedia.Media, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ) -> None:
         
-        qt_image_height = int( height * device_pixel_ratio )
+        thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         
-        qt_image = CG.client_controller.bitmap_manager.GetQtImage( qt_image_width, qt_image_height, 24 )
+        content_size = self._GetContentSize()
         
-        qt_image.setDevicePixelRatio( device_pixel_ratio )
+        if media.GetDisplayMedia() is None:
+            
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusSpecialThumbnail( content_size )
+            
+        else:
+            
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetThumbnail( media.GetDisplayMedia().GetMediaResult(), content_size )
+            
         
-        # TODO: obviously this is the lynchpin of remaining ugly rewrites. we want to re-wangle this guy out of the Media system and broadly decouple this knot entirely
-        # Step one I am doing is fixing the linting by passing the Media object as an explicit param rather than asking self.HasInbox() etc.., despite that Media secretly being self
+        ( width, height ) = self.width, self.height
         
         inbox = media.HasInbox()
         
@@ -2285,8 +1840,6 @@ class Thumbnail( Selectable ):
         # UPDATE 3a: Qt 6.4.x did not magically fix it. It draws much nicer, but still a different font weight/metrics compared to media viewer background, say.
         # The PreferAntialias flag on 6.4.x seems to draw very very close to our ideal, so let's be happy with it for now.
         
-        painter = QG.QPainter( qt_image )
-        
         painter.setRenderHint( QG.QPainter.RenderHint.TextAntialiasing, True ) # is true already in tests, is supposed to be 'the way' to fix the ugly text issue
         painter.setRenderHint( QG.QPainter.RenderHint.Antialiasing, True ) # seems to do nothing, it only affects primitives?
         painter.setRenderHint( QG.QPainter.RenderHint.SmoothPixmapTransform, True ) # makes the thumb QImage scale up and down prettily when we need it, either because it is too small or DPR gubbins
@@ -2295,7 +1848,7 @@ class Thumbnail( Selectable ):
         
         if not local:
             
-            if self._selected:
+            if self.isSelected():
                 
                 background_colour_type = CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED
                 
@@ -2306,7 +1859,7 @@ class Thumbnail( Selectable ):
             
         else:
             
-            if self._selected:
+            if self.isSelected():
                 
                 background_colour_type = CC.COLOUR_THUMB_BACKGROUND_SELECTED
                 
@@ -2317,7 +1870,6 @@ class Thumbnail( Selectable ):
             
         
         # the painter isn't getting QSS style from the qt_image, we need to set the font explitly to get font size changes from QSS etc..
-        
         f = QG.QFont( CG.client_controller.gui.font() )
         
         # this line magically fixes the bad text, as above
@@ -2354,7 +1906,7 @@ class Thumbnail( Selectable ):
             HydrusData.ShowText( f'Failed to render thumbnail for file {hash_hex}!' )
             HydrusData.ShowException( e, do_wait = False )
             
-            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusPlaceholderThumbnail()
+            thumbnail_hydrus_bmp = CG.client_controller.thumbnails_cache.GetHydrusSpecialThumbnail( content_size )
             
             raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
             
@@ -2463,7 +2015,7 @@ class Thumbnail( Selectable ):
             
             if not local:
                 
-                if self._selected:
+                if self.isSelected():
                     
                     border_colour_type = CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED
                     
@@ -2474,7 +2026,7 @@ class Thumbnail( Selectable ):
                 
             else:
                 
-                if self._selected:
+                if self.isSelected():
                     
                     border_colour_type = CC.COLOUR_THUMB_BORDER_SELECTED
                     
@@ -2803,23 +2355,5 @@ class Thumbnail( Selectable ):
             
             top_left_x += icon_to_draw.width() + ( ICON_MARGIN * 2 )
             
-        
-        return qt_image
-        
-    
-
-# TODO: This is another area of OOD inheritance garbage. just rewrite the whole damn thing, stop trying to do everything in one class, decouple and you'll lose the linter freakout over GetQtImage's references and related __init__ headaches
-class ThumbnailMediaCollection( Thumbnail, ClientMediaList.MediaCollection ):
-    
-    def __init__( self, location_context, media_results ):
-        
-        super().__init__( location_context, media_results )
-        
-    
-class ThumbnailMediaSingle( Thumbnail, ClientMediaSingle.MediaSingle ):
-    
-    def __init__( self, media_result ):
-        
-        super().__init__( media_result )
         
     

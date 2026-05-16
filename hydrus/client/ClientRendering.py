@@ -1180,6 +1180,17 @@ class HydrusBitmap( ClientCachesBase.CacheableObject ):
         return self._depth
         
     
+    def GetNumpyImage( self ):
+        
+        arr = numpy.frombuffer( self._GetData(), dtype = numpy.uint8 )
+        
+        # Restore original shape: ( y, x, depth )
+        width, height = self._size
+        depth = self._depth
+        
+        return arr.reshape( ( height, width, depth ) )
+        
+    
     def GetQtImage( self ) -> QG.QImage:
         
         ( width, height ) = self._size

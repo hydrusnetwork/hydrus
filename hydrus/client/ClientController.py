@@ -2670,7 +2670,7 @@ class Controller( HydrusController.HydrusController ):
                 return
                 
             
-            thumbnail = self.thumbnails_cache.GetThumbnail( display_media_result )
+            thumbnail = self.thumbnails_cache.GetThumbnail( display_media_result, ( 0, 0 ) ) # using default thumbnail size here
             
             qt_image = thumbnail.GetQtImage().copy()
             

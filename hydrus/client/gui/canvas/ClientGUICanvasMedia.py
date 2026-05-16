@@ -3273,7 +3273,7 @@ class OpenExternallyPanel( QW.QWidget ):
             
             if display_media_result is not None:
                 
-                qt_pixmap = CG.client_controller.thumbnails_cache.GetThumbnail( display_media_result ).GetQtPixmap()
+                qt_pixmap = CG.client_controller.thumbnails_cache.GetThumbnail( display_media_result, ( 0, 0 ) ).GetQtPixmap() # use default thumbnail size here for now, maybe None (aka whatever size is on the disk) would be better?
                 
                 thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 

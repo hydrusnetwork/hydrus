@@ -63,7 +63,7 @@ if HC.PLATFORM_MACOS:
         
     
 
-class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.MediaList, QW.QScrollArea ):
+class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.MediaList, QW.QGraphicsView ):
     
     selectedMediaTagPresentationChanged = QC.Signal( list, bool, bool )
     selectedMediaTagPresentationIncremented = QC.Signal( list )
@@ -78,6 +78,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     
     filesAdded = QC.Signal( list )
     filesRemoved = QC.Signal( list )
+    
+    visibleRectChanged = QC.Signal( QC.QRectF )
     
     def __init__( self, parent, page_key, page_manager: ClientGUIPageManager.PageManager, media_results ):
         
@@ -96,6 +98,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         self._page_key = page_key
         self._page_manager = page_manager
         
+        self._last_visible_rect = None
+        
         # TODO: Assuming the canvas listeningmedialist refactoring went well, this guy is next
         # take out the class inheritance, instead create a (non-listening) self._media_list, and fix all method calls to self._GetFirst and so on to instead point at that
         # rewrite process(content/service)updates to update the list as needed
@@ -106,20 +110,24 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         # obviously decouple the list from the panel here so we aren't trying to do everything in one class
         super().__init__( self._page_manager.GetLocationContext(), media_results, parent )
         
+        self.setScene( QW.QGraphicsScene( self ) )
+        
+        self.scene().sceneRectChanged.connect( self._VisibleRectUpdate )
+        
+        self.setAlignment( QC.Qt.AlignmentFlag.AlignLeft | QC.Qt.AlignmentFlag.AlignTop ) # alignment of scene within viewport (if scene smaller than viewport)
+        
+        self._MaintainMediaAssociatedGraphics( self._sorted_media )
+        
         self.setObjectName( 'HydrusMediaList' )
         
         self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self.setLineWidth( 2 )
         
-        self.resize( QC.QSize( 20, 20 ) )
-        self.setWidget( QW.QWidget( self ) )
-        self.setWidgetResizable( True )
-        
-        self._UpdateBackgroundColour()
-        
         self._vertical_scrollbar_pos_on_hide = None
+        self._horizontal_scrollbar_pos_on_hide = None
         
         self.verticalScrollBar().setSingleStep( 50 )
+        self.horizontalScrollBar().setSingleStep( 50 )
         
         self._focused_media = None
         self._last_hit_media = None
@@ -136,9 +144,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         self._had_changes_to_tag_presentation_while_hidden = False
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'media', 'thumbnails' ] )
-        
-        self.setWidget( self._InnerWidget( self ) )
-        self.setWidgetResizable( True )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
@@ -301,7 +306,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         if len( media_to_deselect ) > 0:
             
-            for m in media_to_deselect: m.Deselect()
+            for m in media_to_deselect: self._SetMediaSelected( m, False )
             
             self._RedrawMedia( media_to_deselect )
             
@@ -310,7 +315,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         if len( media_to_select ) > 0:
             
-            for m in media_to_select: m.Select()
+            for m in media_to_select: self._SetMediaSelected( m, True )
             
             self._RedrawMedia( media_to_select )
             
@@ -683,27 +688,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         return ( sorted_mime_descriptor, selected_mime_descriptor )
         
     
-    def _GetYStart( self ):
-        
-        visible_rect = QP.ScrollAreaVisibleRect( self )
-        
-        visible_rect_y = visible_rect.y()
-        
-        visible_rect_height = visible_rect.height()
-        
-        my_virtual_size = self.widget().size()
-        
-        my_virtual_height = my_virtual_size.height()
-        
-        max_y = my_virtual_height - visible_rect_height
-        
-        y_start = max( 0, visible_rect_y )
-        
-        y_start = min( y_start, max_y )
-        
-        return y_start
-        
-    
     def _HasFocusSingleton( self ) -> bool:
         
         try:
@@ -733,7 +717,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             if ctrl and not shift:
                 
-                if media.IsSelected():
+                if self._IsMediaSelected( media ):
                     
                     self._DeselectSelect( ( media, ), () )
                     
@@ -790,7 +774,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                 
                 media_to_deselect = [ m for m in self._media_added_in_current_shift_select if m not in media_from_start_of_shift_to_end ]
-                media_to_select = [ m for m in media_from_start_of_shift_to_end if not m.IsSelected() ]
+                media_to_select = [ m for m in media_from_start_of_shift_to_end if not self._IsMediaSelected( m ) ]
                 
                 self._media_added_in_current_shift_select.difference_update( media_to_deselect )
                 self._media_added_in_current_shift_select.update( media_to_select )
@@ -822,7 +806,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                 
             else:
                 
-                if not media.IsSelected():
+                if not self._IsMediaSelected( media ):
                     
                     self._DeselectSelect( self._selected_media, ( media, ) )
                     
@@ -860,6 +844,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ) )
             
+        
+    
+    def _IsMediaSelected( self, media: ClientMedia.Media ) -> bool:
+        
+        return False
         
     
     def _LaunchMediaViewer( self, first_media = None ):
@@ -955,6 +944,15 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             # It is important for stability/deadlock purposes that we create a new canvas not in the same event as when we unwind preview viewer and such
             CG.client_controller.CallAfterQtSafe( self, do_it )
             
+        
+    
+    def _MaintainMediaAssociatedGraphics( self, media ):
+
+        # Individual media may have some kind of graphical objects (widgets, graphics items, etc.) representing them.
+        # This is the function where the media <-> graphical representation association should be maintained,
+        # i.e. remove graphics objects that belong to media no longer in the media list, or add new ones for newly added media.
+        # This is about removing or adding stuff, merely rearranging media should not require calling this.
+        pass
         
     
     def _ManageNotes( self ):
@@ -1058,7 +1056,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
-    def _MediaIsVisible( self, media ):
+    def _IsMediaInRect( self, rect, media ):
         
         return True
         
@@ -1250,11 +1248,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
-    def _RecalculateVirtualSize( self, called_from_resize_event = False ):
-        
-        pass
-        
-    
     def _RedrawMedia( self, media ):
         
         pass
@@ -1362,6 +1355,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         super()._RemoveMediaDirectly( singleton_media, collected_media )
         
+        self._MaintainMediaAssociatedGraphics( singleton_media )
+        self._MaintainMediaAssociatedGraphics( collected_media )
+        
         flat_media = list( singleton_media ) + ClientMediaList.FlattenMedia( collected_media )
         
         hashes = [ m.GetHash() for m in flat_media ]
@@ -1421,8 +1417,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             else:
                 
                 # let's not focus if one of the selectees is already visible
-                
-                media_visible = True in ( self._MediaIsVisible( media ) for media in self._selected_media )
+                current_view_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
+                media_visible = True in ( self._IsMediaInRect( current_view_rect, media ) for media in self._selected_media )
                 
                 if not media_visible:
                     
@@ -1878,6 +1874,11 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
+    def _SetMediaSelected( self, media: ClientMedia.Media, selected: bool ) -> None:
+        
+        pass
+        
+    
     def _ScrollToMedia( self, media ):
         
         pass
@@ -1919,7 +1920,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     
     def _UpdateBackgroundColour( self ):
         
-        self.widget().update()
+        self.update()
         
     
     def _UploadDirectory( self, file_service_key ):
@@ -1957,6 +1958,18 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
+    def _VisibleRectUpdate( self, force: bool = False ):
+            
+            visible_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
+            
+            if force or self._last_visible_rect != visible_rect:
+                
+                self._last_visible_rect = visible_rect
+                
+                self.visibleRectChanged.emit( visible_rect )
+                
+            
+        
     def AddMediaResults( self, page_key, media_results ):
         
         if page_key == self._page_key:
@@ -1964,6 +1977,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             CG.client_controller.pub( 'refresh_page_name', self._page_key )
             
             new_media = ClientMediaList.MediaList.AddMediaResults( self, media_results )
+            
+            self._MaintainMediaAssociatedGraphics( new_media )
             
             self.newMediaAdded.emit()
             
@@ -1977,6 +1992,33 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
         return []
+        
+    
+    def drawBackground( self, painter: QG.QPainter, rect: QC.QRectF ) -> None:
+        
+        try:
+            
+            bg_colour = self.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            
+            painter.setBackground( QG.QBrush( bg_colour ) )
+            
+            painter.eraseRect( rect )
+            
+            background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+            
+            if background_pixmap is not None:
+                
+                my_size = self.viewport().rect().size()
+                
+                pixmap_size = background_pixmap.size()
+                
+                painter.drawPixmap( rect.x() + my_size.width() - pixmap_size.width(), rect.y() + my_size.height() - pixmap_size.height(), background_pixmap )
+                
+            
+        except Exception as e:
+            
+            ClientGUIExceptionHandling.HandlePaintEventException( self, e )
+            
         
     
     def CleanBeforeDestroy( self ):
@@ -1995,7 +2037,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         ClientMediaList.MediaList.Collect( self, media_collect = media_collect )
         
-        self._RecalculateVirtualSize()
+        self._MaintainMediaAssociatedGraphics( self._sorted_media )
         
         self.Sort()
         
@@ -2054,6 +2096,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     def PageHidden( self ):
         
         self._vertical_scrollbar_pos_on_hide = self.verticalScrollBar().value()
+        self._horizontal_scrollbar_pos_on_hide = self.horizontalScrollBar().value()
         
     
     def PageShown( self ):
@@ -2063,6 +2106,10 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         if self._vertical_scrollbar_pos_on_hide is not None:
             
             self.verticalScrollBar().setValue( self._vertical_scrollbar_pos_on_hide )
+            
+        if self._horizontal_scrollbar_pos_on_hide is not None:
+            
+            self.horizontalScrollBar().setValue( self._horizontal_scrollbar_pos_on_hide )
             
         
     
@@ -2649,20 +2696,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         ClientMediaList.MediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         
-        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
-            
-            for service_update in service_updates:
-                
-                ( action, row ) = service_update.ToTuple()
-                
-                if action in ( HC.SERVICE_UPDATE_DELETE_PENDING, HC.SERVICE_UPDATE_RESET ):
-                    
-                    self._RecalculateVirtualSize()
-                    
-                
-                self._PublishSelectionChange( tags_changed = True )
-                
-            
+        self._PublishSelectionChange( tags_changed = True )
         
     
     def PublishSelectionChange( self ):
@@ -2673,6 +2707,13 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     def RemoveMedia( self, hashes ):
         
         self._RemoveMediaByHashes( hashes )
+        
+    
+    def resizeEvent( self, event: QG.QResizeEvent ) -> None:
+        
+        super().resizeEvent( event )
+        
+        self._VisibleRectUpdate()
         
     
     def SelectByTags( self, page_key, tag_service_key, and_or_or, tags ):
@@ -2700,6 +2741,32 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     def SetFocusedMedia( self, media ):
         
         pass
+        
+    
+    def scrollContentsBy( self, dx: int, dy: int ):
+        
+        super().scrollContentsBy( dx, dy )
+        
+        self._VisibleRectUpdate()
+        
+    
+    def showEvent( self, event: QG.QShowEvent ) -> None:
+        
+        super().showEvent( event )
+        
+        self._VisibleRectUpdate()
+        
+    
+    def viewportEvent( self, event: QC.QEvent ) -> bool:
+        
+        event_result = super().viewportEvent( event )
+        
+        if event.type() in ( QC.QEvent.Type.Resize, QC.QEvent.Type.UpdateRequest, QC.QEvent.Type.Paint, QC.QEvent.Type.LayoutRequest ):
+            
+            self._VisibleRectUpdate()
+            
+        
+        return event_result
         
     
     def get_hmrp_background( self ):
@@ -2801,43 +2868,4 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
     hmrp_thumbnail_not_local_background_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_background_selected, set_hmrp_thumbnail_not_local_background_selected )
     hmrp_thumbnail_not_local_border_normal = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_border_normal, set_hmrp_thumbnail_not_local_border_normal )
     hmrp_thumbnail_not_local_border_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_border_selected, set_hmrp_thumbnail_not_local_border_selected )
-    
-    class _InnerWidget( QW.QWidget ):
-        
-        def __init__( self, parent: "MediaResultsPanel" ):
-            
-            super().__init__( parent )
-            
-            self._parent = parent
-            
-        
-        def paintEvent( self, event ):
-            
-            try:
-                
-                painter = QG.QPainter( self )
-                
-                bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-                
-                painter.setBackground( QG.QBrush( bg_colour ) )
-                
-                painter.eraseRect( painter.viewport() )
-                
-                background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
-                
-                if background_pixmap is not None:
-                    
-                    my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
-                    
-                    pixmap_size = background_pixmap.size()
-                    
-                    painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
-                    
-                
-            except Exception as e:
-                
-                ClientGUIExceptionHandling.HandlePaintEventException( self, e )
-                
-            
-        
     

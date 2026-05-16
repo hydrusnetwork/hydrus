@@ -3612,7 +3612,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
         ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
-        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
         ClientGUIMenus.AppendSeparator( debug_modes )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'allow crashy files in mpv', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors.', HG.mpv_allow_crashy_files, self._FlipMPVCrashHandling )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'allow crashy files in mpv (and silence errors)', 'Disable the crash handling that unloads files from mpv when they raise certain fatal errors and do not notify the user when it happens.', HG.mpv_allow_crashy_files_silently, self._FlipMPVSilentCrashHandling )
@@ -7038,10 +7037,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'subscription_report_mode':
             
             HG.subscription_report_mode = not HG.subscription_report_mode
-            
-        elif name == 'thumbnail_debug_mode':
-            
-            HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
             
         elif name == 'force_idle_mode':
             
