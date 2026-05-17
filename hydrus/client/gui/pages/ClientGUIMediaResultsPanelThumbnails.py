@@ -77,9 +77,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
-        self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
-        self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
-        
         CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
     
@@ -743,6 +740,28 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
         
         self.scene().update()
+        
+    
+    def contextMenuEvent( self, event ) -> None:
+        
+        super().contextMenuEvent( event )
+        
+        # This is not nice and I tried a lot of things here to make both the context menu of the view work, while
+        # the Thumbnails still receive & handle mouse events but ultimately only this hack worked out.
+        # The problem is something like that the right click event makes the item you are clicking on become the "mouse grabber" item,
+        # and somehow exec'ing the menu messes up the event loop or some internal state, so after you close the menu,
+        # the item is still the mouse grabber item and the next mouse click (that could be on another item), goes to the mouse grabber item instead,
+        # and a further mouse click is required to then select a new item.
+        # This expliticly "ungrabs" the mouse, so when the context menu closes there is no mouse grabber, and so any items can receive the next click.
+        # One thing I did not try and could be tried is instead of all this, handling the showing of the context menu in the item's context menu handler (that is currently not used).
+        if self.scene().mouseGrabberItem():
+            
+            self.scene().mouseGrabberItem().ungrabMouse()
+            
+        if event.type() == QC.QEvent.Type.ContextMenu:
+            
+            self.ShowMenu()
+            
         
     
     def resizeEvent( self, event: QG.QResizeEvent ) -> None:
@@ -1413,11 +1432,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
         CGC.core().PopupMenu( self, menu )
         
     
-    def ShowMenuFromSignal( self, pos ):
-        
-        self.ShowMenu()
-        
-    
     def Sort( self, media_sort = None ):
         
         super().Sort( media_sort )
@@ -1650,6 +1664,8 @@ class Thumbnail( QW.QGraphicsItem ):
         
         self._view.ShowMediaFullScreen( self._media )
         
+        super().mouseDoubleClickEvent( event )
+        
     
     def mousePressEvent( self, event: QW.QGraphicsSceneMouseEvent ) -> None:
         
@@ -1668,10 +1684,14 @@ class Thumbnail( QW.QGraphicsItem ):
             self._view._HitMedia( self._media, event.modifiers() & QC.Qt.KeyboardModifier.ControlModifier, event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier )
             
         
+        super().mousePressEvent( event )
+        
     
     def mouseReleaseEvent( self, event: QW.QGraphicsSceneMouseEvent ) -> None:
         
         self._is_pressed = False
+        
+        super().mouseReleaseEvent( event )
         
     
     def paint( self, painter: QG.QPainter, option: QW.QStyleOptionGraphicsItem, widget: QW.QWidget = None ) -> None:
