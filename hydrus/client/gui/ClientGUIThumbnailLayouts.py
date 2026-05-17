@@ -317,6 +317,22 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
         
         else:
             
+            # we can only align horizontally the items in a row after a row is completed,
+            # since we don't know the width all the items are taking up ahead of time due to the variable width items
+            def set_row_alignment( row_items, current_col_pos ):
+                
+                row_extra_left_padding = 0
+                if params.content_alignment == QC.Qt.AlignmentFlag.AlignRight:
+                    
+                    row_extra_left_padding = self._viewport_width - current_col_pos
+                    
+                elif params.content_alignment == QC.Qt.AlignmentFlag.AlignHCenter:
+                    
+                    row_extra_left_padding = ( self._viewport_width - current_col_pos ) / 2
+                                    
+                for item in row_items: item.setPos(item.pos().x() + row_extra_left_padding, item.pos().y())
+                
+            
             current_col_pos = 0
             max_row_width = 0
             row_items = []
@@ -332,21 +348,16 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
                 self._thumb_heights[ i ] = th
                 
                 if current_col_pos + params.thumb_margin_horizontal + thumb.width > self._viewport_width:
+                    
                     row += 1
+                    
                     if current_col_pos > max_row_width: max_row_width = current_col_pos
-                    row_extra_left_padding = 0
-                    if params.content_alignment == QC.Qt.AlignmentFlag.AlignRight:
-                        
-                        row_extra_left_padding = self._viewport_width - current_col_pos
-                        
-                    elif params.content_alignment == QC.Qt.AlignmentFlag.AlignHCenter:
-                        
-                        row_extra_left_padding = ( self._viewport_width - current_col_pos ) / 2
-                        
+                    
+                    set_row_alignment( row_items, current_col_pos )
+                    row_items = []
+                    
                     current_col_pos = params.thumb_margin_horizontal
                     
-                    for item in row_items: item.setPos(item.pos().x() + row_extra_left_padding, item.pos().y())
-                    row_items = []
                 
                 thumb.setPos( params.scene_margin_horizontal + current_col_pos, params.scene_margin_vertical + params.thumb_margin_vertical + row * self._row_height )
                 row_items.append(thumb)
@@ -354,6 +365,8 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
                 current_col_pos += params.thumb_margin_horizontal + thumb.width
                 i += 1
                 
+            
+            if row_items: set_row_alignment( row_items, current_col_pos ) # do not forget the last row!
             
         
         if self._variable_dimension == MasonryLayout.VariableDimension.HEIGHT:
@@ -391,14 +404,9 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
             
             raise NotImplementedError()
             
-        if self._params is None or self._params.scroll_direction == ScrollDirection.VERTICAL:
-            
-            return original_index + rows_moved * self._thumbs_in_a_row + cols_moved
-            
-        else:
-            
-            return original_index + rows_moved + cols_moved * self._thumbs_in_a_col
-            
+        
+        return original_index + rows_moved * self._thumbs_in_a_row + cols_moved
+        
         
     
     def JumpPage( self, scene_rect: QC.QRectF, media_index: int, direction: int, percent_visible: float ) -> int:
