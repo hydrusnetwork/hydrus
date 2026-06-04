@@ -55,6 +55,7 @@ CLIENT_API_BYTE_PARAMS = {
     'hash',
     'destination_page_key',
     'page_key',
+    'page_of_pages_key',
     'service_key',
     'Hydrus-Client-API-Access-Key',
     'Hydrus-Client-API-Session-Key',

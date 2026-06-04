@@ -40,6 +40,7 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking.api import ClientLocalServer
+from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchPredicate
@@ -6432,6 +6433,178 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+    def _test_manage_pages_new_page( self, connection, set_up_permissions ):
+
+        api_permissions = set_up_permissions[ 'manage_pages' ]
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+
+        class MockPage:
+
+            def __init__( self, page_manager, page_name ):
+
+                self._page_key = os.urandom( 32 )
+                self._page_manager = page_manager
+                self._page_name = page_name
+
+
+            def GetPageKey( self ):
+
+                return self._page_key
+
+
+            def GetPageManager( self ):
+
+                return self._page_manager
+
+
+            def GetName( self ):
+
+                return self._page_name
+
+
+
+        class MockNotebook:
+
+            def NewPage( self, page_manager, initial_hashes = None, forced_insertion_index = None, on_deepest_notebook = False, select_page = True ):
+
+                return MockPage( page_manager, page_manager.GetPageName() )
+
+
+            def NewPagesNotebook( self, name = 'pages', forced_insertion_index = None, on_deepest_notebook = False, give_it_a_blank_page = True, select_page = True ):
+
+                from hydrus.client.gui.pages import ClientGUIPagesCore
+
+                class MockPagesNotebookPageManager:
+
+                    def GetType( self ):
+
+                        return ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES
+
+
+                return MockPage( MockPagesNotebookPageManager(), name )
+
+
+            def GetPageFromPageKey( self, page_key ):
+
+                return None
+
+
+
+        mock_notebook = MockNotebook()
+
+        with mock.patch.object( TG.test_controller, 'GetTopLevelNotebook', return_value = mock_notebook, create = True ):
+
+            path = '/manage_pages/new_page'
+
+            #
+            # PAGE_TYPE_QUERY
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'my query page',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+
+            connection.request( 'POST', path, body = request_body, headers = headers )
+
+            response = connection.getresponse()
+
+            data = response.read()
+
+            self.assertEqual( response.status, 200 )
+
+            text = str( data, 'utf-8' )
+
+            d = json.loads( text )
+
+            page_key_from_response = d[ 'page_key' ]
+
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'my query page' )
+
+            #
+            # PAGE_TYPE_PAGE_OF_PAGES
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES,
+                'page_name' : 'my sub-notebook',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+
+            connection.request( 'POST', path, body = request_body, headers = headers )
+
+            response = connection.getresponse()
+
+            data = response.read()
+
+            self.assertEqual( response.status, 200 )
+
+            text = str( data, 'utf-8' )
+
+            d = json.loads( text )
+
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES )
+            self.assertEqual( d[ 'page_name' ], 'my sub-notebook' )
+
+            #
+            # PAGE_TYPE_IMPORT_URLS
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS,
+                'page_name' : 'my urls page',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+
+            connection.request( 'POST', path, body = request_body, headers = headers )
+
+            response = connection.getresponse()
+
+            data = response.read()
+
+            self.assertEqual( response.status, 200 )
+
+            text = str( data, 'utf-8' )
+
+            d = json.loads( text )
+
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
+            self.assertEqual( d[ 'page_name' ], 'my urls page' )
+
+            #
+            # PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER (no page_name arg passed)
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER,
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+
+            connection.request( 'POST', path, body = request_body, headers = headers )
+
+            response = connection.getresponse()
+
+            data = response.read()
+
+            self.assertEqual( response.status, 200 )
+
+            text = str( data, 'utf-8' )
+
+            d = json.loads( text )
+
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER )
+
+
     def _test_manage_pages_media_viewers( self, connection, set_up_permissions ):
         
         api_permissions = set_up_permissions[ 'manage_pages' ]
@@ -8698,6 +8871,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_headers( connection, set_up_permissions )
         self._test_manage_pages_media_viewers( connection, set_up_permissions )
+        self._test_manage_pages_new_page( connection, set_up_permissions )
         self._test_manage_pages( connection, set_up_permissions )
         self._test_search_files( connection, set_up_permissions )
         
