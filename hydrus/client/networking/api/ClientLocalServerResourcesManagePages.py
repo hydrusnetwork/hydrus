@@ -210,6 +210,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         tags = request.parsed_request_args.GetValue( 'tags', list, default_value = [] )
         file_service_key = request.parsed_request_args.GetValueOrNone( 'file_service_key', bytes )
+        tag_service_key = request.parsed_request_args.GetValueOrNone( 'tag_service_key', bytes )
         hashes = request.parsed_request_args.GetValue( 'hashes', list, default_value = [] )
         service_key = request.parsed_request_args.GetValueOrNone( 'service_key', bytes )
         paths = request.parsed_request_args.GetValue( 'paths', list, default_value = [] )
@@ -230,6 +231,11 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             raise HydrusExceptions.BadRequestException( 'Sorry, did not understand that sort type!' )
             
         
+        if tag_service_key is not None:
+            
+            ClientLocalServerCore.CheckTagService( tag_service_key )
+            
+        
         if len( tags ) > 0:
             
             predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( request )
@@ -239,7 +245,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             predicates = []
             
         
-        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces ):
+        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces ):
             
             root_notebook = CG.client_controller.gui.GetTopLevelNotebook()
             
@@ -267,7 +273,10 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                     location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
                     
                 
-                tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+                if tag_service_key is None:
+                    
+                    tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
+                    
                 
                 tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )
                 
@@ -386,7 +395,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         try:
             
-            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces )
+            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces )
             
         except HydrusExceptions.DataMissing as e:
             

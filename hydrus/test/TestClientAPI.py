@@ -6629,6 +6629,28 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_name' ], 'namespace sort page' )
 
             #
+            # PAGE_TYPE_QUERY with tag service key
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'tag service page',
+                'tags' : [ 'title:serpent ring' ],
+                'tag_service_key' : CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex(),
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'tag service page' )
+
+            #
             # PAGE_TYPE_QUERY with collect by tag
 
             request_dict = {
