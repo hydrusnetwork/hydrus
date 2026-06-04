@@ -6672,6 +6672,65 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_name' ], 'collect page' )
 
             #
+            # PAGE_TYPE_QUERY with hashes (no tags)
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'hashes page',
+                'hashes' : [ os.urandom( 32 ).hex() ],
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'hashes page' )
+
+            #
+            # PAGE_TYPE_QUERY with hashes + system_hash_locked
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'locked hashes page',
+                'hashes' : [ os.urandom( 32 ).hex() ],
+                'system_hash_locked' : True,
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'locked hashes page' )
+
+            #
+            # system_hash_locked without hashes should error
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'bad lock',
+                'system_hash_locked' : True,
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 400 )
+
+            #
             # Both file_sort_type and file_sort_namespaces should error
 
             request_dict = {

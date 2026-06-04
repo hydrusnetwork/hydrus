@@ -211,7 +211,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         tags = request.parsed_request_args.GetValue( 'tags', list, default_value = [] )
         file_service_key = request.parsed_request_args.GetValueOrNone( 'file_service_key', bytes )
         tag_service_key = request.parsed_request_args.GetValueOrNone( 'tag_service_key', bytes )
-        hashes = request.parsed_request_args.GetValue( 'hashes', list, default_value = [] )
+        hashes = ClientLocalServerCore.ParseHashes( request, optional = True )
         service_key = request.parsed_request_args.GetValueOrNone( 'service_key', bytes )
         paths = request.parsed_request_args.GetValue( 'paths', list, default_value = [] )
         delete_after_success = request.parsed_request_args.GetValue( 'delete_after_success', bool, default_value = False )
@@ -220,6 +220,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         file_sort_asc = request.parsed_request_args.GetValueOrNone( 'file_sort_asc', bool )
         file_sort_namespaces = request.parsed_request_args.GetValueOrNone( 'file_sort_namespaces', list )
         collect_namespaces = request.parsed_request_args.GetValueOrNone( 'collect_namespaces', list )
+        system_hash_locked = request.parsed_request_args.GetValueOrNone( 'system_hash_locked', bool )
         
         if file_sort_type is not None and file_sort_namespaces is not None:
             
@@ -236,6 +237,11 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             ClientLocalServerCore.CheckTagService( tag_service_key )
             
         
+        if system_hash_locked is not None and system_hash_locked and ( hashes is None or len( hashes ) == 0 ):
+            
+            raise HydrusExceptions.BadRequestException( 'system_hash_locked requires hashes to be provided!' )
+            
+        
         if len( tags ) > 0:
             
             predicates = ClientLocalServerCore.ParseClientAPISearchPredicates( request )
@@ -245,7 +251,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             predicates = []
             
         
-        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces ):
+        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked ):
             
             root_notebook = CG.client_controller.gui.GetTopLevelNotebook()
             
@@ -317,7 +323,14 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                     page_manager.SetVariable( 'media_collect', media_collect )
                     
                 
-                page = target_notebook.NewPage( page_manager, initial_hashes = hashes, select_page = False )
+                if system_hash_locked is not None and system_hash_locked:
+                    
+                    page_manager.SetVariable( 'system_hash_locked', True )
+                    page_manager.SetVariable( 'system_hash_locked_syncs_new', True )
+                    page_manager.SetVariable( 'system_hash_locked_syncs_removes', True )
+                    
+                
+                page = target_notebook.NewPage( page_manager, initial_hashes = hashes or [], select_page = False )
                 
             elif page_type == ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES:
                 
@@ -395,7 +408,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         try:
             
-            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces )
+            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked )
             
         except HydrusExceptions.DataMissing as e:
             
