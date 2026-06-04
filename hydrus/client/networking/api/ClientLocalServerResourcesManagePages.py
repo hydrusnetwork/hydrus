@@ -10,7 +10,9 @@ from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUIPagesCore
 from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
+from hydrus.client.media import ClientMediaCollect
 from hydrus.client.media import ClientMediaSort
+from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchTagContext
 from hydrus.core import HydrusExceptions
@@ -215,6 +217,13 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         file_sort_type = request.parsed_request_args.GetValueOrNone( 'file_sort_type', int )
         file_sort_asc = request.parsed_request_args.GetValueOrNone( 'file_sort_asc', bool )
+        file_sort_namespaces = request.parsed_request_args.GetValueOrNone( 'file_sort_namespaces', list )
+        collect_namespaces = request.parsed_request_args.GetValueOrNone( 'collect_namespaces', list )
+        
+        if file_sort_type is not None and file_sort_namespaces is not None:
+            
+            raise HydrusExceptions.BadRequestException( 'Provide either file_sort_type (system sort) or file_sort_namespaces (namespace sort), not both!' )
+            
         
         if file_sort_type is not None and file_sort_type not in CC.SYSTEM_SORT_TYPES:
             
@@ -230,7 +239,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             predicates = []
             
         
-        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc ):
+        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces ):
             
             root_notebook = CG.client_controller.gui.GetTopLevelNotebook()
             
@@ -266,7 +275,18 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                 
                 page_manager = ClientGUIPageManager.CreatePageManagerQuery( page_name or 'files', file_search_context )
                 
-                if file_sort_type is not None:
+                if file_sort_namespaces is not None:
+                    
+                    sort_order = CC.SORT_DESC if file_sort_asc else CC.SORT_ASC
+                    
+                    media_sort = ClientMediaSort.MediaSort(
+                        sort_type = ( 'namespaces', ( tuple( file_sort_namespaces ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ),
+                        sort_order = sort_order
+                    )
+                    
+                    page_manager.SetVariable( 'media_sort', media_sort )
+                    
+                elif file_sort_type is not None:
                     
                     sort_order = CC.SORT_DESC if file_sort_asc else CC.SORT_ASC
                     
@@ -276,6 +296,16 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                     )
                     
                     page_manager.SetVariable( 'media_sort', media_sort )
+                    
+                
+                if collect_namespaces is not None:
+                    
+                    media_collect = ClientMediaCollect.MediaCollect(
+                        namespaces = collect_namespaces,
+                        collect_unmatched = True
+                    )
+                    
+                    page_manager.SetVariable( 'media_collect', media_collect )
                     
                 
                 page = target_notebook.NewPage( page_manager, initial_hashes = hashes, select_page = False )
@@ -356,7 +386,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         try:
             
-            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc )
+            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces )
             
         except HydrusExceptions.DataMissing as e:
             

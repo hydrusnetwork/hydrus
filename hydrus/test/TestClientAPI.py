@@ -6604,6 +6604,68 @@ class TestClientAPI( unittest.TestCase ):
             self.assertIn( 'page_key', d )
             self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER )
 
+            #
+            # PAGE_TYPE_QUERY with namespace sort
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'namespace sort page',
+                'tags' : [ 'title:serpent ring' ],
+                'file_service_key' : '48eb05cfcc855f5cebfcf5df7cef5d6458b6867425fad37684718779536813e7',
+                'file_sort_namespaces' : [ 'series', 'creator', 'title', 'volume', 'chapter', 'page' ],
+                'file_sort_asc' : True,
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'namespace sort page' )
+
+            #
+            # PAGE_TYPE_QUERY with collect by tag
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'collect page',
+                'collect_namespaces' : [ 'series', 'volume', 'page' ],
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
+            self.assertEqual( d[ 'page_name' ], 'collect page' )
+
+            #
+            # Both file_sort_type and file_sort_namespaces should error
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
+                'page_name' : 'bad sort',
+                'file_sort_type' : 0,
+                'file_sort_namespaces' : [ 'series' ],
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 400 )
+
 
     def _test_manage_pages_media_viewers( self, connection, set_up_permissions ):
         
