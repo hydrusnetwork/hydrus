@@ -221,6 +221,8 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         file_sort_namespaces = request.parsed_request_args.GetValueOrNone( 'file_sort_namespaces', list )
         collect_namespaces = request.parsed_request_args.GetValueOrNone( 'collect_namespaces', list )
         system_hash_locked = request.parsed_request_args.GetValueOrNone( 'system_hash_locked', bool )
+        urls = request.parsed_request_args.GetValue( 'urls', list, default_value = [] )
+        url = request.parsed_request_args.GetValueOrNone( 'url', str )
         
         if file_sort_type is not None and file_sort_namespaces is not None:
             
@@ -251,7 +253,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             predicates = []
             
         
-        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked ):
+        def do_it( page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked, urls, url ):
             
             root_notebook = CG.client_controller.gui.GetTopLevelNotebook()
             
@@ -352,17 +354,34 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                 
                 page_manager = ClientGUIPageManager.CreatePageManagerImportURLs( page_name = page_name )
                 
+                if len( urls ) > 0:
+                    
+                    from hydrus.client.importing import ClientImportSimpleURLs
+                    
+                    urls_import: ClientImportSimpleURLs.URLsImport = page_manager.GetVariable( 'urls_import' )
+                    urls_import.PendURLs( urls )
+                    
+                
                 page = target_notebook.NewPage( page_manager, select_page = False )
                 
             elif page_type == ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER:
                 
-                page_manager = ClientGUIPageManager.CreatePageManagerImportMultipleWatcher( page_name = page_name )
+                page_manager = ClientGUIPageManager.CreatePageManagerImportMultipleWatcher( page_name = page_name, url = url )
                 
                 page = target_notebook.NewPage( page_manager, select_page = False )
                 
             elif page_type == ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER:
                 
-                page_manager = ClientGUIPageManager.CreatePageManagerDuplicateFilter( page_name = page_name )
+                if file_service_key is not None:
+                    
+                    location_context = ClientLocation.LocationContext.STATICCreateSimple( file_service_key )
+                    
+                else:
+                    
+                    location_context = None
+                    
+                
+                page_manager = ClientGUIPageManager.CreatePageManagerDuplicateFilter( page_name = page_name, location_context = location_context )
                 
                 page = target_notebook.NewPage( page_manager, select_page = False )
                 
@@ -408,7 +427,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         
         try:
             
-            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked )
+            ( page_key, returned_page_type, returned_page_name ) = CG.client_controller.CallBlockingToQtTLW( do_it, page_type, page_name, page_of_pages_key, focus_page, predicates, file_service_key, tag_service_key, hashes, service_key, paths, delete_after_success, file_sort_type, file_sort_asc, file_sort_namespaces, collect_namespaces, system_hash_locked, urls, url )
             
         except HydrusExceptions.DataMissing as e:
             

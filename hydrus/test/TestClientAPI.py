@@ -6731,6 +6731,120 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( response.status, 400 )
 
             #
+            # PAGE_TYPE_IMPORT_URLS with urls
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS,
+                'page_name' : 'urls with seeds',
+                'urls' : [ 'https://example.com/image1.png', 'https://example.com/image2.png' ],
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
+            self.assertEqual( d[ 'page_name' ], 'urls with seeds' )
+
+            #
+            # PAGE_TYPE_IMPORT_URLS with empty urls
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS,
+                'page_name' : 'empty urls',
+                'urls' : [],
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+
+            #
+            # PAGE_TYPE_IMPORT_MULTIPLE_WATCHER with url
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER,
+                'page_name' : 'my watcher',
+                'url' : 'https://example.com/gallery/page/1',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER )
+            self.assertEqual( d[ 'page_name' ], 'my watcher' )
+
+            #
+            # PAGE_TYPE_IMPORT_MULTIPLE_WATCHER without url (should still work)
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER,
+                'page_name' : 'empty watcher',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+
+            #
+            # PAGE_TYPE_DUPLICATE_FILTER
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER,
+                'page_name' : 'my dupe filter',
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER )
+            self.assertEqual( d[ 'page_name' ], 'my dupe filter' )
+
+            #
+            # PAGE_TYPE_DUPLICATE_FILTER with file_service_key
+
+            request_dict = {
+                'page_type' : ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER,
+                'page_name' : 'filter in service',
+                'file_service_key' : CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY.hex(),
+                'focus_page' : False
+            }
+
+            request_body = json.dumps( request_dict )
+            connection.request( 'POST', path, body = request_body, headers = headers )
+            response = connection.getresponse()
+            data = response.read()
+            self.assertEqual( response.status, 200 )
+            text = str( data, 'utf-8' )
+            d = json.loads( text )
+            self.assertIn( 'page_key', d )
+            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER )
+            self.assertEqual( d[ 'page_name' ], 'filter in service' )
+
+            #
             # Both file_sort_type and file_sort_namespaces should error
 
             request_dict = {
