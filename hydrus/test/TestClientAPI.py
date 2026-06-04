@@ -7307,7 +7307,7 @@ class TestClientAPI( unittest.TestCase ):
         sort_by = kwargs[ 'sort_by' ]
         
         self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
-        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
         
         self.assertIn( 'apply_implicit_limit', kwargs )
         
@@ -7426,7 +7426,7 @@ class TestClientAPI( unittest.TestCase ):
         sort_by = kwargs[ 'sort_by' ]
         
         self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
-        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
         
         self.assertIn( 'apply_implicit_limit', kwargs )
         
@@ -7487,7 +7487,7 @@ class TestClientAPI( unittest.TestCase ):
         sort_by = kwargs[ 'sort_by' ]
         
         self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_IMPORT_TIME ) )
-        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
         
         self.assertIn( 'apply_implicit_limit', kwargs )
         
@@ -7536,7 +7536,7 @@ class TestClientAPI( unittest.TestCase ):
         sort_by = kwargs[ 'sort_by' ]
         
         self.assertEqual( sort_by.sort_type, ( 'system', CC.SORT_FILES_BY_FRAMERATE ) )
-        self.assertEqual( sort_by.sort_order, CC.SORT_DESC )
+        self.assertEqual( sort_by.sort_order, CC.SORT_ASC )
         
         self.assertIn( 'apply_implicit_limit', kwargs )
         

@@ -216,7 +216,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         delete_after_success = request.parsed_request_args.GetValue( 'delete_after_success', bool, default_value = False )
         
         file_sort_type = request.parsed_request_args.GetValueOrNone( 'file_sort_type', int )
-        file_sort_asc = request.parsed_request_args.GetValueOrNone( 'file_sort_asc', bool )
+        file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool, default_value = True )
         file_sort_namespaces = request.parsed_request_args.GetValueOrNone( 'file_sort_namespaces', list )
         collect_namespaces = request.parsed_request_args.GetValueOrNone( 'collect_namespaces', list )
         system_hash_locked = request.parsed_request_args.GetValueOrNone( 'system_hash_locked', bool )

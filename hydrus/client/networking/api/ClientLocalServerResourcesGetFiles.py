@@ -75,12 +75,7 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
                 raise HydrusExceptions.BadRequestException( 'Sorry, did not understand that sort type!' )
                 
             
-            file_sort_asc = False
-            
-            if 'file_sort_asc' in request.parsed_request_args:
-                
-                file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool )
-                
+            file_sort_asc = request.parsed_request_args.GetValue( 'file_sort_asc', bool, default_value = True )
             
             sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
             
