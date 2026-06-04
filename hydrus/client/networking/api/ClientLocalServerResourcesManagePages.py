@@ -207,7 +207,6 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
         page_name = request.parsed_request_args.GetValueOrNone( 'page_name', str )
         page_of_pages_key = request.parsed_request_args.GetValueOrNone( 'page_of_pages_key', bytes )
         focus_page = request.parsed_request_args.GetValue( 'focus_page', bool, default_value = True )
-        
         tags = request.parsed_request_args.GetValue( 'tags', list, default_value = [] )
         file_service_key = request.parsed_request_args.GetValueOrNone( 'file_service_key', bytes )
         tag_service_key = request.parsed_request_args.GetValueOrNone( 'tag_service_key', bytes )
@@ -420,6 +419,11 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
             if focus_page:
                 
                 CG.client_controller.gui.ShowPage( page.GetPageKey() )
+                
+                if hasattr( page, 'SetMediaFocus' ):
+                    
+                    page.SetMediaFocus()
+                    
                 
             
             return ( page.GetPageKey(), page.GetPageManager().GetType(), page.GetName() )

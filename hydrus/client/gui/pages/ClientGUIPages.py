@@ -1233,8 +1233,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 self.setCurrentIndex( new_page_focus )
                 
+                current_page = self.GetCurrentMediaPage()
+                
+                if current_page is not None:
+                    
+                    current_page.SetMediaFocus()
+                    
+                
             
-        
+         
         self.UpdatePreviousPageIndex()
         
         return True
