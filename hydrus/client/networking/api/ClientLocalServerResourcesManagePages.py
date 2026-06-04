@@ -293,7 +293,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                 
                 if file_sort_namespaces is not None:
                     
-                    sort_order = CC.SORT_DESC if file_sort_asc else CC.SORT_ASC
+                    sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
                     
                     media_sort = ClientMediaSort.MediaSort(
                         sort_type = ( 'namespaces', ( tuple( file_sort_namespaces ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ),
@@ -304,7 +304,7 @@ class HydrusResourceClientAPIRestrictedManagePagesNewPage( HydrusResourceClientA
                     
                 elif file_sort_type is not None:
                     
-                    sort_order = CC.SORT_DESC if file_sort_asc else CC.SORT_ASC
+                    sort_order = CC.SORT_ASC if file_sort_asc else CC.SORT_DESC
                     
                     media_sort = ClientMediaSort.MediaSort(
                         sort_type = ( 'system', file_sort_type ),
