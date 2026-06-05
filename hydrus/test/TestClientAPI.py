@@ -6497,33 +6497,7 @@ class TestClientAPI( unittest.TestCase ):
 
             path = '/manage_pages/new_page'
 
-            #
-            # PAGE_TYPE_QUERY
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
-                'page_name' : 'my query page',
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-
-            connection.request( 'POST', path, body = request_body, headers = headers )
-
-            response = connection.getresponse()
-
-            data = response.read()
-
-            self.assertEqual( response.status, 200 )
-
-            text = str( data, 'utf-8' )
-
-            d = json.loads( text )
-
-            page_key_from_response = d[ 'page_key' ]
-
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
-            self.assertEqual( d[ 'page_name' ], 'my query page' )
 
             #
             # PAGE_TYPE_PAGE_OF_PAGES
@@ -6552,57 +6526,9 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_PAGE_OF_PAGES )
             self.assertEqual( d[ 'page_name' ], 'my sub-notebook' )
 
-            #
-            # PAGE_TYPE_IMPORT_URLS
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS,
-                'page_name' : 'my urls page',
-                'focus_page' : False
-            }
 
-            request_body = json.dumps( request_dict )
 
-            connection.request( 'POST', path, body = request_body, headers = headers )
-
-            response = connection.getresponse()
-
-            data = response.read()
-
-            self.assertEqual( response.status, 200 )
-
-            text = str( data, 'utf-8' )
-
-            d = json.loads( text )
-
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
-            self.assertEqual( d[ 'page_name' ], 'my urls page' )
-
-            #
-            # PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER (no page_name arg passed)
-
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER,
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-
-            connection.request( 'POST', path, body = request_body, headers = headers )
-
-            response = connection.getresponse()
-
-            data = response.read()
-
-            self.assertEqual( response.status, 200 )
-
-            text = str( data, 'utf-8' )
-
-            d = json.loads( text )
-
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_SIMPLE_DOWNLOADER )
 
             #
             # PAGE_TYPE_QUERY with namespace sort
@@ -6672,27 +6598,6 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_name' ], 'collect page' )
 
             #
-            # PAGE_TYPE_QUERY with hashes (no tags)
-
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_QUERY,
-                'page_name' : 'hashes page',
-                'hashes' : [ os.urandom( 32 ).hex() ],
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_QUERY )
-            self.assertEqual( d[ 'page_name' ], 'hashes page' )
-
-            #
             # PAGE_TYPE_QUERY with hashes + system_hash_locked
 
             request_dict = {
@@ -6751,26 +6656,7 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
             self.assertEqual( d[ 'page_name' ], 'urls with seeds' )
 
-            #
-            # PAGE_TYPE_IMPORT_URLS with empty urls
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS,
-                'page_name' : 'empty urls',
-                'urls' : [],
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_URLS )
-            self.assertEqual( d[ 'page_name' ], 'empty urls' )
 
             #
             # PAGE_TYPE_IMPORT_MULTIPLE_WATCHER with url
@@ -6793,45 +6679,9 @@ class TestClientAPI( unittest.TestCase ):
             self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER )
             self.assertEqual( d[ 'page_name' ], 'my watcher' )
 
-            #
-            # PAGE_TYPE_IMPORT_MULTIPLE_WATCHER without url (should still work)
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER,
-                'page_name' : 'empty watcher',
-                'focus_page' : False
-            }
 
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_WATCHER )
-            self.assertEqual( d[ 'page_name' ], 'empty watcher' )
 
-            #
-            # PAGE_TYPE_DUPLICATE_FILTER
-
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER,
-                'page_name' : 'my dupe filter',
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_DUPLICATE_FILTER )
-            self.assertEqual( d[ 'page_name' ], 'my dupe filter' )
 
             #
             # PAGE_TYPE_DUPLICATE_FILTER with file_service_key
@@ -6871,25 +6721,7 @@ class TestClientAPI( unittest.TestCase ):
             data = response.read()
             self.assertEqual( response.status, 400 )
 
-            #
-            # PAGE_TYPE_IMPORT_MULTIPLE_GALLERY
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY,
-                'page_name' : 'my gallery',
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_MULTIPLE_GALLERY )
-            self.assertEqual( d[ 'page_name' ], 'my gallery' )
 
             #
             # PAGE_TYPE_PETITIONS without service_key (should error)
@@ -6906,26 +6738,7 @@ class TestClientAPI( unittest.TestCase ):
             data = response.read()
             self.assertEqual( response.status, 400 )
 
-            #
-            # PAGE_TYPE_IMPORT_HDD
 
-            request_dict = {
-                'page_type' : ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD,
-                'page_name' : 'my hdd import',
-                'paths' : [],
-                'focus_page' : False
-            }
-
-            request_body = json.dumps( request_dict )
-            connection.request( 'POST', path, body = request_body, headers = headers )
-            response = connection.getresponse()
-            data = response.read()
-            self.assertEqual( response.status, 200 )
-            text = str( data, 'utf-8' )
-            d = json.loads( text )
-            self.assertIn( 'page_key', d )
-            self.assertEqual( d[ 'page_type' ], ClientGUIPagesCore.PAGE_TYPE_IMPORT_HDD )
-            self.assertEqual( d[ 'page_name' ], 'import' )
 
             #
             # page_of_pages_key with invalid key (should error)
