@@ -103,9 +103,9 @@ class RegularGridLayout( ThumbnailLayout ):
         
         count = len( thumbnails )
         
-        tw = int( params.thumb_width * params.zoom )
-        th = int( params.thumb_height * params.zoom )
         
+        tw = round( params.thumb_width * params.zoom )
+        th = round( params.thumb_height * params.zoom )
         self._viewport_width = params.viewport_width - 2 * params.scene_margin_horizontal
         self._viewport_height = params.viewport_height - 2 * params.scene_margin_vertical
         self._col_width = tw + 2 * params.thumb_margin_horizontal
@@ -254,11 +254,11 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
         
         count = len( thumbnails )
         
-        tw = int( params.thumb_width * params.zoom )
-        th = int( params.thumb_height * params.zoom )
-        tcw = int( params.thumb_content_width * params.zoom )
-        tch = int( params.thumb_content_height * params.zoom )
         
+        tw = round( params.thumb_width * params.zoom )
+        th = round( params.thumb_height * params.zoom )
+        tcw = params.thumb_content_width * params.zoom
+        tch = params.thumb_content_height * params.zoom
         self._viewport_width = params.viewport_width - 2 * params.scene_margin_horizontal
         self._viewport_height = params.viewport_height - 2 * params.scene_margin_vertical
         self._col_width = tw + 2 * params.thumb_margin_horizontal
@@ -272,6 +272,9 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
         if self._variable_dimension == MasonryLayout.VariableDimension.HEIGHT:
         
             leftover_space_horizontal = self._viewport_width - self._thumbs_in_a_row * self._col_width
+            if count < self._thumbs_in_a_row: # handle the case where the thumbs don't even fill a single row
+
+                leftover_space_horizontal += self._col_width * ( self._thumbs_in_a_row - count )
             self._extra_padding_on_left = 0
             
             if params.content_alignment == QC.Qt.AlignmentFlag.AlignRight:
@@ -298,7 +301,7 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
                 
                 thumb._index = i
                 thumb.width = tw
-                thumb.height = int( thumb_padding_ver + thumb.res_y * tcw / thumb.res_x ) # width/height MUST be integers
+                thumb.height = round( thumb_padding_ver + thumb.res_y * tcw / thumb.res_x ) # width/height MUST be integers
                 thumb.setPos( self._extra_padding_on_left + params.scene_margin_horizontal + col * self._col_width + params.thumb_margin_horizontal, self._col_heights[ col ] )
                 self._col_heights[ col ] += thumb.height + params.thumb_margin_vertical
                 thumb.setVisible( True )
@@ -341,7 +344,7 @@ class MasonryLayout(ThumbnailLayout): # also known as Waterfall layout
                 
                 current_col_pos += params.thumb_margin_horizontal
                 thumb._index = i
-                thumb.width = int( thumb_padding_hor + thumb.res_x * tch / thumb.res_y ) # width/height MUST be integers
+                thumb.width = round( thumb_padding_hor + thumb.res_x * tch / thumb.res_y ) # width/height MUST be integers
                 thumb.height = th
                 
                 self._col_indices[ i ] = len(row_items)
