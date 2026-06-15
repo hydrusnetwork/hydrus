@@ -78,6 +78,7 @@ from hydrus.client.gui.pages import ClientGUIPageManager
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.panels import ClientGUIFilesPhysicalStoragePanels
+from hydrus.client.gui.pages import ClientGUIPagesTreeModel
 from hydrus.client.gui.panels import ClientGUILocalFileImports
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
@@ -555,6 +556,21 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._notebook = ClientGUIPages.PagesNotebook( self, 'top page notebook' )
         
+        self._tabs_tree_view = QP.TreeViewWithDnD( self )
+        self._tabs_tree_model = ClientGUIPagesTreeModel.PagesNotebookTreeModel( self._notebook, self._tabs_tree_view )
+        self._tabs_tree_view.setModel( self._tabs_tree_model )
+        self._tabs_tree_sidebar = QP.TreeViewWithControls( self._tabs_tree_view )
+        
+        self._tabs_tree_sidebar.widgetAlignmentChanged.connect( self._RebuildMainFrameLayout )
+        self._tabs_tree_sidebar.tagBarAlignmentChanged.connect( self._notebook.RebuildManagementMediaLayout )
+        self._tabs_tree_sidebar.tabBarVisibilityChanged.connect( self._notebook.UpdateTabVisibility )
+        self._tabs_tree_sidebar.treeSidebarCollapsibilityChanged.connect( self._UpdateTreeSidebarCollapsibility )
+        
+        self._tabs_tree_model.modelAboutToBeReset.connect( self._tabs_tree_view.SaveState )
+        self._tabs_tree_model.modelReset.connect( self._tabs_tree_view.RestoreState )
+        
+        self._notebook.selectionChanged.connect( self._tabs_tree_view.SelectLeafFromNotebookPage )
+        
         self._page_nav_history = ClientGUIPages.PagesHistory()
         
         self._currently_uploading_pending = set()
@@ -603,12 +619,19 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.sub( self, 'SetStatusBarDirtyDB', 'set_status_bar_db_dirty' )
         self._controller.sub( self, 'TryToOpenManageServicesForAutoAccountCreation', 'open_manage_services_and_try_to_auto_create_account' )
         
-        vbox = QP.VBoxLayout()
+        self._main_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        self.setLayout( self._main_vbox )
+        
+        self._vertical_splitter = QW.QSplitter( QC.Qt.Orientation.Horizontal, self )
+        self._vertical_splitter.splitterMoved.connect( self._SaveMainVboxSplitterPosition )
+        
+        QP.AddToLayout( self._main_vbox, self._vertical_splitter, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setCentralWidget( QW.QWidget() )
-        self.centralWidget().setLayout( vbox )
+        self.centralWidget().setLayout( self._main_vbox )
+        
+        self._RebuildMainFrameLayout() # add widgets to the main vbox according to user settings
         
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
@@ -4187,6 +4210,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
                 self._BootOrStopClipboardWatcherIfNeeded()
                 
+                self._tabs_tree_model.Reset()
+                
             
         
         self._controller.CallLaterQtSafe( self, 0.25, 'load initial session', do_it, default_gui_session, load_a_blank_page )
@@ -5377,6 +5402,55 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         self._controller.Write( 'save_options', HC.options )
+        
+    
+    def _RebuildMainFrameLayout( self ):
+        
+        alignment = CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' )
+        
+        while self._vertical_splitter.count() > 0:
+            
+            self._vertical_splitter.widget( 0 ).setParent( None )
+            
+        
+        if alignment is None:
+            
+            self._vertical_splitter.addWidget( self._notebook )
+            
+        
+        else:
+            
+            if alignment == CC.DIRECTION_LEFT:
+                
+                self._vertical_splitter.addWidget( self._tabs_tree_sidebar )
+                self._vertical_splitter.addWidget( self._notebook )
+                
+                sizes = CG.client_controller.new_options.GetIntegerList( 'tab_tree_splitter_sizes_left' )
+                self._vertical_splitter.widget( 0 ).setMinimumWidth( 100 )
+                self._vertical_splitter.setSizes( sizes )
+                
+                self._vertical_splitter.setCollapsible( 0, CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' ) )
+                self._vertical_splitter.setCollapsible( 1, False )
+                
+                
+            else:
+                
+                self._vertical_splitter.addWidget( self._notebook )
+                self._vertical_splitter.addWidget( self._tabs_tree_sidebar )
+                
+                sizes = CG.client_controller.new_options.GetIntegerList( 'tab_tree_splitter_sizes_right' )
+                self._vertical_splitter.widget( 1 ).setMinimumWidth( 100 )
+                self._vertical_splitter.setSizes( sizes )
+                
+                self._vertical_splitter.setCollapsible( 0, False )
+                self._vertical_splitter.setCollapsible( 1, CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' ) )
+            
+            
+            self._vertical_splitter.setStretchFactor( 0, 0 )
+            self._vertical_splitter.setStretchFactor( 1, 1 )
+            
+            self._controller.CallLaterQtSafe( self, 0.05, 'expand treeview', self._tabs_tree_sidebar.expandToDepth, 2 )
+            
         
     
     def _RefreshCurrentPage( self ):
@@ -6624,6 +6698,26 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
     
+    def _SaveMainVboxSplitterPosition( self ):
+        
+        alignment = CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' )
+        
+        if alignment is None:
+            
+            return
+        
+        sizes = self._vertical_splitter.sizes()
+        
+        if alignment == CC.DIRECTION_LEFT:
+            
+            CG.client_controller.new_options.SetIntegerList( 'tab_tree_splitter_sizes_left', sizes )
+            
+        else:
+            
+            CG.client_controller.new_options.SetIntegerList( 'tab_tree_splitter_sizes_right', sizes )
+            
+        
+    
     def _ServerMaintenanceRegenServiceInfo( self, service_key: bytes ):
         
         def do_it( service ):
@@ -7202,7 +7296,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    
+    def _UpdateTreeSidebarCollapsibility( self ):
+        
+        update = CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' )
+        
+        if CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) == CC.DIRECTION_LEFT:
+            
+            self._vertical_splitter.setCollapsible( 0, update )
+            
+        else:
+            
+            self._vertical_splitter.setCollapsible( 1, update )
+        
+            
+        
+        
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
         if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS ) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
@@ -8121,6 +8229,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_services.update()
         self._menu_updater_tags.update()
         self._locator_widget.updateOptions()
+        self._RebuildMainFrameLayout()
         
     
     def NotifyNewPages( self ):

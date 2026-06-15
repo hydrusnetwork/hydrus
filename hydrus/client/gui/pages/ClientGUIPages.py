@@ -168,6 +168,8 @@ class Page( QW.QWidget ):
         
         self.SetSplitterPositions()
         
+        CG.client_controller.CallAfterQtSafe( self, self._RebuildManagementMediaLayout )
+        
         self._search_preview_split.splitterMoved.connect( self._PreviewSplitterMoved )
         
         self._preview_canvas.launchMediaViewer.connect( self._PreviewCanvasWantsToLaunchMediaViewer )
@@ -322,6 +324,27 @@ class Page( QW.QWidget ):
             CG.client_controller.gui.SetStatusBarDirty()
             
         
+    def _RebuildManagementMediaLayout( self ):
+        
+        alignment = CG.client_controller.new_options.GetNoneableInteger( 'tag_view_alignment' )
+        
+        if alignment == CC.DIRECTION_LEFT:
+            
+            self._management_media_split.addWidget( self._search_preview_split )
+            self._management_media_split.addWidget( self._media_panel )
+            
+        elif alignment == CC.DIRECTION_RIGHT:
+            
+            self._management_media_split.addWidget( self._media_panel )
+            self._management_media_split.addWidget( self._search_preview_split )
+            
+        
+        self._management_media_split.widget( 0 ).setMinimumWidth( 120 )
+        self._management_media_split.widget( 1 ).setMinimumWidth( 120 )
+        
+        self._management_media_split.setStretchFactor( 0, 0 )
+        self._management_media_split.setStretchFactor( 1, 1 )
+        
     
     def _SwapMediaResultsPanel( self, new_panel: ClientGUIMediaResultsPanel.MediaResultsPanel ):
         """
@@ -363,7 +386,7 @@ class Page( QW.QWidget ):
             
             # this sets parent of new panel to self and sets parent of old panel to None
             # rumao, it doesn't work if new_panel is already our child
-            self._management_media_split.replaceWidget( 1, new_panel )
+            self._management_media_split.replaceWidget( 1 if CG.client_controller.new_options.GetNoneableInteger( 'tag_view_alignment' ) == CC.DIRECTION_LEFT else 0, new_panel )
             
         
         self._media_panel.setMinimumWidth( 120 )
@@ -692,6 +715,11 @@ class Page( QW.QWidget ):
         
         sizes = self._management_media_split.sizes()
         
+        if CG.client_controller.new_options.GetNoneableInteger( 'tag_view_alignment' ) == CC.DIRECTION_RIGHT:
+            
+            sizes.reverse()
+            
+        
         if len( sizes ) > 1:
             
             if sizes[0] != 0:
@@ -886,12 +914,18 @@ class Page( QW.QWidget ):
         
         if hpos < 0:
             
-            self._management_media_split.setSizes( [ total_sum + hpos, -hpos ] )
+            sizing = [ total_sum + hpos, -hpos ]
             
         elif hpos > 0:
             
-            self._management_media_split.setSizes( [ hpos, total_sum - hpos ] )
+            sizing = [ hpos, total_sum - hpos ]
             
+        if CG.client_controller.new_options.GetNoneableInteger( 'tag_view_alignment' ) == CC.DIRECTION_RIGHT:
+            
+            sizing.reverse()
+            
+        
+        self._management_media_split.setSizes( sizing )
         
         # handle if it was hidden before
         self._preview_panel.setVisible( True )
@@ -1059,10 +1093,18 @@ def ShowReasonsAndPagesConfirmationDialog( win: QW.QWidget, reasons_and_pages, m
 class PagesNotebook( QP.TabWidgetWithDnD ):
     
     freshSessionLoaded = QC.Signal( ClientGUISession.GUISessionContainer )
+    dataChanged = QC.Signal( int, int )
+    layoutChanged = QC.Signal( int, int )
+    selectionChanged = QC.Signal( object, int )
     
     def __init__( self, parent: QW.QWidget, name ):
         
         super().__init__( parent )
+        
+        if isinstance( parent, PagesNotebook ):
+            
+            self.layoutChanged.connect( parent.layoutChanged.emit )
+            self.selectionChanged.connect( parent.selectionChanged.emit )
         
         direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
@@ -1143,6 +1185,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                     self.NewPage( page_manager )
                     
+                self.layoutChanged.emit( 0, self.count() - 1 )
                 
             
         
@@ -1243,6 +1286,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
          
         self.UpdatePreviousPageIndex()
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
         return True
         
@@ -1356,6 +1400,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             self.NewPageQuery( default_location_context, initial_hashes = hashes, forced_insertion_index = page_index )
             
+            self.layoutChanged.emit( 0, self.count() - 1 )
+            
         
     
     def _CollapsePagesToTheRight( self, page_index: int ):
@@ -1389,6 +1435,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self.NewPageQuery( default_location_context, initial_hashes = hashes, forced_insertion_index = page_index )
+        
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
     
     def _DuplicatePage( self, index ):
@@ -1582,6 +1630,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
     
     def _RefreshPageName( self, index ):
@@ -1671,6 +1720,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self.setTabToolTip( index, full_page_name )
                 
             
+        self.dataChanged.emit( index, index )
         
     
     def _RenamePage( self, index ):
@@ -1698,6 +1748,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         page.SetName( new_name )
         
         CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
+        self.dataChanged.emit( index, index )
         
     
     def _SendPageToNewNotebook( self, index ):
@@ -1727,6 +1778,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 
                 CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
                 
+            
+            self.layoutChanged.emit( 0, self.count() - 1 )
             
         
     
@@ -1771,6 +1824,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 CG.client_controller.pub( 'refresh_page_name', dest_notebook.GetPageKey() )
                 
             
+            self.layoutChanged.emit( 0, self.count() - 1 )
+            
         
     
     def _ShiftPage( self, page_index, delta = None, new_index = None ):
@@ -1806,6 +1861,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.insertTab( new_page_index, page, name )
             if page_is_selected: self.setCurrentIndex( new_page_index )
             
+        
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
     
     def _ShowMenu( self, screen_position ):
@@ -2159,6 +2216,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self.setCurrentIndex( self.count() - 1 )
                 
             
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
     
     def _RefreshPageNamesAfterDnD( self, page_widget, source_widget ):
@@ -2175,6 +2233,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             CG.client_controller.pub( 'refresh_page_name', source_notebook.GetPageKey() )
             
         
+        self.layoutChanged.emit( 0, self.count() - 1 )
+        
     
     def _UpdateOptions( self ):
         
@@ -2190,6 +2250,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
+        
+        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) is not None
+        
+        self.tabBar().setHidden( tabs_are_hidden )
         
     
     def AppendGUISession( self, session: ClientGUISession.GUISessionContainer ):
@@ -2269,6 +2333,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         job_status.FinishAndDismiss()
         
+        self.layoutChanged.emit( 0, self.count() - 1 )
+        
     
     def AskIfAbleToClose( self, for_session_close = False ):
         
@@ -2314,9 +2380,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def ChooseNewPage( self ):
+    def ChooseNewPage( self, insertion_index = None ):
         
-        self._ChooseNewPage()
+        self._ChooseNewPage( insertion_index )
         
     
     def ChooseNewPageForDeepestNotebook( self ):
@@ -2401,6 +2467,19 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 self._RenamePage( selection )
                 
             
+        
+    
+    def ClosePage( self, index ):
+        
+        self._ClosePage( index )
+        
+    def DuplicatePage( self, index ):
+        
+        self._DuplicatePage( index )
+        
+    def RenamePage( self, index ):
+        
+        self._RenamePage( index )
         
     
     def eventFilter( self, watched, event ):
@@ -2488,6 +2567,36 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
         return False
+        
+    
+    def RebuildManagementMediaLayout( self ):
+        
+        for page in self._GetPages():
+            
+            if isinstance( page, PagesNotebook ):
+                
+                page.RebuildManagementMediaLayout()
+                
+            else:
+                
+                page._RebuildManagementMediaLayout()
+                
+            
+        
+    def UpdateTabVisibility( self ):
+        
+        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) is not None
+        
+        #
+        
+        for page in self._GetPages():
+            
+            if isinstance( page, PagesNotebook ):
+                
+                page.UpdateTabVisibility()
+                
+        
+        self.tabBar().setHidden( tabs_are_hidden )
         
     
     def ShowMenuFromScreenPosition( self, position ):
@@ -3047,6 +3156,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.InsertSessionNotebookPages( forced_insertion_index, session, page_containers, select_first_page, session_is_clean = session_is_clean )
         
+        self.layoutChanged.emit( 0, self.count() - 1 )
+        
     
     def InsertSessionNotebook( self, forced_insertion_index: int, session: ClientGUISession.GUISessionContainer, notebook_page_container: ClientGUISession.GUISessionContainerPageNotebook, select_first_page: bool, session_is_clean = True ):
         
@@ -3397,6 +3508,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         CG.client_controller.pub( 'refresh_page_name', page.GetPageKey() )
         CG.client_controller.pub( 'notify_new_pages' )
+        self.layoutChanged.emit( 0, self.count() - 1 )
         
         page.Start()
         
@@ -3408,6 +3520,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             CG.client_controller.CallLaterQtSafe( self, 0.5, 'set page focus', page.SetSearchFocus )
             
+        
+        CG.client_controller.CallLaterQtSafe( self, 0.0, 'rebuild media management layout', page.SetSplitterPositions )
         
         return page
         
@@ -3701,7 +3815,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self._previous_page_index = index
         
         CG.client_controller.pub( 'notify_page_change' )
-        
+        self.selectionChanged.emit( self, index )
     
     def PageShown( self ):
         
@@ -3760,6 +3874,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 page.RefreshQuery()
                 
             
+        self.dataChanged.emit( 0, self.count() - 1 )
         
     
     def RefreshPageName( self, page_key = None ):

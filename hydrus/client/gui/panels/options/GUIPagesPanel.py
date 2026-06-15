@@ -93,6 +93,18 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._page_nav_history_max_entries = ClientGUICommon.BetterSpinBox( self._navigation_and_dnd, min=1, max=1000 )
         self._page_nav_history_max_entries.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of entries to display in the tab navigation history menu under pages->history.' ) )
         
+        self._tab_tree_view_alignment = ClientGUICommon.BetterChoice( self._navigation_and_dnd )
+        
+        self._tab_tree_view_alignment.addItem( 'disable', None )
+        
+        for value in [ CC.DIRECTION_LEFT, CC.DIRECTION_RIGHT ]:
+            
+            self._tab_tree_view_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
+            
+        
+        self._tab_tree_view_hides_tabs = QW.QCheckBox( self._navigation_and_dnd )
+        self._tab_tree_view_hides_tabs.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you have the tab tree view enabled, hiding the main tabs can save space and reduce visual clutter.' ) )
+        
         #
         
         self._page_names_panel = ClientGUICommon.StaticBox( self, 'page tab names' )
@@ -134,6 +146,9 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._close_page_focus_goes.SetValue( self._new_options.GetInteger( 'close_page_focus_goes' ) )
         
         self._notebook_tab_alignment.SetValue( self._new_options.GetInteger( 'notebook_tab_alignment' ) )
+        
+        self._tab_tree_view_alignment.SetValue( self._new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) )
+        self._tab_tree_view_hides_tabs.setChecked( self._new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) )
         
         self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
         
@@ -197,6 +212,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
         rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
         rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
+        rows.append( ( 'EXPERIMENTAL: Show tab tree view: ', self._tab_tree_view_alignment ) )
+        rows.append( ( 'EXPERIMENTAL: Hide main page navigation tabs: ', self._tab_tree_view_hides_tabs ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
         
