@@ -209,6 +209,8 @@ SIMPLE_WINDOW_ALWAYS_ON_TOP_ON = 196
 SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF = 197
 SIMPLE_WINDOW_FRAMELESS_FLIP = 198
 SIMPLE_RENAME_PAGE = 199
+SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE = 200
+SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE = 201
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -463,6 +465,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_WINDOW_ALWAYS_ON_TOP_ON : 'window "always on top": set on',
     SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF : 'window "always on top": set off',
     SIMPLE_WINDOW_FRAMELESS_FLIP : 'window "frameless": flip on/off',
+    SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip for current window',
+    SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip global option (for all new windows)'
 }
 
 legacy_simple_str_to_enum_lookup = {

@@ -6,7 +6,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 
-def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True, slideshow_duration = None ):
+def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True, slideshow_duration = None, slideshow_is_shuffling = False ):
     
     if slideshow_duration == 0.0:
         
@@ -54,7 +54,9 @@ def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMe
     
     ClientGUIMenus.AppendSeparator( slideshow_menu )
     
-    initial_value = CG.client_controller.new_options.GetBoolean( 'slideshows_progress_randomly' )
+    initial_thiswindow_value = slideshow_is_shuffling
+    initial_newoptions_value = CG.client_controller.new_options.GetBoolean( 'slideshows_progress_randomly' )
     
-    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'slideshows move randomly', 'Check this to progress randomly through the slideshow.', initial_value, CG.client_controller.new_options.FlipBoolean, 'slideshows_progress_randomly' )
+    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'shuffle this slideshow', 'Check this to progress randomly through the slideshow.', initial_thiswindow_value, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE ) )
+    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'all slideshows shuffle', 'Toggle whether new windows start with random slideshows on.', initial_newoptions_value, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE ) )
     
