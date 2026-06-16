@@ -60,3 +60,7 @@ def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMe
     ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'shuffle this slideshow', 'Check this to progress randomly through the slideshow.', initial_thiswindow_value, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE ) )
     ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'all slideshows shuffle', 'Toggle whether new windows start with random slideshows on.', initial_newoptions_value, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE ) )
     
+    ClientGUIMenus.AppendSeparator( slideshow_menu )
+    
+    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'always play media once through', 'Check this to always play the complete media duration at least once before moving on.', CG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ), CG.client_controller.new_options.FlipBoolean, 'slideshow_always_play_duration_media_once_through' )
+    
