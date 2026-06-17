@@ -18,9 +18,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsSelectFromList
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsTextEntry
 
-def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ) -> str:
-    
-    title = 'Enter Text'
+def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72, title = 'Enter Text' ) -> str:
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_entry_dialog' ) as dlg:
         
@@ -33,6 +31,27 @@ def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, 
             text = panel.GetValue()
             
             return text
+            
+        else:
+            
+            raise HydrusExceptions.CancelledException( 'Dialog cancelled.' )
+            
+        
+    
+
+def EnterTextNumber( win: QW.QWidget, message: str, default = 0, min_value = None, max_value = None, title = 'Enter Number' ) -> int:
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_entry_dialog' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsTextEntry.EditTextSpinboxPanel( dlg, message, default, min_value, max_value )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+            
+            number = panel.GetValue()
+            
+            return number
             
         else:
             

@@ -2605,6 +2605,18 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
             
+        elif command.IsInteractiveContentCommand():
+            
+            content_command = ClientGUIMediaModalActions.GetContentApplicationCommandFromInteractiveContentCommand( self, command, self._GetSelectedFlatMedia()[ 0 ] )
+            
+            if content_command.IsContentCommand():
+                
+                command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, self._GetSelectedFlatMedia() )
+                
+            else:
+                
+                command_processed = False
+                
         else:
             
             command_processed = False

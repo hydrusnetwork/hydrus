@@ -1450,7 +1450,25 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 return
                 
             
-            command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, (self._current_media,) )
+            command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
+            
+        elif command.IsInteractiveContentCommand():
+            
+            if self._current_media is None:
+                
+                return
+                
+            
+            content_command = ClientGUIMediaModalActions.GetContentApplicationCommandFromInteractiveContentCommand( self, command, self._current_media )
+            
+            if content_command.IsContentCommand():
+                
+                command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, ( self._current_media, ) )
+                
+            else:
+                
+                command_processed = False
+                
             
         else:
             

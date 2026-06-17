@@ -582,6 +582,7 @@ legacy_simple_str_to_enum_lookup = {
 
 APPLICATION_COMMAND_TYPE_SIMPLE = 0
 APPLICATION_COMMAND_TYPE_CONTENT = 1
+APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT = 2
 
 class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
@@ -673,6 +674,18 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             serialisable_data = ( service_key.hex(), content_type, action, value )
             
+        elif self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+            
+            ( service_key, content_type, action ) = self._data
+            
+            data_dict = HydrusSerialisable.SerialisableDictionary()
+            
+            data_dict[ 'service_key' ] = service_key.hex()
+            data_dict[ 'content_type' ] = content_type
+            data_dict[ 'action' ] = action
+            
+            serialisable_data = data_dict.GetSerialisableTuple()
+            
         else:
             
             raise NotImplementedError( 'Unknown command type!' )
@@ -716,6 +729,16 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
             
             self._data = ( bytes.fromhex( serialisable_service_key ), content_type, action, value )
+            
+        elif self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+            
+            data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            
+            service_key = bytes.fromhex( data_dict[ 'service_key' ] )
+            content_type = data_dict[ 'content_type' ]
+            action = data_dict[ 'action' ]
+            
+            self._data = ( service_key, content_type, action )
             
         
     
@@ -976,6 +999,30 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return value
         
     
+    def GetInteractiveContentServiceKey( self ):
+        
+        if self._command_type != APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+            
+            raise Exception( 'Not an interactive content command!' )
+            
+        
+        ( service_key, content_type, action ) = self._data
+        
+        return service_key
+        
+    
+    def GetInteractiveContentType( self ):
+        
+        if self._command_type != APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+            
+            raise Exception( 'Not an interactive content command!' )
+            
+        
+        ( service_key, content_type, action ) = self._data
+        
+        return content_type
+        
+    
     def IsSimpleCommand( self ):
         
         return self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE
@@ -984,6 +1031,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     def IsContentCommand( self ):
         
         return self._command_type == APPLICATION_COMMAND_TYPE_CONTENT
+        
+    
+    def IsInteractiveContentCommand( self ):
+        
+        return self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT
         
     
     def ToString( self ):
@@ -1167,13 +1219,21 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     components.append( 'to' )
                     
                 else:
-                    
+                    s
                     components.append( 'for' )
                     
                 
                 components.append( CG.client_controller.services_manager.GetNameSafe( service_key ) )
                 
                 return ' '.join( components )
+                
+            elif self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+                
+                ( service_key, content_type, action ) = self._data
+                
+                service_name = CG.client_controller.services_manager.GetNameSafe( service_key )
+                
+                return 'popup {} entry dialog for {}'.format( HC.content_type_string_lookup[ content_type ], service_name )
                 
             
         except Exception as e:
