@@ -29,7 +29,7 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
     
     def Drop( self, service_id ):
         
-        self._Execute( 'DELETE FROM recent_tags WHERe service_id = ?;', ( service_id, ) )
+        self._Execute( 'DELETE FROM recent_tags WHERE service_id = ?;', ( service_id, ) )
         
     
     def GetRecentTags( self, service_key ):
