@@ -216,6 +216,8 @@ class Controller( HydrusController.HydrusController ):
         self.thumbnails_cache = None
         self.thumbnails_cache_graphics_view_test = None
         
+        self.last_added_tag = None
+        
         Controller.my_instance = self
         
     

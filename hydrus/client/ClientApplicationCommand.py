@@ -1023,6 +1023,18 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return content_type
         
     
+    def GetInteractiveContentAction( self ):
+        
+        if self._command_type != APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
+            
+            raise Exception( 'Not an interactive content command!' )
+            
+        
+        ( service_key, content_type, action ) = self._data
+        
+        return action
+        
+    
     def IsSimpleCommand( self ):
         
         return self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE
@@ -1219,7 +1231,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     components.append( 'to' )
                     
                 else:
-                    s
+                    
                     components.append( 'for' )
                     
                 
