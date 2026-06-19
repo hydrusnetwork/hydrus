@@ -932,10 +932,9 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         zoom_out.SetToolTipWithShortcuts( 'zoom out', CAC.SIMPLE_ZOOM_OUT )
         zoom_out.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
-        zoom_switch = ClientGUICommon.IconButton( self, CC.global_icons().zoom_switch, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER ) )
-        zoom_switch.SetToolTipWithShortcuts( 'zoom switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
-        #zoom_switch = ClientGUICommon.IconButton( self, CC.global_icons().zoom_switch, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER ) )
-        #zoom_switch.SetToolTipWithShortcuts( 'zoom switch3', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER )
+        zoom_switch_command = CG.client_controller.new_options.GetInteger( 'zoom_switch_command' )
+        zoom_switch = ClientGUICommon.IconButton( self, CC.global_icons().zoom_switch, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( zoom_switch_command ) )
+        zoom_switch.SetToolTipWithShortcuts( 'zoom switch', zoom_switch_command )
         zoom_switch.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         zoom_options = ClientGUICommon.IconButton( self, CC.global_icons().zoom_cog, self._ShowZoomOptionsMenu )
@@ -1195,12 +1194,22 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
         
         new_options = CG.client_controller.new_options
+        collapse_eye_menu_window = new_options.GetBoolean( 'collapse_eye_menu_window' )
+        collapse_eye_menu_hovers = new_options.GetBoolean( 'collapse_eye_menu_hovers' )
+        collapse_eye_menu_rendering = new_options.GetBoolean( 'collapse_eye_menu_rendering' )
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
         #
         
-        window_menu = ClientGUIMenus.GenerateMenu( menu )
+        if collapse_eye_menu_window:
+            
+            window_menu = ClientGUIMenus.GenerateMenu( menu )
+            
+        else:
+            
+            window_menu = menu
+            
         
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._my_canvas.IsAlwaysOnTop(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP ) )
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'remove titlebar/frame', 'Toggle the OS frame of this window.', self._my_canvas.IsHidingWindowFrame(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_FRAMELESS_FLIP ) )
@@ -1213,11 +1222,29 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_viewers_frameless' )
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers without titlebar/frame', 'Set whether all new media viewers should start in this state.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
         
-        ClientGUIMenus.AppendMenu( menu, window_menu, 'window' )
-        
+        if collapse_eye_menu_window:
+            
+            ClientGUIMenus.AppendMenu( menu, window_menu, 'window' )
+            
+        else:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
         #
         
-        hovers_menu = ClientGUIMenus.GenerateMenu( menu )
+        if collapse_eye_menu_hovers:
+            
+            hovers_menu = ClientGUIMenus.GenerateMenu( menu )
+            
+        else:
+            
+            hovers_menu = menu
+            
+            if collapse_eye_menu_window:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+            
         
         ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw tags (left) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'draw file information (top) in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
@@ -1233,18 +1260,39 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pop-in notes hover window on mouseover', 'Enable the notes hover window.', not new_options.GetBoolean( 'disable_notes_hover_in_media_viewer' ), flip_background_boolean, 'disable_notes_hover_in_media_viewer' )
         ClientGUIMenus.AppendMenuCheckItem( hovers_menu, 'pin the duplicates hover window so it is always visible', 'Ensure the special duplicates hover window is always visible in the duplicates filter.', new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ), flip_background_boolean, 'hover_window_duplicates_always_on_top' )
         
-        ClientGUIMenus.AppendMenu( menu, hovers_menu, 'hovers' )
-        
+        if collapse_eye_menu_hovers:
+            
+            ClientGUIMenus.AppendMenu( menu, hovers_menu, 'hovers' )
+            
+        else:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
         #
         
-        rendering_menu = ClientGUIMenus.GenerateMenu( menu )
+        if collapse_eye_menu_rendering:
+            
+            rendering_menu = ClientGUIMenus.GenerateMenu( menu )
+            
+        else:
+            
+            rendering_menu = menu
+            
+            if collapse_eye_menu_hovers:
+                
+                ClientGUIMenus.AppendSeparator( rendering_menu )
+                
+            
         
         ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
         ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'draw transparency as checkerboard in media viewer', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER ) )
         ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'draw transparency as checkerboard in media viewer (duplicate filter)', 'Set whether to draw transparency as something that stands out more in the duplicate filter.', new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas_duplicates' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_MEDIA_VIEWER_DUPLICATE_FILTER ) )
         ClientGUIMenus.AppendMenuCheckItem( rendering_menu, 'instead of checkerboard, use a bright greenscreen', 'Set whether to draw transparency as something that stands out more.', new_options.GetBoolean( 'draw_transparency_checkerboard_as_greenscreen' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_TRANSPARENCY_CHECKERBOARD_GREENSCREEN ) )
         
-        ClientGUIMenus.AppendMenu( menu, rendering_menu, 'rendering' )
+        if collapse_eye_menu_rendering:
+            
+            ClientGUIMenus.AppendMenu( menu, rendering_menu, 'rendering' )
+            
         
         CGC.core().PopupMenu( self, menu )
         

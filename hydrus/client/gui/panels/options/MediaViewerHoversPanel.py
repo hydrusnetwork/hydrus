@@ -2,6 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
@@ -58,6 +59,24 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        top_hover_controls_panel = ClientGUICommon.StaticBox( self, 'top hover button/menu controls' )
+        
+        self._zoom_switch_sets = ClientGUICommon.BetterChoice( top_hover_controls_panel )
+        self._zoom_switch_sets.addItem( '100% and canvas fit', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM )
+        self._zoom_switch_sets.addItem( '100% and canvas fit, and recenter media on switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER )
+        self._zoom_switch_sets.addItem( '100% and canvas fit and canvas fill', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM )
+        self._zoom_switch_sets.addItem( '100% and canvas fit and canvas fill, and recenter media on switch', CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_FIT_AND_FILL_ZOOM_VIEWER_CENTER )
+        self._zoom_switch_sets.setToolTip( ClientGUIFunctions.WrapToolTip( 'The zoom switch button in the top hover can be set to switch between either 2 or 3 different zoom levels.' ) )
+        
+        self._collapse_eye_menu_window = QW.QCheckBox( top_hover_controls_panel )
+        self._collapse_eye_menu_hovers = QW.QCheckBox( top_hover_controls_panel )
+        self._collapse_eye_menu_rendering = QW.QCheckBox( top_hover_controls_panel )
+        self._collapse_eye_menu_window.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "windows" submenu in the eye menu.' ) )
+        self._collapse_eye_menu_hovers.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "hovers" submenu in the eye menu.' ) )
+        self._collapse_eye_menu_rendering.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "rendering" submenu in the eye menu.' ) )
+        
+        #
+        
         top_hover_summary_panel = ClientGUICommon.StaticBox( self, 'top hover file summary' )
         
         self._file_info_line_consider_archived_interesting = QW.QCheckBox( top_hover_summary_panel )
@@ -109,6 +128,11 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._hover_window_duplicates_always_on_top.setChecked( self._new_options.GetBoolean( 'hover_window_duplicates_always_on_top' ) )
         self._media_viewer_tags_scrolling_behaviour.SetValue( self._new_options.GetInteger( 'media_viewer_tags_scrolling_behaviour' ) )
         
+        self._zoom_switch_sets.SetValue( self._new_options.GetInteger( 'zoom_switch_command' ) )
+        self._collapse_eye_menu_window.setChecked( self._new_options.GetBoolean( 'collapse_eye_menu_window' ) )
+        self._collapse_eye_menu_hovers.setChecked( self._new_options.GetBoolean( 'collapse_eye_menu_hovers' ) )
+        self._collapse_eye_menu_rendering.setChecked( self._new_options.GetBoolean( 'collapse_eye_menu_rendering' ) )
+        
         self._file_info_line_consider_archived_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_interesting' ) )
         self._file_info_line_consider_archived_time_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_archived_time_interesting' ) )
         self._file_info_line_consider_file_services_interesting.setChecked( self._new_options.GetBoolean( 'file_info_line_consider_file_services_interesting' ) )
@@ -147,6 +171,23 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         background_gridbox = ClientGUICommon.WrapInGrid( background_panel, rows )
         
         background_panel.Add( background_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        rows = []
+        
+        rows.append( ( 'Zoom switch button switches between:', self._zoom_switch_sets ) )
+        rows.append( ( 'Collapse "windows" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_window ) )
+        rows.append( ( 'Collapse "hovers" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_hovers ) )
+        rows.append( ( 'Collapse "rendering" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_rendering ) )
+        
+        top_hover_controls_gridbox = ClientGUICommon.WrapInGrid( top_hover_controls_panel, rows )
+        
+        label = 'The top hover in the center-top of the window provides various controls. Some of their behaviour can be customized here.'
+        
+        st = ClientGUICommon.BetterStaticText( top_hover_controls_panel, label = label )
+        st.setWordWrap( True )
+        
+        top_hover_controls_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        top_hover_controls_panel.Add( top_hover_controls_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         rows = []
         
@@ -191,6 +232,7 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, background_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hover_windows_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, top_hover_controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, top_hover_summary_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, preview_hovers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
@@ -226,6 +268,11 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetBoolean( 'preview_window_hover_top_right_shows_popup', self._preview_window_hover_top_right_shows_popup.isChecked() )
         self._new_options.SetBoolean( 'draw_top_right_hover_in_preview_window_background', self._draw_top_right_hover_in_preview_window_background.isChecked() )
+        
+        self._new_options.SetInteger( 'zoom_switch_command', self._zoom_switch_sets.GetValue() )
+        self._new_options.SetBoolean( 'collapse_eye_menu_window', self._collapse_eye_menu_window.isChecked() )
+        self._new_options.SetBoolean( 'collapse_eye_menu_hovers', self._collapse_eye_menu_hovers.isChecked() )
+        self._new_options.SetBoolean( 'collapse_eye_menu_rendering', self._collapse_eye_menu_rendering.isChecked() )
         
         self._new_options.SetBoolean( 'file_info_line_consider_archived_interesting', self._file_info_line_consider_archived_interesting.isChecked() )
         self._new_options.SetBoolean( 'file_info_line_consider_archived_time_interesting', self._file_info_line_consider_archived_time_interesting.isChecked() )

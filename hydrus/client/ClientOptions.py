@@ -12,6 +12,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import FileImportOptionsLegacy
@@ -285,6 +286,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'disable_tags_hover_in_media_viewer': False,
             'disable_top_right_hover_in_media_viewer': False,
             'disable_notes_hover_in_media_viewer': False,
+            'collapse_eye_menu_window' : True,
+            'collapse_eye_menu_hovers' : True,
+            'collapse_eye_menu_rendering' : True,
             'media_viewer_window_always_on_top': False,
             'media_viewer_lock_current_zoom_type': False,
             'media_viewer_lock_current_zoom': False,
@@ -587,6 +591,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'thread_slots_watcher_check' : 5,
             'ffmpeg_subprocess_timeout' : 15,
             'media_viewer_tags_scrolling_behaviour' : CC.MEDIA_VIEWER_TAGS_SCROLLING_BEHAVIOUR_ONLY_PROPAGATE_AFTER_DELAY,
+            'zoom_switch_command' : CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM,
         }
         
         self._dictionary[ 'floats' ] = {
