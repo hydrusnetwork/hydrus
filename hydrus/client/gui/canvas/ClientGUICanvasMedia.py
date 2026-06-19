@@ -28,7 +28,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
 from hydrus.client.gui.canvas import ClientGUITransparency
-from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.media import ClientGUIMediaControls, ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaSingle
@@ -1488,6 +1488,9 @@ class MediaContainer( QW.QWidget ):
         self._animation_bar = AnimationBar( self._controls_bar )
         self._volume_control = ClientGUIMediaControls.VolumeControl( self._controls_bar, self._canvas_type, direction = 'up' )
         
+        self._this_container_muted_state = ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
+        self._volume_control.muteChanged.connect( self._UpdateMediaWindowMute )
+        
         self._volume_control.setCursor( QC.Qt.CursorShape.ArrowCursor )
         
         #
@@ -2068,6 +2071,21 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def _UpdateMediaWindowMute( self, mute_state ):
+        
+        muteable_window_classes = ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer )
+        
+        if mute_state is not None:
+            
+            self._this_container_muted_state = mute_state
+            
+        
+        if isinstance( self._media_window, muteable_window_classes ):
+            
+            self._media_window.UpdateAudioMute( mute_state = mute_state )
+            
+        
+    
     def AddPlayerMenus( self, menu: QW.QMenu ):
         
         player_menu = ClientGUIMenus.GenerateMenu( menu )
@@ -2316,6 +2334,11 @@ class MediaContainer( QW.QWidget ):
         max_zoom_dimension = self._GetMaxZoomDimension()
         
         return self._current_zoom == max_zoom or self.width() == max_zoom_dimension or self.height() == max_zoom_dimension
+        
+    
+    def IsMuted( self ):
+        
+        return self._media_window.IsMuted()
         
     
     def IsPaused( self ):
@@ -2705,6 +2728,11 @@ class MediaContainer( QW.QWidget ):
             
             self._TryToChangeZoom( new_zoom, zoom_center_type_override = zoom_center_type_override )
             
+        
+    
+    def UpdateMediaWindowMute( self, mute_state ):
+        
+        self._UpdateMediaWindowMute( mute_state )
         
     
     def ZoomMaintainingZoom( self, previous_media: ClientMediaSingle.MediaSingle ):

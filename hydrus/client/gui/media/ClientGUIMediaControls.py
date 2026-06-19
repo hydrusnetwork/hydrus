@@ -87,6 +87,9 @@ class AudioMuteButton( ClientGUICommon.IconButton ):
 
 class VolumeControl( QW.QWidget ):
     
+    muteChanged = QC.Signal( object )
+    volumeChanged = QC.Signal( object )
+    
     def __init__( self, parent, canvas_type, direction = 'down' ):
         
         super().__init__( parent )

@@ -52,7 +52,7 @@ from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
 
-def AddAudioVolumeMenu( menu, canvas_type ):
+def AddAudioVolumeMenu( menu, canvas_type, this_container ):
     
     mute_volume_type = None
     volume_volume_type = ClientGUIMediaControls.AUDIO_GLOBAL
@@ -110,6 +110,16 @@ def AddAudioVolumeMenu( menu, canvas_type ):
         
         ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Mute/unmute audio.', ClientGUIMediaControls.FlipMute, mute_volume_type )
         
+        if this_container.IsMuted():
+            
+            label = 'unmute this window'
+            
+        else:
+            
+            label = 'mute this window'
+            
+        
+        ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Mute/unmute audio.', this_container.UpdateMediaWindowMute, not this_container.IsMuted() )
     
     #
     
@@ -1784,7 +1794,7 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
+        AddAudioVolumeMenu( menu, self.CANVAS_TYPE, self._media_container )
         
         if self._current_media is not None:
             
@@ -3241,6 +3251,11 @@ class CanvasWithHovers( Canvas ):
         return True
         
     
+    def UpdateMediaWindowMute( self, mute_state ):
+        
+        self._media_container.UpdateMediaWindowMute( mute_state )
+        
+    
     def TIMERUIUpdate( self ):
         
         for hover in self._hovers:
@@ -4557,7 +4572,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
+            AddAudioVolumeMenu( menu, self.CANVAS_TYPE, self._media_container )
             
             ClientGUIMenus.AppendSeparator( menu )
             

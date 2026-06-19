@@ -1651,7 +1651,12 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._stop_for_slideshow = value
         
     
-    def UpdateAudioMute( self ):
+    def IsMuted( self ):
+        
+        return self._player.mute
+        
+    
+    def UpdateAudioMute( self, mute_state = None ):
         
         if self._currently_in_media_load_error_state:
             
@@ -1660,7 +1665,14 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         try:
             
-            self._player.mute = ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
+            if mute_state is None:
+                
+                self._player.mute = ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
+                
+            else:
+                
+                self._player.mute = mute_state
+                
             
         except mpv.ShutdownError:
             

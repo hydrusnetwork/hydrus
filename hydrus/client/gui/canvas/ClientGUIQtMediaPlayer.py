@@ -716,11 +716,23 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def UpdateAudioMute( self ):
+    def IsMuted( self ):
+        
+        return self._my_audio_output.isMuted()
+        
+    
+    def UpdateAudioMute( self, mute_state = None ):
         
         if self._my_audio_output is not None:
             
-            self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+            if mute_state is None:
+                
+                self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+                
+            else:
+                
+                self._my_audio_output.setMuted( mute_state )
+                
             
         
 

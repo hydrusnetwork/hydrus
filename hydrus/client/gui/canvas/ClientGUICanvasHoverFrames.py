@@ -942,6 +942,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         zoom_options.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
         self._volume_control = ClientGUIMediaControls.VolumeControl( self, CC.CANVAS_MEDIA_VIEWER )
+        self._volume_control.muteChanged.connect( self._my_canvas.UpdateMediaWindowMute )
         
         if not ClientGUIMPV.MPV_IS_AVAILABLE:
             
