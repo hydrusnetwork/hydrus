@@ -1069,9 +1069,11 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if probably_crashy:
             
-            if HG.mpv_allow_crashy_files or HG.mpv_allow_crashy_files_silently:
+            silenced = HG.mpv_allow_crashy_files_silently or CG.client_controller.new_options.GetBoolean( 'mpv_allow_crashy_files_silently' )
+            
+            if HG.mpv_allow_crashy_files or silenced:
                 
-                if not HG.mpv_allow_crashy_files_silently:
+                if not silenced:
                     
                     hash = original_media.GetHash()
                     
@@ -1454,7 +1456,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         global damaged_file_hashes
         
-        if media is not None and media.GetHash() in damaged_file_hashes and not HG.mpv_allow_crashy_files and not HG.mpv_allow_crashy_files_silently:
+        if media is not None and media.GetHash() in damaged_file_hashes and not HG.mpv_allow_crashy_files and not HG.mpv_allow_crashy_files_silently and not CG.client_controller.new_options.GetBoolean( 'mpv_allow_crashy_files_silently' ):
             
             self.ClearMedia()
             
