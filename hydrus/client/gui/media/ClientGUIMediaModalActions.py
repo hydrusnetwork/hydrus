@@ -543,12 +543,29 @@ def GetContentApplicationCommandFromInteractiveContentCommand( win: QW.QWidget, 
         
         try:
             
-            value = ClientGUIDialogsQuick.EnterText( win, message=f'Enter the tag to be added to \'{service_name}\'.' )
+            recent_tags = CG.client_controller.Read( 'recent_tags', service_key )
+            last_tag = ''
+            
+            if recent_tags is not None:
+                
+                if len( recent_tags ) > 10:
+                    
+                    recent_tags = recent_tags[:10]
+                    
+                if len( recent_tags ) > 0:
+                    
+                    last_tag = recent_tags[0]
+                    
+                
+            
+            value = ClientGUIDialogsQuick.EnterText( win, message=f'Enter the tag to be added to \'{service_name}\'.', allow_whitespace = False, default = last_tag, suggestions = recent_tags )
             
         except HydrusExceptions.CancelledException:
             
             return command
             
+        
+        CG.client_controller.Write( 'push_recent_tags', service_key, list( ( value, ) ) )
         
     elif service_type in HC.RATINGS_SERVICES:
         

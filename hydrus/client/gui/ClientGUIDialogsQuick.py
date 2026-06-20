@@ -18,11 +18,11 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsSelectFromList
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsTextEntry
 
-def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72, title = 'Enter Text' ) -> str:
+def EnterText( win: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, allow_whitespace = True, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72, title = 'Enter Text' ) -> str:
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, frame_key = 'quick_entry_dialog' ) as dlg:
         
-        panel = ClientGUIScrolledPanelsTextEntry.EditTextPanel( dlg, message, default, placeholder, allow_blank, suggestions, max_chars, password_entry, min_char_width = min_char_width )
+        panel = ClientGUIScrolledPanelsTextEntry.EditTextPanel( dlg, message, default, placeholder, allow_blank, allow_whitespace, suggestions, max_chars, password_entry, min_char_width = min_char_width )
         
         dlg.SetPanel( panel )
         

@@ -11,7 +11,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class EditTextPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ):
+    def __init__( self, parent: QW.QWidget, message: str, default = '', placeholder = None, allow_blank = False, allow_whitespace = True, suggestions = None, max_chars = None, password_entry = False, min_char_width = 72 ):
         
         if suggestions is None:
             
@@ -22,6 +22,7 @@ class EditTextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._chosen_suggestion = None
         self._allow_blank = allow_blank
+        self._allow_whitespace = allow_whitespace
         self._max_chars = max_chars
         
         button_choices =  []
@@ -105,6 +106,11 @@ class EditTextPanel( ClientGUIScrolledPanels.EditPanel ):
         if not self._allow_blank and text == '':
             
             raise HydrusExceptions.CancelledException( 'Cannot enter blank text here!' )
+            
+        
+        if not self._allow_whitespace and not text.strip():
+            
+            raise HydrusExceptions.CancelledException( 'Cannot enter only whitespace here!' )
             
         
         return text
