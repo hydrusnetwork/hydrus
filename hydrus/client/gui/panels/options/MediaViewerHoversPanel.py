@@ -71,7 +71,7 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._collapse_eye_menu_window = QW.QCheckBox( top_hover_controls_panel )
         self._collapse_eye_menu_hovers = QW.QCheckBox( top_hover_controls_panel )
         self._collapse_eye_menu_rendering = QW.QCheckBox( top_hover_controls_panel )
-        self._collapse_eye_menu_window.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "windows" submenu in the eye menu.' ) )
+        self._collapse_eye_menu_window.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "window" submenu in the eye menu.' ) )
         self._collapse_eye_menu_hovers.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "hovers" submenu in the eye menu.' ) )
         self._collapse_eye_menu_rendering.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse the "rendering" submenu in the eye menu.' ) )
         
@@ -175,7 +175,7 @@ class MediaViewerHoversPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Zoom switch button switches between:', self._zoom_switch_sets ) )
-        rows.append( ( 'Collapse "windows" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_window ) )
+        rows.append( ( 'Collapse "window" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_window ) )
         rows.append( ( 'Collapse "hovers" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_hovers ) )
         rows.append( ( 'Collapse "rendering" submenu in \'view options\' (eye menu):', self._collapse_eye_menu_rendering ) )
         
