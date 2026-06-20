@@ -2338,7 +2338,13 @@ class MediaContainer( QW.QWidget ):
     
     def IsMuted( self ):
         
-        return self._media_window.IsMuted()
+        if isinstance( self._media_window, ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer ) ):
+            
+            return self._media_window.IsMuted()
+            
+        else:
+            
+            return ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
         
     
     def IsPaused( self ):
@@ -2604,6 +2610,8 @@ class MediaContainer( QW.QWidget ):
             
             self._media_window.show()
             
+        
+        CG.client_controller.CallAfterQtSafe( self, self._UpdateMediaWindowMute, self._this_container_muted_state )
         
         CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
