@@ -110,7 +110,7 @@ There's a more advanced OR search function available by pressing the OR button. 
 ## Sorting
 At the top-left of most pages there's a `sort by: ` dropdown menu. Most of the options are self-explanatory. They do nothing except change in what order Hydrus presents the currently searched files to you.
 
-Default sort order and more `sort by: namespace` are found in `file -> options -> sort/collect`.
+Default sort order and more `namespace file sorting` options to sort by are found in `file -> options -> file sort/collect`.
 
 ### Sorting with `system:limit`
 
@@ -139,4 +139,4 @@ The tooltip on the sort controls will say whether you are currently simple enoug
 A common reason for users wondering why they get random results for their sorted searches is their implicit `system:limit` set under `options -> file search` is lower than the number of results their search would return, and they forgot about it. To address it, depending on your hardware specs and performance needs, you can either increase/remove the implicit `system:limit`, or you can explicitly add a high `system:limit` to queries only when exhaustive results are needed.
 
 ## Collecting
-Collection is found under the `sort by: ` dropdown and uses namespaces listed in the `sort by: namespace` sort options. The new namespaces will only be available in new pages.
+Collection is found under the `sort by: ` dropdown and will collect thumbnails on a page into groups based on namespaced tags or rating services. It uses the namespaces listed in the `namespace file sorting` section in main options tab `file sort/collect`. Any changes to the set of namespaces will only be available in new pages.
