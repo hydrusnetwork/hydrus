@@ -6,7 +6,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 
-def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True, slideshow_duration = None, slideshow_is_shuffling = False ):
+def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMenu, slideshow_is_running: bool, do_submenu = True, slideshow_duration = None, slideshow_is_shuffling = False, slideshow_is_playing_once_through = False ):
     
     if slideshow_duration == 0.0:
         
@@ -62,5 +62,6 @@ def AppendSlideshowMenu( win: CAC.ApplicationCommandProcessorMixin, menu: QW.QMe
     
     ClientGUIMenus.AppendSeparator( slideshow_menu )
     
-    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'always play media once through', 'Check this to always play the complete media duration at least once before moving on.', CG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ), CG.client_controller.new_options.FlipBoolean, 'slideshow_always_play_duration_media_once_through' )
+    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'this slideshow plays media once through', 'Override the \'always play media once through\' behaviour for this window only. New windows will still use the global option.', slideshow_is_playing_once_through, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_THISWINDOW_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH ) )
+    ClientGUIMenus.AppendMenuCheckItem( slideshow_menu, 'always play media once through', 'Check this to always play the complete media duration at least once before moving on.', CG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ), win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH ) )
     

@@ -211,6 +211,8 @@ SIMPLE_WINDOW_FRAMELESS_FLIP = 198
 SIMPLE_RENAME_PAGE = 199
 SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE = 200
 SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE = 201
+SIMPLE_FLIP_THISWINDOW_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH = 202
+SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH = 203
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -465,8 +467,10 @@ simple_enum_to_str_lookup = {
     SIMPLE_WINDOW_ALWAYS_ON_TOP_ON : 'window "always on top": set on',
     SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF : 'window "always on top": set off',
     SIMPLE_WINDOW_FRAMELESS_FLIP : 'window "frameless": flip on/off',
-    SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip for current window',
-    SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip global option (for all new windows)'
+    SIMPLE_FLIP_THISWINDOW_SLIDESHOW_SHUFFLE : 'slideshow shuffle: override/flip for current window',
+    SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip global option (and apply to current window)',
+    SIMPLE_FLIP_THISWINDOW_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH: 'always play media once through: override/flip for current window',
+    SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH: 'always play media once through: flip global option (and apply to current window)',
 }
 
 legacy_simple_str_to_enum_lookup = {

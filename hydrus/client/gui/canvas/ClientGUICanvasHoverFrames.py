@@ -798,7 +798,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._current_index_string = ''
         
         self._slideshow_period = 0.0
-        self.slideshow_is_shuffling = my_canvas.GetSlideshowIsShuffling
+        self.slideshow_is_shuffling = my_canvas.SlideshowIsShuffling
+        self.slideshow_is_playing_once_through = my_canvas.SlideshowIsPlayingMediaDurationOnceThrough
         
         self._top_left_hbox = QP.HBoxLayout()
         self._top_center_hbox = QP.HBoxLayout()
@@ -1626,7 +1627,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUICanvasMenus.AppendSlideshowMenu( self._my_canvas, menu, self._my_canvas.SlideshowIsRunning(), do_submenu = False, slideshow_duration = self._slideshow_period, slideshow_is_shuffling = self.slideshow_is_shuffling() )
+        ClientGUICanvasMenus.AppendSlideshowMenu( self._my_canvas, menu, self._my_canvas.SlideshowIsRunning(), do_submenu = False, slideshow_duration = self._slideshow_period, slideshow_is_shuffling = self.slideshow_is_shuffling(), slideshow_is_playing_once_through = self.slideshow_is_playing_once_through() )
         
         CGC.core().PopupMenu( self, menu )
         

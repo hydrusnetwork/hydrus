@@ -4153,6 +4153,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self._special_slideshow_period_for_current_media = None
         
         self.slideshow_is_shuffling = CG.client_controller.new_options.GetBoolean( 'slideshows_progress_randomly' )
+        self.this_slideshow_always_play_duration_media_once_through = CG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' )
         
         if first_hash is None:
             
@@ -4292,7 +4293,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._media_container.CurrentlyPresentingMediaWithDuration():
                 
-                if CG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ):
+                if self.this_slideshow_always_play_duration_media_once_through:
                     
                     if not self._media_container.HasPlayedOnceThrough():
                         
@@ -4425,9 +4426,14 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
         
     
-    def GetSlideshowIsShuffling( self ):
+    def SlideshowIsShuffling( self ):
         
         return self.slideshow_is_shuffling
+        
+    
+    def SlideshowIsPlayingMediaDurationOnceThrough( self ):
+        
+        return self.this_slideshow_always_play_duration_media_once_through
         
     
     def NotifyUserChangedMedia( self ):
@@ -4468,7 +4474,15 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             elif action == CAC.SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE:
                 
-                CG.client_controller.new_options.FlipBoolean( 'slideshows_progress_randomly' )
+                self.slideshow_is_shuffling = CG.client_controller.new_options.FlipBoolean( 'slideshows_progress_randomly' )
+                
+            elif action == CAC.SIMPLE_FLIP_THISWINDOW_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH:
+                
+                self.this_slideshow_always_play_duration_media_once_through = not self.this_slideshow_always_play_duration_media_once_through
+                
+            elif action == CAC.SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH:
+                
+                self.this_slideshow_always_play_duration_media_once_through = CG.client_controller.new_options.FlipBoolean( 'slideshow_always_play_duration_media_once_through' )
                 
             elif action == CAC.SIMPLE_SHOW_MENU:
                 
@@ -4568,7 +4582,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
                 
             
-            ClientGUICanvasMenus.AppendSlideshowMenu( self, menu, self._slideshow_is_running, slideshow_duration = self._normal_slideshow_period, slideshow_is_shuffling = self.slideshow_is_shuffling )
+            ClientGUICanvasMenus.AppendSlideshowMenu( self, menu, self._slideshow_is_running, slideshow_duration = self._normal_slideshow_period, slideshow_is_shuffling = self.slideshow_is_shuffling, slideshow_is_playing_once_through = self.this_slideshow_always_play_duration_media_once_through )
             
             ClientGUIMenus.AppendSeparator( menu )
             
