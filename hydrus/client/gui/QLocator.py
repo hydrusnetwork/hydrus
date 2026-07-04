@@ -150,7 +150,7 @@ class QLocatorResultWidget(QW.QWidget):
     def __init__(self, keyEventTarget: QW.QWidget, height: int, primaryTextWidth: int, secondaryTextWidth: int, parent = None):
         super().__init__(parent)
         self.iconHeight = height - 2
-        self.setObjectName("unselectedLocatorResult")
+        self.setObjectName( 'unselectedLocatorResult' )
         self.keyEventTarget = keyEventTarget
         hbox = QW.QHBoxLayout()
         self.setLayout( hbox )
@@ -276,13 +276,13 @@ class QLocatorResultWidget(QW.QWidget):
     def setSelected(self, selected: bool):
         self.selected = selected
         if selected:
-            self.setObjectName("selectedLocatorResult")
+            self.setObjectName( 'selectedLocatorResult' )
             if self.defaultStylingEnabled: self.setPalette(self.selectedPalette)
             self.style().unpolish(self)
             self.style().polish(self)
             self.setFocus()
         else:
-            self.setObjectName("unselectedLocatorResult")
+            self.setObjectName( 'unselectedLocatorResult' )
             if self.defaultStylingEnabled: self.setPalette(QG.QPalette())
             self.style().unpolish(self)
             self.style().polish(self)

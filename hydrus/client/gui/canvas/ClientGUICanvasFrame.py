@@ -226,6 +226,18 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
                 
                 ClientGUIMediaControls.FlipMute( ClientGUIMediaControls.AUDIO_GLOBAL )
                 
+            elif action == CAC.SIMPLE_WINDOW_AUDIO_MUTE:
+                
+                self._canvas_window.UpdateMediaWindowMute( True )
+                
+            elif action == CAC.SIMPLE_WINDOW_AUDIO_MUTE_FLIP:
+                
+                self._canvas_window.FlipMediaWindowMute()
+                
+            elif action == CAC.SIMPLE_WINDOW_AUDIO_MUTE_UNMUTE:
+                
+                self._canvas_window.UpdateMediaWindowMute( False )
+                
             elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
                 
                 CG.client_controller.gui.FlipProfileMode( 'db' )

@@ -1490,6 +1490,7 @@ class MediaContainer( QW.QWidget ):
         
         self._this_container_muted_state = ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
         self._volume_control.muteChanged.connect( self._UpdateMediaWindowMute )
+        self._this_window_volume_state_been_changed = False
         
         self._volume_control.setCursor( QC.Qt.CursorShape.ArrowCursor )
         
@@ -2071,19 +2072,19 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def _UpdateMediaWindowMute( self, mute_state ):
+    def _UpdateMediaWindowMute( self, mute_state = None ):
         
         muteable_window_classes = ( ClientGUIMPV.MPVWidget, ClientGUIQtMediaPlayer.QtMediaPlayer )
         
         if mute_state is not None:
             
             self._this_container_muted_state = mute_state
+            self._this_window_volume_state_been_changed = True
             
         
         if isinstance( self._media_window, muteable_window_classes ):
             
             self._media_window.UpdateAudioMute( mute_state = mute_state )
-            
         
     
     def AddPlayerMenus( self, menu: QW.QMenu ):
@@ -2611,7 +2612,10 @@ class MediaContainer( QW.QWidget ):
             self._media_window.show()
             
         
-        CG.client_controller.CallAfterQtSafe( self, self._UpdateMediaWindowMute, self._this_container_muted_state )
+        if self._this_window_volume_state_been_changed:
+            
+            CG.client_controller.CallAfterQtSafe( self, self._UpdateMediaWindowMute, self._this_container_muted_state )
+            
         
         CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
@@ -2738,7 +2742,7 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def UpdateMediaWindowMute( self, mute_state ):
+    def UpdateMediaWindowMute( self, mute_state = None ):
         
         self._UpdateMediaWindowMute( mute_state )
         

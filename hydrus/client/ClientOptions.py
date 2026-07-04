@@ -627,6 +627,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ] = {
             'forced_search_limit' : None,
             'num_recent_tags' : 20,
+            'num_recent_tags_in_quick_dialog' : 10,
             'duplicate_background_switch_intensity_a' : 0,
             'duplicate_background_switch_intensity_b' : 3,
             'duplicate_filter_auto_commit_batch_size' : 1,

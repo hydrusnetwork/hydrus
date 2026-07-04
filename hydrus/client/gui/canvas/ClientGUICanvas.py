@@ -3255,6 +3255,14 @@ class CanvasWithHovers( Canvas ):
         
         self._media_container.UpdateMediaWindowMute( mute_state )
         
+    def FlipMediaWindowMute( self ):
+        
+        self._media_container.UpdateMediaWindowMute( not self._media_container.IsMuted() )
+        
+    def GetMediaMuteState( self ):
+        
+        return self._media_container.IsMuted()
+        
     
     def TIMERUIUpdate( self ):
         
