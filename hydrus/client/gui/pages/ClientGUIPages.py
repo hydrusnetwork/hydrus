@@ -2251,7 +2251,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
-        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) is not None
+        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'treeview_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) is not None
         
         self.tabBar().setHidden( tabs_are_hidden )
         
@@ -2585,7 +2585,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
     def UpdateTabVisibility( self ):
         
-        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) is not None
+        tabs_are_hidden = CG.client_controller.new_options.GetBoolean( 'treeview_hides_tabs' ) and CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) is not None
         
         #
         
@@ -3966,6 +3966,34 @@ class PagesHistory( collections.OrderedDict ):
             
         
         self[ page_key ] = page_name
+        
+    
+    def RemovePage( self, page: Page ):
+        
+        page_key = page.GetPageKey()
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+    
+    def RemovePageKey( self, page_key: bytes ):
+        
+        if page_key in self:
+            
+            self.pop( page_key )
+            
+        
+    
+    def RemovePageIndex( self, index: int ):
+        
+        if 0 <= index < self.count():
+            
+            page_key = list( self.keys() )[ index ]
+            
+            self.pop( page_key )
+            
         
     
     def CleanPages( self, existing_page_keys: set[ bytes ] ):

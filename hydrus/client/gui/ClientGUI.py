@@ -571,7 +571,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._notebook.selectionChanged.connect( self._tabs_tree_view.SelectLeafFromNotebookPage )
         
-        self._page_nav_history = ClientGUIPages.PagesHistory()
+        self.page_nav_history = ClientGUIPages.PagesHistory()
         
         self._currently_uploading_pending = set()
         
@@ -3967,11 +3967,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        self._page_nav_history_menu = ClientGUIMenus.GenerateMenu( menu )
+        self.page_nav_history_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuLabel( self._page_nav_history_menu, 'no tab history', 'Your page history is currently empty.', None, True )
+        ClientGUIMenus.AppendMenuLabel( self.page_nav_history_menu, 'no tab history', 'Your page history is currently empty.', None, True )
         
-        ClientGUIMenus.AppendMenu( menu, self._page_nav_history_menu, 'history' )
+        ClientGUIMenus.AppendMenu( menu, self.page_nav_history_menu, 'history' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -5406,7 +5406,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _RebuildMainFrameLayout( self ):
         
-        alignment = CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' )
+        alignment = CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' )
         
         while self._vertical_splitter.count() > 0:
             
@@ -5429,7 +5429,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 self._vertical_splitter.widget( 0 ).setMinimumWidth( 100 )
                 self._vertical_splitter.setSizes( sizes )
                 
-                self._vertical_splitter.setCollapsible( 0, CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' ) )
+                self._vertical_splitter.setCollapsible( 0, CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' ) )
                 self._vertical_splitter.setCollapsible( 1, False )
                 
                 
@@ -5443,7 +5443,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 self._vertical_splitter.setSizes( sizes )
                 
                 self._vertical_splitter.setCollapsible( 0, False )
-                self._vertical_splitter.setCollapsible( 1, CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' ) )
+                self._vertical_splitter.setCollapsible( 1, CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' ) )
             
             
             self._vertical_splitter.setStretchFactor( 0, 0 )
@@ -6700,7 +6700,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _SaveMainVboxSplitterPosition( self ):
         
-        alignment = CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' )
+        alignment = CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' )
         
         if alignment is None:
             
@@ -6847,7 +6847,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _SetPagesHistoryEmpty( self ):
         
-        self._page_nav_history.CleanPages( {} )
+        self.page_nav_history.CleanPages( {} )
         
         self._menu_updater_set_pages_history_dirty.Update()
         
@@ -7271,16 +7271,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self._pages_history_dirty:
             
-            self._page_nav_history_menu.clear()
+            self.page_nav_history_menu.clear()
             
-            for i, ( page_key, page_name ) in enumerate( reversed( self._page_nav_history.GetHistory() ) ):
+            for i, ( page_key, page_name ) in enumerate( reversed( self.page_nav_history.GetHistory() ) ):
                 
                 if i >= CG.client_controller.new_options.GetInteger( 'page_nav_history_max_entries' ):
                     
                     break
                     
                 
-                history_menuitem = ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', CG.client_controller.gui.ShowPage, page_key )
+                history_menuitem = ClientGUIMenus.AppendMenuItem( self.page_nav_history_menu, '{}: {}'.format( i + 1, page_name ), 'Activate this tab from your viewing history.', CG.client_controller.gui.ShowPage, page_key )
                 
                 if i == 0:
                     
@@ -7289,8 +7289,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     history_menuitem.setFont( font )
                     
                 
-            ClientGUIMenus.AppendSeparator( self._page_nav_history_menu )
-            ClientGUIMenus.AppendMenuItem( self._page_nav_history_menu, 'Clear History', 'Clear the in-memory page nav history.', self._SetPagesHistoryEmpty )
+            ClientGUIMenus.AppendSeparator( self.page_nav_history_menu )
+            ClientGUIMenus.AppendMenuItem( self.page_nav_history_menu, 'Clear History', 'Clear the in-memory page nav history.', self._SetPagesHistoryEmpty )
             
             self._pages_history_dirty = False
             
@@ -7298,9 +7298,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UpdateTreeSidebarCollapsibility( self ):
         
-        update = CG.client_controller.new_options.GetBoolean( 'tab_tree_sidebar_can_collapse' )
+        update = CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' )
         
-        if CG.client_controller.new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) == CC.DIRECTION_LEFT:
+        if CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) == CC.DIRECTION_LEFT:
             
             self._vertical_splitter.setCollapsible( 0, update )
             
@@ -7911,7 +7911,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def GetPagesHistory( self ):
         
-        return self._page_nav_history.GetHistory()
+        return self.page_nav_history.GetHistory()
         
     
     def GetTopLevelNotebook( self ):
@@ -8190,7 +8190,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.ClosePageKeys( page.GetPageKeys() )
         
         open_pages = self._notebook.GetPageKeys()
-        self._page_nav_history.CleanPages( open_pages )
+        self.page_nav_history.CleanPages( open_pages )
         
         self._menu_updater_set_pages_history_dirty.Update()
         
@@ -8275,7 +8275,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if current_page is not None:
             
-            self._page_nav_history.AddPage( current_page )
+            self.page_nav_history.AddPage( current_page )
             
         
         self._menu_updater_set_pages_history_dirty.Update()

@@ -90,20 +90,20 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disable_page_tab_dnd.setToolTip( ClientGUIFunctions.WrapToolTip( 'Trying to debug some client hangs!' ) )
         
-        self._page_nav_history_max_entries = ClientGUICommon.BetterSpinBox( self._navigation_and_dnd, min=1, max=1000 )
-        self._page_nav_history_max_entries.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of entries to display in the tab navigation history menu under pages->history.' ) )
+        self.page_nav_history_max_entries = ClientGUICommon.BetterSpinBox( self._navigation_and_dnd, min=1, max=1000 )
+        self.page_nav_history_max_entries.setToolTip( ClientGUIFunctions.WrapToolTip( 'The maximum number of entries to display in the tab navigation history menu under pages->history.' ) )
         
-        self._tab_tree_view_alignment = ClientGUICommon.BetterChoice( self._navigation_and_dnd )
+        self._treeview_alignment = ClientGUICommon.BetterChoice( self._navigation_and_dnd )
         
-        self._tab_tree_view_alignment.addItem( 'disable', None )
+        self._treeview_alignment.addItem( 'disable', None )
         
         for value in [ CC.DIRECTION_LEFT, CC.DIRECTION_RIGHT ]:
             
-            self._tab_tree_view_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
+            self._treeview_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
             
         
-        self._tab_tree_view_hides_tabs = QW.QCheckBox( self._navigation_and_dnd )
-        self._tab_tree_view_hides_tabs.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you have the tab tree view enabled, hiding the main tabs can save space and reduce visual clutter.' ) )
+        self._treeview_hides_tabs = QW.QCheckBox( self._navigation_and_dnd )
+        self._treeview_hides_tabs.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you have the tab tree view enabled, hiding the main tabs can save space and reduce visual clutter.' ) )
         
         #
         
@@ -147,8 +147,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._notebook_tab_alignment.SetValue( self._new_options.GetInteger( 'notebook_tab_alignment' ) )
         
-        self._tab_tree_view_alignment.SetValue( self._new_options.GetNoneableInteger( 'tab_tree_view_alignment' ) )
-        self._tab_tree_view_hides_tabs.setChecked( self._new_options.GetBoolean( 'tab_tree_view_hides_tabs' ) )
+        self._treeview_alignment.SetValue( self._new_options.GetNoneableInteger( 'treeview_alignment' ) )
+        self._treeview_hides_tabs.setChecked( self._new_options.GetBoolean( 'treeview_hides_tabs' ) )
         
         self._max_page_name_chars.setValue( self._new_options.GetInteger( 'max_page_name_chars' ) )
         
@@ -173,7 +173,7 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._disable_page_tab_dnd.setChecked( self._new_options.GetBoolean( 'disable_page_tab_dnd' ) )
         
-        self._page_nav_history_max_entries.setValue( self._new_options.GetInteger( 'page_nav_history_max_entries' ) )
+        self.page_nav_history_max_entries.setValue( self._new_options.GetInteger( 'page_nav_history_max_entries' ) )
         
         self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
         
@@ -204,7 +204,7 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Notebook tab alignment: ', self._notebook_tab_alignment ) )
-        rows.append( ( 'Maximum entries to show in page navigation history: ', self._page_nav_history_max_entries ) )
+        rows.append( ( 'Maximum entries to show in page navigation history: ', self.page_nav_history_max_entries ) )
         rows.append( ( 'When switching to pages, move keyboard focus to any text input field: ', self._set_search_focus_on_page_change ) )
         rows.append( ( 'Selection chases dropped page after drag and drop: ', self._page_drop_chase_normally ) )
         rows.append( ( '  With shift held down?: ', self._page_drop_chase_with_shift ) )
@@ -212,8 +212,8 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
         rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
         rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
-        rows.append( ( 'EXPERIMENTAL: Show tab tree view: ', self._tab_tree_view_alignment ) )
-        rows.append( ( 'EXPERIMENTAL: Hide main page navigation tabs: ', self._tab_tree_view_hides_tabs ) )
+        rows.append( ( 'EXPERIMENTAL: Show tab tree view: ', self._treeview_alignment ) )
+        rows.append( ( 'EXPERIMENTAL: Hide main page navigation tabs: ', self._treeview_hides_tabs ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._navigation_and_dnd, rows )
         
@@ -321,7 +321,10 @@ class GUIPagesPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetBoolean( 'set_search_focus_on_page_change', self._set_search_focus_on_page_change.isChecked() )
         
-        self._new_options.SetInteger( 'page_nav_history_max_entries', self._page_nav_history_max_entries.value() )
+        self._new_options.SetInteger( 'page_nav_history_max_entries', self.page_nav_history_max_entries.value() )
+        
+        self._new_options.SetNoneableInteger( 'treeview_alignment', self._treeview_alignment.GetValue() )
+        self._new_options.SetBoolean( 'treeview_hides_tabs', self._treeview_hides_tabs.isChecked() )
         
         HC.options[ 'hide_preview' ] = self._hide_preview.isChecked()
         

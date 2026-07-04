@@ -75,6 +75,21 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
         return None
         
     
+
+    def _MakeHashablePageKey( self, page_key ):
+        
+        try:
+            
+            hash( page_key )
+            
+            return ( 'page_key', page_key )
+            
+        except:
+            
+            return ( 'page_key_repr', repr( page_key ) )
+            
+        
+    
     def _SplitPageNameAndCountText( self, text: str ):
         
         text = str( text )
@@ -166,6 +181,18 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
         return max_depth
         
     
+    def GetPageNameAndTooltipFromPageKey( self, page_key ):
+        
+        index = self.FindIndexForPageKey( page_key )
+        
+        if index.isValid():
+            
+            return self.GetPageNameAndTooltipFromIndex( index )
+            
+        
+        return ( str( page_key ), str( page_key ) )
+        
+    
     def GetKindFromIndex( self, index: QC.QModelIndex ) -> Optional[ str ]:
         
         data = self._IndexData( index )
@@ -229,7 +256,9 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
         
         if page_key is not None:
             
-            return ( data.kind, 'page_key', page_key )
+            page_key_type, page_key_value = self._MakeHashablePageKey( page_key )
+            
+            return ( data.kind, page_key_type, page_key_value )
             
         
         return ( data.kind, 'widget_id', id( data.obj ) )
@@ -257,6 +286,43 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
                 
             
             result = self.FindIndexForNodeKey( node_key, index )
+            
+            if result.isValid():
+                
+                return result
+                
+            
+        
+        return QC.QModelIndex()
+        
+    
+    def FindIndexForPageKey( self, page_key, parent: QC.QModelIndex = QC.QModelIndex() ) -> QC.QModelIndex:
+        
+        if page_key is None:
+            
+            return QC.QModelIndex()
+            
+        
+        for row in range( self.rowCount( parent ) ):
+            
+            index = self.index( row, 0, parent )
+            
+            if not index.isValid():
+                
+                continue
+                
+            
+            data = self._IndexData( index )
+            
+            if data is not None and data.kind in ( 'page', 'notebook' ):
+                
+                if self._GetPageKey( data.obj ) == page_key:
+                    
+                    return index
+                    
+                
+            
+            result = self.FindIndexForPageKey( page_key, index )
             
             if result.isValid():
                 
@@ -442,7 +508,7 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
                     
                     if row != -1 and row < notebook.count():
                         
-                        text = notebook.tabText( row )
+                        text = data.obj.GetNameForMenu( elide = False )
                         
                         if text:
                             return text

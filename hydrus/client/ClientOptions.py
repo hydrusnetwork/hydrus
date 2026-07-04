@@ -367,10 +367,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'mpv_allow_crashy_files_silently' : False,
             'test_thumbnails_graphics_view' : False,
             'copy_import_files_to_temp_dir' : True,
-            'tab_tree_view_hides_tabs' : False,
-            'tab_tree_view_controls_at_top' : False,
-            'tab_tree_view_expanding_panel_at_top' : False,
-            'tab_tree_sidebar_can_collapse' : False,
+            'treeview_hides_tabs' : False,
+            'treeview_controls_at_top' : False,
+            'treeview_expanding_panel_at_top' : False,
+            'treeview_sidebar_can_collapse' : False,
+            'treeview_always_expand_to_current_tab_after_reset' : False,
+            'treeview_collapse_all_children_upon_parent_closed' : False,
+            'treeview_animate_current_node' : True,
+            'treeview_history_box_pinned' : False,
         }
         
         #
@@ -656,7 +660,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_limit_page_results' : None,
             'command_palette_limit_history_results' : 10,
             'command_palette_limit_favourite_searches_results' : None,
-            'tab_tree_view_alignment' : None,
+            'treeview_alignment' : None,
             'tag_view_alignment' : None,
         }
         
@@ -723,7 +727,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_provider_order' : [ CC.COMMAND_PALETTE_PROVIDER_CALCULATOR, CC.COMMAND_PALETTE_PROVIDER_MAIN_MENU, CC.COMMAND_PALETTE_PROVIDER_MEDIA_MENU, CC.COMMAND_PALETTE_PROVIDER_PAGES_HISTORY, CC.COMMAND_PALETTE_PROVIDER_PAGES, CC.COMMAND_PALETTE_PROVIDER_FAVOURITE_SEARCH ],
             'tab_tree_splitter_sizes_left' : [ 200, 1000 ],
             'tab_tree_splitter_sizes_right' : [ 1000, 200 ],
-            'tab_tree_view_expanding_panel_splitter_size' : [ 700, 150 ],
+            'treeview_expanding_panel_splitter_size' : [ 700, 150 ],
         }
         
         #
