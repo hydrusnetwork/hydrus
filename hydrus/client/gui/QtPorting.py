@@ -802,6 +802,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
 class TreeViewWithDnD( QW.QTreeView ):
     
     leafDragAndDropped = QC.Signal( QW.QWidget, QW.QWidget )
+    currentPagePathChanged = QC.Signal( str )
     
     def __init__( self, parent = None ):
         
@@ -818,6 +819,12 @@ class TreeViewWithDnD( QW.QTreeView ):
         self.setDropIndicatorShown( True )
         self.setDragDropMode( QW.QAbstractItemView.DragDropMode.InternalMove )
         self.setDefaultDropAction( QC.Qt.DropAction.MoveAction )
+        
+        self.setSelectionBehavior( QW.QAbstractItemView.SelectionBehavior.SelectRows )
+        self.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
+        
+        self._saved_expanded_node_keys = set()
+        self._saved_current_node_key = None
         
         self.activated.connect( self._OnTreeActivated )
         self.doubleClicked.connect( self._OnTreeActivated )
@@ -903,6 +910,57 @@ class TreeViewWithDnD( QW.QTreeView ):
         notebook.ClosePage( index.row() )
         
     
+    def _ExpandAncestors( self, index: QC.QModelIndex ):
+        
+        parents = []
+        parent = index.parent()
+        
+        while parent.isValid():
+            
+            parents.append( parent )
+            parent = parent.parent()
+            
+        
+        for parent in reversed( parents ):
+            
+            self.expand( parent )
+            
+        
+    
+    def _SelectIndex( self, index: QC.QModelIndex, scroll = True ):
+        
+        if not index.isValid():
+            
+            return
+            
+        
+        self._ExpandAncestors( index )
+        self.setCurrentIndex( index )
+        
+        selection_model = self.selectionModel()
+        
+        if selection_model is not None:
+            
+            selection_model.select(
+                index,
+                QC.QItemSelectionModel.SelectionFlag.ClearAndSelect |
+                QC.QItemSelectionModel.SelectionFlag.Rows
+            )
+            
+        
+        if scroll:
+            
+            self.scrollTo( index, QW.QAbstractItemView.ScrollHint.PositionAtCenter )
+            
+        
+        model = self.model()
+        
+        if model is not None and hasattr( model, 'GetFullNameFromIndex' ):
+            
+            self.currentPagePathChanged.emit( model.GetFullNameFromIndex( index ) )
+            
+        
+    
     def _OnTreeActivated( self, index: QC.QModelIndex ):
         
         model = self.model()
@@ -921,14 +979,18 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         model = self.model()
         
+        if model is None:
+            
+            return
+            
+        
         parent_index = model._FindNotebookIndex( notebook )
         index = model.index( tab_index, 0, parent_index )
         
         if index.isValid():
             
-            self.expand( index.parent() )
-            self.setCurrentIndex( index )
-            self.scrollTo( index )
+            self._SelectIndex( index )
+            
         
     
     def SaveState( self ):
@@ -937,11 +999,13 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         if model is None:
             
-            self._saved_expanded_page_keys = set()
+            self._saved_expanded_node_keys = set()
+            self._saved_current_node_key = None
             return
             
         
-        self._saved_expanded_page_keys = set()
+        self._saved_expanded_node_keys = set()
+        self._saved_current_node_key = model.GetNodeKeyFromIndex( self.currentIndex() )
         
         stack = [ QC.QModelIndex() ]
         
@@ -960,19 +1024,18 @@ class TreeViewWithDnD( QW.QTreeView ):
                 
                 if self.isExpanded( index ):
                     
-                    page_key = model.GetPageKeyFromIndex( index )
+                    node_key = model.GetNodeKeyFromIndex( index )
                     
-                    if page_key is not None:
+                    if node_key is not None:
                         
-                        self._saved_expanded_page_keys.add( page_key )
+                        self._saved_expanded_node_keys.add( node_key )
                         
                     
-                
-                stack.append( index )
+                    stack.append( index )
+                    
                 
             
         
-    
     def RestoreState( self ):
         
         model = self.model()
@@ -982,7 +1045,7 @@ class TreeViewWithDnD( QW.QTreeView ):
             return
             
         
-        page_keys = getattr( self, '_saved_expanded_page_keys', set() ) or set()
+        node_keys = getattr( self, '_saved_expanded_node_keys', set() ) or set()
         
         stack = [ QC.QModelIndex() ]
         
@@ -999,14 +1062,27 @@ class TreeViewWithDnD( QW.QTreeView ):
                     continue
                     
                 
-                page_key = model.GetPageKeyFromIndex( index )
+                node_key = model.GetNodeKeyFromIndex( index )
                 
-                if page_key is not None and page_key in page_keys:
+                if node_key is not None and node_key in node_keys:
                     
+                    self._ExpandAncestors( index )
                     self.expand( index )
                     
                 
                 stack.append( index )
+                
+            
+        
+        current_node_key = getattr( self, '_saved_current_node_key', None )
+        
+        if current_node_key is not None and hasattr( model, 'FindIndexForNodeKey' ):
+            
+            current_index = model.FindIndexForNodeKey( current_node_key )
+            
+            if current_index.isValid():
+                
+                self._SelectIndex( current_index, scroll = False )
                 
             
         
@@ -1040,6 +1116,8 @@ class TreeViewWithControls( QW.QWidget ):
         self._controls_layout.setContentsMargins( 0, 0, 0, 0 ) 
         self._controls_layout.setSpacing( 2 )
         
+        #
+        
         self.collapse_all = ClientGUICommon.IconButton( self, CC.global_icons().position_first, lambda: self.expandToDepth( -1 ) )
         self.collapse_all.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse all' ) )
         
@@ -1064,6 +1142,16 @@ class TreeViewWithControls( QW.QWidget ):
         self.expand_all = ClientGUICommon.IconButton( self._controls, CC.global_icons().position_last, lambda: self.expandToDepth( self._tree.model().GetViewDepth() ) )
         self.expand_all.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand all' ) )
         
+        #
+        
+        self._current_page_path = ClientGUICommon.BetterStaticText( self._controls, '' )
+        self._current_page_path.setToolTip( ClientGUIFunctions.WrapToolTip( 'Current page' ) )
+        
+        if hasattr( self._tree, 'currentPagePathChanged' ):
+            
+            self._tree.currentPagePathChanged.connect( self._current_page_path.setText )
+            
+        
         self._controls_button = ClientGUICommon.IconButton( self._controls, CC.global_icons().cog, self._ShowCogMenu )
         self._controls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Tree view controls' ) )
         
@@ -1081,6 +1169,8 @@ class TreeViewWithControls( QW.QWidget ):
         # scroll_area.setWidgetResizable( True )
         # self._expanding_panel = scroll_area
         
+        #
+        
         self._expanding_panel_splitter = QW.QSplitter( QC.Qt.Orientation.Vertical )
         
         if self._panel_at_top:
@@ -1095,7 +1185,6 @@ class TreeViewWithControls( QW.QWidget ):
         self._expanding_panel_splitter.splitterMoved.connect( self._SplitterSizeChanged )
         
         #
-
         
         self._controls_layout.addWidget( depth_1 )
         self._controls_layout.addWidget( depth_2 )
@@ -1107,9 +1196,8 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._controls_layout.addStretch( 1 )
         
+        self._controls_layout.addWidget( self._current_page_path, 1 )
         self._controls_layout.addWidget( self._controls_button )
-        
-        #
         
         self._vbox = QW.QVBoxLayout( self )
         self._vbox.setContentsMargins( 0, 0, 0, 0 )

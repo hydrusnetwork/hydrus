@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Optional
 
+import re
+from html import escape as html_escape
+
 from hydrus.client.gui.pages import ClientGUIPages
 
 from qtpy import QtCore as QC
@@ -71,6 +74,85 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
         
         return None
         
+    
+    def _SplitPageNameAndCountText( self, text: str ):
+        
+        text = str( text )
+        
+        match = re.search( r'^(.*?)(\s+\([^()]+\))$', text )
+        
+        if match is None:
+            
+            return ( text, '' )
+            
+        
+        return ( match.group( 1 ), match.group( 2 ) )
+        
+    
+    def GetPageNameAndTooltipFromIndex( self, index: QC.QModelIndex ):
+        
+        if not index.isValid():
+            
+            return ( '', '' )
+            
+        
+        indices = []
+        walk_index = index
+        
+        while walk_index.isValid():
+            
+            indices.append( walk_index )
+            walk_index = walk_index.parent()
+            
+        
+        indices.reverse()
+        
+        names = []
+        suffix = ''
+        
+        for path_index in indices:
+            
+            text = self.data( path_index, QC.Qt.ItemDataRole.DisplayRole )
+            
+            if text is None:
+                
+                continue
+                
+            
+            name, possible_suffix = self._SplitPageNameAndCountText( str( text ) )
+            
+            names.append( name )
+            
+            if path_index == index:
+                
+                suffix = possible_suffix
+                
+            
+        
+        if len( names ) == 0:
+            
+            return ( '', '' )
+            
+        
+        page_name = names[-1]
+        parent_names = names[:-1]
+        
+        escaped_page_name = html_escape( page_name )
+        escaped_suffix = html_escape( suffix )
+        
+        if len( parent_names ) > 0:
+            
+            escaped_parent_path = html_escape( ' / '.join( parent_names ) )
+            tooltip = f'<html><i>{escaped_parent_path} / </i>{escaped_page_name}{escaped_suffix}</html>'
+            
+        else:
+            
+            tooltip = f'<html>{escaped_page_name}{escaped_suffix}</html>'
+            
+        
+        return ( page_name, tooltip )
+        
+    
     def GetViewDepth( self, parent: QC.QModelIndex = QC.QModelIndex() ) -> int:
         
         max_depth = -1
@@ -132,6 +214,78 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
             return None
         
         return self._GetPageKey( data.obj )
+        
+    
+    def GetNodeKeyFromIndex( self, index: QC.QModelIndex ):
+        
+        data = self._IndexData( index )
+        
+        if data is None or data.kind not in ( 'page', 'notebook' ):
+            
+            return None
+            
+        
+        page_key = self._GetPageKey( data.obj )
+        
+        if page_key is not None:
+            
+            return ( data.kind, 'page_key', page_key )
+            
+        
+        return ( data.kind, 'widget_id', id( data.obj ) )
+        
+    
+    def FindIndexForNodeKey( self, node_key, parent: QC.QModelIndex = QC.QModelIndex() ) -> QC.QModelIndex:
+        
+        if node_key is None:
+            
+            return QC.QModelIndex()
+            
+        
+        for row in range( self.rowCount( parent ) ):
+            
+            index = self.index( row, 0, parent )
+            
+            if not index.isValid():
+                
+                continue
+                
+            
+            if self.GetNodeKeyFromIndex( index ) == node_key:
+                
+                return index
+                
+            
+            result = self.FindIndexForNodeKey( node_key, index )
+            
+            if result.isValid():
+                
+                return result
+                
+            
+        
+        return QC.QModelIndex()
+        
+    
+    def GetFullNameFromIndex( self, index: QC.QModelIndex ) -> str:
+        
+        names = []
+        
+        while index.isValid():
+            
+            name = self.data( index, QC.Qt.ItemDataRole.DisplayRole )
+            
+            if name:
+                
+                names.append( str( name ) )
+                
+            
+            index = index.parent()
+            
+        
+        names.reverse()
+        
+        return ' / '.join( names )
         
     
     def Reset( self ):
