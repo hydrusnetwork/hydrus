@@ -24,6 +24,7 @@ class ColoursPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._help_label = ClientGUICommon.BetterStaticText( self, label = help_text )
         
         self._help_label.setObjectName( 'HydrusWarning' )
+        self._help_label.setProperty( 'exclude_from_search', True )
         
         self._help_label.setWordWrap( True )
         

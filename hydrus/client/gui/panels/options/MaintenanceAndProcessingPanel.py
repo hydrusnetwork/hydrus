@@ -353,6 +353,7 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         
         st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
         st.setWordWrap( True )
+        st.setProperty( 'exclude_from_search' , True )
         
         self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )

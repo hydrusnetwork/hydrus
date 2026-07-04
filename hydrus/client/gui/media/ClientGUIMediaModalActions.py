@@ -538,19 +538,20 @@ def GetContentApplicationCommandFromInteractiveContentCommand( win: QW.QWidget, 
     
     service_type = service.GetServiceType()
     service_name = CG.client_controller.services_manager.GetNameSafe( service_key )
+    suggestions_user_opt = CG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags_in_quick_dialog' )
     
     if service_type in HC.REAL_TAG_SERVICES:
         
         try:
             
-            recent_tags = CG.client_controller.Read( 'recent_tags', service_key )
+            recent_tags = None if suggestions_user_opt is None else CG.client_controller.Read( 'recent_tags', service_key )
             last_tag = ''
             
             if recent_tags is not None:
                 
-                if len( recent_tags ) > 10:
+                if len( recent_tags ) > suggestions_user_opt:
                     
-                    recent_tags = recent_tags[:10]
+                    recent_tags = recent_tags[:suggestions_user_opt]
                     
                 if len( recent_tags ) > 0:
                     

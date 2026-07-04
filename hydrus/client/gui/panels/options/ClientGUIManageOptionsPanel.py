@@ -130,8 +130,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for widget in page.findChildren( QW.QWidget ):
                 
-                text = ""
+                text = ''
                 
+                if widget.property( "exclude_from_search" ):
+                    continue
                 if isinstance( widget, QW.QLabel ):
                     text = widget.text()
                 elif isinstance( widget, QW.QCheckBox ):
@@ -142,7 +144,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     text = widget.currentText()
                 
                 if text:
-                    key = f"{text} ({page_name})"
+                    key = f'{text} ({page_name})'
                     completer_strings.append( key )
                     self._completer_map[key] = ( page_name, widget )
                     
@@ -165,8 +167,46 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 page_name, widget = self._completer_map[text]
                 self._listbook.SelectName( page_name )
                 
-                widget.setStyleSheet( "background-color: rgba(255, 255, 0, 128);" )
-                widget.repaint()
+                def ensure_widget_tab_shown( target_widget: QW.QWidget ):
+                    
+                    w = target_widget
+                    
+                    while w is not None and w != self._listbook:
+                        
+                        maybe_expandable_thing = w.parentWidget()
+                        
+                        if isinstance( maybe_expandable_thing, QW.QTabWidget ):
+                            
+                            tab_bar = maybe_expandable_thing
+                            
+                            for i in range( 0, tab_bar.count() ):
+                                
+                                tab = tab_bar.widget( i )
+                                
+                                if tab.isAncestorOf( target_widget ):
+                                    
+                                    tab_bar.setCurrentWidget( tab )
+                                    
+                        elif isinstance( maybe_expandable_thing, QW.QFrame ): 
+                            
+                            from hydrus.client.gui.widgets import ClientGUICommon
+                            
+                            if isinstance( maybe_expandable_thing, ClientGUICommon.StaticBox ):
+                                
+                                if not maybe_expandable_thing.IsExpanded():
+                                    
+                                    maybe_expandable_thing.ExpandCollapse()
+                                    
+                                
+                            
+                        w = maybe_expandable_thing
+                        
+                    
+                
+                ensure_widget_tab_shown( widget )
+                widget.setStyleSheet( 'background-color: rgba( 234, 234, 0, 123 );' )
+                widget.setObjectName( 'HydrusOptionsSearchHighlight' )
+                widget.update()
                 
             
             QC.QTimer.singleShot( 0, lambda: self._options_search.setText('') )

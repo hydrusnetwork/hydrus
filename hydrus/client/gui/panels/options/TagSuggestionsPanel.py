@@ -156,6 +156,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         suggested_tags_recent_panel = QW.QWidget( suggest_tags_panel_notebook )
         
         self._num_recent_tags = ClientGUICommon.NoneableSpinCtrl( suggested_tags_recent_panel, 20, message = 'number of recent tags to show', min = 1, none_phrase = 'do not show' )
+        self._num_recent_tags_in_quick_dialog = ClientGUICommon.NoneableSpinCtrl( suggested_tags_recent_panel, 10, message = 'number of recent tags to show in quick entry dialogs', min = 1, none_phrase = 'do not show' )
         
         #
         
@@ -185,6 +186,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._favourite_file_lookup_script.SetValue( self._new_options.GetNoneableString( 'favourite_file_lookup_script' ) )
         
         self._num_recent_tags.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags' ) )
+        self._num_recent_tags_in_quick_dialog.SetValue( self._new_options.GetNoneableInteger( 'num_recent_tags_in_quick_dialog' ) )
         
         #
         
@@ -267,6 +269,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( panel_vbox, self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( panel_vbox, self._num_recent_tags_in_quick_dialog, CC.FLAGS_EXPAND_PERPENDICULAR )
         panel_vbox.addStretch( 0 )
         
         suggested_tags_recent_panel.setLayout( panel_vbox )
@@ -537,5 +540,6 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetNoneableString( 'favourite_file_lookup_script', self._favourite_file_lookup_script.GetValue() )
         
         self._new_options.SetNoneableInteger( 'num_recent_tags', self._num_recent_tags.GetValue() )
+        self._new_options.SetNoneableInteger( 'num_recent_tags_in_quick_dialog', self._num_recent_tags_in_quick_dialog.GetValue() )
         
     

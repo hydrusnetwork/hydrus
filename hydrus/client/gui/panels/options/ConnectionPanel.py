@@ -174,6 +174,7 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         st = ClientGUICommon.BetterStaticText( proxy_panel, text )
+        st.setProperty( 'exclude_from_search', True )
         
         st.setWordWrap( True )
         
