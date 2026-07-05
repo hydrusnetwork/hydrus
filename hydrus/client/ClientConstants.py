@@ -689,6 +689,7 @@ class GlobalPixmaps( object ):
         
         self.page_with_text = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'page_with_text.png' ) )
         self.page_of_pages = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'page_of_pages.png' ) )
+        self.thumbnails = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'thumbnails.png' ) )
         
         self.copy = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'copy.png' ) )
         self.paste = QG.QPixmap( HydrusStaticDir.GetStaticPath( 'paste.png' ) )
@@ -825,6 +826,7 @@ class GlobalIcons( object ):
         
         self.page_with_text = self._GetSVGOrPNGPathIcon( 'page_with_text' )
         self.page_of_pages = self._GetSVGOrPNGPathIcon( 'page_of_pages' )
+        self.thumbnails = self._GetSVGOrPNGPathIcon( 'thumbnails' )
         
         self.copy = self._GetSVGOrPNGPathIcon( 'copy' )
         self.paste = self._GetSVGOrPNGPathIcon( 'paste' )

@@ -2174,6 +2174,33 @@ ATTACH "client.mappings.db" as external_mappings;'''
         HydrusData.ShowText( f'{HydrusNumbers.ToHumanInt(len(tables_and_columns))} table and column pairs sent to clipboard.' )
         
     
+    def _GetTopLevelMediaViewerWindows( self ):
+        
+        from hydrus.client.gui.canvas import ClientGUICanvasFrame
+        
+        media_viewer_windows = []
+        
+        for widget in QW.QApplication.topLevelWidgets():
+            
+            if widget is self:
+                
+                continue
+                
+            
+            if not widget.isWindow():
+                
+                continue
+                
+            
+            if isinstance( widget, ClientGUICanvasFrame.CanvasFrame ):
+                
+                media_viewer_windows.append( widget )
+                
+            
+        
+        return media_viewer_windows
+        
+    
     def _HowBonedAmI( self ):
         
         self._controller.file_viewing_stats_manager.Flush()
@@ -9284,5 +9311,54 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.CallToThread( THREADUploadPending, service_key )
         
         return True
+        
+    
+    def WindowsShowAll( self ):
+        
+        for window in self._GetTopLevelMediaViewerWindows():
+            
+            window.show()
+            window.raise_()
+            window.activateWindow()
+            
+        
+    
+    def WindowsHideAll( self ):
+        
+        for window in self._GetTopLevelMediaViewerWindows():
+            
+            window.hide()
+            
+        
+    
+    def WindowsMinimiseAll( self ):
+        
+        for window in self._GetTopLevelMediaViewerWindows():
+            
+            window.showMinimized()
+            
+        
+    
+    def WindowsCloseAll( self ):
+        
+        for window in self._GetTopLevelMediaViewerWindows():
+            
+            window.close()
+            
+        
+    
+    def WindowsRestoreAll( self ):
+        
+        for window in self._GetTopLevelMediaViewerWindows():
+            
+            if window.isMinimized():
+                
+                window.showNormal()
+                
+            elif not window.isVisible():
+                
+                window.show()
+                
+            
         
     

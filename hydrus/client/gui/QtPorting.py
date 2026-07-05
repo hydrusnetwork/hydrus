@@ -1461,6 +1461,7 @@ class TreeviewControlWidget( QW.QWidget ):
         self._current_page_path.setToolTip( ClientGUIFunctions.WrapToolTip( 'Current page' ) )
         self._current_page_path.setSizePolicy( QW.QSizePolicy.Policy.Ignored, QW.QSizePolicy.Policy.Preferred )
         self._current_page_path.setCursor( QC.Qt.CursorShape.PointingHandCursor )
+        self._current_page_path.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Sunken )
         self._current_page_path.mousePressEvent = self._CurrentPagePathClicked
         
         if hasattr( self._tree, 'currentPageNameChanged' ):
@@ -1473,6 +1474,8 @@ class TreeviewControlWidget( QW.QWidget ):
             self._tree.currentPagePathChanged.connect( self._current_page_path.setText )
             self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
             
+        
+        self._windows_control_button = ClientGUICommon.IconButton( self._controls, CC.global_icons().collection, self._ShowWindowsMenu )
         
         self._controls_button = ClientGUICommon.IconButton( self._controls, CC.global_icons().cog, self._ShowCogMenu )
         self._controls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Tree view controls' ) )
@@ -1516,6 +1519,7 @@ class TreeviewControlWidget( QW.QWidget ):
         
         self._controls_layout.addWidget( self._current_page_path, 1 )
         
+        self._controls_layout.addWidget( self._windows_control_button )
         self._controls_layout.addWidget( self._controls_button )
         
         self._vbox = QW.QVBoxLayout( self )
@@ -2291,6 +2295,23 @@ class TreeviewControlWidget( QW.QWidget ):
             menu.addAction( 'Allow collapsing tree sidebar (drag)', self._ToggleCollapsibility )
             
             
+        menu.exec_( QG.QCursor.pos() )
+        
+    
+    def _ShowWindowsMenu( self ):
+        
+        from hydrus.client.gui import ClientGUIMenus
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        
+        menu.addAction( 'Close all media viewer windows', CG.client_controller.gui.WindowsCloseAll )
+        menu.addSeparator()
+        menu.addAction( 'Show all media viewer windows', CG.client_controller.gui.WindowsShowAll )
+        menu.addAction( 'Hide all media viewer windows', CG.client_controller.gui.WindowsHideAll )
+        menu.addAction( 'Minimise all media viewer windows', CG.client_controller.gui.WindowsMinimiseAll )
+        menu.addAction( 'Restore all minimised viewer windows', CG.client_controller.gui.WindowsRestoreAll )
+        
         menu.exec_( QG.QCursor.pos() )
         
     
