@@ -375,6 +375,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'treeview_collapse_all_children_upon_parent_closed' : False,
             'treeview_animate_current_node' : True,
             'treeview_history_box_pinned' : False,
+            'treeview_depth_menu_follows_selection' : True,
         }
         
         #
@@ -602,6 +603,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'ffmpeg_subprocess_timeout' : 15,
             'media_viewer_tags_scrolling_behaviour' : CC.MEDIA_VIEWER_TAGS_SCROLLING_BEHAVIOUR_ONLY_PROPAGATE_AFTER_DELAY,
             'zoom_switch_command' : CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM,
+            'treeview_indentation' : 20,
         }
         
         self._dictionary[ 'floats' ] = {

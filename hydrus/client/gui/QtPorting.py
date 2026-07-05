@@ -1387,7 +1387,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         
     
 
-class TreeViewWithControls( QW.QWidget ):
+class TreeviewControlWidget( QW.QWidget ):
     
     widgetAlignmentChanged = QC.Signal()
     tagBarAlignmentChanged = QC.Signal()
@@ -1402,6 +1402,11 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._tree = tree
         self._current_depth = 2
+        
+        if self._tree is not None:
+            
+            self._tree.setIndentation( CG.client_controller.new_options.GetInteger( 'treeview_indentation' ) )
+            
         
         self._controls_at_top = CG.client_controller.new_options.GetBoolean( 'treeview_controls_at_top' )
         self._panel_at_top = CG.client_controller.new_options.GetBoolean( 'treeview_expanding_panel_at_top' )
@@ -2144,7 +2149,7 @@ class TreeViewWithControls( QW.QWidget ):
             
         
     
-    def _AddBooleanMenuAction( self, menu, label: str, option_name: str, tooltip: str = None ):
+    def _AddBooleanOptionMenuAction( self, menu, label: str, option_name: str, tooltip: str = None ):
         
         action = menu.addAction( label )
         action.setCheckable( True )
@@ -2159,12 +2164,69 @@ class TreeViewWithControls( QW.QWidget ):
         return action
         
     
-    def _ShowCogMenu( self ):
+    def _AddIntegerOptionSliderMenuAction( self, menu, label: str, option_name: str, min_value: int, max_value: int, step: int = 1, tooltip: str = '' ):
         
-        # if CG.client_controller.gui is not None:
-        #     self.placeholder_long_text = str( CG.client_controller.gui.GetTotalPageCounts() ) + str( CG.client_controller.gui.GetPagesHistory() ) + self.placeholder_long_text
-        #     self._expanding_panel.widget().setText( f'blah blah blah {self.placeholder_long_text}' )
+        widget_action = QW.QWidgetAction( menu )
+        
+        widget = QW.QWidget( menu )
+        
+        hbox = QW.QHBoxLayout( widget )
+        hbox.setContentsMargins( 8, 4, 8, 4 )
+        hbox.setSpacing( 6 )
+        
+        wrapped_tooltip = ClientGUIFunctions.WrapToolTip( tooltip ) if tooltip else ''
+        
+        label_widget = QW.QLabel( label, widget )
+        
+        if wrapped_tooltip:
+            
+            label_widget.setToolTip( wrapped_tooltip )
+            
+        
+        current_value = CG.client_controller.new_options.GetInteger( option_name )
+        current_value = max( min_value, min( current_value, max_value ) )
+        
+        slider = QW.QSlider( QC.Qt.Orientation.Horizontal, widget )
+        slider.setMinimum( min_value )
+        slider.setMaximum( max_value )
+        slider.setSingleStep( step )
+        slider.setPageStep( step * 5 )
+        slider.setValue( current_value )
+        
+        if wrapped_tooltip:
+            
+            slider.setToolTip( wrapped_tooltip )
+            
+        
+        value_label = QW.QLabel( str( slider.value() ), widget )
+        value_label.setMinimumWidth( 32 )
+        value_label.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
+        
+        def value_changed( value ):
+            
+            value_label.setText( str( value ) )
+            CG.client_controller.new_options.SetInteger( option_name, value )
+            
+            if option_name == 'treeview_indentation':
                 
+                self._tree.setIndentation( value )
+                
+            
+        
+        slider.valueChanged.connect( value_changed )
+        
+        hbox.addWidget( label_widget )
+        hbox.addWidget( slider, 1 )
+        hbox.addWidget( value_label )
+        
+        widget_action.setDefaultWidget( widget )
+        
+        menu.addAction( widget_action )
+        
+        return widget_action
+        
+    
+    def _ShowCogMenu( self ):
         
         from hydrus.client.gui import ClientGUIMenus
         
@@ -2177,14 +2239,6 @@ class TreeViewWithControls( QW.QWidget ):
         else:
             
             menu.addAction( 'Move this control bar to the top', self._MoveControlBarUp )
-            
-        # if self._panel_at_top:
-            
-        #     menu.addAction( 'Move expanding info panel to bottom', self._MoveExpandingPanelToBottom )
-            
-        # else:
-            
-        #     menu.addAction( 'Move expanding info panel to top', self._MoveExpandingPanelToTop )
             
         
         menu.addSeparator()
@@ -2218,9 +2272,13 @@ class TreeViewWithControls( QW.QWidget ):
         
         menu.addSeparator()
         
-        self._AddBooleanMenuAction( menu, 'Always expand to current tab after reset', 'treeview_always_expand_to_current_tab_after_reset', 'If this is unchecked, any refresh will respect all collapsed states, even if the current page is not showing. Otherwise, it will force expand nodes and highlight the current page every time.' )
-        self._AddBooleanMenuAction( menu, 'Collapse all children when parent is closed', 'treeview_collapse_all_children_upon_parent_closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.' )
-        #self._AddBooleanMenuAction( menu, 'Animate current node highlight', 'treeview_animate_current_node' )
+        self._AddBooleanOptionMenuAction( menu, 'Always expand to current tab after reset', 'treeview_always_expand_to_current_tab_after_reset', 'If this is unchecked, any refresh will respect all collapsed states, even if the current page is not showing. Otherwise, it will force expand nodes and highlight the current page every time.' )
+        self._AddBooleanOptionMenuAction( menu, 'Collapse all children when parent is closed', 'treeview_collapse_all_children_upon_parent_closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.' )
+        self._AddBooleanOptionMenuAction( menu, 'Depth menu follows selection', 'treeview_depth_menu_follows_selection', 'If unchecked, the arrows in the bottom left keep their own depth marker, and can do unexpected things. Keep this checked to make the expand/collapse arrows work relative to the last page you click.' )
+        
+        menu.addSeparator()
+        
+        self._AddIntegerOptionSliderMenuAction( menu, 'Tree sidebar indentation', 'treeview_indentation', min_value = 0, max_value = max( 0, self._tree.width() // 2 ),tooltip = 'Set the indentation of the tree sidebar' )
         
         menu.addSeparator()
         
@@ -2289,6 +2347,11 @@ class TreeViewWithControls( QW.QWidget ):
         
     
     def _TreeCurrentChanged( self, current: QC.QModelIndex, previous: QC.QModelIndex ):
+        
+        if not CG.client_controller.new_options.GetBoolean( 'treeview_depth_menu_follows_selection' ):
+            
+            return
+            
         
         self._SetCurrentDepth( self._GetDepthFromIndex( current ) )
         
