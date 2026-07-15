@@ -3264,15 +3264,17 @@
 </ul>
 <p>Which gives you a full listing of all below arguments, however this will not work with the built hydrus_client executables, which are bundled as a non-console programs and will not give you text output to any console they are launched from. As hydrus_client.exe is the most commonly run version of the program, here is the list, with some more help about each command:</p>
 <h2 id="-d_db_dir_--db_dir_db_dir"><strong><code>-d DB_DIR, --db_dir DB_DIR</code></strong><a class="headerlink" href="#-d_db_dir_--db_dir_db_dir" title="Permanent link">&para;</a></h2>
-<p>Lets you customise where hydrus should use for its base database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described <a href="database_migration.html">here</a>. When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:</p>
+<p>Lets you customise where hydrus should use for its database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described <a href="database_migration.html">here</a>. When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:</p>
 <div class="highlight"><pre><span></span><code>-d=&quot;E:\my hydrus\hydrus db&quot;
 </code></pre></div>
+<p>You can set <code>~/hydrus_db</code> and it will expand to your userdir correctly.</p>
 <h2 id="--temp_dir_temp_dir"><strong><code>--temp_dir TEMP_DIR</code></strong><a class="headerlink" href="#--temp_dir_temp_dir" title="Permanent link">&para;</a></h2>
 <p>This tells all aspects of the client, including the SQLite database (unless the overriding <code>SQLITE_TMPDIR</code> environment variable is set), to use a different path for temp operations. This would be by default your system temp path, such as:</p>
 <div class="highlight"><pre><span></span><code>C:\Users\You\AppData\Local\Temp
 /tmp
 </code></pre></div>
 <p>But you can also check it in <em>help-&gt;about</em>. A handful of database operations (PTR tag processing, vacuums) require a lot of free space, so if your system drive is very full, or you have unusual ramdisk-based temp storage limits, you may want to relocate to another location or drive.</p>
+<p>You can set <code>~/hydrus_temp</code> and it will expand to your userdir correctly. You can also specify a relative path, like <code>db/temp</code> and it will expand relative to your install dir, giving you something like <code>/home/you/hydrus_install_dir/db/temp</code>.</p>
 <h2 id="--db_journal_mode_waltruncatepersistmemory"><strong><code>--db_journal_mode {WAL,TRUNCATE,PERSIST,MEMORY}</code></strong><a class="headerlink" href="#--db_journal_mode_waltruncatepersistmemory" title="Permanent link">&para;</a></h2>
 <p>Change the <em>journal</em> mode of the SQLite database. The default is WAL, which works great for almost all SSD drives, but if you have a very old or slow drive, or if you encounter 'disk I/O error' errors on Windows with an NVMe drive, try TRUNCATE. Full docs are <a href="https://sqlite.org/pragma.html#pragma_journal_mode">here</a>.</p>
 <p>Briefly:</p>
@@ -3326,7 +3328,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="April 22, 2026 20:57:18 UTC">April 22, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 12, 2026 19:34:14 UTC">July 12, 2026</span>
   </span>
 
     
