@@ -10,7 +10,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: hydrus
       -
@@ -21,9 +21,9 @@ jobs:
           echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
       -
         name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           architecture: x64
       -
         name: APT Install
@@ -32,11 +32,21 @@ jobs:
           sudo apt-get install -y libmpv2
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
+        run: |
+          cd hydrus
+          python3 -m pip install .
+          python3 -m pip install pyinstaller==6.18.0
+          python3 -m pip install mkdocs-material==9.7.1
+          cd ..
       -
         name: Build docs to /help
         run: mkdocs build -d help -f mkdocs-offline.yml
         working-directory: hydrus
+      -
+        name: Download and Extract FFmpeg
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-30-13-34/ffmpeg-N-125365-g9a01c1cb6a-linux64-gpl.tar.xz" -OutFile "ffmpeg.tar.xz"
+          tar -xv --file ffmpeg.tar.xz --wildcards --strip-components=2 --directory hydrus/bin '*/bin/ffmpeg'
       -
         name: Build Hydrus
         run: |
@@ -56,7 +66,7 @@ jobs:
           tar --zstd -cvf Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst -C dist "Hydrus Network"
       - 
         name: Upload Files
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |

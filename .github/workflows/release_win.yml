@@ -10,7 +10,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           path: hydrus
       -
@@ -21,13 +21,19 @@ jobs:
           echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
       -
         name: Setup Python
-        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           architecture: x64
       -
         name: Pip Install
-        run: python3 -m pip install -r hydrus/static/build_files/windows/requirements.txt
+        run: |
+          cd hydrus
+          python3 -m pip install .
+          python3 -m pip install pefile
+          python3 -m pip install pyinstaller==6.18.0
+          python3 -m pip install mkdocs-material==9.7.1
+          cd ..
       - 
         name: Build docs to /help
         run: mkdocs build -d help -f mkdocs-offline.yml
@@ -40,7 +46,7 @@ jobs:
       -
         name: Download and Extract FFmpeg
         run: |
-          Invoke-WebRequest -Uri "https://github.com/GyanD/codexffmpeg/releases/download/8.1.1/ffmpeg-8.1.1-full_build.7z" -OutFile "ffmpeg-release-full.7z"
+          Invoke-WebRequest -Uri "https://github.com/GyanD/codexffmpeg/releases/download/8.1.2/ffmpeg-8.1.2-full_build.7z" -OutFile "ffmpeg-release-full.7z"
           7z e ffmpeg-release-full.7z -ohydrus/bin "**/bin/ffmpeg.exe"
       -
         name: Build Hydrus
@@ -59,7 +65,7 @@ jobs:
           7z a -tzip -mm=Deflate -mx=5 Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip .\dist\*
       -
         name: Upload Files
-        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |

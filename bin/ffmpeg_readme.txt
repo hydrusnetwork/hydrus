@@ -1,3 +1,6 @@
-FFMPEG is used by hydrus for many video purposes. To make things simple for Windows users, the Windows release of hydrus includes ffmpeg.exe in this directory. If hydrus does not find the executable here, it will attempt to run it from your normal path.
+FFMPEG is used by hydrus for many video, audio, and animation purposes. The Windows and Linux builds come with ffmpeg in this directory. If hydrus does not find the executable here, it will attempt to run it from your normal PATH.
 
-If you do not have FFMPEG installed to your system path, or would prefer to run it from this location, you can get a static build at http://ffmpeg.org/download.html
+If you need to try a different version, you can find various ffmpeg builds here:
+
+https://github.com/GyanD/codexffmpeg
+https://github.com/BtbN/FFmpeg-Builds

@@ -75,7 +75,7 @@ First of all, make a _new_ backup of the corrupted db, just in case something go
 
 #### sqlite3 executable
 
-We are going to talk to the database files directly, using SQL. I bundle 'sqlite3.exe' in the normal install, which is the Windows version of the SQLite terminal. If you are on Linux or macOS, you will want to look for your equivalent of the 'command-line tools' [here](https://www.sqlite.org/download.html).
+We are going to talk to the database files directly, using SQL. I bundle 'sqlite3' executable in the Windows and Linux builds, and you may see it in your db dir already. If not, check the `install_dir/static/build_files` folder and copy the appropriate executable to your db dir, or look for your equivalent of the 'command-line tools' [here](https://www.sqlite.org/download.html).
 
 Or, look for a program like SQLiteStudio, which is a much richer UI that, if you dig around a bit, will let you run direct SQL commands on a particular db file.
 
