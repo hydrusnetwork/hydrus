@@ -233,7 +233,7 @@ There are three special external libraries. You just have to get them and put th
         
         You should already have ffmpeg, but we should double-check: just type `ffmpeg` into a new terminal, and it should give a basic version response. If you don't have it, check your package manager.
         
-        If you are on a 'LTS'-style Linux flavour, your system ffmpeg may be pinned to an older version to guarantee stability. There's a couple guys who make regular new Linux builds, such as [here](https://github.com/BtbN/FFmpeg-Builds/releases). If you like, you can download that and extract the internal `ffmpeg` executable into `install_dir/bin`, and hydrus will use that instead. Unless you know better, you probably want the `linux64 gpl non-shared`.
+        If you are on a 'LTS'-style Linux flavour, your system ffmpeg may be pinned to an older version to guarantee stability. There's a couple guys who make regular new Linux builds, such as [here](https://github.com/BtbN/FFmpeg-Builds/releases). If you like, you can download that and extract the internal `ffmpeg` executable into `install_dir/bin` (or just download the hydrus Linux build I put out and use the one in there), and hydrus will use that instead. Unless you know better, you probably want the `linux64 gpl non-shared`.
         
 
 === "macOS"
