@@ -45,8 +45,9 @@ jobs:
       -
         name: Download and Extract FFmpeg
         run: |
-          Invoke-WebRequest -Uri "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-30-13-34/ffmpeg-N-125365-g9a01c1cb6a-linux64-gpl.tar.xz" -OutFile "ffmpeg.tar.xz"
+          curl -L -o ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-06-30-13-34/ffmpeg-N-125365-g9a01c1cb6a-linux64-gpl.tar.xz"
           tar -xv --file ffmpeg.tar.xz --wildcards --strip-components=2 --directory hydrus/bin '*/bin/ffmpeg'
+          chmod +x hydrus/bin/ffmpeg
       -
         name: Build Hydrus
         run: |
