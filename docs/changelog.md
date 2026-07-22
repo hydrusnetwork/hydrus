@@ -7,6 +7,44 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 680](https://github.com/hydrusnetwork/hydrus/releases/tag/v680)
+
+### misc
+
+* updated the newish `tldextract` stuff (which helps navigate two-part domain suffixes like .co.uk in URL parsing) to no longer fetch a fresh suffix definition file on first ever use from `publicsuffix.org` and not to make a cache in `~/.cache/python-tldextract`. hydrus now ships with a copy of `public_suffix_list.dat` in the static dir for this library to use, and it doesn't make a cachedir entry any more. I regret not reading the docs closer! I also optimised this code so it should be a bit quicker now, too. thank you to the user who noticed this! (issue #2067)
+* I _think_ I may have fixed some of the heavy CPU thrashing we have seen during heavy work like archive/delete commit and such. if you have had bad UI lag, I would like to know if some of it suddenly leaps forward today
+* made file add/delete calls a tiny bit faster when they have many tags
+* some thumbnail generation scheduling is a little smarter, with expensive filetypes generated more reliably at the end of the queue
+* fixed thumbnail generation for cbz. sorry for the trouble--I messed something up with a recent refactor! all cbzs imported since july 5th will get a thumbnail regen call (issue #2069)
+* setup_venv.py now warns the user that the path will be deleted if they specify a non-standard venv path that already exists
+* added a little safety warning to the Client API page. I don't make any of those plugins and cannot guarantee anything about them--use your common sense!
+
+### system tray
+
+* you no longer need to be in advanced mode to see the system tray icon in Linux (old safety check I forgot about)
+* added two BUGFIX checkboxes to `options->system tray` for those who have odd minimise-to-system-tray behaviour. if you had trouble, try these out and let me know what works
+
+### number locale
+
+* added `TEST: Use your locale for integer rendering` to `options->gui`. try it out, let me know where it works well and badly. I noticed in a fake `fr_FR` locale that the space-separator somehow messed up some taglist rendering and made system predicates no longer parse correct (I guess I hardcode commas out of numbers)--anything else?
+* `system:filesize`, `system:ratio`, and `system:num pixels` now render with separators when the number exceeds 999
+
+### file permissions
+
+* there were some file import paths that did not set the standard hydrus file storage 'you can read and write this guy' permission bits (read+write on Windows, 644 otherwise), which I have fixed. this was affecting some downloads and some local file imports for some time in hydrus's past
+* if we try to move a file during larger 'move this directory here' type operations and get a permission error, hydrus now attempts to assign the hydrus-normal read/write permission bits before trying once more (issue #2064)
+* we are dealing with some legacy read-only guys here. I have a file maintenance job that tries to fix this retroactively, which I am considering firing off, sometime, to address this
+
+### embedded metadata
+
+* the test for the presence of file metadata is now more reliable and reflects what you see in the media viewer. previously, the file may not have been loaded the whole way during file import or file maintenance, and sometimes text was being missed, particularly in the new system where I filter out some stuff like DPI. it wasn't being missed in the media viewer since by happenstance it would generally check for EXIF beforehand, which triggers a full load. now, the thing that fetches embedded metadata now checks the file is loaded fully before grabbing the available text
+* when importing files, the embedded metadata test now saves an image load (it re-uses an earlier EXIF load, if one happened) to save a bit of time
+
+### future build
+
+* I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
+* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
+
 ## [Version 679](https://github.com/hydrusnetwork/hydrus/releases/tag/v679)
 
 ### misc
@@ -496,63 +534,3 @@ title: Changelog
 * cleaned up some old rubbish `subscription.ToTuple` mess
 * cleaned up some misc bad code in hdd importers
 * deleted all the legacy UI code for the old system
-
-## [Version 670](https://github.com/hydrusnetwork/hydrus/releases/tag/v670)
-
-### misc
-
-* when you paste queries into the edit subscription window, it now shows you the pending changes, i.e. which are new/already in/DEAD,  _before_ you say yes/no. if you have DEAD, it asks with a yesyes/no if you want to revive or not
-* the 'rescue off-screen window' system now tries to slide windows down and/or right before falling back to 'topleft of primary screen'. for instance, if the off-screen dialog's originally proposed bottom-left corner would be in view on a particular screen, it now just slides the guy down a bit and adds any fuzzy padding. this makes the new 'put dialog over the mouse' mode nicer to work with near screen edges, although I need to do some more work to better handle particularly short dialogs and those that span across a multi-monitor border
-* for the new 'put the dialog over the mouse' mode, if the dialog would appear off-screen, it no longer gives you a 'woah, that was offscreen' popup
-* for the new 'put the dialog over the mouse' mode, if the current mouse cursor is so invalid it is seemingly not on any current screen, it falls back to 'topleft of parent mate'
-* if you run from source with a normal-looking 'venv' directory, any update that includes new package versions is now going to say, 'hey, looks like you are running from source. this is a good time to update your venv' when you update. this will happen in this release
-* thanks to a user, the F13-24 keys are now mappable in the shortcuts system
-
-### tag suggestions
-
-* in 'manage tags', on the 'related tags' panel, the 'do it just for my files/all known files' flipswitch is now visible on local tag services
-* the 'related tags' panel now has a tag service selector, so you can say 'hey provide related suggests from the PTR' for your 'my tags' and so on
-* the 'related tags' panel now has a 'searching through/not searching siblings and parents' button. this involves some black magic and I don't really know how well it works, but the tech seemed to be done db side so I just wired it up
-* this is mostly experimental. if you use this a lot, give it a go and let me know if any of it is useful. if you find you are setting something one way or another over and over, it might be nice to have it remember the last settings
-* the 'related tags' panel now displays sibling and parent relationships, like the other tag suggestion panels
-* if you hit either of the 'related tags' search-type buttons, or the media changes, the 'related tags' search now refreshes using the same duration that was last searched (or 'quick' if none has been done yet)
-* on tag menus, the 'favourites' sub-menu has been overhauled. for KISS, it now only appears when you have one tag selected, and it provides add/remove options for the general favourites _and_, now, all the 'most used' tag suggestion columns that appear in the manage tags dialog. ten points to anyone who can come up with a better names than 'most used tags' and 'favourite tags' that represents what they do while not confusing one for the other
-* on tag menus, an empty 'search' sub-menu no longer appears in contexts without any search-page stuff (e.g. manage tags was doing this)
-
-### curl_cffi test
-
-* a user pointed me at the `curl_cffi` library this week, which provides http/2 and http/3 support with a `requests`-like interface. I have written a very small and basic shim to test this out with our network engine, and a new test mode is under `help->debug->network actions->curl_cffi test mode`. it asks for some test details and then switches the whole network engine over.
-* very advanced source users can now add `curl_cffi` to their venvs and give it a whirl. if we discover it solves some problems that requests at http/1 can't handle, I'll formalise the test and plan out how to integrate this into a future domain manager so we can shape things to particular network contexts as needed
-* I cleaned a bunch of session code and figured out some nicer session switching/reinitialising-tech and cookie-migration tech. I feel even more optimistic about also playing with `httpx`, which is a comprehensive `requests`-like replacement that offers http/2
-
-### boring import options work
-
-* wrote out a draft of a help document for import options at `https://hydrusnetwork.github.io/hydrus/getting_started_import_options.html`. I'll populate this with nice diagrams and screenshots and insert it properly as this becomes real. if you have been following along here, feel free to have a look and let me know where I'm making mistakes
-
-### boring cleanup
-
-* added a little note to the 'running from source' help regarding ffmpeg on LTS Linux flavours--you probably have an old system ffmpeg, for good reason, so I now say how to find a newer one for hydrus if you like
-* added a small section to the backing up help on how to set up a wineprefix for ToDoList. if you try it, let me know if you have a different mfc experience
-* cleaned up how mouse coordinates are fetched across the program; everything now goes through one place. Wayland has some issues with this (generally, in Wayland, I only get the last place the mouse was seen over my UI panels), so I may end up inserting some DEBUG recoveries for when this gives crazy answers
-* decoupled a bunch of session and cookie code. the way cookies are fetched, inspected, and edited is a good bit cleaner and more centralised and abstract now
-* 'session' cookies are now cleared faster and each session maintains its connection pool less redundantly
-* misc refactoring to tidy up the initial import as the main controller boots. still lots to do
-* pulled `ClientMedia` apart and cleaned up some inheritance mess. this whole thing is still awful, but this was a good step
-* cleared out more linting issues with client media and friends, and in continuing a very long rewrite, a bunch of MediaSingle stuff is replaced with MediaResult, and a bunch of edge-case 'we wanted to show a collection, but it just lost its last member' bugs are fixed
-* fixed 'copy thumbnail bmp' for collections, which wasn't falling back to a nice default behaviour before
-
-### future build committed
-
-* This release commits the changes tested with the recent future build. The test went well, and there are no special instructions for the update. Source users are encouraged to rebuild their venvs this week. Update as normal, and you will get--
-* requests from `2.32.5` to `2.33.1` (security fix)
-* chardet from `chardet>=3.0.4,<6` to `chardet>=3.0.4,<8` (requests dependency issue resolved in the new version)
-* OpenCV from `4.11.0.86` to `4.12.0.88` (normal update)
-* dateparser from `1.2.1` to `1.4.0` (had a build problem before)
-* adds tldextract `5.3.1`, which provides for more sensible '.co.jp' top level domain recognition
-* setuptools no longer pinned at `78.1.1` for the builds (an old hack removed), seems to now be ~82.x
-* pyinstaller `6.14.1` to `6.16.0` for the builds (normal update, and by the hand of fate it worked)
-* test version of OpenCV from `4.13.0.90` to `4.13.0.92` (build dependency fix that'll hit us later)
-* test version of PySide6 (Qt) from `6.10.1` to `6.10.3` (normal update, but we discovered a fun bug yesterday in 6.10.1 that broke several lists and widgets)
-* Windows mpv dll from `2023-08-20` to `2024-08-18` (cautious update; we've had many issues trying newer mpv dlls over the years)
-* `action-gh-release` from v2 (Node 20) to v3 (Node 24) in the Linux and Windows build scripts
-* thanks to a user, the Docker package build files are also now Node 24 compatible

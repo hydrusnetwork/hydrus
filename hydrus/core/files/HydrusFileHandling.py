@@ -155,7 +155,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_fram
         
         thumbnail_numpy = GenerateThumbnailNumPyAudio( path, target_resolution, mime, extra_description = extra_description )
         
-    elif mime in HC.IMAGE_PROJECT_FILES or mime in HC.APPLICATIONS:
+    elif mime in HC.IMAGE_PROJECT_FILES or mime in HC.APPLICATIONS or mime in HC.ARCHIVES:
         
         thumbnail_numpy = GenerateThumbnailNumPyWeirdApplicationGubbins( path, target_resolution, mime, extra_description = extra_description )
         

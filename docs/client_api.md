@@ -22,6 +22,8 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 
 ## Tools created by hydrus users
 
+_I do not make or contribute to these! I can guarantee nothing about them. Check them out before you install anything and use your common sense. If a repo has not been updated in many years, it may not work with the newest Client API. If a repo has recently been taken over by a weird new user or otherwise looks sketchy, be careful!_
+
 ### Browser Add-on
 
 * [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): A Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support.

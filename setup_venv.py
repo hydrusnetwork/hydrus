@@ -65,13 +65,25 @@ def check_python_version():
         
     
 
-def handle_existing_venv( venv_path, doing_interactive_install: bool ):
+def handle_existing_venv( venv_path, default_venv_selected: bool, doing_interactive_install: bool ):
     
     if venv_path.exists():
         
         if doing_interactive_install:
             
-            print( 'Virtual environment will be reinstalled. Press Enter to continue.' )
+            if not default_venv_selected:
+                
+                print( 'Virtual environment will be reinstalled.' )
+                print( '***' )
+                print( 'THIS WILL DELETE THE SPECIFIED FOLDER. ARE YOU SURE THIS IS OK?' )
+                print( '***' )
+                print( 'Press Enter to continue.' )
+                
+            else:
+                
+                print( 'Virtual environment will be reinstalled. Press Enter to continue.' )
+                
+            
             input()
             
         
@@ -368,10 +380,12 @@ def main():
         
         if result.venv_name is None:
             
+            default_venv_selected = True
             venv_name = 'venv'
             
         else:
             
+            default_venv_selected = False
             venv_name = os.path.expanduser( result.venv_name )
             
         
@@ -384,7 +398,7 @@ def main():
         print( f'venv path: {venv_path}' )
         print()
         
-        handle_existing_venv( venv_path, doing_interactive_install )
+        handle_existing_venv( venv_path, default_venv_selected, doing_interactive_install )
         
         # OK, hydev is reworking this whole thing to be hacky and outside of the pyproject.toml
         # background: we moved old multi-requirements.txt mess to a shared pyproject.toml that had 'groups' to simulate the old/normal/test choices we take here

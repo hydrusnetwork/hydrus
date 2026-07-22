@@ -479,6 +479,7 @@ class HydrusTagArchive( object ):
         
         self._AddMappings( hash_id, tag_ids )
         
+    
 
 TAG_PAIR_TYPE_SIBLINGS = 0
 TAG_PAIR_TYPE_PARENTS = 1

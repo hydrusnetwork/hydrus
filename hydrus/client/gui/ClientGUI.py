@@ -639,6 +639,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUITopLevelWindows.SetInitialTLWSizeAndPosition( self, self._frame_key )
         
         self._pre_minimise_window_state = self.windowState()
+        self._last_systray_hide_happened_because_of_main_gui_minimise = False
         
         self._InitialiseMenubar()
         
@@ -7111,7 +7112,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def _SystemTrayHide( self ):
+    def _SystemTrayHide( self, happening_because_of_main_gui_minimise = False ):
         
         if not ClientGUISystemTray.SystemTrayAvailable():
             
@@ -7131,6 +7132,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return
             
+        
+        self._last_systray_hide_happened_because_of_main_gui_minimise = happening_because_of_main_gui_minimise
         
         visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() or tlw.isMinimized() ]
         
@@ -7184,6 +7187,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         self._have_shown_once = True
+        
+        if CG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray_bugfix_restore_after_show' ) and self._last_systray_hide_happened_because_of_main_gui_minimise:
+            
+            self.setWindowState( self._pre_minimise_window_state )
+            
+        
+        self._last_systray_hide_happened_because_of_main_gui_minimise = False
         
         page = self.GetCurrentPage()
         
@@ -7350,7 +7360,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
-        if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS ) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+        if not ClientGUISystemTray.SystemTrayAvailable():
             
             return
             
@@ -7698,17 +7708,43 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                     if ClientGUISystemTray.SystemTrayAvailable() and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
                         
-                        # ok this is a special thing but it makes sense
-                        # when we restore the window, we want to restore it as it was before the hide
-                        # the triggering action is a minimise, which means the restore point is before that
-                        # this set-state here is so quick the user does not see, but it sets flags nicely before the hide
-                        # when I cleaned up the changeEvent stuff, I noticed we were getting weird paired restore-minimise events as it tried to navigate this stuff quickly
-                        # but moving to this, and remembering whole window_state rather than 'was maximised' alone, seems to have fixed it
-                        self.setWindowState( self._pre_minimise_window_state )
-                        
-                        self._SystemTrayHide()
-                        
-                        return
+                        if CG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray_bugfix_restore_after_show' ):
+                            
+                            self._SystemTrayHide( happening_because_of_main_gui_minimise = True )
+                            
+                            return
+                            
+                        elif CG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray_bugfix_deferred_state_set' ):
+                            
+                            def do_it():
+                                
+                                # ok this is a special thing but it makes sense
+                                # when we restore the window, we want to restore it as it was before the hide
+                                # the triggering action is a minimise, which means the restore point is before that
+                                # this set-state here is so quick the user does not see, but it sets flags nicely before the hide
+                                # when I cleaned up the changeEvent stuff, I noticed we were getting weird paired restore-minimise events as it tried to navigate this stuff quickly
+                                # but moving to this, and remembering whole window_state rather than 'was maximised' alone, seems to have fixed it
+                                self.setWindowState( self._pre_minimise_window_state )
+                                
+                                self._SystemTrayHide( happening_because_of_main_gui_minimise = True )
+                                
+                            
+                            CG.client_controller.CallAfterQtSafe( self, do_it )
+                            
+                        else:
+                            
+                            # ok this is a special thing but it makes sense
+                            # when we restore the window, we want to restore it as it was before the hide
+                            # the triggering action is a minimise, which means the restore point is before that
+                            # this set-state here is so quick the user does not see, but it sets flags nicely before the hide
+                            # when I cleaned up the changeEvent stuff, I noticed we were getting weird paired restore-minimise events as it tried to navigate this stuff quickly
+                            # but moving to this, and remembering whole window_state rather than 'was maximised' alone, seems to have fixed it
+                            self.setWindowState( self._pre_minimise_window_state )
+                            
+                            self._SystemTrayHide( happening_because_of_main_gui_minimise = True )
+                            
+                            return
+                            
                         
                     
                 

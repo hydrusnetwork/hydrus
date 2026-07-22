@@ -44,7 +44,7 @@ def GetStaticIconPath( name: str, force_install_dir = False, force_svg = False )
     return path
     
 
-def GetStaticPath( sub_path: str, force_install_dir = False ):
+def GetStaticPath( sub_path: str, force_install_dir = False ) -> str:
     
     ( path, was_userdir ) = GetStaticPathWithResult( sub_path, force_install_dir = force_install_dir )
     

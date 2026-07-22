@@ -2187,7 +2187,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, ratio_width, ratio_height ) = self._value
                     
-                    base += ' ' + operator + ' ' + str( ratio_width ) + ':' + str( ratio_height )
+                    base += ' ' + operator + ' ' + HydrusNumbers.ToHumanInt( ratio_width ) + ':' + HydrusNumbers.ToHumanInt( ratio_height )
                     
                     if ratio_width == 1 and ratio_height == 1:
                         
@@ -2214,7 +2214,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, size, unit ) = self._value
                     
-                    base += ' ' + operator + ' ' + str( size ) + HydrusNumbers.IntToUnit( unit )
+                    base += ' ' + operator + ' ' + HydrusNumbers.ToHumanInt( size ) + HydrusNumbers.IntToUnit( unit )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
@@ -2344,7 +2344,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_pixels, unit ) = self._value
                     
-                    base += ' ' + operator + ' ' + str( num_pixels ) + ' ' + HydrusNumbers.IntToPixels( unit )
+                    base += ' ' + operator + ' ' + HydrusNumbers.ToHumanInt( num_pixels ) + ' ' + HydrusNumbers.IntToPixels( unit )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:

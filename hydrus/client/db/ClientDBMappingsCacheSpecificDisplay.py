@@ -169,6 +169,8 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
                 
             
         
+        current_mappings_inserts = []
+        pending_mappings_inserts = []
         counts_cache_changes = []
         
         # for all display tags implied by the existing storage mappings, add them
@@ -182,7 +184,7 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
             
             if current_delta > 0:
                 
-                self._ExecuteMany( 'INSERT OR IGNORE INTO ' + cache_display_current_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, display_tag_id ) for hash_id in display_current_hash_ids ) )
+                current_mappings_inserts.extend( ( ( hash_id, display_tag_id ) for hash_id in display_current_hash_ids ) )
                 
             
             #
@@ -193,7 +195,7 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
             
             if pending_delta > 0:
                 
-                self._ExecuteMany( 'INSERT OR IGNORE INTO ' + cache_display_pending_mappings_table_name + ' ( hash_id, tag_id ) VALUES ( ?, ? );', ( ( hash_id, display_tag_id ) for hash_id in display_pending_hash_ids ) )
+                pending_mappings_inserts.extend( ( ( hash_id, display_tag_id ) for hash_id in display_pending_hash_ids ) )
                 
             
             #
@@ -202,6 +204,16 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
                 
                 counts_cache_changes.append( ( display_tag_id, current_delta, pending_delta ) )
                 
+            
+        
+        if len( current_mappings_inserts ) > 0:
+            
+            self._ExecuteMany( f'INSERT OR IGNORE INTO {cache_display_current_mappings_table_name} ( hash_id, tag_id ) VALUES ( ?, ? );', current_mappings_inserts )
+            
+        
+        if len( pending_mappings_inserts ) > 0:
+            
+            self._ExecuteMany( f'INSERT OR IGNORE INTO {cache_display_pending_mappings_table_name} ( hash_id, tag_id ) VALUES ( ?, ? );', pending_mappings_inserts )
             
         
         if len( counts_cache_changes ) > 0:

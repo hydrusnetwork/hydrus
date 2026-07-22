@@ -178,7 +178,7 @@ def PopulateComparableSidecarPrefixes( file_paths, comparable_sidecar_prefixes )
         
     
 
-def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None ):
+def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None, possible_raw_pil_image = None ):
     
     if mime not in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
         
@@ -193,7 +193,14 @@ def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None 
         
         try:
             
-            pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
+            if possible_raw_pil_image is None:
+                
+                pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
+                
+            else:
+                
+                pil_image = possible_raw_pil_image
+                
             
             try:
                 

@@ -7055,188 +7055,6 @@ class DB( HydrusDB.HydrusDB ):
         #       v592 PERMISSION CORRECTION UPDATE CODE
         # 
         
-        if version == 611:
-            
-            if not self._TableExists( 'main.duplicate_files_auto_resolution_rules' ):
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicate_files_auto_resolution_rules ( rule_id INTEGER PRIMARY KEY, actioned_pair_count INTEGER DEFAULT 0 );' )
-                
-            
-            if not self._TableExists( 'main.duplicates_files_auto_resolution_rule_count_cache' ):
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicates_files_auto_resolution_rule_count_cache ( rule_id INTEGER, status INTEGER, status_count INTEGER, PRIMARY KEY ( rule_id, status ) );' )
-                
-            
-            try:
-                
-                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
-                
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
-                
-                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-                    
-                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.IMAGE_JXL, ) ) )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE )
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some file maintenance failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 615:
-            
-            found_some = False
-            
-            from hydrus.client.duplicates import ClientDuplicatesAutoResolution
-            
-            if self._TableExists( 'main.duplicate_files_auto_resolution_rules' ):
-                
-                try:
-                    
-                    result = self._Execute( 'SELECT actioned_pair_count FROM duplicate_files_auto_resolution_rules;' ).fetchone()
-                    
-                    do_it = True
-                    
-                except Exception as e:
-                    
-                    do_it = False
-                    
-                
-                if do_it:
-                    
-                    rule_ids = self._STS( self._Execute( 'SELECT rule_id FROM duplicate_files_auto_resolution_rules;' ) )
-                    
-                    for rule_id in rule_ids:
-                        
-                        found_some = True
-                        
-                        table_core = f'duplicate_files_auto_resolution_pair_decisions_{rule_id}'
-                        
-                        for status in (
-                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED,
-                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_BUT_NOT_TESTED,
-                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_DOES_NOT_MATCH_SEARCH,
-                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_MATCHES_SEARCH_FAILED_TEST,
-                            ClientDuplicatesAutoResolution.DUPLICATE_STATUS_ACTIONED
-                        ):
-                            
-                            table_name = f'{table_core}_{status}'
-                            
-                            self._Execute( f'DROP TABLE IF EXISTS {table_name};' )
-                            
-                        
-                    
-                    self._Execute( 'DROP TABLE duplicate_files_auto_resolution_rules;' )
-                    
-                    self._Execute( 'DELETE FROM duplicates_files_auto_resolution_rule_count_cache;' )
-                    
-                    self.modules_serialisable.DeleteJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATES_AUTO_RESOLUTION_RULE )
-                    
-                    if found_some:
-                        
-                        def notify_deleting_auto_resolution_rules():
-                            
-                            message = 'Hey, it looks like you participated in the duplicates auto-resolution test--thank you!\n\nUnfortunately, I have made some database changes that are incompatible with the old system, and I have to delete the old jpeg/png rule now. Sorry!'
-                            
-                            from hydrus.client.gui import ClientGUIDialogsMessage
-                            
-                            ClientGUIDialogsMessage.ShowInformation( CG.client_controller.GetMainTLW(), message )
-                            
-                        
-                        self._controller.CallBlockingToQtTLW( notify_deleting_auto_resolution_rules )
-                        
-                    
-                    self._Execute( 'CREATE TABLE IF NOT EXISTS main.duplicate_files_auto_resolution_rules ( rule_id INTEGER PRIMARY KEY );' )
-                    
-                
-            
-        
-        if version == 617:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                try:
-                    
-                    user_wants_us_to_leave_it_on = new_options.GetBoolean( 'always_show_system_everything' )
-                    
-                except Exception as e:
-                    
-                    user_wants_us_to_leave_it_on = False
-                    
-                
-                if not user_wants_us_to_leave_it_on:
-                    
-                    results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY )
-                    
-                    if results.get( HC.SERVICE_INFO_NUM_FILES, 0 ) > 10000:
-                        
-                        new_options.SetBoolean( 'show_system_everything', False )
-                        
-                        self.modules_serialisable.SetJSONDump( new_options )
-                        
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update your options failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 618:
-            
-            try:
-                
-                self._RepairInvalidTags()
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to scan and fix bad tags in the database failed! You can re-attempt this job under _database->check and repair->fix invalid tags_. Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                current_value = new_options.GetInteger( 'ms_to_wait_between_physical_file_deletes' )
-                
-                if current_value == 250:
-                    
-                    new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', 600 )
-                    
-                    self.modules_serialisable.SetJSONDump( new_options )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update your options failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 619:
             
             try:
@@ -8352,6 +8170,31 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Failed to create a new index!  This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 679:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+                
+                ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = ClientDBFilesStorage.GenerateFilesTableNames( self.modules_services.combined_local_file_domains_service_id )
+                
+                # broke cbz thumbs by accident ~2026-07-05
+                july_5_timestamp_ms = 1783227600000
+                
+                hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {current_files_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusLists.SplayListForDB( ( HC.APPLICATION_CBZ, ) )} AND timestamp_ms > ?;', ( july_5_timestamp_ms, ) ) )
+                
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file maintenance failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

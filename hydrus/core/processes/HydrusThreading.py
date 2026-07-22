@@ -361,6 +361,9 @@ class DAEMONForegroundWorker( DAEMONWorker ):
         return self._controller.GoodTimeToStartForegroundWork()
         
     
+
+SHUTDOWN_SENTINEL = object()
+
 class THREADCallToThread( DAEMON ):
     
     def __init__( self, controller, name ):
@@ -399,6 +402,10 @@ class THREADCallToThread( DAEMON ):
             
             while True:
                 
+                # TODO: Assuming sentinel works out, clear up/out the empty wait, the queue.Empty handling, maybe the threading wait/yield later
+                # and of course tighten up shutdown sentinel call
+                # and replicate to HydrusDB and file parsing and anywhere else
+                
                 while self._queue.empty():
                     
                     CheckIfThreadShuttingDown()
@@ -414,7 +421,14 @@ class THREADCallToThread( DAEMON ):
                     
                     try:
                         
-                        ( callable, args, kwargs ) = self._queue.get( timeout = 1.0 )
+                        result = self._queue.get()
+                        
+                        if result is SHUTDOWN_SENTINEL:
+                            
+                            raise HydrusExceptions.ShutdownException()
+                            
+                        
+                        ( callable, args, kwargs ) = result
                         
                     except queue.Empty:
                         
@@ -483,6 +497,13 @@ class THREADCallToThread( DAEMON ):
                 HydrusData.DebugPrint( f'Daemon CallToWorker "{self._name}" is shut down!' )
                 
             
+        
+    
+    def shutdown( self ):
+        
+        self._queue.put( SHUTDOWN_SENTINEL )
+        
+        super().shutdown()
         
     
 

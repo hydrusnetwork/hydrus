@@ -1284,6 +1284,10 @@ class Controller( HydrusController.HydrusController ):
         HydrusFFMPEG.PREFER_SYSTEM_FFMPEG = self.new_options.GetBoolean( 'use_system_ffmpeg' )
         HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT = self.new_options.GetInteger( 'ffmpeg_subprocess_timeout' )
         
+        from hydrus.client.gui import ClientGUIText
+        
+        ClientGUIText.engage_locale_hook( self.new_options.GetBoolean( 'use_qt_locale_for_human_int' ) )
+        
     
     def InitModel( self ):
         

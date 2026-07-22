@@ -100,7 +100,7 @@ def PixelsToInt( unit ):
     elif unit == 'megapixels': return 1000000
     
 
-def ToHumanInt( num ):
+def BaseToHumanInt( num ):
     
     try:
         
@@ -118,6 +118,8 @@ def ToHumanInt( num ):
     
     return text
     
+
+ToHumanInt = BaseToHumanInt
 
 def UnitToInt( unit ):
     

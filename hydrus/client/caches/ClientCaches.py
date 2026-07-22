@@ -581,6 +581,7 @@ class ThumbnailCache( object ):
         
         # let's render our thumbs in order of ease of regeneration, so we rush what we can to screen as fast as possible and leave big vids until the end
         
+        # first off, get an entry for everything and assume the worst. this ultimately is stuff like PDF
         for mime in HC.ALLOWED_MIMES:
             
             self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 5
@@ -591,12 +592,9 @@ class ThumbnailCache( object ):
         self._magic_mime_thumbnail_ease_score_lookup[ None ] = 0
         self._magic_mime_thumbnail_ease_score_lookup[ HC.APPLICATION_UNKNOWN ] = 0
         
-        for mime in HC.APPLICATIONS:
-            
-            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 0
-            
+        mimes_with_no_thumb = set( HC.ALLOWED_MIMES ).difference( HC.MIMES_WITH_THUMBNAILS )
         
-        for mime in HC.AUDIO:
+        for mime in mimes_with_no_thumb:
             
             self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 0
             
@@ -611,12 +609,6 @@ class ThumbnailCache( object ):
         for mime in HC.ANIMATIONS:
             
             self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 2
-            
-
-        # could get more specific here because some applications will probably be even worse than videos
-        for mime in HC.APPLICATIONS_WITH_THUMBNAILS:
-            
-            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 3
             
         
         # ffmpeg hellzone

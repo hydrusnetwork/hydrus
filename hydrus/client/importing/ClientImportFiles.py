@@ -398,7 +398,7 @@ class FileImportJob( object ):
         
         self._has_exif = has_exif
         
-        self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime )
+        self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime, possible_raw_pil_image = raw_pil_image )
         
         has_icc_profile = False
         

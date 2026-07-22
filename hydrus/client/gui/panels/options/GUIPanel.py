@@ -40,6 +40,10 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
         self._always_show_iso_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
+        self._use_qt_locale_for_human_int = QW.QCheckBox( self._misc_panel )
+        tt = 'Try to render integers with your locale (as seen in _help->about_), rather than the English 1,234,567. hydev is interested in how this works out.'
+        self._use_qt_locale_for_human_int.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         self._menu_choice_buttons_can_mouse_scroll = QW.QCheckBox( self._misc_panel )
         tt = 'Many buttons that produce menus when clicked are also "scrollable", so if you wheel your mouse over them, the selection will scroll through the underlying menu. If this is annoying for you, turn it off here!'
         self._menu_choice_buttons_can_mouse_scroll.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
@@ -113,6 +117,8 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._always_show_iso_time.setChecked( self._new_options.GetBoolean( 'always_show_iso_time' ) )
         
+        self._use_qt_locale_for_human_int.setChecked( self._new_options.GetBoolean( 'use_qt_locale_for_human_int' ) )
+        
         self._menu_choice_buttons_can_mouse_scroll.setChecked( self._new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ) )
         
         self._use_native_menubar.setChecked( self._new_options.GetBoolean( 'use_native_menubar' ) )
@@ -161,6 +167,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows = []
         
         rows.append( ( 'Prefer ISO time ("2018-03-01 12:40:23") to "5 days ago": ', self._always_show_iso_time ) )
+        rows.append( ( 'TEST: Use your locale for integer rendering: ', self._use_qt_locale_for_human_int ) )
         rows.append( ( 'Mouse wheel can "scroll" through menu buttons: ', self._menu_choice_buttons_can_mouse_scroll ) )
         rows.append( ( 'Use Native MenuBar (if available): ', self._use_native_menubar ) )
         rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
@@ -367,6 +374,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         HC.options[ 'confirm_client_exit' ] = self._confirm_client_exit.isChecked()
         
         self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.isChecked() )
+        self._new_options.SetBoolean( 'use_qt_locale_for_human_int', self._use_qt_locale_for_human_int.isChecked() )
         self._new_options.SetBoolean( 'menu_choice_buttons_can_mouse_scroll', self._menu_choice_buttons_can_mouse_scroll.isChecked() )
         self._new_options.SetBoolean( 'use_native_menubar', self._use_native_menubar.isChecked() )
         
