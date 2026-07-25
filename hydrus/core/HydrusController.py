@@ -493,6 +493,8 @@ class HydrusController( object ):
         
         self._InitDB()
         
+        self.CallRepeating( 5, 15, self.db.ScheduleCommitCheck )
+        
         # reset after a long db update
         self.TouchTime( 'last_sleep_check' )
         
