@@ -402,42 +402,18 @@ class THREADCallToThread( DAEMON ):
             
             while True:
                 
-                # TODO: Assuming sentinel works out, clear up/out the empty wait, the queue.Empty handling, maybe the threading wait/yield later
-                # and of course tighten up shutdown sentinel call
-                # and replicate to HydrusDB and file parsing and anywhere else
-                
-                while self._queue.empty():
-                    
-                    CheckIfThreadShuttingDown()
-                    
-                    self._event.wait( 10.0 )
-                    
-                    self._event.clear()
-                    
-                
                 CheckIfThreadShuttingDown()
                 
                 try:
                     
-                    try:
+                    result = self._queue.get()
+                    
+                    if result is SHUTDOWN_SENTINEL:
                         
-                        result = self._queue.get()
+                        raise HydrusExceptions.ShutdownException()
                         
-                        if result is SHUTDOWN_SENTINEL:
-                            
-                            raise HydrusExceptions.ShutdownException()
-                            
-                        
-                        ( callable, args, kwargs ) = result
-                        
-                    except queue.Empty:
-                        
-                        # https://github.com/hydrusnetwork/hydrus/issues/750
-                        # this shouldn't happen, but...
-                        # even if we assume we'll never get this, we don't want to make a business of hanging forever on things
-                        
-                        continue
-                        
+                    
+                    ( callable, args, kwargs ) = result
                     
                     self._DoPreCall()
                     
@@ -501,9 +477,171 @@ class THREADCallToThread( DAEMON ):
     
     def shutdown( self ):
         
+        super().shutdown()
+        
         self._queue.put( SHUTDOWN_SENTINEL )
         
-        super().shutdown()
+    
+
+class ThreadWorkerPool( object ):
+    
+    def __init__( self, controller ):
+        
+        self._controller = controller
+        self._lock = threading.Lock()
+        
+        self._thread_pool_busy_status_text = ''
+        self._thread_pool_busy_status_tooltip = ''
+        self._thread_pool_busy_status_text_last_check_time = 0
+        
+        self._call_to_threads = []
+        self._long_running_call_to_threads = []
+        
+    
+    def GetCallToThread( self ):
+        
+        with self._lock:
+            
+            for call_to_thread in self._call_to_threads:
+                
+                if not call_to_thread.CurrentlyWorking():
+                    
+                    return call_to_thread
+                    
+                
+            
+            # all the threads in the pool are currently busy
+            
+            ok_to_make_one = len( self._call_to_threads ) < 250
+            
+            if not ok_to_make_one:
+                
+                my_thread = threading.current_thread()
+                
+                calling_from_the_thread_pool = my_thread in self._call_to_threads or my_thread in self._long_running_call_to_threads
+                
+                # we gotta make a new one bro, we are calling from inside the pool. try and avoid a deadlock
+                ok_to_make_one = calling_from_the_thread_pool
+                
+            
+            if ok_to_make_one:
+                
+                call_to_thread = THREADCallToThread( self._controller, 'CallToThread' )
+                
+                self._call_to_threads.append( call_to_thread )
+                
+                call_to_thread.start()
+                
+            else:
+                
+                call_to_thread = random.choice( self._call_to_threads )
+                
+            
+            return call_to_thread
+            
+        
+    
+    def GetCallToThreadLongRunning( self ):
+        
+        with self._lock:
+            
+            for call_to_thread in self._long_running_call_to_threads:
+                
+                if not call_to_thread.CurrentlyWorking():
+                    
+                    return call_to_thread
+                    
+                
+            
+            call_to_thread = THREADCallToThread( self._controller, 'CallToThreadLongRunning' )
+            
+            self._long_running_call_to_threads.append( call_to_thread )
+            
+            call_to_thread.start()
+            
+            return call_to_thread
+            
+        
+    
+    def GetThreadPoolBusyStatus( self ):
+        
+        if HydrusTime.TimeHasPassed( self._thread_pool_busy_status_text_last_check_time + 10 ):
+            
+            with self._lock:
+                
+                num_threads = sum( ( 1 for t in self._call_to_threads if t.CurrentlyWorking() ) )
+                
+                if num_threads <= 3:
+                    
+                    self._thread_pool_busy_status_text = ''
+                    
+                elif num_threads <= 8:
+                    
+                    self._thread_pool_busy_status_text = 'working'
+                    
+                else:
+                    
+                    self._thread_pool_busy_status_text = 'busy'
+                    
+                
+                self._thread_pool_busy_status_tooltip = f'There were {HydrusNumbers.ToHumanInt( num_threads )} threads doing jobs at last check.'
+                
+                self._thread_pool_busy_status_text_last_check_time = HydrusTime.GetNow()
+                
+            
+        
+        return ( self._thread_pool_busy_status_text, self._thread_pool_busy_status_tooltip )
+        
+    
+    def GetThreadsSnapshot( self ):
+        
+        with self._lock:
+            
+            return ( list( self._call_to_threads ), self._long_running_call_to_threads )
+            
+        
+    
+    def MaintainCallToThreads( self ):
+        
+        # we don't really want to hang on to threads that are done as event.wait() has a bit of idle cpu
+        # so, any that are in the pools that aren't doing anything can be killed and sent to garbage
+        
+        with self._lock:
+            
+            def filter_call_to_threads( t ):
+                
+                if t.CurrentlyWorking():
+                    
+                    return True
+                    
+                else:
+                    
+                    t.shutdown()
+                    
+                    return False
+                    
+                
+            
+            self._call_to_threads = list( filter( filter_call_to_threads, self._call_to_threads ) )
+            
+            self._long_running_call_to_threads = list( filter( filter_call_to_threads, self._long_running_call_to_threads ) )
+            
+        
+    
+    def shutdown( self ):
+        
+        with self._lock:
+            
+            for call_to_thread in self._call_to_threads:
+                
+                call_to_thread.shutdown()
+                
+            
+            for long_running_call_to_thread in self._long_running_call_to_threads:
+                
+                long_running_call_to_thread.shutdown()
+                
+            
         
     
 

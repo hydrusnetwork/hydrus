@@ -5393,10 +5393,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             idle_status = ''
             idle_tooltip = None
-            
-        
-        hydrus_busy_status = self._controller.GetThreadPoolBusyStatus()
-        hydrus_busy_tooltip = 'just a simple measure of how much hydrus wants to do atm'
+
+
+        ( hydrus_busy_status, hydrus_busy_tooltip ) = self._controller.GetThreadPoolBusyStatus()
         
         if self._controller.SystemBusy():
             

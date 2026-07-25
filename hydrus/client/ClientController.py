@@ -987,7 +987,7 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        def save_objects():
+        def save_objects_and_exit():
             
             try:
                 
@@ -1023,8 +1023,6 @@ class Controller( HydrusController.HydrusController ):
             finally:
                 
                 qapp = QW.QApplication.instance()
-                
-                qapp.setProperty( 'exit_complete', True )
                 
                 self._DestroySplash()
                 
@@ -1062,11 +1060,11 @@ class Controller( HydrusController.HydrusController ):
             
             HydrusData.DebugPrint( 'doing fast shutdown' + HC.UNICODE_ELLIPSIS )
             
-            save_objects()
+            save_objects_and_exit()
             
         else:
             
-            self.CallToThreadLongRunning( save_objects )
+            self.CallToThreadLongRunning( save_objects_and_exit )
             
         
     

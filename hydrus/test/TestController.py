@@ -238,7 +238,7 @@ class Controller( object ):
         
         self.frame_splash_status = ClientGUISplash.FrameSplashStatus()
         
-        self._call_to_threads = []
+        self._thread_worker_pool = HydrusThreading.ThreadWorkerPool( self )
         
         self._pubsub = HydrusPubSub.HydrusPubSub( lambda o: True )
         
@@ -433,30 +433,6 @@ class Controller( object ):
         self._job_scheduler.start()
         
     
-    def _GetCallToThread( self ):
-        
-        for call_to_thread in self._call_to_threads:
-            
-            if not call_to_thread.CurrentlyWorking():
-                
-                return call_to_thread
-                
-            
-        
-        if len( self._call_to_threads ) > 100:
-            
-            raise Exception( 'Too many call to threads!' )
-            
-        
-        call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThread' )
-        
-        self._call_to_threads.append( call_to_thread )
-        
-        call_to_thread.start()
-        
-        return call_to_thread
-        
-    
     def _SetupQt( self ):
         
         self.locale = QC.QLocale() # Very important to init this here and keep it non garbage collected
@@ -588,7 +564,7 @@ class Controller( object ):
     
     def CallToThread( self, callable, *args, **kwargs ):
         
-        call_to_thread = self._GetCallToThread()
+        call_to_thread = self._thread_worker_pool.GetCallToThread()
         
         call_to_thread.put( callable, *args, **kwargs )
         
@@ -1140,6 +1116,8 @@ class Controller( object ):
         
     
     def TidyUp( self ):
+        
+        self._thread_worker_pool.shutdown()
         
         if reactor.running:
             

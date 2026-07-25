@@ -1,7 +1,6 @@
 import collections
 import collections.abc
 import os
-import random
 import sys
 import threading
 import time
@@ -53,13 +52,7 @@ class HydrusController( object ):
         
         self._twisted_thread = None
         
-        self._call_to_threads = []
-        self._long_running_call_to_threads = []
-        
-        self._thread_pool_busy_status_text = ''
-        self._thread_pool_busy_status_text_new_check_time = 0
-        
-        self._call_to_thread_lock = threading.Lock()
+        self._thread_worker_pool = HydrusThreading.ThreadWorkerPool( self )
         
         self._timestamps_lock = threading.Lock()
         
@@ -75,70 +68,6 @@ class HydrusController( object ):
         
         self.TouchTime( 'boot' )
         self.TouchTime( 'last_sleep_check' )
-        
-    
-    def _GetCallToThread( self ):
-        
-        with self._call_to_thread_lock:
-            
-            for call_to_thread in self._call_to_threads:
-                
-                if not call_to_thread.CurrentlyWorking():
-                    
-                    return call_to_thread
-                    
-                
-            
-            # all the threads in the pool are currently busy
-            
-            ok_to_make_one = len( self._call_to_threads ) < 200
-            
-            if not ok_to_make_one:
-                
-                my_thread = threading.current_thread()
-                
-                calling_from_the_thread_pool = my_thread in self._call_to_threads or my_thread in self._long_running_call_to_threads
-                
-                ok_to_make_one = calling_from_the_thread_pool
-                
-            
-            if ok_to_make_one:
-                
-                call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThread' )
-                
-                self._call_to_threads.append( call_to_thread )
-                
-                call_to_thread.start()
-                
-            else:
-                
-                call_to_thread = random.choice( self._call_to_threads )
-                
-            
-            return call_to_thread
-            
-        
-    
-    def _GetCallToThreadLongRunning( self ):
-        
-        with self._call_to_thread_lock:
-            
-            for call_to_thread in self._long_running_call_to_threads:
-                
-                if not call_to_thread.CurrentlyWorking():
-                    
-                    return call_to_thread
-                    
-                
-            
-            call_to_thread = HydrusThreading.THREADCallToThread( self, 'CallToThreadLongRunning' )
-            
-            self._long_running_call_to_threads.append( call_to_thread )
-            
-            call_to_thread.start()
-            
-            return call_to_thread
-            
         
     
     def _GetPubsubValidCallable( self ):
@@ -171,33 +100,6 @@ class HydrusController( object ):
     def _InitHydrusTempDir( self ):
         
         self._hydrus_temp_dir = HydrusTemp.InitialiseHydrusTempDir()
-        
-    
-    def _MaintainCallToThreads( self ):
-        
-        # we don't really want to hang on to threads that are done as event.wait() has a bit of idle cpu
-        # so, any that are in the pools that aren't doing anything can be killed and sent to garbage
-        
-        with self._call_to_thread_lock:
-            
-            def filter_call_to_threads( t ):
-                
-                if t.CurrentlyWorking():
-                    
-                    return True
-                    
-                else:
-                    
-                    t.shutdown()
-                    
-                    return False
-                    
-                
-            
-            self._call_to_threads = list( filter( filter_call_to_threads, self._call_to_threads ) )
-            
-            self._long_running_call_to_threads = list( filter( filter_call_to_threads, self._long_running_call_to_threads ) )
-            
         
     
     def _PublishShutdownSubtext( self, text ):
@@ -377,7 +279,7 @@ class HydrusController( object ):
             HydrusData.ShowText( tuple( what_to_report ) )
             
         
-        call_to_thread = self._GetCallToThread()
+        call_to_thread = self._thread_worker_pool.GetCallToThread()
         
         call_to_thread.put( callable, *args, **kwargs )
         
@@ -401,7 +303,7 @@ class HydrusController( object ):
             HydrusData.ShowText( tuple( what_to_report ) )
             
         
-        call_to_thread = self._GetCallToThreadLongRunning()
+        call_to_thread = self._thread_worker_pool.GetCallToThreadLongRunning()
         
         call_to_thread.put( callable, *args, **kwargs )
         
@@ -525,42 +427,17 @@ class HydrusController( object ):
     
     def GetThreadPoolBusyStatus( self ):
         
-        if HydrusTime.TimeHasPassed( self._thread_pool_busy_status_text_new_check_time ):
-            
-            with self._call_to_thread_lock:
-                
-                num_threads = sum( ( 1 for t in self._call_to_threads if t.CurrentlyWorking() ) )
-                
-            
-            if num_threads < 4:
-                
-                self._thread_pool_busy_status_text = ''
-                
-            elif num_threads < 10:
-                
-                self._thread_pool_busy_status_text = 'working'
-                
-            elif num_threads < 20:
-                
-                self._thread_pool_busy_status_text = 'busy'
-                
-            else:
-                
-                self._thread_pool_busy_status_text = 'very busy!'
-                
-            
-            self._thread_pool_busy_status_text_new_check_time = HydrusTime.GetNow() + 10
-            
-        
-        return self._thread_pool_busy_status_text
+        return self._thread_worker_pool.GetThreadPoolBusyStatus()
         
     
     def GetThreadsSnapshot( self ):
         
         threads = []
+
+        ( call_to_threads, long_running_call_to_threads ) = self._thread_worker_pool.GetThreadsSnapshot()
         
-        threads.extend( self._call_to_threads )
-        threads.extend( self._long_running_call_to_threads )
+        threads.extend( call_to_threads )
+        threads.extend( long_running_call_to_threads )
         
         threads.append( self._slow_job_scheduler )
         threads.append( self._fast_job_scheduler )
@@ -681,7 +558,7 @@ class HydrusController( object ):
         
         HydrusTemp.CleanUpOldTempPaths()
         
-        self._MaintainCallToThreads()
+        self._thread_worker_pool.MaintainCallToThreads()
         
     
     def Read( self, action, *args, **kwargs ):
@@ -795,31 +672,28 @@ class HydrusController( object ):
             self._slow_job_scheduler = None
             
         
+        self._thread_worker_pool.shutdown()
+        
+        self.StopTwistedIfRunning()
+        
+        self._pubsub.Wake()
+        
         HydrusTemp.CleanUpOldTempPaths()
         
         if hasattr( self, '_hydrus_temp_dir' ):
             
-            HydrusPaths.DeletePath( self._hydrus_temp_dir )
-            
-        
-        with self._call_to_thread_lock:
-            
-            for call_to_thread in self._call_to_threads:
+            try:
                 
-                call_to_thread.shutdown()
+                HydrusPaths.DeletePath( self._hydrus_temp_dir )
                 
-            
-            for long_running_call_to_thread in self._long_running_call_to_threads:
+            except Exception as e:
                 
-                long_running_call_to_thread.shutdown()
+                HydrusData.Print( 'While shutting down, could not delete the temp dir "{self._hydrus_temp_dir}"! Error follows:' )
+                HydrusData.PrintException( e, do_wait = False )
                 
             
-        
-        self.StopTwistedIfRunning()
         
         HG.model_shutdown = True
-        
-        self._pubsub.Wake()
         
     
     def ShutdownView( self ) -> None:
