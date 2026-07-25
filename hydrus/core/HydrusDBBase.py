@@ -296,17 +296,13 @@ class JobDatabase( object ):
         self._args = args
         self._kwargs = kwargs
         
+        self._result = None
         self._result_ready = threading.Event()
         
     
     def __str__( self ):
         
         return 'DB Job: {}'.format( self.ToString() )
-        
-    
-    def _DoDelayedResultRelief( self ):
-        
-        pass
         
     
     def GetCallableTuple( self ):
@@ -316,24 +312,7 @@ class JobDatabase( object ):
     
     def GetResult( self ):
         
-        time.sleep( 0.00001 ) # this one neat trick can save hassle on superquick jobs as event.wait can be laggy
-        
-        while True:
-            
-            result_was_ready = self._result_ready.wait( 2 )
-            
-            if result_was_ready:
-                
-                break
-                
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
-                
-            
-            self._DoDelayedResultRelief()
-            
+        self._result_ready.wait()
         
         if isinstance( self._result, Exception ):
             

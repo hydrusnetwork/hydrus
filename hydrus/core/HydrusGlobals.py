@@ -54,7 +54,6 @@ macos_antiflicker_test = False
 
 canvas_tile_outline_mode = False
 
-db_ui_hang_relief_mode = False
 callto_report_mode = False
 db_report_mode = False
 file_report_mode = False

@@ -222,22 +222,6 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     HydrusData.Print( summary )
     
 
-class JobDatabaseClient( HydrusDBBase.JobDatabase ):
-    
-    def _DoDelayedResultRelief( self ):
-        
-        if HG.db_ui_hang_relief_mode:
-            
-            if QC.QThread.currentThread() == CG.client_controller.main_qt_thread:
-                
-                HydrusData.Print( 'ui-hang event processing: begin' )
-                QW.QApplication.instance().processEvents()
-                HydrusData.Print( 'ui-hang event processing: end' )
-                
-            
-        
-    
-
 class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates', 'missing_thumbnail_hashes' ]
@@ -1668,11 +1652,6 @@ class DB( HydrusDB.HydrusDB ):
             
         
         self.modules_media_results.ForceRefreshFileInfoManagers( hash_ids_to_hashes )
-        
-    
-    def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
-        
-        return JobDatabaseClient( job_type, synchronous, action, *args, **kwargs )
         
     
     def _GetBonedStats( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext = None, job_status = None ):

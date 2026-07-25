@@ -3643,7 +3643,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         data_actions = ClientGUIMenus.GenerateMenu( debug_menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( data_actions, 'db ui-hang relief mode', 'Have UI-synchronised database jobs process pending Qt events while they wait.', HG.db_ui_hang_relief_mode, self._SwitchBoolean, 'db_ui_hang_relief_mode' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'force database commit', 'Command the database to flush all pending changes to disk.', CG.client_controller.ForceDatabaseCommit )
         ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
@@ -6957,10 +6956,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'db_report_mode':
             
             HG.db_report_mode = not HG.db_report_mode
-            
-        elif name == 'db_ui_hang_relief_mode':
-            
-            HG.db_ui_hang_relief_mode = not HG.db_ui_hang_relief_mode
             
         elif name == 'fake_petition_mode':
             

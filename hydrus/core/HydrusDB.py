@@ -956,6 +956,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _PutJob( self, job ):
         
+        if self._loop_finished:
+            
+            raise HydrusExceptions.ShutdownException()
+            
+        
         self._jobs_queue.put( job )
         
         self._i_am_idle.clear()
@@ -1268,6 +1273,17 @@ class HydrusDB( HydrusDBBase.DBBase ):
         HydrusPaths.DeletePath( temp_path )
         
         self._loop_finished = True
+        
+        # catching jobs scheduled in the window between mainloop termination and 'loop_finished = True'
+        while not self._jobs_queue.empty():
+            
+            result = self._jobs_queue.get()
+            
+            if isinstance( result, HydrusDBBase.JobDatabase ):
+                
+                result.PutResult( HydrusExceptions.ShutdownException() )
+                
+            
         
     
     def PauseAndDisconnect( self, pause_and_disconnect ):
