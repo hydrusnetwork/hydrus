@@ -3287,7 +3287,6 @@ class ServiceIPFS( ServiceRemote ):
             
             network_job.WaitUntilDone()
             
-            
         
         parsing_text = network_job.GetContentText()
         
