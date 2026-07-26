@@ -94,6 +94,11 @@ class NetworkEngine( object ):
         
         with self._lock:
             
+            if self._is_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Network engine is shut down!' )
+                
+            
             job.engine = self
             
             self._jobs_awaiting_validity.append( job )
@@ -489,6 +494,25 @@ class NetworkEngine( object ):
         self._is_running = False
         
         self._is_shutdown = True
+        
+        with self._lock:
+            
+            for job_list in [
+                self._jobs_awaiting_validity,
+                self._jobs_awaiting_bandwidth,
+                self._jobs_awaiting_login,
+                self._jobs_awaiting_slot,
+                self._jobs_running
+            ]:
+                
+                for job in job_list:
+                    
+                    job.Cancel( 'Network engine is shut down!' )
+                    
+                
+                job_list.clear()
+                
+            
         
     
     def PauseNewJobs( self ):

@@ -8,7 +8,6 @@ from unittest import mock
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
@@ -1267,24 +1266,17 @@ class TestNetworkingJob( unittest.TestCase ):
         self.assertTrue( job.IsDone() )
         
     
-    def test_cancelled_app_shutdown( self ):
+    def test_errored_manually( self ):
         
         job = self._GetJob()
         
         self.assertFalse( job.IsCancelled() )
         self.assertFalse( job.IsDone() )
         
-        HG.started_shutdown = True
+        job.SetError( Exception( 'wew' ), 'help computer' )
         
-        try:
-            
-            self.assertTrue( job.IsCancelled() )
-            self.assertTrue( job.IsDone() )
-            
-        finally:
-            
-            HG.started_shutdown = False
-            
+        self.assertTrue( job.IsCancelled() )
+        self.assertTrue( job.IsDone() )
         
     
     def test_sleep( self ):

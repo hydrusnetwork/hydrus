@@ -210,7 +210,6 @@ class NetworkJob( object ):
         self._is_done_event = threading.Event()
         
         self._is_started = False
-        self._is_done = False
         self._is_cancelled = False
         
         self._gallery_token_name = None
@@ -364,26 +363,6 @@ class NetworkJob( object ):
     def _IsCancelled( self ):
         
         if self._is_cancelled:
-            
-            return True
-            
-        
-        if HG.started_shutdown:
-            
-            return True
-            
-        
-        return False
-        
-    
-    def _IsDone( self ):
-        
-        if self._is_done:
-            
-            return True
-            
-        
-        if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
             
             return True
             
@@ -644,11 +623,6 @@ class NetworkJob( object ):
             self._ReportDataUsed( chunk_num_bytes )
             self._WaitOnOngoingBandwidth()
             
-            if HG.started_shutdown:
-                
-                raise HydrusExceptions.ShutdownException()
-                
-            
         
         with self._lock:
             
@@ -901,12 +875,10 @@ class NetworkJob( object ):
                 
             
         
-        self._SetDone()
+        self._SetCancelled()
         
     
     def _SetDone( self ):
-        
-        self._is_done = True
         
         self._is_done_event.set()
         
@@ -1314,10 +1286,7 @@ class NetworkJob( object ):
     
     def IsDone( self ):
         
-        with self._lock:
-            
-            return self._IsDone()
-            
+        return self._is_done_event.is_set()
         
     
     def IsHydrusJob( self ):
@@ -1919,15 +1888,7 @@ class NetworkJob( object ):
     
     def WaitUntilDone( self ):
         
-        while True:
-            
-            if self.IsDone():
-                
-                break
-                
-            
-            self._is_done_event.wait( 5 )
-            
+        self._is_done_event.wait()
         
         with self._lock:
             
