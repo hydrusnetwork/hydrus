@@ -654,7 +654,7 @@ QLocatorResultWidget#selectedLocatorResult {
 
 QWidget#HydrusMediaViewer
 {
-	qproperty-hmv_background: transparent;
+	qproperty-hmv_background: #020f23;
 	qproperty-hmv_text: #b4c7d9;
 }
 

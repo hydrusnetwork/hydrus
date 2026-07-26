@@ -207,9 +207,16 @@ class CanvasBackgroundColourGenerator( object ):
         self._my_canvas = my_canvas
         
     
-    def _GetColourFromOptions( self ):
+    def _GetColourFromOptions( self ) -> QG.QColor:
         
-        return self._my_canvas.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+        colour = self._my_canvas.GetColour( CC.COLOUR_MEDIA_BACKGROUND )
+        
+        if colour.alpha() != 255:
+            
+            colour.setAlpha( 255 )
+            
+        
+        return colour
         
     
     def GetColour( self ) -> QG.QColor:
