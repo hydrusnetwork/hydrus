@@ -4821,10 +4821,13 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
     
     def Collect( self, media_collect = None ):
         
+        prior_media = list( self._sorted_media )
+        
         self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
         
         ClientMediaList.MediaList.Collect( self, media_collect = media_collect )
         
+        self._MaintainMediaAssociatedGraphics( prior_media )
         self._MaintainMediaAssociatedGraphics( self._sorted_media )
         
         self.Sort()

@@ -2950,13 +2950,20 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         
         for m in media:
             
+            thumb = self._media_to_thumbnails.get( m, None )
+            
+            if thumb is None:
+                
+                return
+                
+            
             if fade_thumbnails:
                 
-                self._media_to_thumbnails[ m ].StartFadeIn()
+                thumb.StartFadeIn()
                 
             else:
                 
-                self._media_to_thumbnails[ m ].update()
+                thumb.update()
                 
             
         
