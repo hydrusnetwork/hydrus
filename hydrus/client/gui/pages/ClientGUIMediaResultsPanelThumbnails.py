@@ -93,14 +93,12 @@ class ThumbnailWaitingToBeDrawnAnimated( ThumbnailWaitingToBeDrawn ):
         
         self.alpha_bmp = QP.AdjustOpacity( self.bitmap, opacity_factor )
         
-        self.animation_started_precise = HydrusTime.GetNowPrecise()
+        self.animation_started_time_float = HydrusTime.GetNowFloat()
         
     
     def _GetNumFramesOutstanding( self ):
         
-        now_precise = HydrusTime.GetNowPrecise()
-        
-        num_frames_to_now = int( ( now_precise - self.animation_started_precise ) // FRAME_DURATION_60FPS )
+        num_frames_to_now = int( ( HydrusTime.GetNowFloat() - self.animation_started_time_float ) // FRAME_DURATION_60FPS )
         
         return min( num_frames_to_now, self.num_frames_to_draw - self.num_frames_drawn )
         
@@ -386,8 +384,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             
             return
             
-        
-        now_precise = HydrusTime.GetNowPrecise()
         
         for thumbnail in thumbnails:
             
@@ -1907,7 +1903,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
     
     def TIMERAnimationUpdate( self ):
         
-        loop_should_break_time = HydrusTime.GetNowPrecise() + ( FRAME_DURATION_60FPS / 2 )
+        loop_should_break_time_float = HydrusTime.GetNowFloat() + ( FRAME_DURATION_60FPS / 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
@@ -1984,7 +1980,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 del self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
                 
             
-            if HydrusTime.TimeHasPassedPrecise( loop_should_break_time ):
+            if HydrusTime.TimeHasPassedFloat( loop_should_break_time_float ):
                 
                 break
                 
@@ -2856,7 +2852,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         #self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.MasonryLayout( ClientGUIThumbnailLayouts.MasonryLayout.VariableDimension.WIDTH )
         self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.RegularGridLayout()
         
-        self._last_animation_update_time = HydrusTime.GetNowPrecise()
+        self._last_animation_update_time_float = HydrusTime.GetNowFloat()
         
         super().__init__( parent, page_key, page_manager, media_results )
         
@@ -4329,7 +4325,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
     
     def TIMERAnimationUpdate( self ):
         
-        if HydrusTime.GetNowPrecise() - self._last_animation_update_time < FRAME_DURATION_60FPS:
+        if HydrusTime.GetNowFloat() - self._last_animation_update_time_float < FRAME_DURATION_60FPS:
             
             return
             
@@ -4342,7 +4338,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                 
             
         
-        self._last_animation_update_time = HydrusTime.GetNowPrecise()
+        self._last_animation_update_time_float = HydrusTime.GetNowFloat()
         
     
     def WaterfallThumbnails( self, page_key, medias ):
@@ -4356,7 +4352,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
 
 class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
     
-    FADE_DURATION_S = 0.5
+    FADE_DURATION_S = 0.25
     
     def __init__( self, media: ClientMedia.Media, panel: MediaResultsPanelThumbnailsGraphicsViewTest, page_key: bytes ):
         
@@ -4413,7 +4409,7 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         self._last_upper_summary = None
         self._last_lower_summary = None
         
-        self._fade_in_started_at = None
+        self._fade_in_started_time_float = None
         
         # Yes, this is another level of caching but I find it helps with performance, although investigating how big is the performance (vs. memory) hit really would be worth it.
         # In addition to the image in the ThumbnailCache this already has the borders, tags, etc. drawn on it too and also it already in QPixmap format for fast painting!
@@ -4436,6 +4432,31 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         # before that the thumb should be hidden so none of the painting-related functions that need this should be called at all
         # maybe return None or something in that case here? at least that would be easier to catch if it somehow happens anyway
         return ( self.width - thumbnail_border * 2, self.height - thumbnail_border * 2 )
+        
+    
+    def _GetFadeInOpacity( self ) -> float:
+        
+        if self._fade_in_started_time_float is None:
+            
+            return 1.0
+            
+        
+        passed = HydrusTime.GetNowFloat() - self._fade_in_started_time_float
+        
+        if passed >= self.FADE_DURATION_S:
+            
+            self._fade_in_started_time_float = None
+            
+            self._cached_old_pixmap_for_fade = None
+            
+            self.is_animating = False # now this is great that the only possible animation we have is the fading but if in the future we have multiple types we can't just set it to False here
+            
+            return 1.0
+            
+        else:
+            
+            return passed / self.FADE_DURATION_S # linear transition from 0 to 1 opacity, maybe some other easing curve would look better?
+            
         
     
     def _PaintThumbnailContent( self, painter: QG.QPainter, media: ClientMedia.Media, media_panel: ClientGUIMediaResultsPanel.MediaResultsPanelGraphicsViewTest ) -> None:
@@ -5037,31 +5058,6 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         self.Invalidate()
         
     
-    def GetFadeInOpacity( self ) -> float:
-        
-        if self._fade_in_started_at is None:
-            
-            return 1.0
-            
-        
-        passed = HydrusTime.GetNowPrecise() - self._fade_in_started_at
-        
-        if passed >= self.FADE_DURATION_S:
-            
-            self._fade_in_started_at = None
-            
-            self._cached_old_pixmap_for_fade = None
-            
-            self.is_animating = False # now this is great that the only possible animation we have is the fading but if in the future we have multiple types we can't just set it to False here
-            
-            return 1.0
-            
-        else:
-            
-            return passed / self.FADE_DURATION_S # linear transition from 0 to 1 opacity, maybe some other easing curve would look better?
-            
-        
-    
     def hoverEnterEvent( self, event: QW.QGraphicsSceneHoverEvent ) -> None:
         
         self._is_hovered = True
@@ -5110,6 +5106,7 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
                     # so yeah maybe we go to something like:
                         # if thumb ready, use it
                         # else, grab the placeholder and remind the cache to schedule an update
+                        # placeholder can be blurhash of course!
                         # if the GV is the one catching all this, then we could just pass the bitmap along that route, in the pubsub, tbh
                         # perhaps all responsibility for thumb load could actually be handled at the GV level. a bunch of it is, and this guy just draws what he has and otherwise takes updates
                     # ANYWAY, just consider the waterfall ''''''pipeline'''''' in its entirety and consider untying it significantly
@@ -5144,7 +5141,7 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
                 self._cached_pixmap = QG.QPixmap.fromImage( cached_image )
                 
             
-            fade_opacity = self.GetFadeInOpacity()
+            fade_opacity = self._GetFadeInOpacity()
             
             if fade_opacity < 1.0 and self._cached_old_pixmap_for_fade: # fade-in in progress, draw the old image first if available
                 
@@ -5179,7 +5176,7 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         # Nevermind actually I'm not sure about that, the scene/view stuff does have a whole system for animations afterall,
         # so maybe we should take a harder look at that for future animations before rolling our own.
         
-        self._fade_in_started_at = HydrusTime.GetNowPrecise()
+        self._fade_in_started_time_float = HydrusTime.GetNowFloat()
         
         self._cached_old_pixmap_for_fade = self._cached_pixmap
         self._cached_pixmap = None
