@@ -1352,11 +1352,27 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                     
                     talked_about_icc_profile = False
                     
+                    software = HydrusImageMetadata.GetSoftwareFromPilInfo( raw_pil_image )
+                    
+                    if software is not None:
+                        
+                        extra_rows.append( ( 'source', software ) )
+                        
+                    
                     if mime == HC.IMAGE_JPEG:
                         
                         extra_rows.append( ( 'subsampling', HydrusImageMetadata.subsampling_str_lookup[ HydrusImageMetadata.GetJpegSubsamplingRaw( raw_pil_image ) ] ) )
                         
                         extra_rows.append( ( 'progressive', 'yes' if 'progression' in raw_pil_image.info else 'no' ) )
+                        
+                    else:
+                        
+                        result = HydrusImageMetadata.GetChromaSubsamplingFromPilInfo( raw_pil_image )
+                        
+                        if result != HydrusImageMetadata.SUBSAMPLING_UNKNOWN:
+                            
+                            extra_rows.append( ( 'subsampling', HydrusImageMetadata.subsampling_str_lookup[ result ]))
+                            
                         
                     
                     if 'srgb' in raw_pil_image.info:

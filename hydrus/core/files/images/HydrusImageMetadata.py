@@ -1,8 +1,10 @@
 import base64
 import json
+import re
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusExceptions
 
 def render_char_card( chara_text: str, indent_depth: int ) -> str:
@@ -32,16 +34,11 @@ def render_char_card( chara_text: str, indent_depth: int ) -> str:
     return render_key_value( indent_depth, 'Character Card?', card_json )
     
 
-def render_dict( d: dict, indent_depth: int, keys_to_put_at_the_top = None, ignore_these_keys = None ) -> str | None:
+def render_dict( d: dict, indent_depth: int, keys_to_put_at_the_top = None ) -> str | None:
     
     if keys_to_put_at_the_top is None:
         
         keys_to_put_at_the_top = []
-        
-    
-    if ignore_these_keys is None:
-        
-        ignore_these_keys = set()
         
     
     def muh_sort( k ):
@@ -68,11 +65,6 @@ def render_dict( d: dict, indent_depth: int, keys_to_put_at_the_top = None, igno
         
     
     for key in keys:
-        
-        if key in ignore_these_keys:
-            
-            continue
-            
         
         value = d[ key ]
         
@@ -136,24 +128,6 @@ def render_key_value( indent_depth, key, value, keys_to_put_at_the_top = None ) 
     return row_text
     
 
-# we parse and display this stuff in other places
-PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF = {
-    'exif',
-    'icc_profile',
-    'progression',
-    'progressive',
-    'srgb',
-    'gamma',
-    'chromaticity',
-    'dpi',
-    'jfif',
-    'jfif_unit',
-    'jfif_density',
-    'jfif_version',
-    'compression',
-    'resolution',
-}
-
 def GetEmbeddedFileText( pil_image: PILImage.Image ) -> str | None:
     
     # OK WE DISCOVERED AN IMAGE THAT DID NOT FLESH OUT ITS info DICT UNTIL IT WAS LOADED
@@ -165,9 +139,9 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> str | None:
         
         try:
             
-            info_dict = pil_image.info.copy()
+            info_dict = WashPilImageInfoDictForHumanReadableMetadata( pil_image.info.copy() )
             
-            return render_dict( info_dict, indent_depth = 0, ignore_these_keys = PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF )
+            return render_dict( info_dict, indent_depth = 0 )
             
         except Exception as e:
             
@@ -319,6 +293,32 @@ subsampling_str_lookup = {
     SUBSAMPLING_GREYSCALE : 'greyscale (no subsampling)'
 }
 
+subsampling_misc_object_to_enum_lookup  = {
+    '420' : SUBSAMPLING_420,
+    420 : SUBSAMPLING_420,
+    '422' : SUBSAMPLING_422,
+    422 : SUBSAMPLING_422,
+    '444' : SUBSAMPLING_444,
+    444 : SUBSAMPLING_444,
+}
+
+def GetChromaSubsamplingFromPilInfo( pil_image: PILImage.Image ):
+    
+    pil_info = pil_image.info.copy()
+    
+    if 'chroma' in pil_info:
+        
+        chroma_object = pil_info[ 'chroma' ]
+        
+        if chroma_object in subsampling_misc_object_to_enum_lookup:
+            
+            return subsampling_misc_object_to_enum_lookup[ chroma_object ]
+            
+        
+    
+    return SUBSAMPLING_UNKNOWN
+    
+
 def GetJpegSubsamplingRaw( pil_image: PILImage.Image ) -> int:
     
     if pil_image.mode == 'L':
@@ -338,6 +338,94 @@ def GetJpegSubsamplingRaw( pil_image: PILImage.Image ) -> int:
     return result
     
 
+def GetSoftwareFromCommentInfoField( value ) -> str | None:
+    
+    if isinstance( value, str ):
+        
+        patterns = [
+            r'^(Created|Converted|Cropped|Compressed|Edited) with (?P<software>.+)',
+            r'^... (created|converted|cropped|compressed|edited) with (?P<software>.+)',
+        ]
+        
+        for pattern in patterns:
+            
+            result = re.search( pattern, value )
+            
+            if result is not None:
+                
+                software = result[ 'software' ]
+                
+                return software
+                
+            
+        
+    
+    return None
+    
+
+def GetSoftwareFromPilInfo( pil_image: PILImage.Image ) -> str | None:
+    
+    info_dict = pil_image.info.copy()
+    
+    components = []
+    
+    for key in [ 'Software', 'software' ]:
+        
+        if key in info_dict:
+            
+            components.append( info_dict[ key ] )
+            
+        
+    
+    if 'Comment' in info_dict or 'comment' in info_dict:
+        
+        if 'Comment' in info_dict:
+            
+            value = info_dict[ 'Comment' ]
+            
+        else:
+            
+            value = info_dict[ 'comment' ]
+            
+        
+        software = GetSoftwareFromCommentInfoField( value )
+        
+        if software is not None:
+            
+            components.append( software )
+            
+        
+    
+    for key in [ 'Creator', 'creator', 'Source', 'source' ]:
+        
+        if key in info_dict:
+            
+            components.append( info_dict[ key ] )
+            
+        
+    
+    if 'Creator' in info_dict:
+        
+        components.append( info_dict[ 'Creator' ] )
+        
+    
+    if 'Source' in info_dict:
+        
+        components.append( info_dict[ 'Source' ] )
+        
+    
+    if len( components ) == 0:
+        
+        return None
+        
+    else:
+        
+        components = HydrusLists.DedupeList( components )
+        
+        return ' / '.join( [ str( c ) for c in components ] )
+        
+    
+
 def HasEXIF( pil_image: PILImage.Image ) -> bool:
     
     result = GetEXIFDict( pil_image )
@@ -347,9 +435,48 @@ def HasEXIF( pil_image: PILImage.Image ) -> bool:
 
 def HasHumanReadableEmbeddedMetadata( pil_image: PILImage.Image ) -> bool:
     
-    result = GetEmbeddedFileText( pil_image )
+    # we do a quick search first. if it has interesting data before the forced load call, we don't have to do any load
+    if hasattr( pil_image, 'info' ):
+        
+        try:
+            
+            info_dict = WashPilImageInfoDictForHumanReadableMetadata( pil_image.info.copy() )
+            
+            result = render_dict( info_dict, indent_depth = 0 )
+            
+            if result is not None:
+                
+                return True
+                
+            
+        except Exception as e:
+            
+            pass
+            
+        
     
-    return result is not None
+    # OK WE DISCOVERED AN IMAGE THAT DID NOT FLESH OUT ITS info DICT UNTIL IT WAS LOADED
+    # I guess sometimes that stuff lives in the frame rather than header data
+    # this guy is apparently idempotent so we'll call it here to ensure we are getting a more decent shot
+    pil_image.load()
+    
+    if hasattr( pil_image, 'info' ):
+        
+        try:
+            
+            info_dict = WashPilImageInfoDictForHumanReadableMetadata( pil_image.info.copy() )
+            
+            result = render_dict( info_dict, indent_depth = 0 )
+            
+            return result is not None
+            
+        except Exception as e:
+            
+            pass
+            
+        
+    
+    return False
     
 
 def HasICCProfile( pil_image: PILImage.Image ) -> bool:
@@ -366,3 +493,121 @@ def HasICCProfile( pil_image: PILImage.Image ) -> bool:
     
     return False
     
+
+# we parse and display this stuff in other places
+# ultimately I guess I should really find the three comment fields we want and whitelist them, rather than trying to blacklist every whack decoder field
+# but I think I do fall on the side of 'yeah let's expose and put human eyes what crazy stuff is going on' so we discover new things
+PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF = {
+    'exif',
+    'Raw profile type exif',
+    'icc_profile',
+    'progression',
+    'progressive',
+    'srgb',
+    'gamma',
+    'chromaticity',
+    'dpi',
+    'jfif',
+    'jfif_unit',
+    'jfif_density',
+    'jfif_version',
+    'compression',
+    'resolution',
+    'Software', # this is cool and we'll def want to search it special one day, but it is not quite human-readable gubbins imo
+    'software', # yeah I have seen both cases
+    'adobe', # this is almost always '100' and isn't helpful
+    'adobe_transform', # this is almost always '1', which is (jpeg) YCbCr
+    'transparency', # we handle this elsewhere
+    'background',
+    'duration',
+    'bit_depth',
+    'primary', # heif "yeah this is the main image"
+    'chroma', # "420" et al on a heif
+    'loop',
+    'photoshop', # this is actually a cool dict but it is either 1005 which has DPI we already pulled or bytes objects
+    'extension', # ( b'NETSCAPE2.0', 419/795 ), gif thing about bytenum where frame starts
+    'bbox', # apng gubbins
+    'blend', # apng gubbins
+    'disposal', # apng gubbins
+    'sizes', # .ico gubbins
+    'interlace',
+    'aspect',
+    'xmp', # xmp stuff
+    'XML:com.adobe.xmp', # xmp stuff
+    'iptc', # ye olde XMP
+    'Raw profile type iptc', # ye olde XMP
+    'default_image', #png thing
+    'Creator',
+    'creator',
+    'Source',
+    'source',
+    'mpoffset',
+    'Creation Time', # TODO: Woop woop, pull this for a noice modified time with like 'file metadata' as the 'domain'
+    'create-date',
+    'modify-date',
+    'date:create',
+    'date:modify',
+    'Thumb::MTime', # leaving this here as a reminder for another source of modified time
+}
+
+def WashPilImageInfoDictForHumanReadableMetadata( info_dict: dict ) -> dict:
+    
+    new_info_dict = dict()
+    
+    for ( key, value ) in list( info_dict.items() ):
+        
+        if key in PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF:
+            
+            continue
+            
+        
+        if value is None:
+            
+            continue
+            
+        
+        if isinstance( value, ( list, dict ) ) and len( value ) == 0:
+            
+            continue
+            
+        
+        # we fetch this elsewhere
+        if key in ( 'comment', 'Comment' ) and GetSoftwareFromCommentInfoField( value ) is not None:
+            
+            continue
+            
+        
+        # some gif gubbins along with 'loop'
+        if key == 'timestamp' and value == 0:
+            
+            continue
+            
+        
+        if key.startswith( 'Thumb::' ):
+            
+            '''
+Thumb::Document::Pages:
+    1
+Thumb::Image::Width:
+    24
+Thumb::Image::height:
+    18
+Thumb::MTime:
+    1359601259
+Thumb::Mimetype:
+    image/png
+Thumb::Size:
+    701BB
+Thumb::URI:
+    file:///tmp/minimagick29295-7.png
+'''
+            
+            continue
+            
+        
+        new_info_dict[ key ] = value
+        
+    
+    return new_info_dict
+    
+
