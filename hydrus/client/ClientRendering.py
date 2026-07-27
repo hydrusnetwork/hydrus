@@ -59,6 +59,7 @@ def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
     return HydrusBitmap( numpy_image.data, ( x, y ), depth, compressed = compressed )
     
+
 def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
     depth = 3

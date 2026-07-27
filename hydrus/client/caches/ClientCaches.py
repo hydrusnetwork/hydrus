@@ -1091,7 +1091,8 @@ class ThumbnailCacheGraphicsViewTest( object ):
     # It's really not nice that this can be called with both image types and even the return type can differ too and should be refactored sometime,
     # but for the time being this is the easiest way I found that 1. keeps code changes to minimum to the existing cache code and 2. preserves performance.
     # Performance of this function really matters since we are going to be requesting/resizing a lot of thumbs...
-    def _ApplySizingToHydrusBitmapOrNumpyImage( self, media_result, image, bounding_dimensions, skip_if_correct_sized_and_numpy ):
+    def _ApplySizingToHydrusBitmapOrNumpyImage( self, media_result, image, bounding_dimensions, skip_if_correct_sized_and_numpy ) -> ClientRendering.HydrusBitmap | None:
+        # TODO: clean up whatever this guy is doing with numpy vs hydrusbitmap and skip_if_correct gubbins
         
         is_hydrus_bitmap = isinstance( image, ClientRendering.HydrusBitmap )
         
@@ -1140,7 +1141,9 @@ class ThumbnailCacheGraphicsViewTest( object ):
                     
                     return ClientRendering.GenerateHydrusBitmapFromNumPyImage( image )
                     
+                
             
+        
         if is_hydrus_bitmap:
             
             numpy_image = image.GetNumpyImage()
@@ -1579,6 +1582,7 @@ class ThumbnailCacheGraphicsViewTest( object ):
             
             mime = HC.APPLICATION_UNKNOWN
             
+        
         if bounding_dimensions == ( 0, 0 ) or bounding_dimensions == self._controller.options[ 'thumbnail_dimensions' ]:
             
             return self._special_thumbs_default_size_hydrus_bitmap[ mime ]
@@ -1646,9 +1650,11 @@ class ThumbnailCacheGraphicsViewTest( object ):
                             # so what to use as the 'unsized' image that we'll later resize?
                             # for now it is using the default thumbnail size, and the blurhash image of that size will then get scaled to the final thumb size that was requested
                             # how well does this work in practice? does using thumbnail_scale_type even make sense inside this function?
-                            hydrus_bitmap_unsized = self._GetBestRecoveryThumbnailNumpyUnsized( media_result )
+                            numpy_image_unsized = self._GetBestRecoveryThumbnailNumpyUnsized( media_result )
                             
-                            hydrus_bitmap_sized = self._ApplySizingToHydrusBitmapOrNumpyImage( media_result, hydrus_bitmap_unsized, bounding_dimensions, skip_if_correct_sized_and_numpy = True )
+                            hydrus_bitmap_unsized = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image_unsized )
+                            
+                            hydrus_bitmap_sized = self._ApplySizingToHydrusBitmapOrNumpyImage( media_result, numpy_image_unsized, bounding_dimensions, skip_if_correct_sized_and_numpy = True )
                             
                         else:
                             
@@ -1656,13 +1662,12 @@ class ThumbnailCacheGraphicsViewTest( object ):
                             
                             hydrus_bitmap_sized = self._ApplySizingToHydrusBitmapOrNumpyImage( media_result, numpy_image, bounding_dimensions, skip_if_correct_sized_and_numpy = True )
                             
-                            if hydrus_bitmap_sized is None: # the unsized image is already the correct size, so the above call skipped resizing the numpy image and creating a new HydrusBitmap and just returned None instead
-                                
-                                hydrus_bitmap_sized = hydrus_bitmap_unsized
-                                
+                        
+                        if hydrus_bitmap_sized is None: # the unsized image is already the correct size, so the above call skipped resizing the numpy image and creating a new HydrusBitmap and just returned None instead
+                            
+                            hydrus_bitmap_sized = hydrus_bitmap_unsized
                             
                         
-                    
                     except Exception as e:
                         
                         return self.GetHydrusSpecialThumbnail( bounding_dimensions, mime )
