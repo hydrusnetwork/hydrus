@@ -1081,28 +1081,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
-    def _OpenFileInWebBrowser( self ):
-        
-        if self._HasFocusSingleton():
-            
-            focused_singleton = self._GetFocusSingleton()
-            
-            if focused_singleton.GetLocationsManager().IsLocal():
-                
-                hash = focused_singleton.GetHash()
-                mime = focused_singleton.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                self.focusMediaPaused.emit()
-                
-                ClientPaths.LaunchPathInWebBrowser( path )
-                
-            
-        
-    
     def _MacQuicklook( self ):
         
         if HC.PLATFORM_MACOS and self._HasFocusSingleton():
@@ -1126,6 +1104,28 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                 
                 ClientMacIntegration.show_quicklook_for_path( path )
+                
+            
+        
+    
+    def _OpenFileInWebBrowser( self ):
+        
+        if self._HasFocusSingleton():
+            
+            focused_singleton = self._GetFocusSingleton()
+            
+            if focused_singleton.GetLocationsManager().IsLocal():
+                
+                hash = focused_singleton.GetHash()
+                mime = focused_singleton.GetMime()
+                
+                client_files_manager = CG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                self.focusMediaPaused.emit()
+                
+                ClientPaths.LaunchPathInWebBrowser( path )
                 
             
         
@@ -3867,28 +3867,6 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             
         
     
-    def _OpenFileInWebBrowser( self ):
-        
-        if self._HasFocusSingleton():
-            
-            focused_singleton = self._GetFocusSingleton()
-            
-            if focused_singleton.GetLocationsManager().IsLocal():
-                
-                hash = focused_singleton.GetHash()
-                mime = focused_singleton.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                self.focusMediaPaused.emit()
-                
-                ClientPaths.LaunchPathInWebBrowser( path )
-                
-            
-        
-    
     def _MacQuicklook( self ):
         
         if HC.PLATFORM_MACOS and self._HasFocusSingleton():
@@ -3912,6 +3890,28 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                     
                 
                 ClientMacIntegration.show_quicklook_for_path( path )
+                
+            
+        
+    
+    def _OpenFileInWebBrowser( self ):
+        
+        if self._HasFocusSingleton():
+            
+            focused_singleton = self._GetFocusSingleton()
+            
+            if focused_singleton.GetLocationsManager().IsLocal():
+                
+                hash = focused_singleton.GetHash()
+                mime = focused_singleton.GetMime()
+                
+                client_files_manager = CG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                self.focusMediaPaused.emit()
+                
+                ClientPaths.LaunchPathInWebBrowser( path )
                 
             
         
