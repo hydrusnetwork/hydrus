@@ -4352,7 +4352,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
 
 class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
     
-    FADE_DURATION_S = 0.25
+    FADE_DURATION_S = 13/60
     
     def __init__( self, media: ClientMedia.Media, panel: MediaResultsPanelThumbnailsGraphicsViewTest, page_key: bytes ):
         
@@ -4424,6 +4424,8 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         
     
     def _GetContentSize( self ) -> tuple[int, int]:
+        # this guy is going to see some changes as we move to size-agnostic thumb pipeline, but just a note, this is device pixels, not device-independant pixels
+        # we won't want to scale a thumb to this size but rather scale to true-DPI size and then draw as if it were in this coordinate space _or something_
         
         thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         
@@ -4436,7 +4438,7 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
     
     def _GetFadeInOpacity( self ) -> float:
         
-        if self._fade_in_started_time_float is None:
+        if self._fade_in_started_time_float is None or self._cached_old_pixmap_for_fade is None:
             
             return 1.0
             
@@ -5093,7 +5095,19 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
             
             thumbnails_cache = CG.client_controller.thumbnails_cache_graphics_view_test
             
-            if not self._cached_pixmap or self.width != self._cached_pixmap.width() or self.height != self._cached_pixmap.height():
+            dpr = painter.device().devicePixelRatio()
+            
+            true_cached_image_width = int( self.width * dpr )
+            true_cached_image_height = int( self.height * dpr )
+            
+            true_cached_image_size = QC.QSize( true_cached_image_width, true_cached_image_height )
+            
+            if self._cached_old_pixmap_for_fade is not None and self._cached_old_pixmap_for_fade.size() != true_cached_image_size:
+                
+                self._cached_old_pixmap_for_fade = None
+                
+            
+            if not self._cached_pixmap or self._cached_pixmap.size() != true_cached_image_size:
                 
                 if not thumbnails_cache.HasThumbnailCached( self.media, self._GetContentSize() ):
                     
@@ -5114,21 +5128,17 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
                     
                     # TODO what if fade is not enabled? I think we don't need to check here for that since then StartFadeIn would never be called and
                     #_ cached_old_pixmap_for_fade would be None. Right??
-                    if self._cached_old_pixmap_for_fade: # fade-in in progress, draw the old image first if available
+                    if self._cached_old_pixmap_for_fade is not None: # fade-in in progress, draw the old image first if available
                         
-                        # if the size of the thumb changed in the meantime then probably don't want to draw
-                        if self.width == self._cached_old_pixmap_for_fade.width() and self.height == self._cached_old_pixmap_for_fade.height():
-                            
-                            painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
-                            
+                        painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
                         
                     
                     return
                     
                 
-                cached_image = QG.QImage( self.width, self.height, QG.QImage.Format.Format_ARGB32_Premultiplied )
+                cached_image = QG.QImage( true_cached_image_width, true_cached_image_height, QG.QImage.Format.Format_ARGB32_Premultiplied )
                 
-                cached_image.setDevicePixelRatio( painter.device().devicePixelRatio() )
+                cached_image.setDevicePixelRatio( dpr )
                 
                 cached_image.fill( QC.Qt.GlobalColor.transparent )
                 
@@ -5143,16 +5153,12 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
             
             fade_opacity = self._GetFadeInOpacity()
             
-            if fade_opacity < 1.0 and self._cached_old_pixmap_for_fade: # fade-in in progress, draw the old image first if available
+            if fade_opacity < 1.0 and self._cached_old_pixmap_for_fade is not None: # fade-in in progress, draw the old image first if available
                 
-                # if the size of the thumb changed in the meantime then probably don't want to draw
-                if self.width == self._cached_old_pixmap_for_fade.width() and self.height == self._cached_old_pixmap_for_fade.height():
-                    
-                    painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
-                    
+                painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
                 
-            
-            painter.setOpacity( fade_opacity )
+                painter.setOpacity( fade_opacity )
+                
             
             painter.drawPixmap( 0, 0, self._cached_pixmap )
             
