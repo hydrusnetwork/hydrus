@@ -4300,6 +4300,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         
         super().Sort( media_sort )
         
+        for m in self._collected_media:
+            
+            self._media_to_thumbnails[ m ].ClearCachesAndInvalidate()
+            
+        
         self._NotifyThumbnailsHaveMoved()
         
     
