@@ -1999,6 +1999,8 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         self.Sort()
         
+        self._PublishSelectionChange()
+        
     
     def GetColour( self, colour_type ):
         
@@ -4831,6 +4833,8 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         self._MaintainMediaAssociatedGraphics( self._sorted_media )
         
         self.Sort()
+        
+        self._PublishSelectionChange()
         
     
     def GetColour( self, colour_type ):
