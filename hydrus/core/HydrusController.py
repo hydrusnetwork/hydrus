@@ -802,21 +802,11 @@ class HydrusController( object ):
             
         
     
-    def WaitUntilDBEmpty( self ) -> None:
-        
-        self.db.WaitUntilFree()
-        
-    
     def WaitUntilModelFree( self ) -> None:
         
-        self.WaitUntilPubSubsEmpty()
-        
-        self.WaitUntilDBEmpty()
-        
-    
-    def WaitUntilPubSubsEmpty( self ):
-        
         self._pubsub.WaitUntilFree()
+        
+        self.db.WaitUntilFree()
         
     
     def WakeDaemon( self, name ):

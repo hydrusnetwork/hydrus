@@ -328,7 +328,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         self._we_have_connected_to_the_database_at_least_once = False
         
-        self._finished_job_event = threading.Event()
         self._i_am_idle = threading.Event()
         self._i_am_idle.set()
         
@@ -1229,8 +1228,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 self._current_job_name = ''
                 self._currently_doing_job = False
                 
-                self._finished_job_event.set()
-                
             finally:
                 
                 self._current_status = ''
@@ -1274,6 +1271,8 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         self._loop_finished = True
         
+        self._i_am_idle.set()
+        
         # catching jobs scheduled in the window between mainloop termination and 'loop_finished = True'
         while not self._jobs_queue.empty():
             
@@ -1306,11 +1305,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         job = self._GenerateDBJob( job_type, synchronous, action, *args, **kwargs )
         
-        if HG.model_shutdown:
-            
-            raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
-            
-        
         self._PutJob( job )
         
         return job.GetResult()
@@ -1335,22 +1329,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def WaitUntilFree( self ):
         
-        while True:
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            else:
-                
-                i_am_idle = self._i_am_idle.wait( 0.5 )
-                
-                if i_am_idle:
-                    
-                    return
-                    
-                
-            
+        self._i_am_idle.wait()
         
     
     def Write( self, action, synchronous, *args, **kwargs ):
@@ -1359,13 +1338,11 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         job = self._GenerateDBJob( job_type, synchronous, action, *args, **kwargs )
         
-        if HG.model_shutdown:
-            
-            raise HydrusExceptions.ShutdownException( 'Application has shut down!' )
-            
-        
         self._PutJob( job )
         
-        if synchronous: return job.GetResult()
+        if synchronous:
+            
+            return job.GetResult()
+            
         
     
