@@ -515,25 +515,26 @@ class FileRWLock( object ):
         
         def __enter__( self ):
             
-            while not HydrusThreading.IsThreadShuttingDown():
+            while True:
                 
                 with self.parent.lock:
                     
                     # if there are no writers, we can start reading
-                    
                     if not self.parent.there_is_an_active_writer and self.parent.num_waiting_writers == 0:
                         
                         self.parent.num_readers += 1
                         
                         return
                         
+                    else:
+                        
+                        # nothing doing right now, we'll have to wait for writers to free up
+                        self.parent.read_available_event.clear()
+                        
                     
                 
                 # otherwise wait a bit
-                
-                self.parent.read_available_event.wait( 1 )
-                
-                self.parent.read_available_event.clear()
+                self.parent.read_available_event.wait()
                 
             
         
@@ -569,13 +570,15 @@ class FileRWLock( object ):
                 self.parent.num_waiting_writers += 1
                 
             
-            while not HydrusThreading.IsThreadShuttingDown():
+            while True:
                 
                 with self.parent.lock:
                     
                     # if nothing reading or writing atm, sieze the opportunity
-                    
                     if not self.parent.there_is_an_active_writer and self.parent.num_readers == 0:
+                        
+                        # I got it; others can wait
+                        self.parent.write_available_event.clear()
                         
                         self.parent.num_waiting_writers -= 1
                         
@@ -586,10 +589,7 @@ class FileRWLock( object ):
                     
                 
                 # otherwise wait a bit
-                
-                self.parent.write_available_event.wait( 1 )
-                
-                self.parent.write_available_event.clear()
+                self.parent.write_available_event.wait()
                 
             
         
@@ -623,7 +623,9 @@ class FileRWLock( object ):
         self.lock = threading.Lock()
         
         self.read_available_event = threading.Event()
+        self.read_available_event.set()
         self.write_available_event = threading.Event()
+        self.write_available_event.set()
         
         self.num_readers = 0
         self.num_waiting_writers = 0
