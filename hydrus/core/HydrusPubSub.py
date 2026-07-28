@@ -15,7 +15,8 @@ class HydrusPubSub( object ):
         self._pubsubs = []
         
         self._received_job_event = threading.Event()
-        self._finished_job_event = threading.Event()
+        
+        self._shutdown = False
         
         self._i_am_idle = threading.Event()
         self._i_am_idle.set()
@@ -150,28 +151,28 @@ class HydrusPubSub( object ):
             
         finally:
             
-            self._finished_job_event.set()
-            
-            with self._lock:
-                
-                if len( self._pubsubs ) == 0:
-                    
-                    self._i_am_idle.set()
-                    
-                
+            self._i_am_idle.set()
             
         
     
     def pub( self, topic, *args, **kwargs ):
         
+        if self._shutdown:
+            
+            self.pubimmediate( topic, *args, **kwargs )
+            
+            return
+            
+        
         with self._lock:
             
             self._pubsubs.append( ( topic, args, kwargs ) )
             
-            self._i_am_idle.clear()
-            
+        
+        self._i_am_idle.clear()
         
         self._received_job_event.set()
+        self._received_job_event.clear()
         
     
     def pubimmediate( self, topic, *args, **kwargs ):
@@ -185,6 +186,14 @@ class HydrusPubSub( object ):
             
             callable( *args, **kwargs )
             
+        
+    
+    def shutdown( self ):
+        
+        self._shutdown = True
+        
+        self._received_job_event.set()
+        self._i_am_idle.set()
         
     
     def sub( self, object, method_name, topic ):
@@ -201,34 +210,12 @@ class HydrusPubSub( object ):
     
     def WaitOnPub( self ):
         
-        self._received_job_event.wait( 0.5 )
-        
-        self._received_job_event.clear()
-        
-    
-    def Wake( self ):
-        
-        self._received_job_event.set()
+        self._received_job_event.wait()
         
     
     def WaitUntilFree( self ):
         
-        while True:
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            else:
-                
-                i_am_idle = self._i_am_idle.wait( 0.5 )
-                
-                if i_am_idle:
-                    
-                    return
-                    
-                
-            
+        self._i_am_idle.wait()
         
     
     def WorkToDo( self ):

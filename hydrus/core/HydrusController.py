@@ -645,20 +645,7 @@ class HydrusController( object ):
     
     def ShutdownModel( self ) -> None:
         
-        if self.db is not None:
-            
-            self.db.Shutdown()
-            
-            if not self._doing_fast_exit:
-                
-                while not self.db.LoopIsFinished():
-                    
-                    self._PublishShutdownSubtext( 'waiting for db to finish up' + HC.UNICODE_ELLIPSIS )
-                    
-                    time.sleep( 0.1 )
-                    
-                
-            
+        self.StopTwistedIfRunning()
         
         if self._fast_job_scheduler is not None:
             
@@ -676,9 +663,22 @@ class HydrusController( object ):
         
         self._thread_worker_pool.shutdown()
         
-        self.StopTwistedIfRunning()
+        self._pubsub.shutdown()
         
-        self._pubsub.Wake()
+        if self.db is not None:
+            
+            self.db.Shutdown()
+            
+            if not self._doing_fast_exit:
+                
+                while not self.db.LoopIsFinished():
+                    
+                    self._PublishShutdownSubtext( 'waiting for db to finish up' + HC.UNICODE_ELLIPSIS )
+                    
+                    time.sleep( 0.1 )
+                    
+                
+            
         
         HydrusTemp.CleanUpOldTempPaths()
         
