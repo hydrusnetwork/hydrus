@@ -3218,6 +3218,11 @@ class CanvasWithHovers( Canvas ):
         return self._hide_window_frame
         
     
+    def IsAlwaysOnTopWhilePlaying( self ):
+        
+        return self._media_container.GetTieMediaWindowOnTopToPausePlayState()
+        
+    
     def NotifyWeAreClosing( self ):
         
         pass
@@ -3271,6 +3276,10 @@ class CanvasWithHovers( Canvas ):
                     
                 
                 self._FlipWindowAlwaysOnTop()
+                
+            elif action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP:
+                
+                self._media_container.SetTieMediaWindowOnTopToPausePlayState( not self._media_container.GetTieMediaWindowOnTopToPausePlayState() )
                 
             elif action == CAC.SIMPLE_WINDOW_FRAMELESS_FLIP:
                 
