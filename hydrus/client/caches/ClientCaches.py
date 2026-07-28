@@ -378,6 +378,9 @@ class ThumbnailCache( object ):
         self._waterfall_queue_quick = set()
         self._waterfall_queue = []
         
+        self._shutdown = False
+        self._loop_finished = False
+        
         self._waterfall_queue_empty_event = threading.Event()
         
         self._delayed_regeneration_queue_quick = set()
@@ -691,6 +694,11 @@ class ThumbnailCache( object ):
         
         with self._lock:
             
+            if self._shutdown:
+                
+                return
+                
+            
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
             cancelled_media_results = { media.GetDisplayMediaResult() for media in medias }
@@ -779,24 +787,6 @@ class ThumbnailCache( object ):
             for hash in hashes:
                 
                 self._data_cache.DeleteData( hash )
-                
-            
-        
-    
-    def WaitUntilFree( self ):
-        
-        while True:
-            
-            if HG.started_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            
-            queue_is_empty = self._waterfall_queue_empty_event.wait( 1 )
-            
-            if queue_is_empty:
-                
-                return
                 
             
         
@@ -907,11 +897,35 @@ class ThumbnailCache( object ):
             
         
     
+    def shutdown( self ):
+        
+        self._shutdown = True
+        
+    
+    def WaitUntilFree( self ):
+        
+        self._waterfall_queue_empty_event.wait()
+        
+    
     def Waterfall( self, page_key, medias ):
         
         with self._lock:
             
-            self._waterfall_queue_quick.update( ( ( page_key, media ) for media in medias ) )
+            if self._shutdown:
+                
+                return
+                
+            
+            stuff_to_add = { ( page_key, media ) for media in medias }
+            
+            # if there is stuff to add, this generally returns quickly, not wasting time
+            # if there isn't stuff to add, we avoid doing a recalcqueues, saving time
+            if stuff_to_add.issubset( self._waterfall_queue_quick ):
+                
+                return
+                
+            
+            self._waterfall_queue_quick.update( stuff_to_add )
             
             self._RecalcQueues()
             
@@ -923,7 +937,7 @@ class ThumbnailCache( object ):
         
         # TODO: Wangle this guy to a ManagerWithMainLoop
         
-        while not HydrusThreading.IsThreadShuttingDown():
+        while not ( HydrusThreading.IsThreadShuttingDown() or self._shutdown ):
             
             time.sleep( 0.00001 )
             
@@ -1030,6 +1044,12 @@ class ThumbnailCache( object ):
                 
             
         
+        self._loop_finished = True
+        
+        self.Clear()
+        
+        self._waterfall_queue_empty_event.set()
+        
     
 
 class ThumbnailCacheGraphicsViewTest( object ):
@@ -1062,6 +1082,9 @@ class ThumbnailCacheGraphicsViewTest( object ):
         
         self._waterfall_queue_quick = set()
         self._waterfall_queue = []
+        
+        self._shutdown = False
+        self._loop_finished = False
         
         self._waterfall_queue_empty_event = threading.Event()
         
@@ -1454,6 +1477,11 @@ class ThumbnailCacheGraphicsViewTest( object ):
         
         with self._lock:
             
+            if self._shutdown:
+                
+                return
+                
+            
             self._waterfall_queue_quick.difference_update( ( ( page_key, media ) for media in medias ) )
             
             cancelled_media_results = { media.GetDisplayMediaResult() for media in medias }
@@ -1554,24 +1582,6 @@ class ThumbnailCacheGraphicsViewTest( object ):
                         
                     del self._hashes_to_cached_sizes[ hash ]
                     
-                
-            
-        
-    
-    def WaitUntilFree( self ):
-        
-        while True:
-            
-            if HG.started_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            
-            queue_is_empty = self._waterfall_queue_empty_event.wait( 1 )
-            
-            if queue_is_empty:
-                
-                return
                 
             
         
@@ -1757,9 +1767,24 @@ class ThumbnailCacheGraphicsViewTest( object ):
             
         
     
+    def shutdown( self ):
+        
+        self._shutdown = True
+        
+    
+    def WaitUntilFree( self ):
+        
+        self._waterfall_queue_empty_event.wait()
+        
+    
     def Waterfall( self, page_key, medias ):
         
         with self._lock:
+            
+            if self._shutdown:
+                
+                return
+                
             
             stuff_to_add = { ( page_key, media ) for media in medias }
             
@@ -1782,7 +1807,7 @@ class ThumbnailCacheGraphicsViewTest( object ):
         
         # TODO: Wangle this guy to a ManagerWithMainLoop
         
-        while not HydrusThreading.IsThreadShuttingDown():
+        while not ( HydrusThreading.IsThreadShuttingDown() or self._shutdown ):
             
             time.sleep( 0.00001 )
             
@@ -1888,5 +1913,12 @@ class ThumbnailCacheGraphicsViewTest( object ):
                 self._HandleThumbnailException( hash, e, summary )
                 
             
+        
+        self._loop_finished = True
+        
+        self.Clear()
+        
+        # just to be sure haha
+        self._waterfall_queue_empty_event.set()
         
     
