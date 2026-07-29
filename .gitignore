@@ -44,19 +44,7 @@ local.properties
 
 # user's db files
 # I nonetheless recommend you use the -d switch to put your db somewhere else if you run and update from git source
-/db/*.db
-/db/*.db-shm
-/db/*.db-wal
-/db/*.crt
-/db/*.key
-/db/*.log
-/db/*.conf
-/db/hydrus_crash.log
-/db/client_running
-/db/server_running
-/db/client_files/
-/db/server_files/
-/db/missing_and_invalid_files/
+/db/
 
 # in case user adds their own
 /bin/ffmpeg.exe

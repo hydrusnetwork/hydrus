@@ -1031,6 +1031,17 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 HydrusPaths.MirrorFile( sqlite_exe_path, dest_path )
                 
             
+        elif HC.PLATFORM_LINUX:
+            
+            sqlite_exe_path = os.path.join( HydrusStaticDir.INSTALL_STATIC_DIR, 'build_files', 'linux', 'sqlite3' )
+            
+            if os.path.exists( sqlite_exe_path ) and os.path.isfile( sqlite_exe_path ):
+                
+                dest_path = os.path.join( self._db_dir, 'sqlite3' )
+                
+                HydrusPaths.MirrorFile( sqlite_exe_path, dest_path )
+                
+            
         
     
     def _Write( self, action, *args, **kwargs ):
