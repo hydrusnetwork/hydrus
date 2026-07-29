@@ -7571,7 +7571,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if version == 643:
             
-            def ask_what_to_do_transparency_recheck_644( num_transparent_files ):
+            def ask_what_to_do_transparency_recheck_644( num_transparent_files: int ):
                 
                 message = f'Hey, I have changed how I detect transparency in files. Files that only have a barely-noticeable handful of 98% opaque pixels are now considered non-transparent. You have {HydrusNumbers.ToHumanInt(num_transparent_files)} images and animations that are currently considered as having transparency. Do you want to schedule a transparency-rescan for all of them to clear out the previous false positives?'
                 message += '\n' * 2
