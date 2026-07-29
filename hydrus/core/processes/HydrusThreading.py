@@ -389,6 +389,8 @@ class THREADCallToThread( DAEMON ):
     
     def put( self, callable, *args, **kwargs ) -> None:
         
+        # TODO: maybe put a 'if shutdown, raise shutdown exception' here
+        
         self._currently_working = True
         
         self._queue.put( ( callable, args, kwargs ) )

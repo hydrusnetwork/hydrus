@@ -491,11 +491,11 @@ class NetworkEngine( object ):
             self._new_work_to_do.clear()
             
         
-        self._is_running = False
-        
-        self._is_shutdown = True
-        
         with self._lock:
+            
+            self._is_running = False
+            
+            self._is_shutdown = True
             
             for job_list in [
                 self._jobs_awaiting_validity,
