@@ -59,7 +59,36 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str, job_status: ClientThreading.JobStatus | None = None ):
+
+    def GetHashIdsFromNoteContent( self, content_pattern: str, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+        
+        cancelled_hook = None
+        
+        if job_status is not None:
+            
+            cancelled_hook = job_status.IsCancelled
+            
+        return self._STS( self._ExecuteCancellable(
+            fr"SELECT hash_id FROM {hash_ids_table_name} CROSS JOIN file_notes USING ( hash_id ) CROSS JOIN notes using ( note_id ) WHERE note LIKE ? ESCAPE '\';", ( content_pattern, ), cancelled_hook) )
+        
+    
+    def GetHashIdsFromNoteWords( self, words: str, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+        
+        cancelled_hook = None
+        
+        if job_status is not None:
+            
+            cancelled_hook = job_status.IsCancelled
+            
+        words = [f"%{word}%" for word in words.split(" ")]
+        
+        query = " AND ".join([ fr"note LIKE ? ESCAPE '\'" for _ in words ])
+        
+        return self._STS( self._ExecuteCancellable(
+            fr"SELECT hash_id FROM {hash_ids_table_name} CROSS JOIN file_notes USING ( hash_id ) CROSS JOIN notes using ( note_id ) WHERE {query};", words, cancelled_hook) )
+        
+    
+    def GetHashIdsFromNumNotes( self, number_tests: list[ ClientNumberTest.NumberTest ], hash_ids: collections.abc.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         result_hash_ids = set( hash_ids )
         

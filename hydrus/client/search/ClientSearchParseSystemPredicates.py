@@ -331,6 +331,12 @@ pred_generators = {
     SystemPredicateParser.Predicate.TAG_ADVANCED_INCLUSIVE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED, ( o[0], o[1], o[2], v ) ),
     SystemPredicateParser.Predicate.TAG_ADVANCED_EXCLUSIVE : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_TAG_ADVANCED, ( o[0], o[1], o[2], v ), inclusive = False ),
     SystemPredicateParser.Predicate.RATING_ADVANCED : lambda o, v, u: ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_RATING_ADVANCED, v ),
+    SystemPredicateParser.Predicate.MATCHES_NOTE_CONTENT : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT, ( True, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.NO_MATCHES_NOTE_CONTENT : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT, ( False, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.CONTAINS_NOTE_WORDS : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS, ( True, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.NO_CONTAINS_NOTE_WORDS : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS, ( False, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.CONTAINS_NOTE_CONTENT : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT, ( True, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.NO_CONTAINS_NOTE_CONTENT : lambda o, v, u: ClientSearchPredicate.Predicate(ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT, ( False, strip_quotes( v ) ) ),
 }
 
 def ParseSystemPredicateStringsToPredicates( system_predicate_strings: collections.abc.Collection[ str ], discard_failures = False ) -> list[ ClientSearchPredicate.Predicate ]:

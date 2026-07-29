@@ -378,6 +378,68 @@ class FileSystemPredicates( object ):
                 self._common_info[ label ].add( name )
                 
             
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_MATCHES_CONTENT:
+                
+                ( operator, name ) = value
+                
+                if operator:
+                    
+                    label = 'note_matches'
+                    
+                else:
+                    
+                    label = 'not_note_matches'
+                    
+                    
+                if label not in self._common_info:
+                    
+                    self._common_info[ label ] = set()
+                    
+                
+                self._common_info[ label ].add( name )
+                
+            
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_CONTENT:
+                
+                ( operator, name ) = value
+                
+                if operator:
+                    
+                    label = 'note_contains'
+                    
+                else:
+                    
+                    label = 'not_note_contains'
+                    
+                
+                if label not in self._common_info:
+                    
+                    self._common_info[ label ] = set()
+                    
+                
+                self._common_info[ label ].add( name )
+                
+            
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_NOTE_CONTAINS_WORDS:
+                
+                ( operator, name ) = value
+                
+                if operator:
+                    
+                    label = 'note_contains_words'
+                    
+                else:
+                    
+                    label = 'not_note_contains_words'
+                    
+                
+                if label not in self._common_info:
+                    
+                    self._common_info[ label ] = set()
+                    
+                
+                self._common_info[ label ].add( name )
+            
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_LIMIT:
                 
                 limit = value
