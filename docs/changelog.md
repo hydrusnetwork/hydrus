@@ -7,6 +7,106 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 681](https://github.com/hydrusnetwork/hydrus/releases/tag/v681)
+
+### misc
+
+* status bar 'busy' indicator is simpler, and the tooltip now says the number of threads working
+* wrote a catch to stop QSS stylesheets from specifying a hydrus property colour with transparency. these were drawing crazy, with noclip garbage left on bitmaps used for transparenty images and animations in the media viewer. also fixed the `e621_redux` stylesheet, where this issue was discovered, to simply set a background colour for the media viewer
+
+### more human-readable embedded metadata filtering
+
+* I further cleaned up what hydrus considers 'human-readable embedded metadata'. many more technical fields are now hidden from the little text panel, meaning when this guy does pop up, or you search 'has non-EXIF embedded metadata', you'll now tend to see something nice and human like 'Artist' or 'Title', or otherwise rich like an AI prompt or Character card
+* I now invite advanced users to do some 'determine if the file has non-EXIF embedded metadata' maintenance regenning on some 'has non-EXIF embedded metadata' files and tell me what technical/inhuman text remains in their collections. I'm getting pretty happy here and I expect to (optionally) schedule a big regen for all users pretty soon
+* the newly excluded fields are: 'software', 'transparency', 'bit_depth', 'duration', 'primary', 'default_image', 'Creation Time', 'create-date', 'modify-date', 'date:create', 'date:modify', 'chroma', 'loop', 'timestamp = 0', 'extension', 'photoshop', 'bbox', 'blend', 'mpoffset', 'disposal', 'interlace', 'aspect', 'sizes', a ton of 'Thumb::' garbage, 'iptc', 'Raw profile type exif', 'Raw profile type iptc' (ye olde XMP), 'xmp', 'XML:com.adobe.xmp', 'adobe', and 'adobe_transform'. a bunch of these are format specific DPI data and such and not useful to elevate to the user. the IPTC and XMP stuff will come back when I expand EXIF parsing
+* excluded 'comment' or 'Comment' from human-readable metadata fields if it matches a handful of 'Created with X' style regexes; this is now parsed as a 'software' field
+* the 'Creator' and 'Source' fields are now appended to the 'software' field
+* excluded any human-readable metadata fields that have null value or empty list/dict
+* I realised while doing this that maybe going for a whitelist of what we do want would be saner, but I think I prefer, for completeness and fun, to get everything and actually deal with the sore thumbs
+* put 'software' metadata field in the 'extra info' panel below, as 'source' ('source' rather than 'software' because sometimes stuff like Kodak blah blah comes through here). there's an argument to include this in human-readable fields, if we are keeping artist/title, but I'm falling on the side of extracting it. I like this field a lot as human-valuable and it'll be high priority to be its own thing when we add richer metadata storage/search
+* similarly, the 'create-date' and friends are cool and I'll figure out some way to pipe that to a 'file metadata' modified time 'domain'. you can't generally get any better than the file metadata for this
+* if a file has a 'chroma' field talking about '420' subsampling, this is now converted to a subsampling field in the 'extra info' panel, like for jpeg
+* optimised 'has human-readable metadata' test for a fast yes in many cases
+
+### new graphicsview thumbnail grid test
+
+* the new 'thumbnail rendering tech' TEST under `options->thumbnails` is fixed up a bit and ready for advanced users to tentatively try out. I think I have it doing pretty much everything the existing code does without complaint, but I would like to confirm that with a broader test. it only applies to new pages, so I recommend first opening a new page and do some of your normal stuff before you test your whole session with a full client restart
+* fixed 'collect-by' transitions, removing the ghost singles that hung around
+* fixed a late waterfall thumb keyerror when transitioning through collect-by states
+* fixed collections not redrawing for a new first media on sort-by changes
+* fixed updating the status bar on any collect-by change, in either old or new thumbgrid code. it now flips between '200 files' and '200 files in 12 collections' when you change the collections
+* fixed drawing of thumbs at higher than 100% UI scale (the bitmaps were cropped due to DPR fun)
+* fixed a blurhash thumb fallback route in the new test
+* shaved the test animation time down for snappier feel. I'm pretty sure the old animation is accidentally heavily curved so despite ostensibly being 0.5s it was visually done faster. new guy is now ~13 frames at 60Hz
+* did some KISS refactoring of this code
+
+### more de-laggification work
+
+* I hacked in a test last week to try a different way of scheduling jobs in the background. it worked very well and I seem to have found the cause of the 'I have a fat client and when it does heavy work like archive/delete filter commit, everything slows down a lot' issue. basically, when certain sorts of heavy work was going on, threads waiting on new work to do or database jobs to come back were getting into a kind of traffic jam and wasting lots of time figuring out who had to go first rather than letting the guy who was actually doing the work go ahead and do it. I have now replicated and cleaned my work to several places and big clients that do a lot should be a good bit less laggy when big things are going on
+* cleaned up the successful CallToThread anti-CPU-thrashing test, taking out older code and cleaning the loop of it
+* added anti-CPU-thrash tech to db mainloop
+* added anti-CPU-thrash tech to threads waiting on the db to finish current work
+* added anti-CPU-thrash tech to database jobs; when many threads are competing for the db, they'll wake less
+* added anti-CPU-thrash tech to network job waits; when many threads are competing for network resources, they'll wake less
+* added anti-CPU-thrash tech to pubsub, both in the managing daemon and any threads waiting on 'background work to free up'
+* added anti-CPU thrash tech to 'are we currently rendering any thumbnails?' wait, which a bunch of threads wait on before going ahead with their own work
+* added anti-CPU-thrash tech to the core read-write lock used in the filesystem. I was very careful here as this is not my fortÃ©, and tests are good. this should improve latency, particularly thumb and file loading latency, when many file imports are going on and the locks are churning, which is another place we've seen inexplicable lag during certain busy periods
+* retired the debug 'db ui-hang relief mode'. this was an interesting experiment but the incorrect solution to the problem of GUI threads waiting on the db
+
+### boring de-laggification stuff
+
+* wrote a new thread worker pool object to look after calltothreads
+* primary controller and test controller now use this same object to manage threads (test guy had its own hacky code before)
+* tightened up db mainloop shutdown--to assure that db jobs can wait forever safely, we now guarantee that every job posted will get explicitly woken with a result through db shutdown
+* network engine now guarantees every network job it gets will be done'd so waiting threads shall all be woken up on program shutdown
+* rejiggered some 'is it time to commit?' in db idle time stuff given the changes
+* cleaned up some thread status-checking locking, mostly in debug code
+* KISSed some network job status stuff, and removed some confusing shutdown detection from the core 'isdone' calls
+* removed defunct db I/O-locking error-handling code
+* pubsub takes work breaks more often
+* pubsub system now has a shutdown signal to tidy up waiters properly on shutdown
+* thumbnail caches now have an explicit shutdown signal and clean up after themselves better on shutdown
+* cleaned up some misc thumb cache code
+* misc shutdown code cleanup
+* reordered some controller shutdown code
+* misc cleanup of controller wait code
+* removal of spurious event flags in db and pubsub
+
+### future build committed
+
+* This release commits the changes tested with the recent future test build, which went well
+* the summary for this update is: loads of stuff
+* there are no special instructions for the update. update as normal
+* since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week.
+* the library changes are--
+   - ` PySide6` (Qt) from `6.9.3` to `6.10.3`
+   - OpenCV (`opencv-python-headless`) from `4.12.0.88` to `4.13.0.92`
+   - `beatifulsoup4` `4.14.3` to `4.15.0`
+   - `cbor2` `6.1.1` to `6.1.3`
+   - `cryptography` `48.0.0` to `49.0.0`
+   - `Pillow` `12.2.0` to `12.3.0`
+   - `pillow-heif` `1.3.0` to `1.4.0`
+   - `pillow-jxl-plugin` `1.3.7` to `1.3.8`
+   - `pyopenssl` `26.2.0` to `26.3.0`
+   - `service-identity` `24.2.0` to `26.1.0`
+   - `numpy` `2.3.1` to `2.4.6` (this jump was a bit of a juggle, and now possible with OpenCV 4.13)
+   - `requests` `2.33.1` to `2.34.2`
+   - SQLite dll and sqlite3 terminal updated on Windows from `3.51.2` to `3.53.3`
+   - SQLite terminal executable `3.53.3` now added to Linux and added to new db folders just like the Windows extract
+* the 'test' library changes are--
+   - `PySide6` (Qt) from `6.10.3` to `6.11.1`
+   - OpenCV (`opencv-python-headless`) from `4.13.0.92` to `5.0.0.93`. I did some research, and this upcoming jump doesn't seem to be a super significant change for our purposes. mostly C++ cleanup and finally dropping python 2 support.
+* other stuff--
+   - db folder is now completely masked in gitignore
+* build environment--
+   - updated the workflow actions versions across the board
+   - Windows and Linux builds are moved from python 3.12 to 3.13
+   - `pyinstaller` `6.16.0` to `6.18.0`
+   - the builds now share the core pyproject.toml rather than using their own requirements.txt files
+   - `pywin32` in Windows build env from `311` to `312`
+   - Windows ffmpeg (GyanD) `8.1.1` to `8.1.2`
+   - Linux build now comes with ffmpeg (BtbN) `2026-06-30`, which I think covers `8.1.2`
+
 ## [Version 680](https://github.com/hydrusnetwork/hydrus/releases/tag/v680)
 
 ### misc
@@ -431,106 +531,3 @@ title: Changelog
 * fixed an issue with dissolving an OR predicate from the active predicates menu where the signal was being double-sent
 * reworked the `NumberTest` rendering tech to better handle custom number and operator rendering
 * the Number Tests across the program, which power a bunch of the newer system predicates where you can say 'width is approx 400 +/- 15%' are no longer coerced to integers behind the scenes. this doesn't affect much, but in the duplicates auto-resolution system, where you can do `A has height > 1.8x B`, that multiplier can now result in a float. in the trivial case of B height `1`, `1 * 1.8` is now less than `2`, rather than being rounded up
-
-## [Version 671](https://github.com/hydrusnetwork/hydrus/releases/tag/v671)
-
-### import options overhaul
-
-* the frontend and object storage is moved to the new import options system! there's a bunch going on here, but in brief--
-* the old file/tag/note import options are split into seven smaller types: prefetch, file filtering, tag filtering, locations, tags, notes, presentation
-* your old options have been converted to the new system and it should all work as before, with only minor logical changes. you do not have to do anything
-* all the defaults are now edited in `file->options->import options`. the system is richer and supports favourites/templates for quick-load
-* all the 'import options' buttons across the program use some slightly newer UI and offer quick 'load from favourites'
-* the 'edit subscriptions' dialog now has a column to show a summary for any custom import options you have set
-* the 'edit subscription' dialog now has a column to show a summary for any queries that have 'additional tags' set up
-* full help, now with screenshots, is here: https://hydrusnetwork.github.io/hydrus/getting_started_import_options.html
-
-### misc
-
-* the pretty media info lines that appear on a single media right-click flyout menu and some other places now includes a `approx bitrate: 1.4MB/s` line. it is pretty similar to the 'sort by approx bitrate' sort but only appears for stuff with an actual duration (the sort also puts big static images before small ones). it is just a naive `size / duration` and it'll do `1.4MB/s` with existing display tech rather than `7,200KBps` as you otherwise usually see, so I may revisit when I eventually get around to 1000/1024 byte-count presentation options and such
-* renamed the shortcut labels 'close page' and 'restore the most recently closed page', to 'pages: close current' and 'pages: unclose the most recently closed'
-* added a 'pages: rename current' shortcut to 'the main window' set
-* fixed the setting of referral urls to child import objects in two cases: A) when a file import produced multiple child urls with the note `Found x new URLs in one post` and B) when a gallery url in the search phase produced an unexpected non-gallery url because of 3XX or api url class redirection with note `was redirected to a non-gallery url, which has been queued as a file import`.. the referral url was not being set correctly because of a regression in v664. thank you to the enterprising user who ran this through Codex to find the solution
-* fixed a foolish typo that broke importing a cookies.txt (issue #2011)
-* when loading a cookies.txt, if the file includes some complicated utf-8 encoding that the current default locale cannot decode, I now catch the decoding failure and try to recover with a newly encoded temp file (also issue #2011)
-* fixed a bit of page counting logic that would turn up in some 'hey do you want to close the x pages?' labels and some 'do to current page' logic, where a page of pages was not counting child page of pages
-* updated the base `requirements.txt` to match the future build stuff we folded in recently. missed this guy by accident; he'll be deleted in v673 in lieu of the cleaner `pyproject.toml` that's coming up
-* did a quick hotfix patch to master for the curl_cffi test, which was frozen by accident at chrome/http2
-* added a note to the installation help, Linux specifically: if you get a crash on any keypress after booting the client, you probably need to run from source (issue #2010)
-* added some careful typedefs and imports to fix a deferred import that was causing certain recent database updates to fail out when trying to load the core options object
-
-**normal users do not pass this line**
-
-### import options detailed changes
-
-* an import options manager with default settings is now created with a new db
-* on update from v671, your existing quiet/loud file import options, post/watcher tag/note import options, and all the url class tag/note import options are converted into a new import options manager. the old settings are deleted from your options and domain manager objects once it is all done and clear
-* a new button-with-a-dropdown-menu-arrow to handles the import options container of a specific import context. its arrow menu offers a detailed review of what it currently holds and supports quick 'favourites/template' loading
-* the 'fetch page metadata even if hash/url recognised and file appears "already in db" stuff is moved from tag import options to the new 'prefetch import options'. this is the only movement of options; everything else has been separated into the sub-panels you've seen in recent weeks
-* updated the new system's freeze routine to consult both the given url of the import object _and_ any referral url, _and_ if either is an API redirect, to look up every url class in the api redirect chain and select the first for which there is a custom import options entry. previously, referral url lookup was spotty, and it would only ever look at the final place in the api redirect chain. very sophisticated setups can now have separate per-url-class import options that nonetheless connect to the same final api url class
-* import folders and subscription queries now add 'additional tags' even if the file ends up 'previously deleted' (all imports generally apply new content updates to a 'previously deleted' result, so this brings these supplementary tags into normal behaviour.) I may add an option around which import statuses quality for a post-import content update commit, now everything is on the same page
-* if you hop skip and jump, you can now set 'additional tags' to a local file import that is entirely adjunct to the normal filename tagging system. there's probably some weird edge undesired behaviour now, because of odd new capabilities like this, so I'm interested in error reports or 'hey you should probably hide this by default here' reports
-* made some svgs and screenshots for the new import options help, removed the old help, integrated it all into the 'gettting started - downloading' help, and added it to the main index
-
-### import options detailed fixes
-
-* fixed some import situations (usually when the import object had no other tags to add) where 'additional tags' in a tag import options might not be added
-* if a file import results in 'ignored' but somehow gets an sha256 hash (local imports hit by file filtering rules would get this), no post-job content updates like urls or tags will be added to the file
-* in edit subscriptions, the 'set file/tag/note import options' stuff is merged into one and there are copy/paste/favourite buttons like in `options->import options` with the same clever paste-merge tech. there is also a new column to see which subs have custom import options set. just a bit easier to mass-manage custom options here now
-* fixed a bug with adding a _watchable_ URL with a custom import destination (via Client API); previously, it would just to the first watchable page. now it checks and creates a new one with the desired custom location import options as needed
-* tag import options now present a single-line summary (they'd spill over to multiple lines when things got complicated), with some tighter syntax
-
-### client api
-
-* the `get_client_options` call no longer presents a `default_file_import_options` summary row
-* Client API version is now 91
-
-**non-hydev do not pass this line**
-
-### some last-minute fixes and tweaks
-
-* added some repair code for if your 'global' options container set is missing or missing a sub-option type. the holes are filled in and the fixed structure is saved back
-* wrote some more safety code to ensure a non-full global options container cannot be set to the core options structure with the issue reported nicely to the user
-* I didn't like how the favourite buttons were still loading up the complicated custom-merge dialog on 'load', so I made a quick-multi-load 'load' and slow-single-load 'custom load' menus. if you just want to set x to a big selection somewhere, no problem
-* same deal with the new general 'import options button'--I added a submenu to pull from the favourites, and you can 'load' in one click or 'custom load' if you need something like 'hey I just need the prefetch options from this template'
-* in the main edit panel, updated the options summary strings, which were in the form `file filtering: default/stuff` to `default file filtering` and `> file filtering: stuff`. this makes the non-default stuff stand out better, but maybe we can do more here. maybe this guy could evolve into a checklist or a multi-column list
-* the new vertically stacked listbook now disables horizontal scrollbar too (the scrollbar was drawing over the bottom item, let's go)
-* fixed an issue with my migration routine where a new container would not contain prefetch import options with the 'force refetch' stuff from tag import options when the original file import options was missing/default
-* updated the migration routine to abstain from adding prefetch stuff if it was uninteresting
-* updated all my importer migration code to safely attempt to determine the already-migrated defaults for this importer before migration so the 'if we don't disagree with our parent's defaults, we can set that sub-options to default' logic can kick in. this eases the transition and ensures we don't end up with a bunch of importers with default 'tag filter: allows everything' stubs because the user only changed the parsing rules
-* fixed a little thing in the import options manager initialisation where the defaults set the 'quiet' presentation rules to the Client API setting--the Client API import does not publish files anywhere, so no need for that
-* fixed an issue where the 'panel types to load for this import caller type' CONST reference was being unintentionally updated and thus poisoning later dialog opens
-* ditched the 'set and check full' system as too brittle with bad error handling
-
-### boring import options data migration log
-
-* all importers' storage and final pipeline: hdd imports, import folders, simple downloaders, url downloader pages; a couple of misc 'download these urls' routines used by stuff like IPFS, hydrus file repository download, gallery imports, the multiple gallery import container, watcher imports, the multiple watcher import container, client api imports, and subscriptions
-* subscription query 'additional tags'
-* migrated some network report mode stuff over to the new system as a frozen import options container is assembled with potential URL data
-* ancient legacy subscription update routine
-* subscription serialisation unit test
-
-### boring cleanup and refactoring
-
-* the import options manager now tracks if it is dirty and needs saving, and the main client controller consults that in the normal maintenance and shutdown cycle
-* removed the default file import options from `options->importing` and tag/note stuff from `network->downloaders->default import options`
-* deleted the old system's legacy edit panels and widgets
-* removed some hackery that made gallery/watcher list selection-inspection a little faster but was too beardy
-* the old `show_downloader_options` display option is replaced by direct `import_options_caller_type` inspection in all situations
-* wrote an `ImportOptionsMetatype` for our seven new sub-options to help some typing inference. all these guys now know their own `import_options_type` too, and some `Set` stuff is a bit simpler
-* moved the subscription query 'additional tags' button to a simpler single-panel-dialog solution
-* updated the UI for all importers to use the new import options container button
-* figured out some default/display fixes for the newer container edit UI panels to show the correct 'this defers to default type x' whether editing a default, global, favourite, or a specific importer
-* cleaned up some prefetch options juggling
-* improved some edge cases in the process by which paged importers figure out their best-guess current location context
-* moved some legacy presentation import options consultation in the gallery/watcher sidebar list menu is over to the new system
-* when a new url import page call wants to queue up urls with a custom import destination or, now, prefetch import options, this is merged into an import options container. as an edge-case logical change here, such jobs will no longer be added to pre-existing pages that have the same import destination and prefetch settings but other options differences. this is really in the weeds, but I may change this behaviour and just merge them into existing pages but with different import options; we'll see
-* a check that regularly goes 'hey are we still good to import stuff?' in all importers that reviews the validity of the destination import location (generally checking if we want to import to a local file domain that has since been deleted) has been cleaned up, refactored into one central location, and now consults the next-pending object for specific options. if someone sets all x url classes to import to 'cool places' and then deletes that, the queue now pauses ahead of time rather than spitting out a hundred errors. the actual exception raised here has an improved typedef, too, that the veto system catches easier
-* moved the new system's constants to their own `ImportOptionsConstants.py`, `as IOC`, so stuff can see them better
-* moved the new system's manager to its own `ImportOptionsManager.py`
-* moved some 'filter these pending tags this way' from the now-defunct `ClientImportOptions` to `TagImportOptions`
-* the various edit/custom-paste UI now obeys the 'simple mode :^)' set in `options->import options`
-* renamed the old `ClientImportOptions` to `CheckerImportOptions`, since that is all it does now
-* cleaned up some old rubbish `subscription.ToTuple` mess
-* cleaned up some misc bad code in hdd importers
-* deleted all the legacy UI code for the old system
