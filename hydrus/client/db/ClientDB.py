@@ -9,13 +9,9 @@ import time
 import traceback
 import typing
 
-from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
-from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
@@ -7582,6 +7578,7 @@ class DB( HydrusDB.HydrusDB ):
                 message += 'I recommend you say yes unless the number here is truly huge and you do not want hydrus to be eventually loading all those files (e.g. if your files are stored in the cloud and you need to keep bandwidth usage down).'
                 
                 from hydrus.client.gui import ClientGUIDialogsQuick
+                from qtpy import QtWidgets as QW
                 
                 result = ClientGUIDialogsQuick.GetYesNo( CG.client_controller.GetMainTLW(), message, title = 'Re-do transparency check?', yes_label = 'yes, re-scan these files', no_label = 'no, do not do it' )
                 

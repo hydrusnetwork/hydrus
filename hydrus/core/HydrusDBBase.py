@@ -1,12 +1,10 @@
 import collections
 import collections.abc
 import threading
-import time
 
 import sqlite3
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusPSUtil
