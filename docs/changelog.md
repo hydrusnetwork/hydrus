@@ -79,7 +79,7 @@ title: Changelog
 * there are no special instructions for the update. update as normal
 * since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week.
 * the library changes are--
-   - ` PySide6` (Qt) from `6.9.3` to `6.10.3`
+   - `PySide6` (Qt) from `6.9.3` to `6.10.3`
    - OpenCV (`opencv-python-headless`) from `4.12.0.88` to `4.13.0.92`
    - `beatifulsoup4` `4.14.3` to `4.15.0`
    - `cbor2` `6.1.1` to `6.1.3`
