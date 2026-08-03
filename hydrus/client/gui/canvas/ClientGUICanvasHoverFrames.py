@@ -1040,22 +1040,35 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 self._undelete_button.show()
                 
             
-            has_exif = self._current_media.GetMediaResult().GetFileInfoManager().has_exif
-            has_human_readable_embedded_metadata = self._current_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
             has_extra_rows = self._current_media.GetMime() == HC.IMAGE_JPEG
             
             tt = 'show detailed file metadata'
             
             tt_components = []
             
-            if has_exif:
+            if self._current_media.GetMediaResult().GetFileInfoManager().has_exif:
                 
                 tt_components.append( 'exif' )
                 
             
-            if has_human_readable_embedded_metadata:
+            if self._current_media.GetMediaResult().GetFileInfoManager().has_xmp:
                 
-                tt_components.append( 'non-exif embedded metadata' )
+                tt_components.append( 'xmp' )
+                
+            
+            if self._current_media.GetMediaResult().GetFileInfoManager().has_iptc:
+                
+                tt_components.append( 'iptc' )
+                
+            
+            if self._current_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata:
+                
+                tt_components.append( 'human-readable metadata' )
+                
+            
+            if self._current_media.GetMediaResult().GetFileInfoManager().has_software_source:
+                
+                tt_components.append( 'software/source metadata' )
                 
             
             if has_extra_rows:
@@ -2494,7 +2507,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         QP.AddToLayout( self._comparison_statements_vbox, self._comparison_statement_score_summary, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        self._comparison_statement_names_fast = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio', 'duration' ]
+        self._comparison_statement_names_fast = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'pixel_duplicates', 'has_transparency', 'exif_data', 'xmp_data', 'iptc_data', 'human_readable_metadata', 'software_source_metadata', 'icc_profile', 'has_audio', 'duration' ]
         self._comparison_statement_names_slow = ['jpeg_subsampling', 'jpeg_quality', 'a_and_b_are_visual_duplicates' ]
         
         self._total_score_fast = 0

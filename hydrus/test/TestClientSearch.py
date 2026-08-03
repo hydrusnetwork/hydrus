@@ -1365,15 +1365,51 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP, True )
+        
+        self.assertEqual( p.ToString(), 'system:has xmp' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP, False )
+        
+        self.assertEqual( p.ToString(), 'system:no xmp' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC, True )
+        
+        self.assertEqual( p.ToString(), 'system:has iptc' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC, False )
+        
+        self.assertEqual( p.ToString(), 'system:no iptc' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
         p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True )
         
-        self.assertEqual( p.ToString(), 'system:has embedded metadata' )
+        self.assertEqual( p.ToString(), 'system:has human-readable metadata' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
         p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False )
         
-        self.assertEqual( p.ToString(), 'system:no embedded metadata' )
+        self.assertEqual( p.ToString(), 'system:no human-readable metadata' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, True )
+        
+        self.assertEqual( p.ToString(), 'system:has software/source metadata' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, False )
+        
+        self.assertEqual( p.ToString(), 'system:no software/source metadata' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -1652,12 +1688,22 @@ class TestAutocompletePredGubbins( unittest.TestCase ):
             ( 'system:has tags', "system:has tags" ),
             ( 'system:untagged', "system:no tags" ),
             ( 'system:untagged', "system:untagged" ),
-            ( 'system:has embedded metadata', "system:has human readable embedded metadata" ),
-            ( 'system:no embedded metadata', "system:no human readable embedded metadata" ),
-            ( 'system:has embedded metadata', "system:has human-readable embedded metadata" ),
-            ( 'system:no embedded metadata', "system:no human-readable embedded metadata" ),
-            ( 'system:has embedded metadata', "system:has embedded metadata" ),
-            ( 'system:no embedded metadata', "system:no embedded metadata" ),
+            ( 'system:has exif', "system:has_exif" ),
+            ( 'system:no exif', "system:no exif" ),
+            ( 'system:has xmp', "system:has_xmp" ),
+            ( 'system:no xmp', "system:no xmp" ),
+            ( 'system:has iptc', "system:has_iptc" ),
+            ( 'system:no iptc', "system:no iptc" ),
+            ( 'system:has human-readable metadata', "system:has human readable embedded metadata" ),
+            ( 'system:no human-readable metadata', "system:no human readable embedded metadata" ),
+            ( 'system:has human-readable metadata', "system:has human-readable embedded metadata" ),
+            ( 'system:no human-readable metadata', "system:no human-readable embedded metadata" ),
+            ( 'system:has human-readable metadata', "system:has embedded metadata" ),
+            ( 'system:no human-readable metadata', "system:no embedded metadata" ),
+            ( 'system:has human-readable metadata', "system:has human-readable metadata" ),
+            ( 'system:no human-readable metadata', "system:no human-readable metadata" ),
+            ( 'system:has software/source metadata', "system:has software/source metadata" ),
+            ( 'system:no software/source metadata', "system:no software/source metadata" ),
             ( 'system:has icc profile', "system:has icc profile" ),
             ( 'system:no icc profile', "system:no icc profile" ),
             ( 'system:has forced filetype', "system:has forced filetype" ),

@@ -8176,6 +8176,16 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 681:
+            
+            if not self._TableExists( 'has_xmp' ):
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_xmp ( hash_id INTEGER PRIMARY KEY );' )
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_iptc ( hash_id INTEGER PRIMARY KEY );' )
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_software_source ( hash_id INTEGER PRIMARY KEY );' )
+                
+            
+        
         if False: # on version where we are happy with human-readable file metadata. do not want to pull the trigger on this big job until we are content
             
             try:

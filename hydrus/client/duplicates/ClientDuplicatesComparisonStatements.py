@@ -428,6 +428,8 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
     
+    # TODO: collapse these spammy flag statement generators down to ( has_flag, enum ) kind of thing mate with dict lookups for the strings?
+    
     s_has_transparency = shown_media_result.GetFileInfoManager().has_transparency
     c_has_transparency = comparison_media_result.GetFileInfoManager().has_transparency
     
@@ -470,6 +472,48 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
         statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
         
     
+    s_has_xmp = shown_media_result.GetFileInfoManager().has_xmp
+    c_has_xmp = comparison_media_result.GetFileInfoManager().has_xmp
+    
+    if s_has_xmp or c_has_xmp:
+        
+        if s_has_xmp and c_has_xmp:
+            
+            xmp_statement = 'both have xmp data'
+            
+        elif s_has_xmp:
+            
+            xmp_statement = 'this has xmp data, the other does not'
+            
+        else:
+            
+            xmp_statement = 'the other has xmp data, this does not'
+            
+        
+        statements_and_scores[ 'xmp_data' ] = ( xmp_statement, 0 )
+        
+    
+    s_has_iptc = shown_media_result.GetFileInfoManager().has_iptc
+    c_has_iptc = comparison_media_result.GetFileInfoManager().has_iptc
+    
+    if s_has_iptc or c_has_iptc:
+        
+        if s_has_iptc and c_has_iptc:
+            
+            iptc_statement = 'both have iptc data'
+            
+        elif s_has_iptc:
+            
+            iptc_statement = 'this has iptc data, the other does not'
+            
+        else:
+            
+            iptc_statement = 'the other has iptc data, this does not'
+            
+        
+        statements_and_scores[ 'iptc_data' ] = ( iptc_statement, 0 )
+        
+    
     s_has_human_readable_embedded_metadata = shown_media_result.GetFileInfoManager().has_human_readable_embedded_metadata
     c_has_human_readable_embedded_metadata = comparison_media_result.GetFileInfoManager().has_human_readable_embedded_metadata
     
@@ -477,14 +521,35 @@ def GetDuplicateComparisonStatementsFast( shown_media_result: ClientMediaResult.
         
         if s_has_human_readable_embedded_metadata:
             
-            embedded_metadata_statement = 'this has embedded metadata, the other does not'
+            embedded_metadata_statement = 'this has human-readable metadata, the other does not'
             
         else:
             
-            embedded_metadata_statement = 'the other has embedded metadata, this does not'
+            embedded_metadata_statement = 'the other has human-readable metadata, this does not'
             
         
-        statements_and_scores[ 'embedded_metadata' ] = ( embedded_metadata_statement, 0 )
+        statements_and_scores[ 'human_readable_metadata' ] = ( embedded_metadata_statement, 0 )
+        
+    
+    s_has_software_source = shown_media_result.GetFileInfoManager().has_software_source
+    c_has_software_source = comparison_media_result.GetFileInfoManager().has_software_source
+    
+    if s_has_software_source or c_has_software_source:
+        
+        if s_has_software_source and c_has_software_source:
+            
+            software_source_statement = 'both have software/source data'
+            
+        elif s_has_software_source:
+            
+            software_source_statement = 'this has software/source metadata, the other does not'
+            
+        else:
+            
+            software_source_statement = 'the other has software/source metadata, this does not'
+            
+        
+        statements_and_scores[ 'software_source_data' ] = ( software_source_statement, 0 )
         
     
     s_has_icc = shown_media_result.GetFileInfoManager().has_icc_profile

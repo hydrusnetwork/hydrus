@@ -76,7 +76,10 @@ PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
 PREDICATE_TYPE_SYSTEM_URLS = 53
 PREDICATE_TYPE_SYSTEM_TAG_ADVANCED = 54
 PREDICATE_TYPE_SYSTEM_RATING_ADVANCED_LEGACY = 55 # not using
-PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 66
+PREDICATE_TYPE_SYSTEM_RATING_ADVANCED = 66 # what in the, did I hit 6X by accident?
+PREDICATE_TYPE_SYSTEM_HAS_XMP = 67 # /\/\--(^-^)--\/\/
+PREDICATE_TYPE_SYSTEM_HAS_IPTC = 68
+PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE = 69
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -101,7 +104,10 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
     PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
+    PREDICATE_TYPE_SYSTEM_HAS_XMP,
+    PREDICATE_TYPE_SYSTEM_HAS_IPTC,
     PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_MIME,
     PREDICATE_TYPE_SYSTEM_RATING,
@@ -384,8 +390,11 @@ PREDICATE_TYPES_WE_CAN_TEST_ON_MEDIA_RESULTS = [
     PREDICATE_TYPE_SYSTEM_NUM_TAGS,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
-    PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
+    PREDICATE_TYPE_SYSTEM_HAS_XMP,
+    PREDICATE_TYPE_SYSTEM_HAS_IPTC,
     PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE,
+    PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
     PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY,
     PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
@@ -1171,7 +1180,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 return Predicate( self._predicate_type, self._value, not self._inclusive )
                 
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_XMP, PREDICATE_TYPE_SYSTEM_HAS_IPTC, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING ):
                 
                 if self._value is None: # weird default that sometimes kicks in, means 'yes, has'
                     
@@ -1660,17 +1669,35 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return media_result.GetFileInfoManager().has_exif == inclusive_hack
             
-        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_XMP:
             
             inclusive_hack = self._value is None or self._value is True
             
-            return media_result.GetFileInfoManager().has_icc_profile == inclusive_hack
+            return media_result.GetFileInfoManager().has_xmp == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_IPTC:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().has_iptc == inclusive_hack
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
             
             inclusive_hack = self._value is None or self._value is True
             
             return media_result.GetFileInfoManager().has_human_readable_embedded_metadata == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().has_software_source == inclusive_hack
+            
+        elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
+            
+            inclusive_hack = self._value is None or self._value is True
+            
+            return media_result.GetFileInfoManager().has_icc_profile == inclusive_hack
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_AUDIO:
             
@@ -2400,9 +2427,37 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     
                 
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_XMP:
+                
+                base = 'has xmp'
+                
+                if self._value is not None:
+                    
+                    has_xmp = self._value
+                    
+                    if not has_xmp:
+                        
+                        base = 'no xmp'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_IPTC:
+                
+                base = 'has iptc'
+                
+                if self._value is not None:
+                    
+                    has_iptc = self._value
+                    
+                    if not has_iptc:
+                        
+                        base = 'no iptc'
+                        
+                    
+                
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                 
-                base = 'has embedded metadata'
+                base = 'has human-readable metadata'
                 
                 if self._value is not None:
                     
@@ -2410,7 +2465,21 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     if not has_human_readable_embedded_metadata:
                         
-                        base = 'no embedded metadata'
+                        base = 'no human-readable metadata'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE:
+                
+                base = 'has software/source metadata'
+                
+                if self._value is not None:
+                    
+                    has_software_source = self._value
+                    
+                    if not has_software_source:
+                        
+                        base = 'no software/source metadata'
                         
                     
                 

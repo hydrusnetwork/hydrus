@@ -7963,7 +7963,10 @@ class TestClientAPI( unittest.TestCase ):
                 'is_deleted' : False,
                 'has_transparency' : False,
                 'has_exif' : True,
+                'has_xmp' : False,
+                'has_iptc' : False,
                 'has_human_readable_embedded_metadata' : False,
+                'has_software_source' : False,
                 'has_icc_profile' : True,
                 'known_urls' : list( sorted_urls ),
                 'pixel_hash' : file_info_manager.pixel_hash.hex()

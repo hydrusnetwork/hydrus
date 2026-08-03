@@ -1674,6 +1674,8 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
+        # TODO: yeah, collapse all this down to a '( has_flag, flag_enum )' here mate, this is too spammy
+        
         if 'has_exif' in simple_preds:
             
             has_exif = simple_preds[ 'has_exif' ]
@@ -1693,6 +1695,44 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
+        if 'has_xmp' in simple_preds:
+            
+            has_xmp = simple_preds[ 'has_xmp' ]
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                has_xmp_hash_ids = self.modules_files_metadata_basic.GetHasXMPHashIds( temp_hash_ids_table_name )
+                
+            
+            if has_xmp:
+                
+                query_hash_ids.intersection_update( has_xmp_hash_ids )
+                
+            else:
+                
+                query_hash_ids.difference_update( has_xmp_hash_ids )
+                
+            
+        
+        if 'has_iptc' in simple_preds:
+            
+            has_iptc = simple_preds[ 'has_iptc' ]
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                has_iptc_hash_ids = self.modules_files_metadata_basic.GetHasIPTCHashIds( temp_hash_ids_table_name )
+                
+            
+            if has_iptc:
+                
+                query_hash_ids.intersection_update( has_iptc_hash_ids )
+                
+            else:
+                
+                query_hash_ids.difference_update( has_iptc_hash_ids )
+                
+            
+        
         if 'has_human_readable_embedded_metadata' in simple_preds:
             
             has_human_readable_embedded_metadata = simple_preds[ 'has_human_readable_embedded_metadata' ]
@@ -1709,6 +1749,25 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             else:
                 
                 query_hash_ids.difference_update( has_human_readable_embedded_metadata_hash_ids )
+                
+            
+        
+        if 'has_software_source' in simple_preds:
+            
+            has_software_source = simple_preds[ 'has_software_source' ]
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                has_software_source_hash_ids = self.modules_files_metadata_basic.GetHasSoftwareSourceHashIds( temp_hash_ids_table_name )
+                
+            
+            if has_software_source:
+                
+                query_hash_ids.intersection_update( has_software_source_hash_ids )
+                
+            else:
+                
+                query_hash_ids.difference_update( has_software_source_hash_ids )
                 
             
         

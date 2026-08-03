@@ -1886,7 +1886,7 @@ If the access key's permissions only permit search for certain tags, at least on
 
 Wildcards and namespace searches are supported, so if you search for 'character:sam*' or 'series:*', this will be handled correctly clientside.
 
-**Many system predicates are also supported using a text parser!** The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). **Here's a big list of examples that are supported:**
+**Many system predicates are also supported using a text parser!** The parser was designed by a clever user for human input and allows for a certain amount of error (e.g. ~= instead of ≈, or "isn't" instead of "is not") or requires more information (e.g. the specific hashes for a hash lookup). **Here's a big list of supported examples:**
 
 ??? example "System Predicates" 
     *   system:everything
@@ -1900,8 +1900,8 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:no audio
     *   system:has exif
     *   system:no exif
-    *   system:has embedded metadata
-    *   system:no embedded metadata
+    *   system:has human-readable metadata
+    *   system:no human-readable metadata
     *   system:has icc profile
     *   system:no icc profile
     *   system:has tags
@@ -2167,7 +2167,10 @@ Response:
       "is_trashed" : false,
       "is_deleted" : false,
       "has_exif" : true,
+      "has_xmp" : false,
+      "has_iptc" : false,
       "has_human_readable_embedded_metadata" : true,
+      "has_software_source" : true,
       "has_icc_profile" : true,
       "has_transparency" : false,
       "known_urls" : [],
@@ -3550,7 +3553,10 @@ Response description
                 "is_deleted": false,
                 "has_transparency": false,
                 "has_exif": false,
+                "has_xmp": false,
+                "has_iptc": false,
                 "has_human_readable_embedded_metadata": true,
+                "has_software_source": false,
                 "has_icc_profile": false,
                 "known_urls": [
                     "https://somebooru.org//images/1063/blah.jpg",

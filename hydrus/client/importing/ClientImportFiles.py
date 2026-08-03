@@ -12,6 +12,7 @@ from hydrus.core.files.images import HydrusImageOpening
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.files import ClientFiles
+from hydrus.client.files.images import ClientImageMetadata
 from hydrus.client.files.images import ClientImagePerceptualHashes
 from hydrus.client.importing.options import ImportOptionsContainer
 
@@ -122,10 +123,16 @@ class FileImportJob( object ):
         self._thumbnail_bytes = None
         self._perceptual_hashes = None
         self._extra_hashes = None
+        
+        # TODO: ideal place for a 'flags' object that holds all this; same deal for media result file info manager
         self._has_transparency = None
         self._has_exif = None
+        self._has_xmp = None
+        self._has_iptc = None
         self._has_human_readable_embedded_metadata = None
+        self._has_software_source = None
         self._has_icc_profile = None
+        
         self._pixel_hash = None
         self._file_modified_timestamp_ms = None
         self._blurhash = None
@@ -376,6 +383,9 @@ class FileImportJob( object ):
         self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration_ms = duration_ms, num_frames = num_frames, resolution = ( width, height ) )
         
         has_exif = False
+        has_xmp = False
+        has_iptc = False
+        has_software_source = False
         
         raw_pil_image = None
         
@@ -397,6 +407,63 @@ class FileImportJob( object ):
             
         
         self._has_exif = has_exif
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_XMP:
+            
+            try:
+                
+                if raw_pil_image is None:
+                    
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path, human_file_description = self._human_file_description )
+                    
+                
+                has_xmp = ClientImageMetadata.HasXMP( raw_pil_image )
+                
+            except Exception as e:
+                
+                pass
+                
+            
+        
+        self._has_xmp = has_xmp
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_IPTC:
+            
+            try:
+                
+                if raw_pil_image is None:
+                    
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path, human_file_description = self._human_file_description )
+                    
+                
+                has_iptc = ClientImageMetadata.HasIPTC( raw_pil_image )
+                
+            except Exception as e:
+                
+                pass
+                
+            
+        
+        self._has_iptc = has_iptc
+        
+        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            try:
+                
+                if raw_pil_image is None:
+                    
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path, human_file_description = self._human_file_description )
+                    
+                
+                has_software_source = HydrusImageMetadata.HasSoftwareSource( raw_pil_image )
+                
+            except Exception as e:
+                
+                pass
+                
+            
+        
+        self._has_software_source = has_software_source
         
         self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime, possible_raw_pil_image = raw_pil_image )
         
@@ -505,9 +572,24 @@ class FileImportJob( object ):
         return self._has_icc_profile
         
     
+    def HasIPTC( self ) -> bool:
+        
+        return self._has_iptc
+        
+    
+    def HasSoftwareSource( self ) -> bool:
+        
+        return self._has_software_source
+        
+    
     def HasTransparency( self ) -> bool:
         
         return self._has_transparency
+        
+    
+    def HasXMP( self ) -> bool:
+        
+        return self._has_xmp
         
     
     def GetBlurhash( self ) -> str:

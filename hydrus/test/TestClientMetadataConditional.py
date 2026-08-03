@@ -355,6 +355,68 @@ class TestPredicateTesting( unittest.TestCase ):
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )
         
     
+    def test_type_xmp( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_xmp = True
+        media_result_fail.GetFileInfoManager().has_xmp = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_xmp = False
+        media_result_fail.GetFileInfoManager().has_xmp = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_iptc( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_iptc = True
+        media_result_fail.GetFileInfoManager().has_iptc = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_iptc = False
+        media_result_fail.GetFileInfoManager().has_iptc = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
     def test_type_audio( self ):
         
         pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_AUDIO )
@@ -474,6 +536,37 @@ class TestPredicateTesting( unittest.TestCase ):
         
         media_result_pass.GetFileInfoManager().has_human_readable_embedded_metadata = False
         media_result_fail.GetFileInfoManager().has_human_readable_embedded_metadata = True
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+    
+    def test_type_software_source( self ):
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_software_source = True
+        media_result_fail.GetFileInfoManager().has_software_source = False
+        
+        self.assertTrue( pred.TestMediaResult( media_result_pass ) )
+        self.assertFalse( pred.TestMediaResult( media_result_fail ) )
+        
+        #
+        
+        pred = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, value = False )
+        
+        self.assertTrue( pred.CanTestMediaResult() )
+        
+        media_result_pass = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey(), mime = HC.IMAGE_JPEG )
+        media_result_fail = media_result_pass.Duplicate()
+        
+        media_result_pass.GetFileInfoManager().has_software_source = False
+        media_result_fail.GetFileInfoManager().has_software_source = True
         
         self.assertTrue( pred.TestMediaResult( media_result_pass ) )
         self.assertFalse( pred.TestMediaResult( media_result_fail ) )

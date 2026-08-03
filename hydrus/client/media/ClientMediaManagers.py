@@ -82,7 +82,10 @@ class FileInfoManager( object ):
         
         self.has_transparency = False
         self.has_exif = False
+        self.has_xmp = False
+        self.has_iptc = False
         self.has_human_readable_embedded_metadata = False
+        self.has_software_source = False
         self.has_icc_profile = False
         self.blurhash = None
         self.pixel_hash: bytes | None = None
@@ -94,6 +97,9 @@ class FileInfoManager( object ):
         
         fim.has_transparency = self.has_transparency
         fim.has_exif = self.has_exif
+        fim.has_xmp = self.has_xmp
+        fim.has_iptc = self.has_iptc
+        fim.has_software_source = self.has_software_source
         fim.has_human_readable_embedded_metadata = self.has_human_readable_embedded_metadata
         fim.has_icc_profile = self.has_icc_profile
         fim.blurhash = self.blurhash

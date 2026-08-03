@@ -159,6 +159,34 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         possibly_new_auto_resolution_hash_ids.add( hash_id )
                         
                     
+                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP:
+                    
+                    previous_has_xmp = self.modules_files_metadata_basic.GetHasXMP( hash_id )
+                    
+                    has_xmp = additional_data
+                    
+                    if previous_has_xmp != has_xmp:
+                        
+                        self.modules_files_metadata_basic.SetHasXMP( hash_id, has_xmp )
+                        
+                        new_file_info_managers_info.add( ( hash_id, hash ) )
+                        possibly_new_auto_resolution_hash_ids.add( hash_id )
+                        
+                    
+                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC:
+                    
+                    previous_has_iptc = self.modules_files_metadata_basic.GetHasIPTC( hash_id )
+                    
+                    has_iptc = additional_data
+                    
+                    if previous_has_iptc != has_iptc:
+                        
+                        self.modules_files_metadata_basic.SetHasIPTC( hash_id, has_iptc )
+                        
+                        new_file_info_managers_info.add( ( hash_id, hash ) )
+                        possibly_new_auto_resolution_hash_ids.add( hash_id )
+                        
+                    
                 elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                     
                     previous_has_human_readable_embedded_metadata = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadata( hash_id )
@@ -168,6 +196,20 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     if previous_has_human_readable_embedded_metadata != has_human_readable_embedded_metadata:
                         
                         self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, has_human_readable_embedded_metadata )
+                        
+                        new_file_info_managers_info.add( ( hash_id, hash ) )
+                        possibly_new_auto_resolution_hash_ids.add( hash_id )
+                        
+                    
+                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE:
+                    
+                    previous_has_software_source = self.modules_files_metadata_basic.GetHasSoftwareSource( hash_id )
+                    
+                    has_software_source = additional_data
+                    
+                    if previous_has_software_source != has_software_source:
+                        
+                        self.modules_files_metadata_basic.SetHasSoftwareSource( hash_id, has_software_source )
                         
                         new_file_info_managers_info.add( ( hash_id, hash ) )
                         possibly_new_auto_resolution_hash_ids.add( hash_id )

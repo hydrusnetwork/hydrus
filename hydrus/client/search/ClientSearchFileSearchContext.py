@@ -125,11 +125,32 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'has_exif' ] = has_exif
                 
             
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP:
+                
+                has_xmp = value
+                
+                self._common_info[ 'has_xmp' ] = has_xmp
+                
+            
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC:
+                
+                has_iptc = value
+                
+                self._common_info[ 'has_iptc' ] = has_iptc
+                
+            
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                 
                 has_human_readable_embedded_metadata = value
                 
                 self._common_info[ 'has_human_readable_embedded_metadata' ] = has_human_readable_embedded_metadata
+                
+            
+            if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE:
+                
+                has_software_source = value
+                
+                self._common_info[ 'has_software_source' ] = has_software_source
                 
             
             if predicate_type == ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:

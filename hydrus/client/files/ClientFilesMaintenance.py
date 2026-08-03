@@ -22,6 +22,9 @@ REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF = 20
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD = 21
 REGENERATE_FILE_DATA_JOB_BLURHASH = 22
 REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY = 23
+REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP = 24
+REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC = 25
+REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE = 26
 
 regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'regenerate file metadata',
@@ -44,7 +47,10 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'regenerate file modified time',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY: 'determine if the file has transparency',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 'determine if the file has EXIF metadata',
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'determine if the file has non-EXIF embedded metadata',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP : 'determine if the file has XMP metadata',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC : 'determine if the file has IPTC metadata',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'determine if the file has human-readable metadata',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE : 'determine if the file has software/source metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'determine if the file has an icc profile',
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'regenerate pixel hashes',
     REGENERATE_FILE_DATA_JOB_BLURHASH: 'regenerate blurhash'
@@ -111,9 +117,12 @@ All missing/incorrect files will also have their hashes, tags, and URLs exported
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : '''This forces a regeneration of the file's similar-files 'phashes'. It is not useful unless you know there is missing data to repair.''',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : '''This rechecks the file's modified timestamp and saves it to the database.''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : '''This loads the file to see if it has an alpha channel with useful data (the strictness of this test is determined in the options). Only works for images and some animations.''',
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : '''This loads the file to see if it has EXIF metadata, which can be shown in the media viewer and searched with "system:image has exif".''',
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : '''This loads the file to see if it has non-EXIF human-readable embedded metadata, which can be shown in the media viewer and searched with "system:image has human-readable embedded metadata".''',
-    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : '''This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : '''This loads the file to see if it has EXIF metadata, which can be shown in the media viewer and searched with "system:has exif".''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP : '''This loads the file to see if it has XMP metadata, which can be shown in the media viewer and searched with "system:has xmp".''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC : '''This loads the file to see if it has XMP metadata, which can be shown in the media viewer and searched with "system:has iptc".''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : '''This loads the file to see if it has human-readable metadata outside of EXIF and such, things like a stray Artist or Title or Comment label, or something like an AI prompt, which can be shown in the media viewer and searched with "system:has human-readable metadata".''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE : '''This loads the file to see if it has software/source metadata, which can be shown in the media viewer and searched with "system:has software/source metadata".''',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : '''This loads the file to see if it has an ICC profile, which is generally applied in hydrus and can be searched with "system:has icc profile".''',
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : '''This generates a fast unique identifier for the pixels in a still image, which is used in duplicate pixel searches.''',
     REGENERATE_FILE_DATA_JOB_BLURHASH : '''This generates a very small version of the file's thumbnail that can be used as a placeholder while the thumbnail loads.'''
 }
@@ -141,7 +150,10 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 25,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP : 25,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 25,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 25,
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 100,
     REGENERATE_FILE_DATA_JOB_BLURHASH: 15
@@ -168,7 +180,10 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : [],
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP : [],
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : [],
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : [],
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH : [],
     REGENERATE_FILE_DATA_JOB_BLURHASH: []
@@ -195,7 +210,10 @@ ALL_REGEN_JOBS_IN_RUN_ORDER = [
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE,
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH,
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES
@@ -222,7 +240,10 @@ ALL_REGEN_JOBS_IN_HUMAN_ORDER = [
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE,
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS,
     REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES

@@ -23,6 +23,7 @@ from hydrus.client import ClientDaemons
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.files import ClientFiles
 from hydrus.client.files import ClientFilesMaintenance
+from hydrus.client.files.images import ClientImageMetadata
 from hydrus.client.files.images import ClientImagePerceptualHashes
 
 from hydrus.client import ClientThreading
@@ -519,6 +520,90 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _HasXMP( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.FILES_THAT_CAN_HAVE_XMP:
+            
+            return False
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                try:
+                    
+                    has_xmp = ClientImageMetadata.HasXMP( raw_pil_image )
+                    
+                finally:
+                    
+                    raw_pil_image.close()
+                    
+                
+            except Exception as e:
+                
+                has_xmp = False
+                
+            
+            additional_data = has_xmp
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
+    def _HasIPTC( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.FILES_THAT_CAN_HAVE_IPTC:
+            
+            return False
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                try:
+                    
+                    has_iptc = ClientImageMetadata.HasIPTC( raw_pil_image )
+                    
+                finally:
+                    
+                    raw_pil_image.close()
+                    
+                
+            except Exception as e:
+                
+                has_iptc = False
+                
+            
+            additional_data = has_iptc
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
     def _HasHumanReadableEmbeddedMetadata( self, media_result ):
         
         hash = media_result.GetHash()
@@ -536,6 +621,48 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( path, mime )
             
             additional_data = has_human_readable_embedded_metadata
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
+    def _HasSoftwareSource( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            return False
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                try:
+                    
+                    has_software_source = HydrusImageMetadata.HasSoftwareSource( raw_pil_image )
+                    
+                finally:
+                    
+                    raw_pil_image.close()
+                    
+                
+            except Exception as e:
+                
+                has_software_source = False
+                
+            
+            additional_data = has_software_source
             
             return additional_data
             
@@ -941,9 +1068,21 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                             
                             additional_data = self._HasEXIF( media_result )
                             
+                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP:
+                            
+                            additional_data = self._HasXMP( media_result )
+                            
+                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC:
+                            
+                            additional_data = self._HasIPTC( media_result )
+                            
                         elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                             
                             additional_data = self._HasHumanReadableEmbeddedMetadata( media_result )
+                            
+                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE:
+                            
+                            additional_data = self._HasSoftwareSource( media_result )
                             
                         elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE:
                             

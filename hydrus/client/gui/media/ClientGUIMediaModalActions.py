@@ -1313,6 +1313,14 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
     file_text = None
     extra_rows = []
     
+    exif_looking_good = mime in HC.FILES_THAT_CAN_HAVE_EXIF
+    xmp_looking_good = mime in HC.FILES_THAT_CAN_HAVE_XMP
+    iptc_looking_good = mime in HC.FILES_THAT_CAN_HAVE_IPTC
+    software_source_looking_good = mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA
+    human_readable_looking_good = mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA
+    
+    looking_good_for_something = exif_looking_good or xmp_looking_good or iptc_looking_good or software_source_looking_good or human_readable_looking_good
+    
     if media.GetLocationsManager().IsLocal():
         
         hash = media.GetHash()
@@ -1330,7 +1338,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                 pass # leave it as None
                 
             
-        elif mime in HC.FILES_THAT_CAN_HAVE_EXIF or mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+        elif looking_good_for_something:
             
             path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
@@ -1340,23 +1348,28 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                 
                 try:
                     
-                    if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
+                    if exif_looking_good:
                         
                         exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
                         
                     
-                    if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+                    # TODO: XMP and IPTC here
+                    
+                    if human_readable_looking_good:
                         
                         file_text = HydrusImageMetadata.GetEmbeddedFileText( raw_pil_image )
                         
                     
                     talked_about_icc_profile = False
                     
-                    software_source = HydrusImageMetadata.GetSoftwareSourceFromPilInfo( raw_pil_image )
-                    
-                    if software_source is not None:
+                    if software_source_looking_good:
                         
-                        extra_rows.append( ( 'software/source', software_source ) )
+                        software_source = HydrusImageMetadata.GetSoftwareSourceFromPilInfo( raw_pil_image )
+                        
+                        if software_source is not None:
+                            
+                            extra_rows.append( ( 'software/source', software_source ) )
+                            
                         
                     
                     if mime == HC.IMAGE_JPEG:

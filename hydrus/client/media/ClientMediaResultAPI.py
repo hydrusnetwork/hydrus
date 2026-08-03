@@ -198,7 +198,10 @@ def PopulateMetadataAPIDict( metadata_list: list[ dict ], hashes: list[ bytes ],
             
             metadata_dict[ 'has_transparency' ] = file_info_manager.has_transparency
             metadata_dict[ 'has_exif' ] = file_info_manager.has_exif
+            metadata_dict[ 'has_xmp' ] = file_info_manager.has_xmp
+            metadata_dict[ 'has_iptc' ] = file_info_manager.has_iptc
             metadata_dict[ 'has_human_readable_embedded_metadata' ] = file_info_manager.has_human_readable_embedded_metadata
+            metadata_dict[ 'has_software_source' ] = file_info_manager.has_software_source
             metadata_dict[ 'has_icc_profile' ] = file_info_manager.has_icc_profile
             
             known_urls = sorted( locations_manager.GetURLs() )

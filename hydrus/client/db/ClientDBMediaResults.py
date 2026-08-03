@@ -155,6 +155,9 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
         hash_ids_to_forced_filetypes = self.modules_files_metadata_basic.GetHashIdsToForcedFiletypes( hash_ids_table_name )
         has_transparency_hash_ids = self.modules_files_metadata_basic.GetHasTransparencyHashIds( hash_ids_table_name )
         has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( hash_ids_table_name )
+        has_xmp_hash_ids = self.modules_files_metadata_basic.GetHasXMPHashIds( hash_ids_table_name )
+        has_iptc_hash_ids = self.modules_files_metadata_basic.GetHasIPTCHashIds( hash_ids_table_name )
+        has_software_source_hash_ids = self.modules_files_metadata_basic.GetHasSoftwareSourceHashIds( hash_ids_table_name )
         has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( hash_ids_table_name )
         has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( hash_ids_table_name )
         
@@ -177,8 +180,12 @@ class ClientDBMediaResults( ClientDBModule.ClientDBModule ):
             
             file_info_manager.pixel_hash = hash_ids_to_pixel_hashes.get( hash_id, None )
             file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
+            
             file_info_manager.has_transparency = hash_id in has_transparency_hash_ids
             file_info_manager.has_exif = hash_id in has_exif_hash_ids
+            file_info_manager.has_xmp = hash_id in has_xmp_hash_ids
+            file_info_manager.has_iptc = hash_id in has_iptc_hash_ids
+            file_info_manager.has_software_source = hash_id in has_software_source_hash_ids
             file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
             file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
             

@@ -503,16 +503,44 @@ def HasICCProfile( pil_image: PILImage.Image ) -> bool:
 
 def HasSoftwareSource( pil_image: PILImage.Image ) -> bool:
     
-    try:
+    # we do a quick search first. if it has interesting data before the forced load call, we don't have to do any load
+    if hasattr( pil_image, 'info' ):
         
-        result = GetSoftwareSourceFromPilInfo( pil_image )
-        
-    except Exception as e:
-        
-        return False
+        try:
+            
+            result = GetSoftwareSourceFromPilInfo( pil_image )
+            
+            if result is not None:
+                
+                return True
+                
+            
+        except Exception as e:
+            
+            pass
+            
         
     
-    return result is not None
+    # OK WE DISCOVERED AN IMAGE THAT DID NOT FLESH OUT ITS info DICT UNTIL IT WAS LOADED
+    # I guess sometimes that stuff lives in the frame rather than header data
+    # this guy is apparently idempotent so we'll call it here to ensure we are getting a more decent shot
+    pil_image.load()
+    
+    if hasattr( pil_image, 'info' ):
+        
+        try:
+            
+            result = GetSoftwareSourceFromPilInfo( pil_image )
+            
+            return result is not None
+            
+        except Exception as e:
+            
+            pass
+            
+        
+    
+    return False
     
 
 # we parse and display this stuff in other places

@@ -427,12 +427,27 @@ def GetPrettyMediaResultInfoLines( media_result: ClientMediaResult.MediaResult, 
     
     if file_info_manager.has_exif:
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has exif data', False ) )
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has exif metadata', False ) )
+        
+    
+    if file_info_manager.has_xmp:
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has xmp metadata', False ) )
+        
+    
+    if file_info_manager.has_iptc:
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has iptc metadata', False ) )
         
     
     if file_info_manager.has_human_readable_embedded_metadata:
         
-        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has embedded metadata', False ) )
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has human-readable metadata', False ) )
+        
+    
+    if file_info_manager.has_software_source:
+        
+        pretty_info_lines.append( ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine( 'has software/source metadata', False ) )
         
     
     if file_info_manager.has_icc_profile:

@@ -33,14 +33,47 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return index_generation_dict
         
     
+    def _GetHasFlag( self, table_name: str, hash_id: int ):
+        
+        result = self._Execute( f'SELECT hash_id FROM {table_name} WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def _GetFlagHashIds( self, table_name: str, hash_ids_table_name: str ):
+        
+        hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {hash_ids_table_name} CROSS JOIN {table_name} USING ( hash_id );' ) )
+        
+        return hash_ids
+        
+    
+    def _SetHasFlag( self, table_name: str, hash_id: int, has_flag: bool ):
+        
+        if has_flag:
+            
+            self._Execute( f'INSERT OR IGNORE INTO {table_name} ( hash_id ) VALUES ( ? );', ( hash_id, ) )
+            
+        else:
+            
+            self._Execute( f'DELETE FROM {table_name} WHERE hash_id = ?;', ( hash_id, ) )
+            
+        
+    
     def _GetInitialTableGenerationDict( self ) -> dict:
+        
+        # yo, do you want to collapse these boolean 'has_x' tables into one guy with a status_type column and a ( status_type | hash ) index?
+        # in my experience this sort of thing is not as KISS as one dreams and the index column of '80,000 instances each of only five distinct values' tends to perform and store like garbage
+        # spammy tables are spammy, but they are fast and KISS
         
         return {
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
             'main.files_info_forced_filetypes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, forced_mime INTEGER );', 556 ),
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
+            'main.has_xmp' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 682 ),
+            'main.has_iptc' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 682 ),
             'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
+            'main.has_software_source' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 682 ),
             'main.has_transparency' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 552 ),
             'external_master.blurhashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 )
         }
@@ -77,30 +110,22 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def GetHasEXIF( self, hash_id: int ):
         
-        result = self._Execute( 'SELECT hash_id FROM has_exif WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
+        return self._GetHasFlag( 'has_exif', hash_id )
         
     
     def GetHasEXIFHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
-        has_exif_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_exif USING ( hash_id );'.format( hash_ids_table_name ) ) )
-        
-        return has_exif_hash_ids
+        return self._GetFlagHashIds( 'has_exif', hash_ids_table_name )
         
     
     def GetHasHumanReadableEmbeddedMetadata( self, hash_id: int ):
         
-        result = self._Execute( 'SELECT hash_id FROM has_human_readable_embedded_metadata WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
+        return self._GetHasFlag( 'has_human_readable_embedded_metadata', hash_id )
         
     
     def GetHasHumanReadableEmbeddedMetadataHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
-        has_human_readable_embedded_metadata_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_human_readable_embedded_metadata USING ( hash_id );'.format( hash_ids_table_name ) ) )
-        
-        return has_human_readable_embedded_metadata_hash_ids
+        return self._GetFlagHashIds( 'has_human_readable_embedded_metadata', hash_ids_table_name )
         
     
     def GetHashIdsToBlurhashes( self, hash_ids_table_name: str ):
@@ -115,30 +140,52 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def GetHasICCProfile( self, hash_id: int ):
         
-        result = self._Execute( 'SELECT hash_id FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
+        return self._GetHasFlag( 'has_icc_profile', hash_id )
         
     
     def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
-        has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        return self._GetFlagHashIds( 'has_icc_profile', hash_ids_table_name )
         
-        return has_icc_profile_hash_ids
+    
+    def GetHasIPTC( self, hash_id: int ):
+        
+        return self._GetHasFlag( 'has_iptc', hash_id )
+        
+    
+    def GetHasIPTCHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
+        
+        return self._GetFlagHashIds( 'has_iptc', hash_ids_table_name )
+        
+    
+    def GetHasSoftwareSource( self, hash_id: int ):
+        
+        return self._GetHasFlag( 'has_software_source', hash_id )
+        
+    
+    def GetHasSoftwareSourceHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
+        
+        return self._GetFlagHashIds( 'has_software_source', hash_ids_table_name )
         
     
     def GetHasTransparency( self, hash_id: int ):
         
-        result = self._Execute( 'SELECT hash_id FROM has_transparency WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
+        return self._GetHasFlag( 'has_transparency', hash_id )
         
     
     def GetHasTransparencyHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
         
-        has_transparency_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_transparency USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        return self._GetFlagHashIds( 'has_transparency', hash_ids_table_name )
         
-        return has_transparency_hash_ids
+    
+    def GetHasXMP( self, hash_id: int ):
+        
+        return self._GetHasFlag( 'has_xmp', hash_id )
+        
+    
+    def GetHasXMPHashIds( self, hash_ids_table_name: str ) -> set[ int ]:
+        
+        return self._GetFlagHashIds( 'has_xmp', hash_ids_table_name )
         
     
     def GetMime( self, hash_id: int ) -> int:
@@ -194,7 +241,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
                 ( 'files_info', 'hash_id' ),
                 ( 'files_info_forced_filetypes', 'hash_id' ),
                 ( 'has_exif', 'hash_id' ),
+                ( 'has_xmp', 'hash_id' ),
+                ( 'has_iptc', 'hash_id' ),
                 ( 'has_human_readable_embedded_metadata', 'hash_id' ),
+                ( 'has_software_source', 'hash_id' ),
                 ( 'has_icc_profile', 'hash_id' ),
                 ( 'has_transparency', 'hash_id' ),
                 ( 'blurhashes', 'hash_id' )
@@ -249,50 +299,37 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def SetHasEXIF( self, hash_id: int, has_exif: bool ):
         
-        if has_exif:
-            
-            self._Execute( 'INSERT OR IGNORE INTO has_exif ( hash_id ) VALUES ( ? );', ( hash_id, ) )
-            
-        else:
-            
-            self._Execute( 'DELETE FROM has_exif WHERE hash_id = ?;', ( hash_id, ) )
-            
+        self._SetHasFlag( 'has_exif', hash_id, has_exif )
         
     
     def SetHasHumanReadableEmbeddedMetadata( self, hash_id: int, has_human_readable_embedded_metadata: bool ):
         
-        if has_human_readable_embedded_metadata:
-            
-            self._Execute( 'INSERT OR IGNORE INTO has_human_readable_embedded_metadata ( hash_id ) VALUES ( ? );', ( hash_id, ) )
-            
-        else:
-            
-            self._Execute( 'DELETE FROM has_human_readable_embedded_metadata WHERE hash_id = ?;', ( hash_id, ) )
-            
+        self._SetHasFlag( 'has_human_readable_embedded_metadata', hash_id, has_human_readable_embedded_metadata )
         
     
     def SetHasICCProfile( self, hash_id: int, has_icc_profile: bool ):
         
-        if has_icc_profile:
-            
-            self._Execute( 'INSERT OR IGNORE INTO has_icc_profile ( hash_id ) VALUES ( ? );', ( hash_id, ) )
-            
-        else:
-            
-            self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
-            
+        self._SetHasFlag( 'has_icc_profile', hash_id, has_icc_profile )
+        
+    
+    def SetHasIPTC( self, hash_id: int, has_iptc: bool ):
+        
+        self._SetHasFlag( 'has_iptc', hash_id, has_iptc )
+        
+    
+    def SetHasSoftwareSource( self, hash_id: int, has_software_source: bool ):
+        
+        self._SetHasFlag( 'has_software_source', hash_id, has_software_source )
         
     
     def SetHasTransparency( self, hash_id: int, has_transparency: bool ):
         
-        if has_transparency:
-            
-            self._Execute( 'INSERT OR IGNORE INTO has_transparency ( hash_id ) VALUES ( ? );', ( hash_id, ) )
-            
-        else:
-            
-            self._Execute( 'DELETE FROM has_transparency WHERE hash_id = ?;', ( hash_id, ) )
-            
+        self._SetHasFlag( 'has_transparency', hash_id, has_transparency )
+        
+    
+    def SetHasXMP( self, hash_id: int, has_xmp: bool ):
+        
+        self._SetHasFlag( 'has_xmp', hash_id, has_xmp )
         
     
     def SetBlurhash( self, hash_id: int, blurhash: str ):

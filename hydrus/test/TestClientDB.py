@@ -426,6 +426,15 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True, 0 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_EXIF, False, 1 ) )
         
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP, True, 0 ) )
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_XMP, False, 1 ) )
+        
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC, True, 0 ) )
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_IPTC, False, 1 ) )
+        
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, True, 0 ) )
+        tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_SOFTWARE_SOURCE, False, 1 ) )
+        
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True, 0 ) )
         tests.append( ( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False, 1 ) )
         

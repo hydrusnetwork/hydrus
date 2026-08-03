@@ -125,8 +125,14 @@ class Predicate( Enum ):
     NO_TRANSPARENCY = auto()
     HAS_EXIF = auto()
     NO_EXIF = auto()
+    HAS_XMP = auto()
+    NO_XMP = auto()
+    HAS_IPTC = auto()
+    NO_IPTC = auto()
     HAS_HUMAN_READABLE_EMBEDDED_METADATA = auto()
     NO_HUMAN_READABLE_EMBEDDED_METADATA = auto()
+    HAS_SOFTWARE_SOURCE = auto()
+    NO_SOFTWARE_SOURCE = auto()
     HAS_ICC_PROFILE = auto()
     NO_ICC_PROFILE = auto()
     HAS_FORCED_FILETYPE = auto()
@@ -276,8 +282,16 @@ SYSTEM_PREDICATES = {
     'no (transparency|alpha)': (Predicate.NO_TRANSPARENCY, None, None, None),
     'has exif': (Predicate.HAS_EXIF, None, None, None),
     'no exif': (Predicate.NO_EXIF, None, None, None),
+    'has xmp': (Predicate.HAS_XMP, None, None, None),
+    'no xmp': (Predicate.NO_XMP, None, None, None),
+    'has iptc': (Predicate.HAS_IPTC, None, None, None),
+    'no iptc': (Predicate.NO_IPTC, None, None, None),
     'has.*embedded.*metadata': (Predicate.HAS_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
     'no.*embedded.*metadata': (Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
+    'has.*human-readable.*metadata': (Predicate.HAS_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
+    'no.*human-readable.*metadata': (Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
+    'has software/source metadata': (Predicate.HAS_SOFTWARE_SOURCE, None, None, None),
+    'no software/source metadata': (Predicate.NO_SOFTWARE_SOURCE, None, None, None),
     'has icc profile': (Predicate.HAS_ICC_PROFILE, None, None, None),
     'no icc profile': (Predicate.NO_ICC_PROFILE, None, None, None),
     'has forced filetype': (Predicate.HAS_FORCED_FILETYPE, None, None, None),
