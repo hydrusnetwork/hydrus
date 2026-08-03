@@ -103,6 +103,11 @@ def OpenExternallySingleFile( executable_manager: ExecutableManager, id_and_name
         raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+        
+        raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
+        
+    
     mime = media_result.GetMime()
     
     file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
@@ -126,6 +131,11 @@ def OpenExternallyURL( executable_manager: ExecutableManager, id_and_name: Hydru
     except HydrusExceptions.DataMissing:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
+        
+    
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+        
+        raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
     
     input_params = {
