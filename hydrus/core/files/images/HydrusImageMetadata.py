@@ -338,7 +338,7 @@ def GetJpegSubsamplingRaw( pil_image: PILImage.Image ) -> int:
     return result
     
 
-def GetSoftwareFromCommentInfoField( value ) -> str | None:
+def GetSoftwareSourceFromCommentInfoField( value ) -> str | None:
     
     if isinstance( value, str ):
         
@@ -363,7 +363,7 @@ def GetSoftwareFromCommentInfoField( value ) -> str | None:
     return None
     
 
-def GetSoftwareFromPilInfo( pil_image: PILImage.Image ) -> str | None:
+def GetSoftwareSourceFromPilInfo( pil_image: PILImage.Image ) -> str | None:
     
     info_dict = pil_image.info.copy()
     
@@ -388,7 +388,7 @@ def GetSoftwareFromPilInfo( pil_image: PILImage.Image ) -> str | None:
             value = info_dict[ 'comment' ]
             
         
-        software = GetSoftwareFromCommentInfoField( value )
+        software = GetSoftwareSourceFromCommentInfoField( value )
         
         if software is not None:
             
@@ -428,7 +428,14 @@ def GetSoftwareFromPilInfo( pil_image: PILImage.Image ) -> str | None:
 
 def HasEXIF( pil_image: PILImage.Image ) -> bool:
     
-    result = GetEXIFDict( pil_image )
+    try:
+        
+        result = GetEXIFDict( pil_image )
+        
+    except Exception as e:
+        
+        return False
+        
     
     return result is not None
     
@@ -494,6 +501,20 @@ def HasICCProfile( pil_image: PILImage.Image ) -> bool:
     return False
     
 
+def HasSoftwareSource( pil_image: PILImage.Image ) -> bool:
+    
+    try:
+        
+        result = GetSoftwareSourceFromPilInfo( pil_image )
+        
+    except Exception as e:
+        
+        return False
+        
+    
+    return result is not None
+    
+
 # we parse and display this stuff in other places
 # ultimately I guess I should really find the three comment fields we want and whitelist them, rather than trying to blacklist every whack decoder field
 # but I think I do fall on the side of 'yeah let's expose and put human eyes what crazy stuff is going on' so we discover new things
@@ -534,8 +555,8 @@ PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF = {
     'aspect',
     'xmp', # xmp stuff
     'XML:com.adobe.xmp', # xmp stuff
-    'iptc', # ye olde XMP
-    'Raw profile type iptc', # ye olde XMP
+    'iptc', # ye olde industry/enterprise XMP
+    'Raw profile type iptc', # ye olde industry/enterprise XMP
     'default_image', #png thing
     'Creator',
     'creator',
@@ -572,7 +593,7 @@ def WashPilImageInfoDictForHumanReadableMetadata( info_dict: dict ) -> dict:
             
         
         # we fetch this elsewhere
-        if key in ( 'comment', 'Comment' ) and GetSoftwareFromCommentInfoField( value ) is not None:
+        if key in ( 'comment', 'Comment' ) and GetSoftwareSourceFromCommentInfoField( value ) is not None:
             
             continue
             

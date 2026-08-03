@@ -104,7 +104,7 @@ def GetSoup( html ):
         
     else:
         
-        message = 'This client does not have access to either lxml or html5lib, and so it cannot parse html. Please install one of these parsing libraries and restart the client.'
+        message = 'Neither lxml or html5lib seem to be available, and so I cannot parse html. Please install one of these parsing libraries.'
         
         raise HydrusExceptions.ParseException( message )
         

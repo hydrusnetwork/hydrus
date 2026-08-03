@@ -1352,11 +1352,11 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                     
                     talked_about_icc_profile = False
                     
-                    software = HydrusImageMetadata.GetSoftwareFromPilInfo( raw_pil_image )
+                    software_source = HydrusImageMetadata.GetSoftwareSourceFromPilInfo( raw_pil_image )
                     
-                    if software is not None:
+                    if software_source is not None:
                         
-                        extra_rows.append( ( 'source', software ) )
+                        extra_rows.append( ( 'software/source', software_source ) )
                         
                     
                     if mime == HC.IMAGE_JPEG:
