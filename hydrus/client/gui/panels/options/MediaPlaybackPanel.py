@@ -118,17 +118,12 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         qt_media_panel = ClientGUICommon.StaticBox( self, 'QtMediaPlayer' )
         
+        self._qt_media_player_initialise_audio_devices_button = ClientGUICommon.BetterButton( qt_media_panel, 'fetch and initialise Qt audio devices', self._FetchAndInitialiseQtAudioDevices )
+        
         self._qt_media_player_preferred_audio_device = ClientGUICommon.BetterChoice( qt_media_panel )
         self._qt_media_player_preferred_audio_device.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only works on new players, so restart the client if you re-use QtMediaPlayers.' ) )
         
-        self._qt_media_player_preferred_audio_device.addItem( 'default', None )
-        
-        for audio_device in ClientGUIQtMediaPlayer.GetAvailableAudioDevices():
-            
-            self._qt_media_player_preferred_audio_device.addItem( audio_device.description(), bytes( audio_device.id() ).hex() )
-            
-        
-        self._qt_media_player_preferred_audio_device.addItem( 'null - DEBUG: Do not use any audio output device', -1 )
+        self._qt_media_player_preferred_audio_device.setEnabled( False )
         
         self._qt_media_player_null_audio_on_silent_media = QW.QCheckBox( qt_media_panel )
         self._qt_media_player_null_audio_on_silent_media.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you have unusual audio issues when playing silent media like animated gifs, try this.' ) )
@@ -217,17 +212,6 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._do_not_setgeometry_on_an_mpv.setChecked( self._new_options.GetBoolean( 'do_not_setgeometry_on_an_mpv' ) )
         
         self._mpv_preferred_audio_device.SetValue( self._new_options.GetNoneableString( 'mpv_preferred_audio_device' ) )
-        
-        qt_media_player_no_audio_device = self._new_options.GetBoolean( 'qt_media_player_no_audio_device' )
-        
-        if qt_media_player_no_audio_device:
-            
-            self._qt_media_player_preferred_audio_device.SetValue( -1 )
-            
-        else:
-            
-            self._qt_media_player_preferred_audio_device.SetValue( self._new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_id_hex' ) )
-            
         
         self._qt_media_player_opengl_test.setChecked( self._new_options.GetBoolean( 'qt_media_player_opengl_test' ) )
         self._qt_media_player_null_audio_on_silent_media.setChecked( self._new_options.GetBoolean( 'qt_media_player_null_audio_on_silent_media' ) )
@@ -318,6 +302,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
+        rows.append( self._qt_media_player_initialise_audio_devices_button )
         rows.append( ( 'Preferred audio output device:', self._qt_media_player_preferred_audio_device ) )
         rows.append( ( 'DEBUG: Set null audio device on silent media:', self._qt_media_player_null_audio_on_silent_media ) )
         rows.append( ( 'DEBUG: Use the same QtMediaPlayer through media transitions:', self._persist_media_window_qt_media_player ) )
@@ -388,6 +373,32 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         all_selected_are_deletable = selected_mimes.issubset( deletable_mimes )
         
         return all_selected_are_deletable
+        
+    
+    def _FetchAndInitialiseQtAudioDevices( self ):
+        
+        self._qt_media_player_preferred_audio_device.addItem( 'default', None )
+        
+        for audio_device in ClientGUIQtMediaPlayer.GetAvailableAudioDevices():
+            
+            self._qt_media_player_preferred_audio_device.addItem( audio_device.description(), bytes( audio_device.id() ).hex() )
+            
+        
+        self._qt_media_player_preferred_audio_device.addItem( 'null - DEBUG: Do not use any audio output device', -1 )
+        
+        qt_media_player_no_audio_device = self._new_options.GetBoolean( 'qt_media_player_no_audio_device' )
+        
+        if qt_media_player_no_audio_device:
+            
+            self._qt_media_player_preferred_audio_device.SetValue( -1 )
+            
+        else:
+            
+            self._qt_media_player_preferred_audio_device.SetValue( self._new_options.GetNoneableString( 'qt_media_player_preferred_audio_device_id_hex' ) )
+            
+        
+        self._qt_media_player_initialise_audio_devices_button.setVisible( False )
+        self._qt_media_player_preferred_audio_device.setEnabled( True )
         
     
     def _FetchMPVAudioDevices( self ):
@@ -614,25 +625,28 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetNoneableString( 'mpv_preferred_audio_device', self._mpv_preferred_audio_device.GetValue() )
         
-        qt_media_player_preferred_audio_device_id_hex = self._qt_media_player_preferred_audio_device.GetValue()
-        
-        if qt_media_player_preferred_audio_device_id_hex == -1:
+        if self._qt_media_player_preferred_audio_device.isEnabled():
             
-            self._new_options.SetBoolean( 'qt_media_player_no_audio_device', True )
+            qt_media_player_preferred_audio_device_id_hex = self._qt_media_player_preferred_audio_device.GetValue()
             
-        else:
-            
-            self._new_options.SetBoolean( 'qt_media_player_no_audio_device', False )
-            
-            if qt_media_player_preferred_audio_device_id_hex is None:
+            if qt_media_player_preferred_audio_device_id_hex == -1:
                 
-                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', None )
-                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', None )
+                self._new_options.SetBoolean( 'qt_media_player_no_audio_device', True )
                 
             else:
                 
-                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', qt_media_player_preferred_audio_device_id_hex )
-                self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', self._qt_media_player_preferred_audio_device.currentText() )
+                self._new_options.SetBoolean( 'qt_media_player_no_audio_device', False )
+                
+                if qt_media_player_preferred_audio_device_id_hex is None:
+                    
+                    self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', None )
+                    self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', None )
+                    
+                else:
+                    
+                    self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_id_hex', qt_media_player_preferred_audio_device_id_hex )
+                    self._new_options.SetNoneableString( 'qt_media_player_preferred_audio_device_name', self._qt_media_player_preferred_audio_device.currentText() )
+                    
                 
             
         
