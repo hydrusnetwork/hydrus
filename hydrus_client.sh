@@ -27,6 +27,7 @@ fi
 #
 # Also, if you need to put environment variables in this script, do it like this (before the program is booted!):
 #
+# export QT_AUDIO_BACKEND=pulseaudio
 # export QT_QPA_PLATFORM=xcb
 # unset WAYLAND_DISPLAY
 #

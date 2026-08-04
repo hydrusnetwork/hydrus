@@ -119,6 +119,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         qt_media_panel = ClientGUICommon.StaticBox( self, 'QtMediaPlayer' )
         
         self._qt_media_player_initialise_audio_devices_button = ClientGUICommon.BetterButton( qt_media_panel, 'fetch and initialise Qt audio devices', self._FetchAndInitialiseQtAudioDevices )
+        self._qt_media_player_initialise_audio_devices_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you are on Linux and this button causes an instacrash, try launching hydrus with "QT_AUDIO_BACKEND=pulseaudio" environment variable set. It may be Pipewire crashing things.' ) )
         
         self._qt_media_player_preferred_audio_device = ClientGUICommon.BetterChoice( qt_media_panel )
         self._qt_media_player_preferred_audio_device.setToolTip( ClientGUIFunctions.WrapToolTip( 'Only works on new players, so restart the client if you re-use QtMediaPlayers.' ) )

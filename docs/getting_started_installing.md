@@ -66,17 +66,6 @@ Running the program from source takes a little extra first-time setup, but it al
         **One user had a related error that caused a program crash any time he pressed any key. This was an _incompatibility_ with the `libxkbcommon` bundled with the built release. The solution here--and with any other severe crashes than can be traced to a specific bundled .so file--is to run from source.**
         
     
-    !!! note "FFMPEG support"
-        
-        Hydrus uses FFMPEG, but I do not bundle it with the Linux build. I assume you have a version you are happy with on your system.
-        
-        If you are uncertain whether you have FFMPEG, you either A) perhaps do not, or B) probably do, but it is an older 'LTS' version. Do not overwrite any system FFMPEG if you aren't sure of what you are doing.
-        
-        If you want the quick and easy fix, just go [here](https://github.com/BtbN/FFmpeg-Builds/releases) and download the `linux64 gpl non-shared`. Extract the big 'ffmpeg' executable to your install_dir/lib/bin folder.
-        
-        I am probably just going to bundle a nice new version of FFMPEG in the Linux build in future.
-        
-    
     !!! warning "Wayland (and MPV)"
         Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and [running from source](running_from_source.md) may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.
         
@@ -104,6 +93,12 @@ Running the program from source takes a little extra first-time setup, but it al
                 3. Boot the client and hit _help->about_ to see if it reports a version.
                 4. If it all seems good, hit _options->media playback_ to set up mpv as your player for video/audio and try to view some things.
                 5. If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider [running from source](running_from_source.md)
+    
+    ??? warning "Crashing on Qt Audio"
+        If hydrus crashes whenever requesting the Qt Audio Devices in the Options dialog, or otherwise when booting up a "QtMediaPlayer", it may be PipeWire causing the crash.
+        
+        Try `export QT_AUDIO_BACKEND=pulseaudio` in your export script to fix this!
+    
     ??? warning "MangoHUD and MPV"
         A user notes that MangoHUD may also interfere with mpv, causing crashes.
         
