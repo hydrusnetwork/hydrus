@@ -21,6 +21,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
 from hydrus.client.files import ClientFilesMaintenance
+from hydrus.client.files.images import ClientImageMetadata
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -1310,6 +1311,8 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
     mime = media.GetMime()
     top_line_text = ClientMediaResultPrettyInfo.ConvertInfoLinesToTextBlock( info_lines )
     exif_dict = None
+    xmp_dict = None
+    iptc_dict = None
     file_text = None
     extra_rows = []
     
@@ -1348,19 +1351,29 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                 
                 try:
                     
+                    talked_about_icc_profile = False
+                    
+                    raw_pil_image.load() # yes this is generally smart to up-front err on the side of max harvest
+                    
                     if exif_looking_good:
                         
                         exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
                         
                     
-                    # TODO: XMP and IPTC here
+                    if xmp_looking_good:
+                        
+                        xmp_dict = ClientImageMetadata.GetXMPDict( raw_pil_image )
+                        
+                    
+                    if iptc_looking_good:
+                        
+                        iptc_dict = ClientImageMetadata.GetIPTCDict( raw_pil_image )
+                        
                     
                     if human_readable_looking_good:
                         
                         file_text = HydrusImageMetadata.GetEmbeddedFileText( raw_pil_image )
                         
-                    
-                    talked_about_icc_profile = False
                     
                     if software_source_looking_good:
                         
@@ -1387,6 +1400,8 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                             extra_rows.append( ( 'subsampling', HydrusImageMetadata.subsampling_str_lookup[ result ]))
                             
                         
+                    
+                    # TODO: bundle all this to a sub-method
                     
                     if 'srgb' in raw_pil_image.info:
                         
@@ -1521,7 +1536,6 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
                             
                         
                     
-                    
                 finally:
                     
                     raw_pil_image.close()
@@ -1541,7 +1555,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
     
     frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Detailed File Metadata' )
     
-    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, top_line_text, exif_dict, file_text, extra_rows )
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, top_line_text, exif_dict, xmp_dict, iptc_dict, file_text, extra_rows )
     
     frame.SetPanel( panel )
     

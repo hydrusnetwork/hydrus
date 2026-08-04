@@ -102,7 +102,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: dict | None, file_text: str | None, extra_rows: list[ tuple[ str, str ] ] ):
+    def __init__( self, parent, mime: int, top_line_text: str, exif_dict: dict | None, xmp_dict: dict | None, iptc_dict: dict | None, file_text: str | None, extra_rows: list[ tuple[ str, str ] ] ):
         
         super().__init__( parent )
         
@@ -140,12 +140,30 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        text_panel = ClientGUICommon.StaticBox( self, 'embedded text' )
+        xmp_panel = ClientGUICommon.StaticBox( self, 'XMP' )
         
-        self._text = QW.QPlainTextEdit( text_panel )
-        self._text.setReadOnly( True )
+        self._xmp_text = QW.QPlainTextEdit( xmp_panel )
+        self._xmp_text.setReadOnly( True )
         
-        text_panel.Add( self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        xmp_panel.Add( self._xmp_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        iptc_panel = ClientGUICommon.StaticBox( self, 'IPTC' )
+        
+        self._iptc_text = QW.QPlainTextEdit( iptc_panel )
+        self._iptc_text.setReadOnly( True )
+        
+        iptc_panel.Add( self._iptc_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        human_readable_text_panel = ClientGUICommon.StaticBox( self, 'human-readable text' )
+        
+        self._human_readable_text = QW.QPlainTextEdit( human_readable_text_panel )
+        self._human_readable_text.setReadOnly( True )
+        
+        human_readable_text_panel.Add( self._human_readable_text, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
@@ -182,13 +200,63 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
             self._exif_listctrl.AddDatas( datas )
             
         
-        if file_text is None:
+        if xmp_dict is None:
             
-            text_panel.setVisible( False )
+            xmp_panel.setVisible( False )
             
         else:
             
-            self._text.setPlainText( file_text )
+            from hydrus.core.files.images import HydrusImageMetadata
+            
+            try:
+                
+                xmp_text = HydrusImageMetadata.render_dict( xmp_dict, 0 )
+                
+                if xmp_text is None:
+                    
+                    xmp_text = 'XMP data appears to be empty!'
+                    
+                
+            except Exception as e:
+                
+                xmp_text = f'Could not render XMP text! {e}'
+                
+            
+            self._xmp_text.setPlainText( xmp_text )
+            
+        
+        if iptc_dict is None:
+            
+            iptc_panel.setVisible( False )
+            
+        else:
+            
+            from hydrus.core.files.images import HydrusImageMetadata
+            
+            try:
+                
+                iptc_text = HydrusImageMetadata.render_dict( iptc_dict, 0 )
+                
+                if iptc_text is None:
+                    
+                    iptc_text = 'IPTC data appears to be empty!'
+                    
+                
+            except Exception as e:
+                
+                iptc_text = f'Could not render IPTC text! {e}'
+                
+            
+            self._iptc_text.setPlainText( iptc_text )
+            
+        
+        if file_text is None:
+            
+            human_readable_text_panel.setVisible( False )
+            
+        else:
+            
+            self._human_readable_text.setPlainText( file_text )
             
         
         if len( extra_rows ) == 0:
@@ -202,7 +270,9 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, top_line_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, exif_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, text_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, xmp_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, iptc_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, human_readable_text_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, extra_rows_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
