@@ -2051,6 +2051,7 @@ class NotePanel( QW.QWidget ):
         self._parent = parent
         
         self._name = name
+        self._note = note
         self._note_visible = note_visible
         
         self._note_name = ClientGUICommon.BetterStaticText( self, label = name )
@@ -2081,6 +2082,15 @@ class NotePanel( QW.QWidget ):
         self._note_name.installEventFilter( self )
         self._note_text.installEventFilter( self )
         
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Left-click to edit, Middle-click to copy, Right-click to hide/show.' ) )
+        
+    
+    def _CopyNote( self ):
+        
+        copy_text = self._name + '\n\n' + self._note
+        
+        CG.client_controller.pub( 'clipboard', 'text', copy_text )
+        
     
     def eventFilter( self, watched, event ):
         
@@ -2093,6 +2103,10 @@ class NotePanel( QW.QWidget ):
                 if event.button() == QC.Qt.MouseButton.LeftButton:
                     
                     self.editNote.emit( self._name )
+                    
+                elif event.button() == QC.Qt.MouseButton.MiddleButton:
+                    
+                    self._CopyNote()
                     
                 else:
                     
