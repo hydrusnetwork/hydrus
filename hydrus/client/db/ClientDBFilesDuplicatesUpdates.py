@@ -283,11 +283,25 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
     
     def AddPotentialDuplicates( self, media_id, potential_duplicate_media_ids_and_distances ):
         
+        king_hash_id = self.modules_files_duplicates_storage.GetKingHashId( media_id )
+        
+        if not self.modules_similar_files.FileIsInSystem( king_hash_id ):
+            
+            return
+            
+        
         inserts = []
         
         for ( potential_duplicate_media_id, distance ) in potential_duplicate_media_ids_and_distances:
             
             if potential_duplicate_media_id == media_id: # already duplicates!
+                
+                continue
+                
+            
+            king_hash_id = self.modules_files_duplicates_storage.GetKingHashId( potential_duplicate_media_id )
+            
+            if not self.modules_similar_files.FileIsInSystem( king_hash_id ):
                 
                 continue
                 

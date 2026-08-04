@@ -8185,6 +8185,21 @@ class DB( HydrusDB.HydrusDB ):
                 self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_software_source ( hash_id INTEGER PRIMARY KEY );' )
                 
             
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'clearing out location-orphaned potential duplicate pairs' )
+                
+                self.modules_files_duplicates_updates.ResyncPotentialPairsToHydrusLocalFileStorage()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some duplicate maintenance failed to work on update! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
         
         if False: # on version where we are happy with human-readable file metadata. do not want to pull the trigger on this big job until we are content
             
