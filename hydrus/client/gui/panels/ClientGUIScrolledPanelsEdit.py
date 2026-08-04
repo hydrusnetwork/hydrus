@@ -25,6 +25,7 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
@@ -888,6 +889,22 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from a copy from another notes dialog.' ) )
         
+        menu_template_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'copy_notes_dialog_copy_all' )
+        
+        tt = 'Copy all the notes in the dialog, or just the one in view?'
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'copy all notes', tt, check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'copy_notes_dialog_copy_json' )
+        
+        tt = 'Copy as technical JSON, which the paste button will accept, or as prettier, human text?'
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'copy as JSON', tt, check_manager ) )
+        
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
+        
         #
         
         index_to_select = 0
@@ -930,6 +947,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -999,11 +1017,47 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
     
     def _Copy( self ):
         
-        ( names_to_notes, deletee_names ) = self.GetValue()
+        if CG.client_controller.new_options.GetBoolean( 'copy_notes_dialog_copy_all' ):
+            
+            ( names_to_notes, deletee_names ) = self.GetValue()
+            
+        else:
+            
+            current_page = self._notebook.currentWidget()
+            
+            if current_page is None:
+                
+                return
+                
+            
+            current_page = typing.cast( QW.QPlainTextEdit, current_page )
+            
+            name = self._notebook.tabText( self._notebook.currentIndex() )
+            note_text = HydrusText.CleanNoteText( current_page.toPlainText() )
+            
+            names_to_notes = { name : note_text }
+            
         
-        text = json.dumps( names_to_notes )
+        if len( names_to_notes ) == 0:
+            
+            return
+            
         
-        CG.client_controller.pub( 'clipboard', 'text', text )
+        if CG.client_controller.new_options.GetBoolean( 'copy_notes_dialog_copy_json' ):
+            
+            text = json.dumps( names_to_notes )
+            
+        else:
+            
+            names_and_notes = sorted( names_to_notes.items(), key = lambda x : HydrusText.HumanTextSortKey( x[0] ) )
+            
+            text = '\n\n\n\n'.join( ( name + '\n\n' + note_text for ( name, note_text ) in names_and_notes ) )
+            
+        
+        if len( text ) > 0:
+            
+            CG.client_controller.pub( 'clipboard', 'text', text )
+            
         
     
     def _CurrentNoteChanged( self ):
