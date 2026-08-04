@@ -586,6 +586,7 @@ PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF = {
     'iptc', # ye olde industry/enterprise XMP
     'Raw profile type iptc', # ye olde industry/enterprise XMP
     'default_image', #png thing
+    'distortion', # some image-processing artifact
     'Creator',
     'creator',
     'Source',
@@ -596,6 +597,7 @@ PIL_INFO_KEYS_THAT_ARE_NOT_CONSIDERED_HUMAN_READABLE_STUFF = {
     'modify-date',
     'date:create',
     'date:modify',
+    'date:timestamp',
     'Thumb::MTime', # leaving this here as a reminder for another source of modified time
 }
 
