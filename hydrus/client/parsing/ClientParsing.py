@@ -92,21 +92,28 @@ def GetHTMLTagString( tag: bs4.Tag ):
     return ''.join( all_strings )
     
 
-def GetSoup( html ):
+def GetSoup( html, force_parser = None ):
     
-    if HTML5LIB_IS_OK:
+    if force_parser is not None:
         
-        parser = 'html5lib'
-        
-    elif LXML_IS_OK:
-        
-        parser = 'lxml'
+        parser = force_parser
         
     else:
         
-        message = 'Neither lxml or html5lib seem to be available, and so I cannot parse html. Please install one of these parsing libraries.'
-        
-        raise HydrusExceptions.ParseException( message )
+        if HTML5LIB_IS_OK:
+            
+            parser = 'html5lib'
+            
+        elif LXML_IS_OK:
+            
+            parser = 'lxml'
+            
+        else:
+            
+            message = 'Neither lxml or html5lib seem to be available, and so I cannot parse html. Please install one of these parsing libraries.'
+            
+            raise HydrusExceptions.ParseException( message )
+            
         
     
     with warnings.catch_warnings():

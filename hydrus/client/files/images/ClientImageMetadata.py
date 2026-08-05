@@ -1,6 +1,7 @@
 from PIL import Image as PILImage
 from PIL import IptcImagePlugin
 
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 
 # this big dict brought to you by ChatGPT, which grunked this whole https://www.iptc.org/std/IIM/4.2/specification/IIMV4.2.pdf for me
@@ -246,7 +247,14 @@ def GetXMPDict( pil_image: PILImage.Image ) -> dict | None:
             import bs4
             from hydrus.client.parsing import ClientParsing
             
-            root = ClientParsing.GetSoup( xmp_data )
+            try:
+                
+                root = ClientParsing.GetSoup( xmp_data, force_parser = 'xml' )
+                
+            except HydrusExceptions.ParseException:
+                
+                root = ClientParsing.GetSoup( xmp_data )
+                
             
             def get_name( node: bs4.element.Tag ) -> str:
                 
