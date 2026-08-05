@@ -459,7 +459,7 @@ def FilesAreVisuallySimilarRegionalLabHistogramsRaw( histograms_1: list[ LabHist
     
     scores = [ lab_score for ( interesting_tile, lab_score ) in lab_data ]
     
-    max_regional_score = max( scores )
+    max_regional_score: float = max( scores )
     mean_score = float( numpy.mean( scores ) )
     score_variance = float( numpy.var( scores ) )
     score_skew = skewness_numpy( scores )

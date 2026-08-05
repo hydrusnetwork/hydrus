@@ -863,7 +863,7 @@ class DateTimesButtonWithCopyPaste( QW.QWidget ):
     
     def SetValue( self, datetime_value_range: DateTimeWidgetValueRange, from_user = False ):
         
-        return self._datetimes_button.SetValue( datetime_value_range, from_user = from_user )
+        self._datetimes_button.SetValue( datetime_value_range, from_user = from_user )
         
     
 

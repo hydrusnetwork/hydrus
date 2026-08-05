@@ -109,7 +109,7 @@ class MockController( object ):
     
     def CallToThread( self, callable, *args, **kwargs ):
         
-        return TG.test_controller.CallToThread( callable, *args, **kwargs )
+        TG.test_controller.CallToThread( callable, *args, **kwargs )
         
     
     def JustWokeFromSleep( self ):

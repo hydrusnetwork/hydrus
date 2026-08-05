@@ -62,7 +62,8 @@ class BytesControl( QW.QWidget ):
     
     def SetSeparatedValue( self, value, unit ):
         
-        return ( self._spin.setValue( value ), self._unit.SetValue( unit ) )
+        self._spin.setValue( value )
+        self._unit.SetValue( unit )
         
     
     def SetValue( self, value: int ):

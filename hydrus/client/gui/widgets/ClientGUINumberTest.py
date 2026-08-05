@@ -170,7 +170,7 @@ class NumberTestWidget( QW.QWidget ):
     
     def _SetSubValue( self, value ):
         
-        return self._value.setValue( value )
+        self._value.setValue( value )
         
     
     def _GetAbsoluteValue( self ):
@@ -180,7 +180,7 @@ class NumberTestWidget( QW.QWidget ):
     
     def _SetAbsoluteValue( self, value ):
         
-        return self._absolute_plus_or_minus.setValue( value )
+        self._absolute_plus_or_minus.setValue( value )
         
     
     def _UpdateVisibility( self ):

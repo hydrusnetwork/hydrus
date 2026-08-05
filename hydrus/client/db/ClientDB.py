@@ -6512,11 +6512,6 @@ class DB( HydrusDB.HydrusDB ):
             
             file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES )
             
-            def status_hook( s ):
-                
-                job_status.SetStatusText( s, 2 )
-                
-            
             for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
                 
                 if job_status.IsCancelled():
