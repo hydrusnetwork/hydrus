@@ -196,7 +196,12 @@ class Controller( HydrusController.HydrusController ):
         
         self._splash = None
         
-        self.gui = None
+        if typing.TYPE_CHECKING:
+            
+            from hydrus.client.gui import ClientGUI
+            
+
+        self.gui: "ClientGUI.FrameGUI" = None
         
         super().__init__( db_dir, logger )
         
