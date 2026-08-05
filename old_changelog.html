@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_682"><a href="#version_682">version 682</a></h2>
+                    <ul>
+                        <li><h3>more file metadata</h3></li>
+                        <li>the client can now inspect an image file and tell if it has (EXIF-like) XMP or IPTC metadata! the data will also show in the media viewer, in the extra info dialog</li>
+                        <li>renamed the new 'source' metadata line to 'software/source'. sometimes it is 'photoshop'; sometimes it is a camera model; sometimes it is both</li>
+                        <li>the client now tracks and generates 'has software/source', 'has xmp', and 'has iptc' flags, just like 'has exif' and friends. all _new_ files will get these flags and it is all saved to db and so on</li>
+                        <li>there are new 'system:file property' predicates to search for these flags; they are also parseable</li>
+                        <li>the file maintenance system has new jobs to regen these flags for existing files</li>
+                        <li>these flags appear in the duplicate filter comparison statements and in some file flyout menu summaries and so on, similarly</li>
+                        <li>'has embedded metadata' and 'has non-EXIF metadata' and similar terms are now renamed (back) to 'has human-readable metadata'. this flag is now absolutely intended to be Artist, Title, Comment, and AI prompts kind of stuff. 'some dude probably typed this in once metadata'</li>
+                        <li>I am, again, not yet triggering the big (optional) 'regen who has human-readable metadata' job for all existing files, but I think we are just about ready, so if no one has any issues with today's work, it'll be next week. we'll do all four xmp, iptc, software/source, and human-readable flags in one go and make something more useful out of all this. if you are an advanced user, give these new flags a spin and let me know what you think</li>
+                        <li><h3>Client API</h3></li>
+                        <li>file_metadata call now says `has_xmp`, `has_iptc`, and `has_software_source`, reflecting the above changes</li>
+                        <li>Client API version is now 95</li>
+                        <li><h3>misc</h3></li>
+                        <li>the right-hand notes hover window in the media viewer now copies the name/note_text on a middle-click. it also has a tooltip that says what different clicks do (is this obscuring/annoying?)</li>
+                        <li>the 'edit file notes' dialog has a little cog icon to alter how the copy button works; you can say whether you want all notes or just the current one in view, and you can say whether to copy as JSON, which the paste button accepts, or something more human</li>
+                        <li>fixed the new GraphicsView thumbnail widget test to accept drag and drops</li>
+                        <li>the options dialog now hides the Qt audio device fetch and list initialisation behind a button click. this has been a source of dialog crashing and other hassle in the past, so, like for mpv, the dialog now needs you to click a thing to go ask your lower level OS dlls whats up with audio device availability right now</li>
+                        <li>I fixed an issue in the duplicates system that was sometimes causing non-accessible potential duplicate pairs to be registered. it was when a serf (a non-king member) of a multi-file duplicate group was queued up for potential duplicate discovery and found a pair while the king had since been physically deleted (this typically requires some non-deleting duplicate-setting and then a king delete and then a re-search potentials action, but a big client can have a few warts like this). on update, all clients will run the 'resync potnential duplicate pairs to storage' maintenance job to clean up any location-orphaned pairs</li>
+                        <li>thanks to a user, fixed another instance of certain downloaders adding tags parsed in a gallery page fetch passing on their tags to a 'next page' gallery url</li>
+                        <li><h3>executables manager plan</h3></li>
+                        <li>I have planned out the basic shape of the executable manager, which is my big project for the second half of this year that will allow hydrus to call external exes and servers in a more flexible way. basically a reverse API that will add tech like 'please download this complicated URL' and 'generate clever tag suggestions for this file' without needing me to write the exe hooks. now I have sunken my teeth into it, I feel fairly good and hope to have richer 'open file/url externally' options page as the first step quite soon</li>
+                        <li>in closer detail, I had a think, made a plan, and sketched out some early enums and objects</li>
+                        <li>also wrote out a new serialisable tracker object for objects that have an immutable id and a string name label; something nicer than the hackery I have previously deployed in the downloader system</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>added `distortion` and `date:timestamp` to the ignored fields for human-readable metadata</li>
+                        <li>since we now track seven boolean flags for stuff like 'has exif' and 'has transparency', I cleaned up _some_ of the db storage code here. I considered folding it all into one table, but in my experience, this particular shape of data doesn't benefit from such a thing. I kept it separate and spammy but KISS and collapsed the code to more shared calls. the search code however is now pretty spammy so I will revisit this</li>
+                        <li>cleaned up some code in the master main gui drag and drop catcher and improved how it handles some drag mouse events. there's a small chance some odd drop bugs may be fixed in weirder OSes</li>
+                        <li>added some unit tests for the new file metadata flag tech</li>
+                        <li>fixed up some unit tests in the duplicates auto-resolution system that were skating on thin ice and needed tighter logic for my new 'only add potential duplicate pairs when they satisfy x and y' filter</li>
+                        <li>removed some old defunct Linux help regarding ffmpeg on the frozen builds. you got it now, bro</li>
+                        <li>fixed some 'waiting for a work slot' labelling in the downloaders UI</li>
+                        <li>a bunch of misc linting and some voodoo linting</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_681"><a href="#version_681">version 681</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -96,7 +133,7 @@
                         <li>there are no special instructions for the update. update as normal</li>
                         <li>since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week.</li>
                         <li>the library changes are--</li>
-                        <li>- ` PySide6` (Qt) from `6.9.3` to `6.10.3`</li>
+                        <li>- `PySide6` (Qt) from `6.9.3` to `6.10.3`</li>
                         <li>- OpenCV (`opencv-python-headless`) from `4.12.0.88` to `4.13.0.92`</li>
                         <li>- `beatifulsoup4` `4.14.3` to `4.15.0`</li>
                         <li>- `cbor2` `6.1.1` to `6.1.3`</li>

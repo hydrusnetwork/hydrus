@@ -3376,13 +3376,6 @@
 <p>One user reports that Fedora might need <code>libxkbcommon</code> too.</p>
 <p><strong>One user had a related error that caused a program crash any time he pressed any key. This was an <em>incompatibility</em> with the <code>libxkbcommon</code> bundled with the built release. The solution here--and with any other severe crashes than can be traced to a specific bundled .so file--is to run from source.</strong></p>
 </div>
-<div class="admonition note">
-<p class="admonition-title">FFMPEG support</p>
-<p>Hydrus uses FFMPEG, but I do not bundle it with the Linux build. I assume you have a version you are happy with on your system.</p>
-<p>If you are uncertain whether you have FFMPEG, you either A) perhaps do not, or B) probably do, but it is an older 'LTS' version. Do not overwrite any system FFMPEG if you aren't sure of what you are doing.</p>
-<p>If you want the quick and easy fix, just go <a href="https://github.com/BtbN/FFmpeg-Builds/releases">here</a> and download the <code>linux64 gpl non-shared</code>. Extract the big 'ffmpeg' executable to your install_dir/lib/bin folder.</p>
-<p>I am probably just going to bundle a nice new version of FFMPEG in the Linux build in future.</p>
-</div>
 <div class="admonition warning">
 <p class="admonition-title">Wayland (and MPV)</p>
 <p>Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. Newer versions are less buggy, and <a href="running_from_source.html">running from source</a> may improve the situation, but some of these issues, particularly mpv embedding, seem to be intractable.</p>
@@ -3414,6 +3407,11 @@ Then please do this:  <ol>
 </li>
 </ul>
 </div>
+<details class="warning">
+<summary>Crashing on Qt Audio</summary>
+<p>If hydrus crashes whenever requesting the Qt Audio Devices in the Options dialog, or otherwise when booting up a "QtMediaPlayer", it may be PipeWire causing the crash.</p>
+<p>Try <code>export QT_AUDIO_BACKEND=pulseaudio</code> in your export script to fix this!</p>
+</details>
 <details class="warning">
 <summary>MangoHUD and MPV</summary>
 <p>A user notes that MangoHUD may also interfere with mpv, causing crashes.</p>
@@ -3686,7 +3684,7 @@ Almost every OS you can name.</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 8, 2026 21:22:12 UTC">July 8, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 4, 2026 23:55:55 UTC">August 4, 2026</span>
   </span>
 
     
