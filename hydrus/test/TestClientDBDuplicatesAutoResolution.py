@@ -143,28 +143,26 @@ class TestClientDBDuplicatesAutoResolution( unittest.TestCase ):
         
         test_files = []
         
-        test_files.append( ( 'muh_jpg.jpg', '5d884d84813beeebd59a35e474fa3e4742d0f2b6679faa7609b245ddbbd05444' ) )
-        test_files.append( ( 'muh_png.png', 'cdc67d3b377e6e1397ffa55edc5b50f6bdf4482c7a6102c6f27fa351429d6f49' ) )
-        test_files.append( ( 'muh_apng.png', '9e7b8b5abc7cb11da32db05671ce926a2a2b701415d1b2cb77a28deea51010c3' ) )
-        test_files.append( ( 'muh_gif.gif', '00dd9e9611ebc929bfc78fde99a0c92800bbb09b9d18e0946cea94c099b211c2' ) )
+        test_files.append( 'muh_jpg.jpg' )
+        test_files.append( 'muh_png.png' )
+        test_files.append( 'dupe_test_1.gif' )
+        test_files.append( 'dupe_test_2.gif' )
         
         full_import_options_container = ImportOptionsManager.ImportOptionsManager.STATICGetDefaultInitialisedManager().GetDefaultImportOptionsContainerForCallerType( IOC.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL )
         
-        for ( filename, hex_hash ) in test_files:
+        for filename in test_files:
             
             TG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
             
             path = HydrusStaticDir.GetStaticPath( os.path.join( 'testing', filename ) )
-            
-            hash = bytes.fromhex( hex_hash )
-            
-            hashes.append( hash )
             
             file_import_job = ClientImportFiles.FileImportJob( path, full_import_options_container )
             
             file_import_job.GeneratePreImportHashAndStatus()
             
             file_import_job.GenerateInfo()
+            
+            hashes.append( file_import_job.GetHash() )
             
             file_import_status = self._write( 'import_file', file_import_job )
             
