@@ -8176,7 +8176,15 @@ class DB( HydrusDB.HydrusDB ):
             if not self._TableExists( 'has_xmp' ):
                 
                 self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_xmp ( hash_id INTEGER PRIMARY KEY );' )
+                
+            
+            if not self._TableExists( 'has_iptc' ):
+                
                 self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_iptc ( hash_id INTEGER PRIMARY KEY );' )
+                
+            
+            if not self._TableExists( 'has_software_source' ):
+                
                 self._Execute( 'CREATE TABLE IF NOT EXISTS main.has_software_source ( hash_id INTEGER PRIMARY KEY );' )
                 
             
@@ -8197,6 +8205,7 @@ class DB( HydrusDB.HydrusDB ):
             
         
         if False: # on version where we are happy with human-readable file metadata. do not want to pull the trigger on this big job until we are content
+            # actually yeah now we want to do it for 'has xmp', 'has iptc', and 'has software/source', and we MUST make it optional through a yes/no dialog
             
             try:
                 

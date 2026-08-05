@@ -7,6 +7,50 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 682](https://github.com/hydrusnetwork/hydrus/releases/tag/v682)
+
+### more file metadata
+
+* the client can now inspect an image file and tell if it has (EXIF-like) XMP or IPTC metadata! the data will also show in the media viewer, in the extra info dialog
+* renamed the new 'source' metadata line to 'software/source'. sometimes it is 'photoshop'; sometimes it is a camera model; sometimes it is both
+* the client now tracks and generates 'has software/source', 'has xmp', and 'has iptc' flags, just like 'has exif' and friends. all _new_ files will get these flags and it is all saved to db and so on
+* there are new 'system:file property' predicates to search for these flags; they are also parseable
+* the file maintenance system has new jobs to regen these flags for existing files
+* these flags appear in the duplicate filter comparison statements and in some file flyout menu summaries and so on, similarly
+* 'has embedded metadata' and 'has non-EXIF metadata' and similar terms are now renamed (back) to 'has human-readable metadata'. this flag is now absolutely intended to be Artist, Title, Comment, and AI prompts kind of stuff. 'some dude probably typed this in once metadata'
+* I am, again, not yet triggering the big (optional) 'regen who has human-readable metadata' job for all existing files, but I think we are just about ready, so if no one has any issues with today's work, it'll be next week. we'll do all four xmp, iptc, software/source, and human-readable flags in one go and make something more useful out of all this. if you are an advanced user, give these new flags a spin and let me know what you think
+
+### Client API
+
+* file_metadata call now says `has_xmp`, `has_iptc`, and `has_software_source`, reflecting the above changes
+* Client API version is now 95
+
+### misc
+
+* the right-hand notes hover window in the media viewer now copies the name/note_text on a middle-click. it also has a tooltip that says what different clicks do (is this obscuring/annoying?)
+* the 'edit file notes' dialog has a little cog icon to alter how the copy button works; you can say whether you want all notes or just the current one in view, and you can say whether to copy as JSON, which the paste button accepts, or something more human
+* fixed the new GraphicsView thumbnail widget test to accept drag and drops
+* the options dialog now hides the Qt audio device fetch and list initialisation behind a button click. this has been a source of dialog crashing and other hassle in the past, so, like for mpv, the dialog now needs you to click a thing to go ask your lower level OS dlls whats up with audio device availability right now
+* I fixed an issue in the duplicates system that was sometimes causing non-accessible potential duplicate pairs to be registered. it was when a serf (a non-king member) of a multi-file duplicate group was queued up for potential duplicate discovery and found a pair while the king had since been physically deleted (this typically requires some non-deleting duplicate-setting and then a king delete and then a re-search potentials action, but a big client can have a few warts like this). on update, all clients will run the 'resync potnential duplicate pairs to storage' maintenance job to clean up any location-orphaned pairs
+* thanks to a user, fixed another instance of certain downloaders adding tags parsed in a gallery page fetch passing on their tags to a 'next page' gallery url
+
+### executables manager plan
+
+* I have planned out the basic shape of the executable manager, which is my big project for the second half of this year that will allow hydrus to call external exes and servers in a more flexible way. basically a reverse API that will add tech like 'please download this complicated URL' and 'generate clever tag suggestions for this file' without needing me to write the exe hooks. now I have sunken my teeth into it, I feel fairly good and hope to have richer 'open file/url externally' options page as the first step quite soon
+* in closer detail, I had a think, made a plan, and sketched out some early enums and objects
+* also wrote out a new serialisable tracker object for objects that have an immutable id and a string name label; something nicer than the hackery I have previously deployed in the downloader system
+
+### boring stuff
+
+* added `distortion` and `date:timestamp` to the ignored fields for human-readable metadata
+* since we now track seven boolean flags for stuff like 'has exif' and 'has transparency', I cleaned up _some_ of the db storage code here. I considered folding it all into one table, but in my experience, this particular shape of data doesn't benefit from such a thing. I kept it separate and spammy but KISS and collapsed the code to more shared calls. the search code however is now pretty spammy so I will revisit this
+* cleaned up some code in the master main gui drag and drop catcher and improved how it handles some drag mouse events. there's a small chance some odd drop bugs may be fixed in weirder OSes
+* added some unit tests for the new file metadata flag tech
+* fixed up some unit tests in the duplicates auto-resolution system that were skating on thin ice and needed tighter logic for my new 'only add potential duplicate pairs when they satisfy x and y' filter
+* removed some old defunct Linux help regarding ffmpeg on the frozen builds. you got it now, bro
+* fixed some 'waiting for a work slot' labelling in the downloaders UI
+* a bunch of misc linting and some voodoo linting
+
 ## [Version 681](https://github.com/hydrusnetwork/hydrus/releases/tag/v681)
 
 ### misc
@@ -490,44 +534,3 @@ title: Changelog
 
 * moved some file parsing code out of `ClientGUILocalFileimports` to `ClientImportFileParse`
 * jiggled some 'make this panel x characters wide' numbers after last week's character-width update. this generally meant clearing out old +2 padding hacks and shaving some 64 to 60, that sort of thing, and I fixed a couple of things that were a little out of whack or sizing the wrong widget
-
-## [Version 672](https://github.com/hydrusnetwork/hydrus/releases/tag/v672)
-
-### misc
-
-* fixed a stupid error where the new-ish `media playback->ffmpeg call timeout` setting was not hooked up correctly on options dialog ok and was not saving! sorry for the trouble, I don't know how this slipped through testing
-* fixed an issue where edit-pasting a prefixed 'sha256:abcd...'-style hash into an existing 'system:hashes' would wipe out the existing hashes (issue #2015)
-* fixed the 'is this video rotated 90 degrees?' test in my ffmpeg output parsing for ffmpeg 8.1.x (which the windows builds moved to recently) (issue #1377)
-* improved the speed and precision of the core call in the 'hey roughly how wide is 16 characters for this widget?' size calculations used by stuff across the program. system:hash panel should fit better in different fonts and sizes now. this may make some tight multi-column lists (like the one in duplicate page, auto-resolution tab) go a bit wide, requiring you to shrink them a little manually to hide new horizontal scrollbars--forgive me
-* if a PNG file has chromaticity data but not gamma data, I now sub in a gamma of 0.45455 (which works well as a best-case fallback), and continue with the new ICC Profile-based chromaticity correction. thanks to the user who noticed this in the duplicate filter and had example files to test that rendered with a slightly different glow but were inexplicably marked, in an older version of the client, as pixel dupes
-
-### duplicates auto-resolution
-
-* the cog icon of the potential duplicate par search panel (which you see on dupe pages and a couple other places in auto-resolution UI) has a new 'start new potential duplicate pair search panels paused' entry. if you use a bunch of these and wrestling with the pause status is annoying, try it out
-* you can now use 'system:number of pixels' in the single-file 'test A or B using search terms' comparator
-* you can now use 'system:ratio' in the single-file 'test A or B using search terms' comparator
-* you can now use 'system:ratio' in the 'test A against B using file info' comparator, but the UI for it shows some default operator labels; `<` instead of `taller than`. the comparator summary label should work though
-* the system pred dropdown in that edit panel (this is the Metadata Conditional edit panel) collapses system:width, height, num_pixels, and ratio down to 'system:dimensions', like in a normal search page
-* added unit tests for the new comparators
-
-### some import options follow-up
-
-* added three simple examples to the top of the new import options help for 'setting up import previously deleted'; 'sending some tags elsewhere'; and 'forcing a tag redownload' as a stepping stone between 'ignore this whole system m8' and 'how to harmonically conjunct the polyhierarchic metalateral defaults'
-* also added an example of how to customise and clone URL Class defaults
-* added a 'help for this panel' button that links to the html help to the regular edit import options panel
-* the regular edit import options panel's favourite button has a new 'save current value as new favourite' entry in its menu, under edit/add
-* in the new import options system, the 'locations' import options now shows for post urls, watcher urls, and the subs defaults in simple mode
-
-### client api
-
-* added `/client_info`, accessible to all valid access keys, which provides a random hex `boot_id`, a float `boot_time`, and `currently_idle` bool, for tracking client restarts and throttling decisions
-* Client API version is now 92
-
-### boring cleanup
-
-* the 'fetch service id' button in review services has nicer error handling and now disables the button while it works
-* cleaned up how the 'set forced mimetype to these files' operation works behind the scenes
-* reworked how the sidebar taglist broadcasts tag changes to the current search; moving from an old pubsub to a newer Qt signal
-* fixed an issue with dissolving an OR predicate from the active predicates menu where the signal was being double-sent
-* reworked the `NumberTest` rendering tech to better handle custom number and operator rendering
-* the Number Tests across the program, which power a bunch of the newer system predicates where you can say 'width is approx 400 +/- 15%' are no longer coerced to integers behind the scenes. this doesn't affect much, but in the duplicates auto-resolution system, where you can do `A has height > 1.8x B`, that multiplier can now result in a float. in the trivial case of B height `1`, `1 * 1.8` is now less than `2`, rather than being rounded up
