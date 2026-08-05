@@ -1093,7 +1093,7 @@ class SchedulableJob( object ):
         
         if self._thread_slot_type is not None:
             
-            if not self._currently_working.set() and self.IsDue() and not HG.controller.ThreadSlotsAreAvailable( self._thread_slot_type ):
+            if not self._currently_working.is_set() and self.IsDue() and not HG.controller.ThreadSlotsAreAvailable( self._thread_slot_type ):
                 
                 return True
                 
