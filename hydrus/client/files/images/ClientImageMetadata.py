@@ -1,7 +1,6 @@
 from PIL import Image as PILImage
 from PIL import IptcImagePlugin
 
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 
 # this big dict brought to you by ChatGPT, which grunked this whole https://www.iptc.org/std/IIM/4.2/specification/IIMV4.2.pdf for me
