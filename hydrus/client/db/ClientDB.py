@@ -3723,7 +3723,10 @@ class DB( HydrusDB.HydrusDB ):
             
             self.modules_files_metadata_basic.SetHasTransparency( hash_id, file_import_job.HasTransparency() )
             self.modules_files_metadata_basic.SetHasEXIF( hash_id, file_import_job.HasEXIF() )
+            self.modules_files_metadata_basic.SetHasXMP( hash_id, file_import_job.HasXMP() )
+            self.modules_files_metadata_basic.SetHasIPTC( hash_id, file_import_job.HasIPTC() )
             self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
+            self.modules_files_metadata_basic.SetHasSoftwareSource( hash_id, file_import_job.HasSoftwareSource() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
             self.modules_files_metadata_basic.SetBlurhash( hash_id, file_import_job.GetBlurhash() )
             
