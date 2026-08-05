@@ -39,7 +39,7 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         raise NotImplemented()
         
     
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
+    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole ):
         
         if not index.isValid():
             
@@ -202,7 +202,7 @@ class ThumbnailPairListModelPendingAutoResolutionAction( ThumbnailPairListModel 
         return 3
         
     
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
+    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole ):
         
         if not index.isValid():
             
@@ -317,7 +317,7 @@ class ThumbnailPairListModelDeniedAutoResolutionAction( ThumbnailPairListModel )
         return 3
         
     
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
+    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole ):
         
         if not index.isValid():
             
@@ -377,7 +377,7 @@ class ThumbnailPairListModelTakenAutoResolutionAction( ThumbnailPairListModel ):
         return 3
         
     
-    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole.DisplayRole ):
+    def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole ):
         
         if not index.isValid():
             

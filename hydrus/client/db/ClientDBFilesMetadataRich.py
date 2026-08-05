@@ -21,7 +21,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
     def __init__(
         self,
         cursor: sqlite3.Cursor,
-        modules_services: ClientDBServices,
+        modules_services: ClientDBServices.ClientDBMasterServices,
         modules_hashes: ClientDBMaster.ClientDBMasterHashes,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
