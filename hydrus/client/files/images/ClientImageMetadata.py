@@ -251,7 +251,7 @@ def GetXMPDict( pil_image: PILImage.Image ) -> dict | None:
                 
                 root = ClientParsing.GetSoup( xmp_data, force_parser = 'xml' )
                 
-            except HydrusExceptions.ParseException:
+            except Exception as e:
                 
                 root = ClientParsing.GetSoup( xmp_data )
                 
