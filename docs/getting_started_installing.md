@@ -97,7 +97,7 @@ Running the program from source takes a little extra first-time setup, but it al
     ??? warning "Crashing on Qt Audio"
         If hydrus crashes whenever requesting the Qt Audio Devices in the Options dialog, or otherwise when booting up a "QtMediaPlayer", it may be PipeWire causing the crash.
         
-        Try `export QT_AUDIO_BACKEND=pulseaudio` in your export script to fix this!
+        Try `export QT_AUDIO_BACKEND=pulseaudio` in your boot script to fix this!
     
     ??? warning "MangoHUD and MPV"
         A user notes that MangoHUD may also interfere with mpv, causing crashes.
