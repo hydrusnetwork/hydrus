@@ -2935,6 +2935,11 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ 'media', 'thumbnails' ] )
         
+        # yes we actually want this for now. we want to eat file import and thumb drops generally, not handled at the viewport level (yet?)
+        # if you leave viewport to acceptdrops True, the default, you'll see 'drag leave received before drag enter' warnings as things get confused
+        self.setAcceptDrops( True )
+        self.viewport().setAcceptDrops( False )
+        
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
@@ -4835,6 +4840,23 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         self.Sort()
         
         self._PublishSelectionChange()
+        
+    
+    def dragEnterEvent( self, event: QG.QDragEnterEvent ):
+        
+        event.acceptProposedAction()
+        
+    
+    def dragMoveEvent( self, event: QG.QDragMoveEvent ):
+        
+        event.acceptProposedAction()
+        
+    
+    def dropEvent( self, event: QG.QDropEvent ):
+        
+        drop_target = CG.client_controller.gui.GetDropTarget()
+        
+        drop_target.eventFilter( self, event )
         
     
     def GetColour( self, colour_type ):

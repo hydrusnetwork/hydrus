@@ -584,9 +584,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._clipboard_watcher_destination_page_watcher = None
         self._clipboard_watcher_destination_page_urls = None
         
-        drop_target = ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped )
+        self._drop_target = ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped )
         self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped ) )
-        self._notebook.AddSupplementaryTabBarDropTarget( drop_target ) # ugly hack to make the case of files/media dropped onto a tab work
+        self._notebook.AddSupplementaryTabBarDropTarget( self._drop_target ) # ugly hack to make the case of files/media dropped onto a tab work
         
         self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self, self._controller.job_status_popup_queue )
         
@@ -7902,6 +7902,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def GetCurrentSessionPageAPIInfoDict( self ):
         
         return self._notebook.GetSessionAPIInfoDict( is_selected = True )
+        
+    
+    def GetDropTarget( self ) -> "ClientGUIDragDrop.FileDropTarget":
+        
+        return self._drop_target
         
     
     def GetMPVWidget( self, parent ):

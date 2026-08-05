@@ -253,10 +253,14 @@ class FileDropTarget( QC.QObject ):
                     
                     event.accept()
                     
+                    return True
+                    
                 
-            elif event.type() == QC.QEvent.Type.DragEnter:
+            elif event.type() in ( QC.QEvent.Type.DragEnter, QC.QEvent.Type.DragMove ):
                 
-                event.accept()
+                event.acceptProposedAction()
+                
+                return True
                 
             
         except Exception as e:
