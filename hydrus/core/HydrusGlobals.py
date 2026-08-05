@@ -15,7 +15,7 @@ if typing.TYPE_CHECKING:
     from hydrus.core import HydrusController
     
 
-controller: "HydrusController.HydrusController | None" = None
+controller: "HydrusController.HydrusController" = None
 
 # TODO: move the client, server, and any test-specific garbage to the new module Globals mate, and/or the controller objects themselves
 

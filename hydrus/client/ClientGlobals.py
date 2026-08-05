@@ -5,6 +5,6 @@ if typing.TYPE_CHECKING:
     from hydrus.client import ClientController
     
 
-client_controller: "ClientController.Controller | None" = None
+client_controller: "ClientController.Controller" = None
 
 NO_QT_MULTIMEDIA = False
