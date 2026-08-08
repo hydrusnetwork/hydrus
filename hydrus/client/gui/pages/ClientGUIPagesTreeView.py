@@ -724,8 +724,6 @@ class TreeViewWithDnD( QW.QTreeView ):
         self._saved_current_node_key = None
         
         self._filter_text = ''
-        self._pulse_node_key = None
-        self._pulse_step = 0
         
         self.collapsed.connect( self._OnTreeCollapsed )
         self.expanded.connect( self._OnTreeExpanded )
@@ -795,11 +793,6 @@ class TreeViewWithDnD( QW.QTreeView ):
         self.currentPageNameChanged.emit( page_name, tooltip )
         
     
-    def _ActivatePage( self, page_key ):
-        
-        CG.client_controller.gui.ShowPage( page_key )
-        
-    
     def _ApplyFilterToParent( self, parent: QC.QModelIndex ) -> bool:
         
         model = self.model()
@@ -859,77 +852,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             self._CollapseAllChildren( child )
             self.collapse( child )
             
-        
-    
-    def _DoPulseCurrentSelection( self ):
-        
-        model = self.model()
-        
-        if model is None or not hasattr( model, 'FindIndexForNodeKey' ):
-            
-            return
-            
-        
-        node_key = self._pulse_node_key
-        
-        if node_key is None:
-            
-            return
-            
-        
-        index = model.FindIndexForNodeKey( node_key )
-        
-        if not index.isValid():
-            
-            return
-            
-        
-        selection_model = self.selectionModel()
-        
-        if selection_model is None:
-            
-            return
-            
-        
-        if self._pulse_step % 2 == 0:
-            
-            selection_model.select(
-                index,
-                QC.QItemSelectionModel.SelectionFlag.ClearAndSelect |
-                QC.QItemSelectionModel.SelectionFlag.Rows
-            )
-            
-        else:
-            
-            selection_model.clearSelection()
-            self.setCurrentIndex( index )
-            
-        
-        self._pulse_step += 1
-        
-        if self._pulse_step < 7:
-            
-            QC.QTimer.singleShot( 90, self._DoPulseCurrentSelection )
-            
-        else:
-            
-            self._SetCurrentIndex( index )
-            
-        
-    
-    def _DuplicatePage( self, notebook, index ):
-        
-        notebook.DuplicatePage( index.row() )
-        
-    
-    def _CreateNewPage( self, notebook, index ):
-        
-        notebook.ChooseNewPage( index.row() )
-        
-    
-    def _ClosePage( self, notebook, index):
-        
-        notebook.ClosePage( index.row() )
         
     
     def _EmitCurrentPageText( self, index: QC.QModelIndex ):
@@ -1040,47 +962,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
     
-    def _PulseCurrentSelection( self ):
-        
-        if not self._ShouldAnimateCurrentNode():
-            
-            return
-            
-        
-        model = self.model()
-        index = self.currentIndex()
-        
-        if model is None or not index.isValid() or not hasattr( model, 'GetNodeKeyFromIndex' ):
-            
-            return
-            
-        
-        self._pulse_node_key = model.GetNodeKeyFromIndex( index )
-        self._pulse_step = 0
-        
-        self._DoPulseCurrentSelection()
-        
-    
-    def _RefreshAllPages( self, notebook ):
-        
-        notebook.RefreshAllPages()
-        
-    
-    def _RefreshPage( self, notebook, page_key ):
-        
-        page = notebook.GetPageFromPageKey( page_key )
-        
-        if page is not None:
-            
-            page.RefreshQuery()
-            
-        
-    
-    def _RenamePage( self, notebook, index ):
-        
-        notebook.RenamePage( index.row() )
-        
-    
     def _SetCurrentIndex( self, index: QC.QModelIndex, scroll = True ):
         
         if not index.isValid():
@@ -1105,7 +986,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         self._EmitCurrentIndexText( index )
         
     
-    def _SelectIndex( self, index: QC.QModelIndex, scroll = True, pulse = False ):
+    def _SelectIndex( self, index: QC.QModelIndex, scroll = True ):
         
         if not index.isValid():
             
@@ -1119,16 +1000,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             
             self.scrollTo( index, QW.QAbstractItemView.ScrollHint.PositionAtCenter )
             
-        
-        if pulse and 1==2:
-            
-            self._PulseCurrentSelection()
-            
-        
-    
-    def _ShouldAnimateCurrentNode( self ) -> bool:
-        
-        return CG.client_controller.new_options.GetBoolean( 'treeview_animate_current_node' )
         
     
     def _ShowContextMenu( self, point ):
@@ -1189,13 +1060,13 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
     
-    def RevealCurrentSelection( self, pulse = False ):
+    def RevealCurrentSelection( self ):
         
         current_page_index = self.model().FindIndexForPageKey( CG.client_controller.gui.GetCurrentPage().GetPageKey() )
         
         if current_page_index.isValid():
             
-            self._SelectIndex( current_page_index, scroll = True, pulse = pulse )
+            self._SelectIndex( current_page_index, scroll = True )
             
         
     
@@ -1262,7 +1133,7 @@ class TreeViewWithDnD( QW.QTreeView ):
                 
                 if CG.client_controller.new_options.GetBoolean( 'treeview_always_expand_to_current_tab_after_reset' ):
                     
-                    self.RevealCurrentSelection( pulse = self._ShouldAnimateCurrentNode() )
+                    self.RevealCurrentSelection()
                     
                 
             
