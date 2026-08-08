@@ -1228,6 +1228,11 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
     
     def _ChildSelectionChanged( self, notebook, index: int ):
         
+        if self.sender() != self.currentWidget():
+            
+            return
+            
+        
         self.selectionChanged.emit( notebook, index )
         
     

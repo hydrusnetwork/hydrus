@@ -1575,8 +1575,6 @@ class HistoryPanel( QW.QWidget ):
 # If we want a modular future, we want to drag the splitters out of the panels to a LayoutOverseer and all subcomponents need to be their own clear thing
 
 # TODO: when you go through an options cycle, this guy shrinks in width width, so some layout flag is missing maybe?
-
-# TODO: when this boots up, the focus seems to go to the first deepest item rather than the actual selected page. maybe an artifact of session load
 class TreeViewWithControls( QW.QWidget ):
     
     widgetAlignmentChanged = QC.Signal()
