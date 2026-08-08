@@ -1,4 +1,4 @@
-FROM alpine:3.23
+FROM alpine:3.24
 
 ARG UID
 ARG GID
@@ -14,7 +14,7 @@ RUN apk --no-cache add fvwm tigervnc xvfb supervisor opencv mpv mpv-libs ffmpeg 
  build-base libavif-dev libheif-dev libjxl-dev python3-dev freetype-dev fribidi-dev lcms2-dev libimagequant-dev libjpeg-turbo-dev libpng-dev libwebp-dev libxcb-dev openjpeg-dev py3-gpep517 py3-setuptools py3-wheel python3-dev tiff-dev zlib-dev
 
 RUN python3 -m venv /opt/venv --system-site-packages
-RUN /opt/venv/bin/pip install dateparser Pympler pillow-avif-plugin pillow-heif pillow-jxl-plugin
+RUN /opt/venv/bin/pip install dateparser Pympler pillow-avif-plugin pillow-heif==1.4.0 pillow-jxl-plugin
 
 RUN ln -fs /usr/bin/python3 /usr/bin/python && ln -fs /usr/bin/pip3 /usr/bin/pip && ln -fs vnc.html /usr/share/novnc/index.html
 
