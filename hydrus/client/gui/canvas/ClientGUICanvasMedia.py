@@ -1461,7 +1461,7 @@ class MediaContainer( QW.QWidget ):
         self._close_check_timer.timeout.connect( self._CheckClosingWidgets )
         
         self._media_window = None
-        self._tie_media_window_to_pauseplay_state = CG.client_controller.new_options.GetBoolean( 'always_start_media_windows_tied_to_pauseplay_state' )
+        self._tie_media_window_to_pauseplay_state = self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES and CG.client_controller.new_options.GetBoolean( 'always_start_media_windows_tied_to_pauseplay_state' )
         
         self._embed_button = EmbedButton( self, self._background_colour_generator )
         self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
@@ -2102,6 +2102,25 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def _UpdateWindowAlwaysOnTop( self ):
+        
+        if not self._tie_media_window_to_pauseplay_state:
+            
+            return
+            
+        
+        always_on_top = self.CurrentlyPresentingMediaWithDuration() and not self._media_window.IsPaused()
+        
+        if always_on_top == self._canvas.IsAlwaysOnTop():
+            
+            return
+            
+        
+        action = CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON if always_on_top else CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF
+        
+        self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( action ) )
+        
+    
     def AddPlayerMenus( self, menu: QW.QMenu ):
         
         player_menu = ClientGUIMenus.GenerateMenu( menu )
@@ -2138,6 +2157,8 @@ class MediaContainer( QW.QWidget ):
         
         self._media_window = None
         
+        self._UpdateWindowAlwaysOnTop()
+
         CG.client_controller.gui.UnregisterUIUpdateWindow( self )
         
         self.hide()
@@ -2466,11 +2487,6 @@ class MediaContainer( QW.QWidget ):
                 
                 self._media_window.Pause()
                 
-                if self._tie_media_window_to_pauseplay_state and self._canvas.IsAlwaysOnTop():
-                    
-                    self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF ) )
-                    
-                
             
         
     
@@ -2480,13 +2496,7 @@ class MediaContainer( QW.QWidget ):
             
             if self.CurrentlyPresentingMediaWithDuration():
                 
-                if self._tie_media_window_to_pauseplay_state and self._media_window.IsPaused() and not self._canvas.IsAlwaysOnTop():
-                    
-                    self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON ) )
-                    
-                
                 self._media_window.PausePlay()
-                
             
         
     
@@ -2676,6 +2686,8 @@ class MediaContainer( QW.QWidget ):
         
         self.show()
         
+        self._UpdateWindowAlwaysOnTop()
+        
     
     def ShouldHaveVolumeControl( self ):
         
@@ -2705,6 +2717,19 @@ class MediaContainer( QW.QWidget ):
     def SetTieMediaWindowOnTopToPausePlayState( self, tie_media_window_to_pauseplay_state: bool ):
         
         self._tie_media_window_to_pauseplay_state = tie_media_window_to_pauseplay_state
+        
+        if self._tie_media_window_to_pauseplay_state:
+            
+            self._UpdateWindowAlwaysOnTop()
+            
+        else:
+            
+            always_on_top = CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' )
+            
+            action = CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON if always_on_top else CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF
+            
+            self.sendApplicationCommand.emit( CAC.ApplicationCommand.STATICCreateSimpleCommand( action ) )
+            
         
     
     def sizeHint(self) -> QC.QSize:
@@ -3217,6 +3242,7 @@ class MediaContainer( QW.QWidget ):
     def TIMERUIUpdate( self ):
         
         self._ShowHideControlBar()
+        self._UpdateWindowAlwaysOnTop()
         
     
 

@@ -2308,6 +2308,7 @@ class CanvasWithHovers( Canvas ):
         self._top_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         
         self._media_container.zoomChanged.connect( self._top_hover.SetCurrentZoom )
+        self._media_container.sendApplicationCommand.connect( self.ProcessApplicationCommand, QC.Qt.ConnectionType.QueuedConnection )
         
         self._hovers.append( self._top_hover )
         
@@ -2356,7 +2357,7 @@ class CanvasWithHovers( Canvas ):
         self._window_always_on_top = False
         self._hide_window_frame = False # should always start with titlebar/frame (to establish taskbar gubbins?)
         
-        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' ):
+        if CG.client_controller.new_options.GetBoolean( 'always_start_media_viewers_always_on_top' ) and not self.IsAlwaysOnTopWhilePlaying():
             
             CG.client_controller.CallLaterQtSafe( self, 0.1, 'setting media viewer window on top', self._FlipWindowAlwaysOnTop )
             
@@ -3266,16 +3267,12 @@ class CanvasWithHovers( Canvas ):
                 
             elif action in ( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP, CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON, CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF ):
                 
-                if action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON:
-                    
-                    self._window_always_on_top = False
-                    
-                elif action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF:
-                    
-                    self._window_always_on_top = True
-                    
+                should_flip = action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP or ( action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON ) != self._window_always_on_top
                 
-                self._FlipWindowAlwaysOnTop()
+                if should_flip:
+                    
+                    self._FlipWindowAlwaysOnTop()
+                    
                 
             elif action == CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP:
                 
