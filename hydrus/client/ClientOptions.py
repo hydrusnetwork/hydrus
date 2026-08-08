@@ -610,6 +610,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_tags_scrolling_behaviour' : CC.MEDIA_VIEWER_TAGS_SCROLLING_BEHAVIOUR_ONLY_PROPAGATE_AFTER_DELAY,
             'zoom_switch_command' : CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM,
             'page_sidebar_alignment' : CC.DIRECTION_LEFT,
+            'treeview_indentation' : 20,
+            'treeview_row_height' : 20,
         }
         
         self._dictionary[ 'floats' ] = {

@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 class TabBar( QW.QTabBar ):
     
@@ -659,6 +660,30 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
 
+class TreeViewRowHeightDelegate( QW.QStyledItemDelegate ):
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        super().__init__( parent )
+        
+        self._row_height = 20
+        
+    
+    def SetRowHeight( self, row_height: int ):
+        
+        self._row_height = row_height
+        
+    
+    def sizeHint( self, option: QW.QStyleOptionViewItem, index: QC.QModelIndex ) -> QC.QSize:
+        
+        size_hint = super().sizeHint( option, index )
+        
+        size_hint.setHeight( self._row_height )
+        
+        return size_hint
+        
+    
+
 # TODO: THIS WHOLE THING IS A MESS OF FIVE DIFFERENT REWRITES, it needs a good look and cleanup and perhaps pulling into different pieces
 # Base tree view that uses a PagesNotebookTreeModel( QC.QAbstractItemModel ) to allow more control over pages/notebooks
 class TreeViewWithDnD( QW.QTreeView ):
@@ -671,6 +696,13 @@ class TreeViewWithDnD( QW.QTreeView ):
     def __init__( self, parent = None ):
         
         super().__init__( parent )
+        
+        self._row_height_delegate = TreeViewRowHeightDelegate( self )
+        
+        self.setItemDelegate( self._row_height_delegate )
+        self.setUniformRowHeights( True )
+        self.setIndentation( CG.client_controller.new_options.GetInteger( 'treeview_indentation' ) )
+        self.SetRowHeight( CG.client_controller.new_options.GetInteger( 'treeview_row_height' ) )
         
         self.setHeaderHidden( True )
         self.setAlternatingRowColors( CG.client_controller.new_options.GetBoolean( 'treeview_alternating_row_colours' ) )
@@ -729,6 +761,13 @@ class TreeViewWithDnD( QW.QTreeView ):
             
             model.modelReset.connect( self._ModelResetReapplyFilter )
             
+        
+    
+    def SetRowHeight( self, row_height: int ):
+    
+        self._row_height_delegate.SetRowHeight( row_height )
+        self.doItemsLayout()
+        self.viewport().update()
         
     
     def _EmitCurrentIndexText( self, index: QC.QModelIndex ):
@@ -1628,8 +1667,7 @@ class TreeViewWithControls( QW.QWidget ):
             self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
             
         
-        # TODO: change this to a cogiconbutton with the menu item stuff 
-        self._controls_button = ClientGUICommon.IconButton( self._controls, CC.global_icons().cog, self._ShowCogMenu )
+        self._controls_button = ClientGUIMenuButton.CogIconButton( self._controls, self._GetCogMenuTemplateItems() )
         self._controls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Tree view controls' ) )
         
         #
@@ -1709,23 +1747,6 @@ class TreeViewWithControls( QW.QWidget ):
             
         
         self._queued_floating_panel_reposition = False
-        
-    
-    def _AddBooleanMenuAction( self, menu, label: str, option_name: str, tooltip: str = None ):
-        
-        # TODO: move this out, since it is static, and probably move it to normal menu code
-        
-        action = menu.addAction( label )
-        action.setCheckable( True )
-        action.setChecked( CG.client_controller.new_options.GetBoolean( option_name ) )
-        action.triggered.connect( lambda checked, option_name = option_name: CG.client_controller.new_options.SetBoolean( option_name, checked ) )
-        
-        if tooltip is not None:
-            
-            action.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
-            
-        
-        return action
         
     
     def _CurrentPagePathClicked( self, event ):
@@ -1986,82 +2007,118 @@ class TreeViewWithControls( QW.QWidget ):
         self._current_page_path.setToolTip( tooltip )
         
     
-    def _ShowCogMenu( self ):
+    def _SetTreeViewIndentation( self, value: int ):
         
-        # if CG.client_controller.gui is not None:
-        #     self.placeholder_long_text = str( CG.client_controller.gui.GetTotalPageCounts() ) + str( CG.client_controller.gui.GetPagesHistory() ) + self.placeholder_long_text
-        #     self._expanding_panel.widget().setText( f'blah blah blah {self.placeholder_long_text}' )
+        CG.client_controller.new_options.SetInteger( 'treeview_indentation', value )
         
-        from hydrus.client.gui import ClientGUIMenus
+        self._tree.setIndentation( value )
         
-        menu = ClientGUIMenus.GenerateMenu( self )
+    
+    def _SetTreeViewRowHeight( self, value: int ):
         
-        if self._controls_at_top:
-            
-            menu.addAction( 'Move this control bar to the bottom', self._MoveControlBarDown )
-            
-        else:
-            
-            menu.addAction( 'Move this control bar to the top', self._MoveControlBarUp )
-            
-        # if self._panel_at_top:
-            
-        #     menu.addAction( 'Move expanding info panel to bottom', self._MoveExpandingPanelToBottom )
-            
-        # else:
-            
-        #     menu.addAction( 'Move expanding info panel to top', self._MoveExpandingPanelToTop )
-            
+        CG.client_controller.new_options.SetInteger( 'treeview_row_height', value )
         
-        menu.addSeparator()
+        self._tree.SetRowHeight( value )
         
-        if CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) == CC.DIRECTION_LEFT:
+    
+    def _GetCogMenuTemplateItems( self ) -> list[ ClientGUIMenuButton.MenuTemplateItem ]:
+        
+        def control_bar_position_title_call():
             
-            menu.addAction( 'Move tree sidebar to right', lambda: self._EmitAlignmentToggle( CC.DIRECTION_RIGHT ) )
-            
-        else:
-            
-            menu.addAction( 'Move tree sidebar to left', lambda: self._EmitAlignmentToggle( CC.DIRECTION_LEFT ) )
+            if self._controls_at_top:
+                
+                return 'Move this control bar to the bottom'
+                
+            else:
+                
+                return 'Move this control bar to the top'
+                
             
         
-        if CG.client_controller.new_options.GetInteger( 'page_sidebar_alignment' ) == CC.DIRECTION_LEFT:
+        def tree_sidebar_position_title_call():
             
-            menu.addAction( 'Move tags/preview sidebar to right', lambda: self._EmitTagViewAlignmentToggle( CC.DIRECTION_RIGHT ) )
-            
-        else:
-            
-            menu.addAction( 'Move tags/preview sidebar to left', lambda: self._EmitTagViewAlignmentToggle( CC.DIRECTION_LEFT ) )
-            
-        
-        if CG.client_controller.new_options.GetBoolean( 'treeview_hides_tabs' ):
-            
-            menu.addAction( 'Show the normal tab bar', self._ToggleTabBarVisibility )
-            
-        else:
-            
-            menu.addAction( 'Hide the normal tab bar', self._ToggleTabBarVisibility )
+            if CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) == CC.DIRECTION_LEFT:
+                
+                return 'Move tree sidebar to right'
+                
+            else:
+                
+                return 'Move tree sidebar to left'
+                
             
         
-        menu.addSeparator()
+        def tag_sidebar_position_title_call():
+            
+            if CG.client_controller.new_options.GetInteger( 'page_sidebar_alignment' ) == CC.DIRECTION_LEFT:
+                
+                return 'Move tags/preview sidebar to right'
+                
+            else:
+                
+                return 'Move tags/preview sidebar to left'
+                
+            
         
-        self._AddBooleanMenuAction( menu, 'Always expand to current tab after reset', 'treeview_always_expand_to_current_tab_after_reset', 'If this is unchecked, any refresh will respect all collapsed states, even if the current page is not showing. Otherwise, it will force expand nodes and highlight the current page every time.' )
-        self._AddBooleanMenuAction( menu, 'Collapse all children when parent is closed', 'treeview_collapse_all_children_upon_parent_closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.' )
-        #self._AddBooleanMenuAction( menu, 'Animate current node highlight', 'treeview_animate_current_node' )
-        alternating_rows_action = self._AddBooleanMenuAction( menu, 'Shade alternating rows', 'treeview_alternating_row_colours', 'Style the treeview with alternating colour shading per row.' )
-        alternating_rows_action.triggered.connect( lambda: self._tree.setAlternatingRowColors( alternating_rows_action.isChecked() ) )
-         
-        menu.addSeparator()
+        def tab_bar_visibility_title_call():
+            
+            if CG.client_controller.new_options.GetBoolean( 'treeview_hides_tabs' ):
+                
+                return 'Show the normal tab bar'
+                
+            else:
+                
+                return 'Hide the normal tab bar'
+                
+            
         
-        if CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' ):
+        def tree_sidebar_collapsibility_title_call():
             
-            menu.addAction( 'Prevent tree sidebar from collapsing', self._ToggleCollapsibility )
+            if CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' ):
+                
+                return 'Prevent tree sidebar from collapsing'
+                
+            else:
+                
+                return 'Allow collapsing tree sidebar (drag)'
+                
             
-        else:
-            
-            menu.addAction( 'Allow collapsing tree sidebar (drag)', self._ToggleCollapsibility )
-            
-            
-        menu.exec_( QG.QCursor.pos() )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( control_bar_position_title_call, 'Move the tree view control bar.', lambda: self._MoveControlBarDown() if self._controls_at_top else self._MoveControlBarUp() ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( tree_sidebar_position_title_call, 'Move the tree sidebar to the other side.', lambda: self._EmitAlignmentToggle( CC.DIRECTION_RIGHT if CG.client_controller.new_options.GetNoneableInteger( 'treeview_alignment' ) == CC.DIRECTION_LEFT else CC.DIRECTION_LEFT ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( tag_sidebar_position_title_call, 'Move the tags and preview sidebar to the other side.', lambda: self._EmitTagViewAlignmentToggle( CC.DIRECTION_RIGHT if CG.client_controller.new_options.GetInteger( 'page_sidebar_alignment' ) == CC.DIRECTION_LEFT else CC.DIRECTION_LEFT ) ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( tab_bar_visibility_title_call, 'Show or hide the normal notebook tab bar.', self._ToggleTabBarVisibility ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_always_expand_to_current_tab_after_reset' )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Always expand to current tab after reset', 'If this is unchecked, any refresh will respect all collapsed states, even if the current page is not showing. Otherwise, it will force expand nodes and highlight the current page every time.', check_manager ) )
+
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_collapse_all_children_upon_parent_closed' )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Collapse all children when parent is closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.', check_manager ) )
+
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_alternating_row_colours' )
+        check_manager.AddNotifyCall( lambda: self._tree.setAlternatingRowColors( CG.client_controller.new_options.GetBoolean( 'treeview_alternating_row_colours' ) ) )
+
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Shade alternating rows', 'Style the tree view with alternating colour shading per row.', check_manager ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        spacing_template_items = []
+        spacing_template_items.append( ClientGUIMenuButton.MenuTemplateItemSlider( 'indent width', 'The horizontal indentation added for each nested tree level.', lambda: CG.client_controller.new_options.GetInteger( 'treeview_indentation' ), 4, 64, 1, self._SetTreeViewIndentation ) )
+        spacing_template_items.append( ClientGUIMenuButton.MenuTemplateItemSlider( 'row height', 'The vertical height of each tree row.', lambda: CG.client_controller.new_options.GetInteger( 'treeview_row_height' ), 16, 64, 1, self._SetTreeViewRowHeight ) )
+
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'tree row dimensions', spacing_template_items ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( tree_sidebar_collapsibility_title_call, 'Allow or prevent the tree sidebar from being collapsed.', self._ToggleCollapsibility ) )
+        
+        return menu_template_items
         
     
     def _SplitterSizeChanged( self ):
