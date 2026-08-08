@@ -1462,6 +1462,9 @@ class MediaContainer( QW.QWidget ):
         
         self._media_window = None
         self._tie_media_window_to_pauseplay_state = self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES and CG.client_controller.new_options.GetBoolean( 'always_start_media_windows_tied_to_pauseplay_state' )
+        self._window_always_on_top_update_timer = QC.QTimer( self )
+        self._window_always_on_top_update_timer.setSingleShot( True )
+        self._window_always_on_top_update_timer.timeout.connect( self._UpdateWindowAlwaysOnTop )
         
         self._embed_button = EmbedButton( self, self._background_colour_generator )
         self._embed_button_widget_event_filter = QP.WidgetEventFilter( self._embed_button )
@@ -2102,9 +2105,11 @@ class MediaContainer( QW.QWidget ):
             
         
     
-    def _UpdateWindowAlwaysOnTop( self ):
+    def _UpdateWindowAlwaysOnTop( self, wait_for_double_click = False ):
         
         if not self._tie_media_window_to_pauseplay_state:
+            
+            self._window_always_on_top_update_timer.stop()
             
             return
             
@@ -2113,8 +2118,24 @@ class MediaContainer( QW.QWidget ):
         
         if always_on_top == self._canvas.IsAlwaysOnTop():
             
+            self._window_always_on_top_update_timer.stop()
+            
             return
             
+        
+        if wait_for_double_click:
+            
+            if not self._window_always_on_top_update_timer.isActive():
+                
+                double_click_interval = QW.QApplication.instance().doubleClickInterval()
+                
+                self._window_always_on_top_update_timer.start( double_click_interval )
+                
+            
+            return
+            
+        
+        self._window_always_on_top_update_timer.stop()
         
         action = CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_ON if always_on_top else CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_OFF
         
@@ -3242,7 +3263,7 @@ class MediaContainer( QW.QWidget ):
     def TIMERUIUpdate( self ):
         
         self._ShowHideControlBar()
-        self._UpdateWindowAlwaysOnTop()
+        self._UpdateWindowAlwaysOnTop( wait_for_double_click = True )
         
     
 
