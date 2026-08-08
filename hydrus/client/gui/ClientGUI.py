@@ -573,6 +573,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._tabs_tree_model.modelAboutToBeReset.connect( self._tabs_tree_view.SaveState )
         self._tabs_tree_model.modelReset.connect( self._tabs_tree_view.RestoreState )
+        self._tabs_tree_view.emptySpaceDoubleLeftClicked.connect( self._notebook.ChooseNewPageForDeepestNotebook )
         
         self._notebook.selectionChanged.connect( self._tabs_tree_view.SelectLeafFromNotebookPage )
         

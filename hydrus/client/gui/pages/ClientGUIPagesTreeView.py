@@ -666,6 +666,7 @@ class TreeViewWithDnD( QW.QTreeView ):
     leafDragAndDropped = QC.Signal( QW.QWidget, QW.QWidget )
     currentPagePathChanged = QC.Signal( str )
     currentPageNameChanged = QC.Signal( str, str )
+    emptySpaceDoubleLeftClicked = QC.Signal()
     
     def __init__( self, parent = None ):
         
@@ -1108,6 +1109,22 @@ class TreeViewWithDnD( QW.QTreeView ):
         menu.addAction( f'close{num_pages}', lambda: self._ClosePage( notebook, index ) )
         
         menu.exec_( self.viewport().mapToGlobal( point ) )
+        
+    
+    def mouseDoubleClickEvent( self, event ):
+        
+        index = self.indexAt( event.position().toPoint() )
+        
+        if ( event.button() == QC.Qt.MouseButton.LeftButton and not index.isValid() ):
+            
+            self.emptySpaceDoubleLeftClicked.emit()
+            
+            event.accept()
+            
+            return
+            
+        
+        QW.QTreeView.mouseDoubleClickEvent( self, event )
         
     
     def SelectLeafFromNotebookPage( self, notebook, tab_index ):
