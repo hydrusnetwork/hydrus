@@ -695,6 +695,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         self._pulse_step = 0
         
         self.collapsed.connect( self._OnTreeCollapsed )
+        self.expanded.connect( self._OnTreeExpanded )
         
         self.activated.connect( self._OnTreeActivated )
         self.doubleClicked.connect( self._OnTreeActivated )
@@ -962,7 +963,36 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
     
+    def _OnTreeExpanded( self, index: QC.QModelIndex ):
+        
+        model = self.model()
+        
+        if model is None:
+            
+            return
+            
+        
+        node_key = model.GetNodeKeyFromIndex( index )
+        
+        if node_key is not None:
+            
+            self._saved_expanded_node_keys.add( node_key )
+            
+        
+    
     def _OnTreeCollapsed( self, index: QC.QModelIndex ):
+        
+        model = self.model()
+        
+        if model is not None:
+            
+            node_key = model.GetNodeKeyFromIndex( index )
+            
+            if node_key is not None:
+                
+                self._saved_expanded_node_keys.discard( node_key )
+                
+            
         
         if CG.client_controller.new_options.GetBoolean( 'treeview_collapse_all_children_upon_parent_closed' ):
             
@@ -1161,49 +1191,12 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         if model is None:
             
-            self._saved_expanded_node_keys = set()
             self._saved_current_node_key = None
             
             return
             
         
-        self._saved_expanded_node_keys = set()
         self._saved_current_node_key = model.GetNodeKeyFromIndex( self.currentIndex() )
-        
-        save_collapsed_children = not CG.client_controller.new_options.GetBoolean( 'treeview_collapse_all_children_upon_parent_closed' )
-        
-        stack = [ QC.QModelIndex() ]
-        
-        while stack:
-            
-            parent = stack.pop()
-            
-            for row in range( model.rowCount( parent ) ):
-                
-                index = model.index( row, 0, parent )
-                
-                if not index.isValid():
-                    
-                    continue
-                    
-                
-                if self.isExpanded( index ):
-                    
-                    node_key = model.GetNodeKeyFromIndex( index )
-                    
-                    if node_key is not None:
-                        
-                        self._saved_expanded_node_keys.add( node_key )
-                        
-                    
-                    stack.append( index )
-                    
-                elif save_collapsed_children:
-                    
-                    stack.append( index )
-                    
-                
-            
         
     
     def RestoreState( self ):
