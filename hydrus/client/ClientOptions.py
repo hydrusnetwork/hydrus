@@ -373,6 +373,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'treeview_sidebar_can_collapse' : False,
             'treeview_always_expand_to_current_tab_after_reset' : False,
             'treeview_collapse_all_children_upon_parent_closed' : False,
+            'treeview_alternating_row_colours' : False,
             'treeview_animate_current_node' : True,
             'treeview_history_box_pinned' : False,
             'allow_comic_book_archive_detection' : True,
@@ -609,6 +610,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'media_viewer_tags_scrolling_behaviour' : CC.MEDIA_VIEWER_TAGS_SCROLLING_BEHAVIOUR_ONLY_PROPAGATE_AFTER_DELAY,
             'zoom_switch_command' : CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM,
             'page_sidebar_alignment' : CC.DIRECTION_LEFT,
+            'treeview_indentation' : 20,
+            'treeview_row_height' : 20,
         }
         
         self._dictionary[ 'floats' ] = {

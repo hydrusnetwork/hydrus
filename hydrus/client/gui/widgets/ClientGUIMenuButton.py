@@ -106,6 +106,20 @@ class MenuTemplateItemSeparator( MenuTemplateItem ):
         
     
 
+class MenuTemplateItemSlider( MenuTemplateItem ):
+    
+    def __init__( self, title: str | collections.abc.Callable[ [], str ], description: str | collections.abc.Callable[ [], str ], current_value_callable: collections.abc.Callable[ [], int ], min_value: int, max_value: int, step: int, value_changed_callable: collections.abc.Callable[ [ int ], None ] ):
+        
+        super().__init__( title, description )
+        
+        self.current_value_callable = current_value_callable
+        self.min_value = min_value
+        self.max_value = max_value
+        self.step = step
+        self.value_changed_callable = value_changed_callable
+        
+    
+
 class MenuTemplateItemSubmenu( MenuTemplateItem ):
     
     def __init__( self, title: str | collections.abc.Callable[ [], str ], submenu_template_items: list[ MenuTemplateItem ] ):
@@ -151,6 +165,19 @@ def PopulateMenuFromTemplateItems( menu: QW.QMenu, menu_template_items: list[ Me
         elif isinstance( menu_template_item, MenuTemplateItemSeparator ):
             
             ClientGUIMenus.AppendSeparator( menu )
+            
+        elif isinstance( menu_template_item, MenuTemplateItemSlider ):
+            
+            ClientGUIMenus.AppendMenuSlider(
+                menu,
+                title,
+                description,
+                menu_template_item.current_value_callable(),
+                menu_template_item.min_value,
+                menu_template_item.max_value,
+                menu_template_item.step,
+                menu_template_item.value_changed_callable
+            )
             
         elif isinstance( menu_template_item, MenuTemplateItemLabel ):
             

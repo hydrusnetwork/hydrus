@@ -1178,13 +1178,7 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         super().__init__( parent )
         
-        # TODO: No, these need to be managed by the parent, not registered by the child
-        # on DnD or whatever, this stuff needs to move around
-        if isinstance( parent, PagesNotebook ):
-            
-            self.layoutChanged.connect( parent.layoutChanged.emit )
-            self.selectionChanged.connect( parent.selectionChanged.emit )
-            
+        self._child_notebooks = set()
         
         direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
@@ -1225,6 +1219,79 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         self.tabBar().installEventFilter( self )
         self.installEventFilter( self )
+        
+    
+    def _ChildLayoutChanged( self, first: int, last: int ):
+        
+        self.layoutChanged.emit( first, last )
+        
+    
+    def _ChildSelectionChanged( self, notebook, index: int ):
+        
+        if self.sender() != self.currentWidget():
+            
+            return
+            
+        
+        self.selectionChanged.emit( notebook, index )
+        
+    
+    def _RegisterChildNotebook( self, widget ):
+        
+        if not isinstance( widget, PagesNotebook ):
+            
+            return
+            
+        
+        if widget in self._child_notebooks:
+            
+            return
+            
+        
+        widget.layoutChanged.connect( self._ChildLayoutChanged )
+        widget.selectionChanged.connect( self._ChildSelectionChanged )
+        
+        self._child_notebooks.add( widget )
+        
+    
+    def _UnregisterChildNotebook( self, widget ):
+        
+        if widget not in self._child_notebooks:
+            
+            return
+            
+        
+        widget.layoutChanged.disconnect( self._ChildLayoutChanged )
+        widget.selectionChanged.disconnect( self._ChildSelectionChanged )
+        
+        self._child_notebooks.remove( widget )
+        
+    
+    def addTab( self, widget, *args, **kwargs ):
+        
+        result = super().addTab( widget, *args, **kwargs )
+        
+        self._RegisterChildNotebook( widget )
+        
+        return result
+        
+    
+    def insertTab( self, index, widget, *args, **kwargs ):
+        
+        result = super().insertTab( index, widget, *args, **kwargs )
+        
+        self._RegisterChildNotebook( widget )
+        
+        return result
+        
+    
+    def removeTab( self, index ):
+        
+        widget = self.widget( index )
+        
+        self._UnregisterChildNotebook( widget )
+        
+        return super().removeTab( index )
         
     
     def _ChooseNewPage( self, insertion_index = None ):
@@ -1950,6 +2017,11 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
         
+        self._ShowMenuForTabIndex( tab_index )
+        
+    
+    def _ShowMenuForTabIndex( self, tab_index: int ):
+        
         num_pages = self.count()
         
         end_index = num_pages - 1
@@ -2674,6 +2746,13 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
                 
         
         self.tabBar().setHidden( tabs_are_hidden )
+        
+    
+    def ShowMenuForPageKey( self, page_key ):
+        
+        tab_index = self._GetIndex( page_key )
+        
+        self._ShowMenuForTabIndex( tab_index )
         
     
     def ShowMenuFromScreenPosition( self, position ):

@@ -87,6 +87,50 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     return menu_item
     
 
+def AppendMenuSlider( menu: QW.QMenu, label: str, description: str, initial_value: int, min_value: int, max_value: int, step: int, value_changed_callable ):
+    
+    slider_menu_item = QW.QWidgetAction( menu )
+    
+    widget = QW.QWidget( menu )
+    
+    hbox = QW.QHBoxLayout( widget )
+    hbox.setContentsMargins( 8, 4, 8, 4 )
+    hbox.setSpacing( 6 )
+    
+    label_widget = QW.QLabel( label, widget )
+    label_widget.setToolTip( ClientGUIFunctions.WrapToolTip( description ) )
+    
+    slider = QW.QSlider( QC.Qt.Orientation.Horizontal, widget )
+    slider.setMinimum( min_value )
+    slider.setMaximum( max_value )
+    slider.setSingleStep( step )
+    slider.setPageStep( step * 5 )
+    slider.setValue( initial_value )
+    slider.setToolTip( ClientGUIFunctions.WrapToolTip( description ) )
+    
+    value_label = QW.QLabel( str( initial_value ), widget )
+    value_label.setMinimumWidth( 32 )
+    value_label.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
+    
+    def value_changed( value ):
+        
+        value_label.setText( str( value ) )
+        value_changed_callable( value )
+        
+    
+    slider.valueChanged.connect( value_changed )
+    
+    hbox.addWidget( label_widget )
+    hbox.addWidget( slider, 1 )
+    hbox.addWidget( value_label )
+    
+    slider_menu_item.setDefaultWidget( widget )
+    
+    menu.addAction( slider_menu_item )
+    
+    return slider_menu_item
+    
+
 def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.MenuRole = None, **kwargs ):
     
     menu_item = QW.QAction( menu )

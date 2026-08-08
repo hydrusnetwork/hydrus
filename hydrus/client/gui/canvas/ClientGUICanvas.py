@@ -2394,14 +2394,61 @@ class CanvasWithHovers( Canvas ):
         self.window().setGeometry( window_real_geom )
         
         self.window().show()
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            self._DoWindowAlwaysOnTop()
+            
+        
         self.update()
         
     
     def _DoWindowAlwaysOnTop( self ):
         
-        self.window().setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+        window = self.window()
         
-        self.window().show()
+        if HC.PLATFORM_WINDOWS:
+            
+            import ctypes
+            from ctypes import wintypes
+            
+            set_window_pos = ctypes.windll.user32.SetWindowPos
+            
+            set_window_pos.argtypes = (
+                wintypes.HWND,
+                wintypes.HWND,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                ctypes.c_int,
+                wintypes.UINT
+            )
+            
+            set_window_pos.restype = wintypes.BOOL
+            
+            hwnd_insert_after = wintypes.HWND( -1 if self._window_always_on_top else -2 )
+            
+            flags = 0x0001 | 0x0002 | 0x0010
+            
+            success = set_window_pos(
+                wintypes.HWND( int( window.winId() ) ),
+                hwnd_insert_after,
+                0,
+                0,
+                0,
+                0,
+                flags
+            )
+            
+            if success:
+                
+                return
+                
+            
+        
+        window.setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+        
+        window.show()
         
         self.update()
         
