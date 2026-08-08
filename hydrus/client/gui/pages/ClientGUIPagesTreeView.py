@@ -1428,6 +1428,8 @@ class HistoryPanel( QW.QWidget ):
         
         if len( history ) == 0:
             
+            self._title.setText( 'Tab History' )
+            
             label = QW.QLabel( 'no page history', self._page_list )
             label.setWordWrap( True )
             self._page_list_layout.addWidget( label )
