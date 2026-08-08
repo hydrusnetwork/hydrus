@@ -216,6 +216,7 @@ SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH = 203
 SIMPLE_PER_PLAYER_AUDIO_MUTE = 204
 SIMPLE_PER_PLAYER_AUDIO_MUTE_FLIP = 205
 SIMPLE_PER_PLAYER_AUDIO_UNMUTE = 206
+SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP = 207
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -477,6 +478,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_FLIP_GLOBAL_SLIDESHOW_SHUFFLE : 'slideshow shuffle: flip global option (and apply to current window)',
     SIMPLE_FLIP_THISWINDOW_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH: 'always play media once through: override/flip for current window',
     SIMPLE_FLIP_GLOBAL_SLIDESHOW_ALWAYS_PLAY_DURATION_MEDIA_ONCE_THROUGH: 'always play media once through: flip global option (and apply to current window)',
+    SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP : 'window "always on top while playing": flip on/off',
 }
 
 legacy_simple_str_to_enum_lookup = {

@@ -355,6 +355,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'archive_delete_commit_panel_delays_multiple_delete_choices' : True,
             'always_start_media_viewers_always_on_top' : False,
             'always_start_media_viewers_frameless' : False,
+            'always_start_media_windows_tied_to_pauseplay_state' : False,
             'qt_media_player_opengl_test' : False,
             'persist_media_window_qt_media_player' : False,
             'persist_media_window_mpv' : False,
