@@ -673,6 +673,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         super().__init__( parent )
         
         self.setHeaderHidden( True )
+        self.setAlternatingRowColors( CG.client_controller.new_options.GetBoolean( 'treeview_alternating_row_colours' ) )
         
         self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
         
@@ -2046,7 +2047,9 @@ class TreeViewWithControls( QW.QWidget ):
         self._AddBooleanMenuAction( menu, 'Always expand to current tab after reset', 'treeview_always_expand_to_current_tab_after_reset', 'If this is unchecked, any refresh will respect all collapsed states, even if the current page is not showing. Otherwise, it will force expand nodes and highlight the current page every time.' )
         self._AddBooleanMenuAction( menu, 'Collapse all children when parent is closed', 'treeview_collapse_all_children_upon_parent_closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.' )
         #self._AddBooleanMenuAction( menu, 'Animate current node highlight', 'treeview_animate_current_node' )
-        
+        alternating_rows_action = self._AddBooleanMenuAction( menu, 'Shade alternating rows', 'treeview_alternating_row_colours', 'Style the treeview with alternating colour shading per row.' )
+        alternating_rows_action.triggered.connect( lambda: self._tree.setAlternatingRowColors( alternating_rows_action.isChecked() ) )
+         
         menu.addSeparator()
         
         if CG.client_controller.new_options.GetBoolean( 'treeview_sidebar_can_collapse' ):
