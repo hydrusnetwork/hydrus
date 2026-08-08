@@ -2017,6 +2017,11 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         tab_index = ClientGUIFunctions.NotebookScreenToHitTest( self, screen_position )
         
+        self._ShowMenuForTabIndex( tab_index )
+        
+    
+    def _ShowMenuForTabIndex( self, tab_index: int ):
+        
         num_pages = self.count()
         
         end_index = num_pages - 1
@@ -2741,6 +2746,13 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
                 
         
         self.tabBar().setHidden( tabs_are_hidden )
+        
+    
+    def ShowMenuForPageKey( self, page_key ):
+        
+        tab_index = self._GetIndex( page_key )
+        
+        self._ShowMenuForTabIndex( tab_index )
         
     
     def ShowMenuFromScreenPosition( self, position ):

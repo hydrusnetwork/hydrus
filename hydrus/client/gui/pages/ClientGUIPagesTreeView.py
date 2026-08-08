@@ -1112,33 +1112,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         page_key = model.GetPageKeyFromIndex( index )
         notebook = model.GetParentNotebookFromIndex( index )
         
-        # TODO: Convert this to a normal hydrus menu
-        
-        menu = QW.QMenu( self )
-        
-        menu.addAction( 'activate', lambda: self._ActivatePage( page_key ) )
-        menu.addAction( 'rename', lambda: self._RenamePage( notebook, index ) )
-        menu.addAction( 'duplicate', lambda: self._DuplicatePage( notebook, index ) )
-        
-        menu.addSeparator()
-        
-        if kind == 'notebook':
-            
-            num_pages = f' ({notebook.GetNumPagesHeld( only_my_level = False )}p)'
-            menu.addAction( 'refresh all child pages', lambda: self._RefreshAllPages( notebook ) )
-            
-        elif kind == 'page':
-            
-            num_pages = ''
-            menu.addAction( 'refresh this page', lambda: self._RefreshPage( notebook, page_key ) )
-            
-        
-        menu.addSeparator()
-        
-        menu.addAction( 'new page here', lambda: self._CreateNewPage( notebook, index ) )
-        menu.addAction( f'close{num_pages}', lambda: self._ClosePage( notebook, index ) )
-        
-        menu.exec_( self.viewport().mapToGlobal( point ) )
+        notebook.ShowMenuForPageKey( page_key )
         
     
     def mouseDoubleClickEvent( self, event ):
