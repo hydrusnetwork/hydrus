@@ -5,6 +5,7 @@ from qtpy import QtGui as QG
 from hydrus.client.gui.pages import ClientGUIPagesTreeModel
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTime
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -1424,6 +1425,7 @@ class HistoryPanel( QW.QWidget ):
     def _CreateHistoryRow( self, history_index: int, page_key ):
         
         ( page_name, tooltip ) = self._model.GetPageNameAndTooltipFromPageKey( page_key )
+        page_name = HydrusText.ElideText( page_name, 100, elide_center = True )
         
         row = QW.QWidget( self._history_list )
         hbox = QW.QHBoxLayout( row )
