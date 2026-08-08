@@ -1288,7 +1288,6 @@ class TreeViewWithDnD( QW.QTreeView ):
         
     
 
-# TODO: rename this stuff now it is decoupled. '_filter_expand_button' -> '_expand_button' and such
 class FilterPanel( QW.QWidget ):
     
     iWantToClose = QC.Signal()
@@ -1306,52 +1305,51 @@ class FilterPanel( QW.QWidget ):
         hbox.setContentsMargins( 4, 4, 4, 4 )
         hbox.setSpacing( 2 )
         
-        self._filter_text = QW.QLineEdit( self )
-        self._filter_text.setPlaceholderText( 'filter pages' )
-        self._filter_text.textChanged.connect( self._FilterTextChanged )
+        self._text_entry = QW.QLineEdit( self )
+        self._text_entry.setPlaceholderText( 'filter pages' )
+        self._text_entry.textChanged.connect( self._TextChanged )
         
-        self._filter_expand_button = QW.QPushButton( '+', self )
-        self._filter_expand_button.setEnabled( False )
-        self._filter_expand_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand all currently visible matches' ) )
-        self._filter_expand_button.clicked.connect( self.expandVisibleFilterResults )
+        self._expand_button = QW.QPushButton( '+', self )
+        self._expand_button.setEnabled( False )
+        self._expand_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand all currently visible matches' ) )
+        self._expand_button.clicked.connect( self.expandVisibleFilterResults )
         
-        self._filter_clear_button = QW.QPushButton( 'X', self )
-        self._filter_clear_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Clear filter' ) )
-        self._filter_clear_button.clicked.connect( self._ClearFilter )
+        self._clear_button = QW.QPushButton( 'X', self )
+        self._clear_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Clear filter' ) )
+        self._clear_button.clicked.connect( self._Clear )
         
-        hbox.addWidget( self._filter_text )
-        hbox.addWidget( self._filter_expand_button )
-        hbox.addWidget( self._filter_clear_button )
+        hbox.addWidget( self._text_entry )
+        hbox.addWidget( self._expand_button )
+        hbox.addWidget( self._clear_button )
         
     
-    def _ClearFilter( self ):
+    def _Clear( self ):
         
-        self._filter_text.clear()
+        self._text_entry.clear()
         
         self.clearFilter.emit()
         
         self.iWantToClose.emit()
         
     
-    def _FilterTextChanged( self, text: str ):
+    def _TextChanged( self, text: str ):
         
-        self._filter_expand_button.setEnabled( len( text ) >= 2 )
+        self._expand_button.setEnabled( len( text ) >= 2 )
         
         self.setFilterText.emit( text )
         
     
     def HasText( self ):
         
-        return self._filter_text.text() != ''
+        return self._text_entry.text() != ''
         
     
     def TakeFocus( self ):
         
-        self._filter_text.setFocus( QC.Qt.FocusReason.OtherFocusReason )
+        self._text_entry.setFocus( QC.Qt.FocusReason.OtherFocusReason )
         
     
 
-# TODO: rename this stuff now it is decoupled. 'history_title' -> 'title' and such
 class HistoryPanel( QW.QWidget ):
     
     iWantToClose = QC.Signal()
@@ -1372,49 +1370,49 @@ class HistoryPanel( QW.QWidget ):
         vbox.setContentsMargins( 4, 4, 4, 4 )
         vbox.setSpacing( 2 )
         
-        self._history_title = QW.QLabel( 'Tab History', self )
-        self._history_title.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        self._title = QW.QLabel( 'Tab History', self )
+        self._title.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        self._history_scroll_area = QW.QScrollArea( self )
-        self._history_scroll_area.setWidgetResizable( True )
-        self._history_scroll_area.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
+        self._scroll_area = QW.QScrollArea( self )
+        self._scroll_area.setWidgetResizable( True )
+        self._scroll_area.setVerticalScrollBarPolicy( QC.Qt.ScrollBarPolicy.ScrollBarAsNeeded )
         
-        self._history_list = QW.QWidget( self._history_scroll_area )
-        self._history_list_layout = QW.QVBoxLayout( self._history_list )
-        self._history_list_layout.setContentsMargins( 0, 0, 0, 0 )
-        self._history_list_layout.setSpacing( 1 )
-        self._history_list_layout.addStretch( 1 )
+        self._page_list = QW.QWidget( self._scroll_area )
+        self._page_list_layout = QW.QVBoxLayout( self._page_list )
+        self._page_list_layout.setContentsMargins( 0, 0, 0, 0 )
+        self._page_list_layout.setSpacing( 1 )
+        self._page_list_layout.addStretch( 1 )
         
-        self._history_scroll_area.setWidget( self._history_list )
+        self._scroll_area.setWidget( self._page_list )
         
-        self._history_button_bar = QW.QWidget( self )
-        bar = QW.QHBoxLayout( self._history_button_bar )
+        self._button_bar = QW.QWidget( self )
+        bar = QW.QHBoxLayout( self._button_bar )
         bar.setContentsMargins( 0, 0, 0, 0 )
         bar.setSpacing( 2 )
         
-        self._history_close = QW.QPushButton( 'X', self._history_button_bar )
-        self._history_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'Close history' ) )
-        self._history_close.clicked.connect( self.iWantToClose )
+        self._close_button = QW.QPushButton( 'X', self._button_bar )
+        self._close_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Close history' ) )
+        self._close_button.clicked.connect( self.iWantToClose )
         
-        self._history_pin = QW.QPushButton( '', self._history_button_bar )
-        self._history_pin.setCheckable( True )
-        self._history_pin.setChecked( CG.client_controller.new_options.GetBoolean( 'treeview_history_box_pinned' ) )
-        self._history_pin.setToolTip( ClientGUIFunctions.WrapToolTip( 'Keep history box open' ) )
-        self._history_pin.toggled.connect( self._HistoryPinChanged )
-        self._SetHistoryPinIcon()
+        self._pin_button = QW.QPushButton( '', self._button_bar )
+        self._pin_button.setCheckable( True )
+        self._pin_button.setChecked( CG.client_controller.new_options.GetBoolean( 'treeview_history_box_pinned' ) )
+        self._pin_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Keep history box open' ) )
+        self._pin_button.toggled.connect( self._PinChanged )
+        self._SetPinIcon()
         
-        self._history_size_grip = QW.QSizeGrip( self )
-        bar.addWidget( self._history_close )
-        bar.addWidget( self._history_pin )
+        self._size_grip = QW.QSizeGrip( self )
+        bar.addWidget( self._close_button )
+        bar.addWidget( self._pin_button )
         bar.addStretch( 1 )
-        bar.addWidget( self._history_size_grip )
+        bar.addWidget( self._size_grip )
         
-        vbox.addWidget( self._history_title )
-        vbox.addWidget( self._history_scroll_area, 1 )
-        vbox.addWidget( self._history_button_bar )
+        vbox.addWidget( self._title )
+        vbox.addWidget( self._scroll_area, 1 )
+        vbox.addWidget( self._button_bar )
         
     
-    def _ActivateHistoryPage( self, page_key ):
+    def _ActivatePage( self, page_key ):
         
         CG.client_controller.gui.ShowPage( page_key )
         
@@ -1424,11 +1422,11 @@ class HistoryPanel( QW.QWidget ):
             
         
     
-    def _ClearHistoryList( self ):
+    def _ClearPageList( self ):
         
-        while self._history_list_layout.count() > 0:
+        while self._page_list_layout.count() > 0:
             
-            item = self._history_list_layout.takeAt( 0 )
+            item = self._page_list_layout.takeAt( 0 )
             
             widget = item.widget()
             
@@ -1439,12 +1437,12 @@ class HistoryPanel( QW.QWidget ):
             
         
     
-    def _CreateHistoryRow( self, history_index: int, page_key ):
+    def _CreatePageRow( self, history_index: int, page_key ):
         
         ( page_name, tooltip ) = self._model.GetPageNameAndTooltipFromPageKey( page_key )
         page_name = HydrusText.ElideText( page_name, 100, elide_center = True )
         
-        row = QW.QWidget( self._history_list )
+        row = QW.QWidget( self._page_list )
         hbox = QW.QHBoxLayout( row )
         hbox.setContentsMargins( 0, 0, 0, 0 )
         hbox.setSpacing( 2 )
@@ -1455,11 +1453,11 @@ class HistoryPanel( QW.QWidget ):
         button = QW.QPushButton( page_name, row )
         button.setToolTip( tooltip )
         button.setFlat( True )
-        button.clicked.connect( lambda checked = False, page_key = page_key: self._ActivateHistoryPage( page_key ) )
+        button.clicked.connect( lambda checked = False, page_key = page_key: self._ActivatePage( page_key ) )
         
         remove = QW.QPushButton( 'X', row )
         remove.setToolTip( ClientGUIFunctions.WrapToolTip( 'Remove this page from history' ) )
-        remove.clicked.connect( lambda checked = False, page_key = page_key: self._RemoveHistoryPage( page_key ) )
+        remove.clicked.connect( lambda checked = False, page_key = page_key: self._RemovePage( page_key ) )
         
         hbox.addWidget( number )
         hbox.addWidget( button, 1 )
@@ -1468,14 +1466,14 @@ class HistoryPanel( QW.QWidget ):
         return row
         
     
-    def _HistoryPinChanged( self, value: bool ):
+    def _PinChanged( self, value: bool ):
         
         CG.client_controller.new_options.SetBoolean( 'treeview_history_box_pinned', value )
         
-        self._SetHistoryPinIcon()
+        self._SetPinIcon()
         
     
-    def _RemoveHistoryPage( self, page_key ):
+    def _RemovePage( self, page_key ):
         
         CG.client_controller.gui.page_nav_history.RemovePageKey( page_key )
         
@@ -1484,16 +1482,16 @@ class HistoryPanel( QW.QWidget ):
         self.iNeedAReposition.emit()
         
     
-    def _ResizeHistoryPanelToRows( self, num_rows: int ):
+    def _ResizeToRows( self, num_rows: int ):
         
         num_rows = max( 1, num_rows )
         visible_rows = min( 10, num_rows )
         
         row_height = 24
         
-        for i in range( self._history_list_layout.count() ):
+        for i in range( self._page_list_layout.count() ):
             
-            item = self._history_list_layout.itemAt( i )
+            item = self._page_list_layout.itemAt( i )
             widget = item.widget()
             
             if widget is not None:
@@ -1505,11 +1503,11 @@ class HistoryPanel( QW.QWidget ):
         margins = self.layout().contentsMargins()
         spacing = self.layout().spacing()
         
-        title_height = self._history_title.sizeHint().height()
-        bar_height = self._history_button_bar.sizeHint().height()
+        title_height = self._title.sizeHint().height()
+        bar_height = self._button_bar.sizeHint().height()
         scroll_height = ( row_height * visible_rows ) + 8
         
-        self._history_scroll_area.setMinimumHeight( scroll_height )
+        self._scroll_area.setMinimumHeight( scroll_height )
         
         target_height = (
             margins.top() +
@@ -1525,58 +1523,58 @@ class HistoryPanel( QW.QWidget ):
         self.iNeedAReposition.emit()
         
     
-    def _SetHistoryPinIcon( self ):
+    def _SetPinIcon( self ):
         
-        if self._history_pin.isChecked():
+        if self._pin_button.isChecked():
             
-            self._history_pin.setIcon( CC.global_icons().lock )
+            self._pin_button.setIcon( CC.global_icons().lock )
             
         else:
             
-            self._history_pin.setIcon( CC.global_icons().lock_open )
+            self._pin_button.setIcon( CC.global_icons().lock_open )
             
         
     
     def IsPinned( self ):
         
-        return self._history_pin.isChecked()
+        return self._pin_button.isChecked()
         
     
     def Repopulate( self ):
         
-        self._ClearHistoryList()
+        self._ClearPageList()
         
-        self._history_pin.setChecked( CG.client_controller.new_options.GetBoolean( 'treeview_history_box_pinned' ) )
+        self._pin_button.setChecked( CG.client_controller.new_options.GetBoolean( 'treeview_history_box_pinned' ) )
         
         history = CG.client_controller.gui.GetPagesHistory()
         
         if len( history ) == 0:
             
-            label = QW.QLabel( 'no page history', self._history_list )
+            label = QW.QLabel( 'no page history', self._page_list )
             label.setWordWrap( True )
-            self._history_list_layout.addWidget( label )
-            self._history_list_layout.addStretch( 1 )
-            self._ResizeHistoryPanelToRows( 1 )
+            self._page_list_layout.addWidget( label )
+            self._page_list_layout.addStretch( 1 )
+            self._ResizeToRows( 1 )
             return
             
         
-        self._history_title.setText( f'Tab History ({len(history)} pages)' )
+        self._title.setText( f'Tab History ({len(history)} pages)' )
         
         row_count = 0
         
         for history_index, ( page_key, page_name ) in enumerate( reversed( history ) ):
             
-            row = self._CreateHistoryRow( history_index, page_key )
+            row = self._CreatePageRow( history_index, page_key )
             
             if row is not None:
                 
                 row_count += 1
-                self._history_list_layout.addWidget( row )
+                self._page_list_layout.addWidget( row )
                 
             
         
-        self._history_list_layout.addStretch( 1 )
-        self._ResizeHistoryPanelToRows( row_count )
+        self._page_list_layout.addStretch( 1 )
+        self._ResizeToRows( row_count )
         
     
 
