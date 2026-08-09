@@ -2442,6 +2442,11 @@ class MediaContainer( QW.QWidget ):
         return False
         
     
+    def IsUsingMPV( self ):
+        
+        return isinstance( self._media_window, ClientGUIMPV.MPVWidget )
+        
+    
     def IsZoomable( self ):
         
         if self._media is None:

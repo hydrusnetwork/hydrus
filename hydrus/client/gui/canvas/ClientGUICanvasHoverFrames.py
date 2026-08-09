@@ -1223,18 +1223,22 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             window_menu = menu
             
         
+        if HC.PLATFORM_LINUX:
+            
+            ClientGUIMenus.AppendMenuLabel( window_menu, 'MAY BE BUGGY/CRASHY ON LINUX', 'Be careful with always-on-top with Linux. Switching while mpv is loaded is disabled since it proved too crashy.' )
+            
+        
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top', 'Toggle whether this window is always on top.', self._my_canvas.IsAlwaysOnTop(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_FLIP ) )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always on top (while playing)', 'Tie the window always on top state to the Play/Pause state of media.', self._my_canvas.IsAlwaysOnTopWhilePlaying(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP ) )
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'remove titlebar/frame', 'Toggle the OS frame of this window.', self._my_canvas.IsHidingWindowFrame(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_FRAMELESS_FLIP ) )
-        
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'current window always-on-top while playing media', 'Tie the window always on top state to the Play/Pause state of media.', self._my_canvas.IsAlwaysOnTopWhilePlaying(), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_WINDOW_ALWAYS_ON_TOP_WHILE_PLAYING_FLIP ) )
-        
-        checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_windows_tied_to_pauseplay_state' )
-        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers on top while playing', 'Tie the window always on top state to the Play/Pause state of media, for all newly created media viewers.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
         
         ClientGUIMenus.AppendSeparator( window_menu )
         
         checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_viewers_always_on_top' )
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers always on top', 'Set whether all new media viewers should start in this state.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
+        
+        checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_windows_tied_to_pauseplay_state' )
+        ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers on top while playing', 'Tie the window always on top state to the Play/Pause state of media, for all newly created media viewers.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )
         
         checkbox_manager = ClientGUICommon.CheckboxManagerOptions( 'always_start_media_viewers_frameless' )
         ClientGUIMenus.AppendMenuCheckItem( window_menu, 'always start new media viewers without titlebar/frame', 'Set whether all new media viewers should start in this state.', checkbox_manager.GetCurrentValue(), checkbox_manager.Invert )

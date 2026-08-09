@@ -2396,10 +2396,7 @@ class CanvasWithHovers( Canvas ):
         
         self.window().show()
         
-        if HC.PLATFORM_WINDOWS:
-            
-            self._DoWindowAlwaysOnTop()
-            
+        self._DoWindowAlwaysOnTop()
         
         self.update()
         
@@ -2447,11 +2444,23 @@ class CanvasWithHovers( Canvas ):
                 
             
         
-        window.setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+        current_state = window.windowFlags() & QC.Qt.WindowType.WindowStaysOnTopHint
         
-        window.show()
-        
-        self.update()
+        if self._window_always_on_top != current_state:
+            
+            if HC.PLATFORM_LINUX and self._media_container.IsUsingMPV():
+                
+                print( 'Avoiding switching always-on-top because we are Linux + mpv!' )
+                
+                return # this fairly reliably causes a crash hooray
+                
+            
+            window.setWindowFlag( QC.Qt.WindowType.WindowStaysOnTopHint, self._window_always_on_top )
+            
+            window.show()
+            
+            self.update()
+            
         
     
     def _DrawAdditionalTopMiddleInfo( self, painter: QG.QPainter, current_y ):
