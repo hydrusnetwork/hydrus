@@ -344,7 +344,7 @@ def GetSoftwareSourceFromCommentInfoField( value ) -> str | None:
         
         patterns = [
             r'^(Created|Converted|Cropped|Compressed|Edited) with (?P<software>.+)',
-            r'^... (created|converted|cropped|compressed|edited) with (?P<software>.+)',
+            r'^(created|converted|cropped|compressed|edited) with (?P<software>.+)',
         ]
         
         for pattern in patterns:
