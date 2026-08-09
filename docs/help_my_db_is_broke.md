@@ -147,9 +147,53 @@ This instructs the database to copy itself to a new file. When it comes across d
 
 And wait a bit. It'll report its progress as it tries to copy your db. It will be slow. Remember to go '.exit' once it is done to close the shell neatly.
 
-If the clone says some errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! That probably isn't a real error, and even if it is, 'fts' stuff will be automatically fixed on the next boot. Same if you get any errors about 'sqlite_stat1' table.
+!!! note "table already exists"
+    If the clone gives errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! It isn't a real error, and you can ignore it.
+    
+    Same if you get any errors about 'sqlite_stat1' table.
 
-Some users have reported the sqlite terminal crashing during a very large clone. This has never happened to me, and I cannot explain it if your system is ok. I do not _think_ SQLite will crash from bad data alone, but I guess it could just be some bug. The executable is going to be munching through a multi-GB file, so if you have a crash and your OS has strange temp/swap settings, that might be it. One user says they had crashes and discovered with a memtest that they had bad memory. Another possibility in our context is if the hard drive still has I/O issues. Try copying the .db file somewhere, with the intention of cloning it from a different area of your hard drive (or even a completely different drive)--if your OS has a serious read/write error trying to copy the file, then that's probably what was causing SQLite to have trouble, and you now need to think about more serious drive recovery before you move forward on fixing hydrus.
+??? warning "clone crashes/halts"
+    Some users have reported the sqlite terminal crashing during a clone. Typically it just halts while working, perhaps when it hits a table with known malformation. I do not know why this ever happens, but perhaps some damage is too much for SQLite to route around during a clone.
+    
+    One user says they had crashes and discovered with a memtest that they had bad memory. Another possibility in our context is if the hard drive still has I/O issues. Try copying the .db file somewhere, with the intention of cloning it from a different area of your hard drive (or even a completely different drive)--if your OS has a serious read/write error trying to copy the file, then that's probably what was causing SQLite to have trouble, and you now need to think about more serious drive recovery before you move forward on fixing hydrus.
+    
+    Another option is to try `.backup client_backup.db` before you do a `.clone`. The `.backup` command copies the file block for block, not trying to parse rows or skip over errors, and it _supposed_ to make a byte-for-byte copy, but if you have I/O errors, perhaps a bad disk sector, it may be that `.backup` works where an OS file copy will not, and then a `.clone` on the new disk will be ok. Do something like this:
+    
+    ```
+    .open client.db
+    .backup client_backup.db
+    .exit
+    
+    .open client_backup.db
+    .clone client_new.db
+    .exit
+    ```
+    
+    If you need to do this, your disk is probably still damaged. You might like to specify a new drive for the backup destination, like this:
+    
+    ```
+    .backup E:\recovery\client_backup.db
+    -or, on non-Windows-
+    .backup /path/to/safe/partition/client_backup.db
+    ```
+    
+
+??? danger "my clone will not work, I think because of one table"
+    One user could not get a clone to work; they had a single really huge malformed table, ~90% of the total database size, that was malformed, unwanted, and would crash a clone. He discovered that you can hackily delist the table from SQLite and a clone would then work.
+    
+    THIS IS CLEVER AND DANGEROUS. YOU HAVE A BACKUP OF EVERYTHING, RIGHT?
+    
+    - Let's say your bad table is `combined_files_tag_cache_17`, on client.caches.db
+    - Open up `sqlite3` on `client.caches.db`. Do not do any ATTACH work, if you know what that is.
+    - `SELECT * FROM sqlite_schema WHERE name = 'combined_files_tag_cache_17';`. It should give you a nice line describing the table.
+    - `PRAGMA writable_schema = ON`
+    - `DELETE FROM sqlite_schema WHERE name = 'combined_files_tag_cache_17';`
+    - `PRAGMA writable_schema = OFF`
+    - `.clone client.caches_new.db`
+    - `.exit`
+    
+    By removing the table from the master schema, it is not queued up in the clone. Of course, by doing this, it is lost completely. Do not edit the sqlite_schema unless you know what you intend to do.
+    
 
 Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. If it is more than, say, 8% reduction, this probably means some data has been lost (a little bit is ok, since a clone is basically a VACUUM). If the loss is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data once you are working again. If your client.db loses lots of data, I am afraid this is not a great situation.
 
