@@ -11,6 +11,7 @@ from pathlib import Path
 import threading
 
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientGlobals as CG
@@ -117,6 +118,48 @@ def OpenExternallySingleFile( executable_manager: ExecutableManager, id_and_name
     input_params = {
         ClientExecutablePipelines.PARAM_TYPE_FILE_PATH : file_path,
         ClientExecutablePipelines.PARAM_TYPE_FILE_LOCAL_PATH_URI : file_uri,
+    }
+    
+    call.Call( input_params )
+    
+
+def OpenExternallyMultipleFiles( executable_manager: ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_results: list[ ClientMediaResult.MediaResult ] ):
+    
+    files_desc = f'{HydrusNumbers.ToHumanInt( len( media_results ))} files'
+    
+    try:
+        
+        call = executable_manager.GetCallable( id_and_name )
+        
+    except HydrusExceptions.DataMissing:
+        
+        raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) did not exist!' )
+        
+    
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+        
+        raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
+        
+    
+    file_paths = []
+    file_uris = []
+    
+    for media_result in media_results:
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+        
+        file_uri = Path( file_path ).as_uri()
+        
+        file_paths.append( file_path )
+        file_uris.append( file_uri )
+        
+    
+    input_params = {
+        ClientExecutablePipelines.PARAM_TYPE_FILE_PATHS : file_paths,
+        ClientExecutablePipelines.PARAM_TYPE_FILE_LOCAL_PATH_URIS : file_uris,
     }
     
     call.Call( input_params )

@@ -248,7 +248,14 @@ def RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pi
         
     
 
-def RunSubprocess( cmd, timeout: int = 15, bufsize: int = 65536, this_is_a_potentially_long_lived_external_guy = False, hide_terminal = True, text = True ):
+def RunSubprocess(
+    cmd,
+    timeout: int = 15,
+    bufsize: int = 65536,
+    this_is_a_potentially_long_lived_external_guy = False,
+    hide_terminal = True,
+    text = True
+):
     
     if this_is_a_potentially_long_lived_external_guy:
         
