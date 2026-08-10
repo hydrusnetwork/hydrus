@@ -4,8 +4,6 @@ from hydrus.client.executables import ClientExecutablePipelines
 
 def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
     
-    # the hardcoded Windows open guy?
-    
     parameter_processing_rules = [
         ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule(
             ClientExecutablePipelines.PARAM_TYPE_FILE_PATH,
@@ -14,6 +12,18 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     ]
     
     callables = []
+    
+    #
+    
+    actual_call = ClientExecutableActualCall.ExecutableLocalProcessWindowsStartFile()
+    
+    call = ClientExecutableCallables.ClientExecutableCallable(
+        'Windows Startfile',
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        actual_call = actual_call
+    )
+    
+    callables.append( call )
     
     #
     

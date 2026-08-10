@@ -1,6 +1,8 @@
+import os
 import shutil
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
@@ -326,5 +328,57 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_TEMPLATE ] = ExecutableLocalProcessCallTemplate
 
-# A Hardcoded Windows open guy??
-    # available = platform_windows lol
+class ExecutableLocalProcessWindowsStartFile( ExecutableActualCall ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_WINDOWS_STARTFILE
+    SERIALISABLE_NAME = 'Local Process (Windows Startfile)'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self ):
+        
+        super().__init__()
+        
+    
+    def _DoCall( self, input_parameters: dict ) -> dict:
+        
+        try:
+            
+            path = input_parameters[ ClientExecutablePipelines.PARAM_TYPE_FILE_PATH ]
+            
+        except KeyError:
+            
+            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.PARAM_TYPE_FILE_PATH ]}" was not in the call arguments!' )
+            
+        
+        os.startfile( path )
+        
+        return dict()
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return tuple()
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        pass
+        
+    
+    def _TestAvailability( self ):
+        
+        return HC.PLATFORM_WINDOWS
+        
+    
+    def CanTestAvailability( self ):
+        
+        return True
+        
+    
+    def GetCommandDescription( self ):
+        
+        return 'Call Windows file launcher'
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_WINDOWS_STARTFILE ] = ExecutableLocalProcessWindowsStartFile
