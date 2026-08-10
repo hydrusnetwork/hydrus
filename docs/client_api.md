@@ -4,7 +4,7 @@ title: Client API
 
 # Client API
 
-The hydrus client now supports a very simple API so you can access it with external programs.
+The hydrus client has API so you can access many of its functions with external programs.
 
 ## Enabling the API
 
