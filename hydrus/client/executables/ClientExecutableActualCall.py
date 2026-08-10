@@ -1,3 +1,4 @@
+import shutil
 import typing
 
 from hydrus.core import HydrusData
@@ -6,23 +7,12 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core.processes import HydrusSubprocess
 
 from hydrus.client import ClientStrings
+from hydrus.client.executables import ClientExecutablePipelines
 
 class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_NAME = 'Actual Call Superclass'
     SERIALISABLE_VERSION = 1
-    
-    def __init__( self, can_test_availability: bool | None = None ):
-        
-        super().__init__()
-        
-        if can_test_availability is None:
-            
-            can_test_availability = True
-            
-        
-        self._can_test_availability = can_test_availability
-        
     
     def _DoCall( self, input_parameters: dict ) -> dict:
         
@@ -51,7 +41,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
     
     def CanTestAvailability( self ):
         
-        return self._can_test_availability
+        raise NotImplementedError()
         
     
     def Call( self, input_parameters: dict ) -> dict:
@@ -71,13 +61,13 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
     SERIALISABLE_NAME = 'Local Process Call - Input Parameter Processing Rule'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, input_parameter_name: str | None = None, replacement_string: str | None = None, string_processor: ClientStrings.StringProcessor | None = None ):
+    def __init__( self, parameter_type: int | None = None, replacement_string: str | None = None, string_processor: ClientStrings.StringProcessor | None = None ):
         
         super().__init__()
         
-        if input_parameter_name is None:
+        if parameter_type is None:
             
-            input_parameter_name = 'path'
+            parameter_type = ClientExecutablePipelines.PARAM_TYPE_FILE_PATH
             
         
         if replacement_string is None:
@@ -90,7 +80,7 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
             string_processor = ClientStrings.StringProcessor()
             
         
-        self.input_parameter_name: str = input_parameter_name
+        self.parameter_type: int = parameter_type
         self.replacement_string: str = replacement_string
         self.string_processor: ClientStrings.StringProcessor = string_processor
         
@@ -99,12 +89,12 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
         
         serialisable_string_processor = self.string_processor.GetSerialisableTuple()
         
-        return ( self.input_parameter_name, self.replacement_string, serialisable_string_processor )
+        return ( self.parameter_type, self.replacement_string, serialisable_string_processor )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.input_parameter_name, self.replacement_string, serialisable_string_processor ) = serialisable_info
+        ( self.parameter_type, self.replacement_string, serialisable_string_processor ) = serialisable_info
         
         self.string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         
@@ -142,9 +132,9 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     SERIALISABLE_NAME = 'Local Process Call (Template)'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, availability_path = None, path_template = None, parameter_processing_rules = None ):
+    def __init__( self, path_template = None, parameter_processing_rules = None ):
         
-        super().__init__( can_test_availability = availability_path is not None )
+        super().__init__()
         
         if path_template is None:
             
@@ -156,13 +146,14 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             parameter_processing_rules = HydrusSerialisable.SerialisableList()
             
         
-        self._availability_path: str | None = availability_path # 'ffmpeg --version' or something, maybe optional?
         self._path_template: str = path_template # the actual call
         self._parameter_processing_rules: HydrusSerialisable.SerialisableList = HydrusSerialisable.SerialisableList( parameter_processing_rules )
         self._timeout = 15
         self._this_is_a_potentially_long_lived_external_guy = False
         self._hide_terminal = False
         self._text = False
+        self._availability_call = None
+        self._availability_which_name = None
         
     
     def _DoCall( self, input_parameters: dict ) -> dict:
@@ -177,11 +168,11 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             
             try:
                 
-                input_parameter_value = input_parameters[ parameter_processing_rule.input_parameter_name ]
+                input_parameter_value = input_parameters[ parameter_processing_rule.parameter_type ]
                 
             except KeyError:
                 
-                raise HydrusExceptions.ExecutableException( f'The expected input parameter "{parameter_processing_rule.input_parameter_name}" was not in the call arguments!' )
+                raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ parameter_processing_rule.parameter_type ]}" was not in the call arguments!' )
                 
             
             if isinstance( input_parameter_value, str ):
@@ -239,26 +230,29 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
         serialisable_parameter_processing_rules = self._parameter_processing_rules.GetSerialisableTuple()
         
         return (
-            self._availability_path,
             self._path_template,
             serialisable_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
             self._hide_terminal,
-            self._text
+            self._text,
+            self._availability_call,
+            self._availability_which_name
         )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         (
-            self._availability_path,
+            self._availability_call,
             self._path_template,
             serialisable_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
             self._hide_terminal,
-            self._text
+            self._text,
+            self._availability_call,
+            self._availability_which_name
         ) = serialisable_info
         
         self._parameter_processing_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameter_processing_rules )
@@ -266,29 +260,52 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     
     def _TestAvailability( self ):
         
-        try:
+        if self._availability_call is not None:
             
-            HydrusSubprocess.RunSubprocess(
-                self._availability_path,
-                this_is_a_potentially_long_lived_external_guy = False,
-                hide_terminal = True,
-                text = True
-            )
+            try:
+                
+                HydrusSubprocess.RunSubprocess(
+                    self._availability_call,
+                    this_is_a_potentially_long_lived_external_guy = False,
+                    hide_terminal = True,
+                    text = True
+                )
+                
+                return True
+                
+            except Exception as e:
+                
+                HydrusData.Print( f'While testing local process call with "{self._availability_call}", ran into the following error:' f' {e}' )
+                HydrusData.PrintException( e )
+                
             
-            return True
+        
+        if self._availability_which_name is not None:
             
-        except Exception as e:
-            
-            HydrusData.Print( f'While testing local process call with "{self._availability_path}", ran into the following error:' f' {e}' )
-            HydrusData.PrintException( e )
+            return shutil.which( self._availability_which_name ) is not None
             
         
         return False
         
     
+    def CanTestAvailability( self ):
+        
+        return self._availability_call is not None or self._availability_which_name is not None
+        
+    
     def GetCommandDescription( self ):
         
         return 'CALL: ' + self._path_template
+        
+    
+    def SetAvailabilityCall( self, call: str ):
+        
+        self._availability_call = call
+        
+    
+    def SetAvailabilityWhichName( self, name: str ):
+        
+        self._availability_which_name = name
         
     
     def SetHideTerminal( self, value: bool ):
@@ -308,3 +325,6 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_TEMPLATE ] = ExecutableLocalProcessCallTemplate
+
+# A Hardcoded Windows open guy??
+    # available = platform_windows lol
