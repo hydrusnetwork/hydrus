@@ -268,7 +268,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         message = 'THIS SYSTEM IS STILL IN TESTING! ONLY ADVANCED USERS SEE THIS, AND IT IS NOT PLUGGED INTO ANYTHING YET.'
         message += '\n\n'
-        message += 'Feel free to play with it and let hydev know how you feel.'
+        message += 'Feel free to play with it and let hydev know how you feel. Edit panel is not ready yet, so add/edit do nothing.'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
