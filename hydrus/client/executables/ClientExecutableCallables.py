@@ -58,6 +58,16 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         return self._actual_call.Call( input_params )
         
     
+    def GenerateNewCallableKey( self ):
+        
+        self._callable_key = HydrusData.GenerateKey()
+        
+    
+    def GetCall( self ):
+        
+        return self._actual_call
+        
+    
     def GetCallableKey( self ):
         
         return self._callable_key

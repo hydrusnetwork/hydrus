@@ -69,7 +69,7 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
         
         if parameter_type is None:
             
-            parameter_type = ClientExecutablePipelines.PARAM_TYPE_FILE_PATH
+            parameter_type = ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH
             
         
         if replacement_string is None:
@@ -246,7 +246,6 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         (
-            self._availability_call,
             self._path_template,
             serialisable_parameter_processing_rules,
             self._timeout,
@@ -341,13 +340,18 @@ class ExecutableLocalProcessWindowsStartFile( ExecutableActualCall ):
     
     def _DoCall( self, input_parameters: dict ) -> dict:
         
+        if not HC.PLATFORM_WINDOWS:
+            
+            raise HydrusExceptions.ExecutableException( 'The Windows Startfile call is not available on non-Windows!' )
+            
+        
         try:
             
-            path = input_parameters[ ClientExecutablePipelines.PARAM_TYPE_FILE_PATH ]
+            path = input_parameters[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]
             
         except KeyError:
             
-            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.PARAM_TYPE_FILE_PATH ]}" was not in the call arguments!' )
+            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]}" was not in the call arguments!' )
             
         
         os.startfile( path )
@@ -377,7 +381,7 @@ class ExecutableLocalProcessWindowsStartFile( ExecutableActualCall ):
     
     def GetCommandDescription( self ):
         
-        return 'Call Windows file launcher'
+        return 'Call Windows default file launcher'
         
     
 

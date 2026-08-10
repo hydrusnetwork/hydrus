@@ -881,7 +881,6 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    
     def _EditNGUG( self ):
         
         data = self._ngug_list_ctrl.GetTopSelectedData()

@@ -116,8 +116,8 @@ def OpenExternallySingleFile( executable_manager: ExecutableManager, id_and_name
     file_uri = Path( file_path ).as_uri()
     
     input_params = {
-        ClientExecutablePipelines.PARAM_TYPE_FILE_PATH : file_path,
-        ClientExecutablePipelines.PARAM_TYPE_FILE_LOCAL_PATH_URI : file_uri,
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH : file_path,
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URI : file_uri,
     }
     
     call.Call( input_params )
@@ -158,8 +158,8 @@ def OpenExternallyMultipleFiles( executable_manager: ExecutableManager, id_and_n
         
     
     input_params = {
-        ClientExecutablePipelines.PARAM_TYPE_FILE_PATHS : file_paths,
-        ClientExecutablePipelines.PARAM_TYPE_FILE_LOCAL_PATH_URIS : file_uris,
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS : file_paths,
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS : file_uris,
     }
     
     call.Call( input_params )
@@ -182,7 +182,7 @@ def OpenExternallyURL( executable_manager: ExecutableManager, id_and_name: Hydru
         
     
     input_params = {
-        ClientExecutablePipelines.PARAM_TYPE_URL : url,
+        ClientExecutablePipelines.PARAMETER_TYPE_URL : url,
     }
     
     call.Call( input_params )

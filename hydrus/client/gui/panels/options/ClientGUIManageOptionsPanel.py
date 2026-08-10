@@ -22,6 +22,7 @@ from hydrus.client.gui.panels.options import ConnectionPanel
 from hydrus.client.gui.panels.options import DownloadingPanel
 from hydrus.client.gui.panels.options import DuplicatesPanel
 from hydrus.client.gui.panels.options import ExportingPanel
+from hydrus.client.gui.panels.options import ExternalProgramsPanel
 from hydrus.client.gui.panels.options import FilesAndTrashPanel
 from hydrus.client.gui.panels.options import FileSearchPanel
 from hydrus.client.gui.panels.options import FileSortCollectPanel
@@ -75,6 +76,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'downloading', DownloadingPanel.DownloadingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'duplicates', DuplicatesPanel.DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'exporting', ExportingPanel.ExportingPanel( self._listbook ) )
+        
+        if self._new_options:
+            
+            self._listbook.AddPage( 'external programs (TESTING)', ExternalProgramsPanel.ExternalProgramsPanel( self._listbook, self._new_options ) )
+            
+        
         self._listbook.AddPage( 'files and trash', FilesAndTrashPanel.FilesAndTrashPanel( self._listbook ) )
         self._listbook.AddPage( 'file search', FileSearchPanel.FileSearchPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'file sort/collect', FileSortCollectPanel.FileSortCollectPanel( self._listbook, self._new_options ) )
