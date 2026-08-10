@@ -44,23 +44,28 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
+    def GetCommandDescription( self ):
+        
+        raise NotImplementedError()
+        
+    
     def CanTestAvailability( self ):
         
         return self._can_test_availability
-        
-    
-    def TestAvailability( self ):
-        
-        return self._TestAvailability()
         
     
     def Call( self, input_parameters: dict ) -> dict:
         
         return self._DoCall( input_parameters )
         
+
+    def TestAvailability( self ):
+        
+        return self._TestAvailability()
+        
     
 
-class LocalProcessCallTemplateInputParameterProcessingRule( HydrusSerialisable.SerialisableBase ):
+class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE
     SERIALISABLE_NAME = 'Local Process Call - Input Parameter Processing Rule'
@@ -279,6 +284,11 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             
         
         return False
+        
+    
+    def GetCommandDescription( self ):
+        
+        return 'CALL: ' + self._path_template
         
     
     def SetHideTerminal( self, value: bool ):

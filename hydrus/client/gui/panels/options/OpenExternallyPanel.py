@@ -13,7 +13,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
 
-class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
+class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def __init__( self, parent ):
         
@@ -36,7 +36,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_OPEN_EXTERNALLY.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
         
         self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, 12, model, activation_callback = self._EditMimeLaunch )
         

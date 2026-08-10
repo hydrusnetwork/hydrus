@@ -205,7 +205,7 @@ Boot up your newly assembled client, and if your files or thumbnails are stored 
 
 Then:
 
-- check `options->external programs` and update anything as needed
+- check `options->open externally` and update anything as needed
 - check `options->exporting` and update the default export directory
 - check a file's `right-click->share->export files` window to see what the default export path there is
 - check `database->move media files` and remove any empty stubs from the old system

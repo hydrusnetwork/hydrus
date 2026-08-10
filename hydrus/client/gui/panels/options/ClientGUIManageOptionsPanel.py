@@ -22,7 +22,6 @@ from hydrus.client.gui.panels.options import ConnectionPanel
 from hydrus.client.gui.panels.options import DownloadingPanel
 from hydrus.client.gui.panels.options import DuplicatesPanel
 from hydrus.client.gui.panels.options import ExportingPanel
-from hydrus.client.gui.panels.options import ExternalProgramsPanel
 from hydrus.client.gui.panels.options import FilesAndTrashPanel
 from hydrus.client.gui.panels.options import FileSearchPanel
 from hydrus.client.gui.panels.options import FileSortCollectPanel
@@ -37,6 +36,7 @@ from hydrus.client.gui.panels.options import MediaPlaybackPanel
 from hydrus.client.gui.panels.options import MediaViewerHoversPanel
 from hydrus.client.gui.panels.options import MediaViewerPanel
 from hydrus.client.gui.panels.options import NotesPanel
+from hydrus.client.gui.panels.options import OpenExternallyPanel
 from hydrus.client.gui.panels.options import PopupPanel
 from hydrus.client.gui.panels.options import RatingsPanel
 from hydrus.client.gui.panels.options import RegexPanel
@@ -72,37 +72,37 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'command palette', CommandPalettePanel.CommandPalettePanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'colours', ColoursPanel.ColoursPanel( self._listbook ) )
         self._listbook.AddPage( 'connection', ConnectionPanel.ConnectionPanel( self._listbook ) )
+        self._listbook.AddPage( 'downloading', DownloadingPanel.DownloadingPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'duplicates', DuplicatesPanel.DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'exporting', ExportingPanel.ExportingPanel( self._listbook ) )
-        self._listbook.AddPage( 'external programs', ExternalProgramsPanel.ExternalProgramsPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', FilesAndTrashPanel.FilesAndTrashPanel( self._listbook ) )
         self._listbook.AddPage( 'file search', FileSearchPanel.FileSearchPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'file sort/collect', FileSortCollectPanel.FileSortCollectPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'file viewing statistics', FileViewingStatisticsPanel.FileViewingStatisticsPanel( self._listbook ) )
         self._listbook.AddPage( 'gui pages', GUIPagesPanel.GUIPagesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'gui sessions', GUISessionsPanel.GUISessionsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'importing', ImportingPanel.ImportingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'import options', ImportOptionsPanel.ImportOptionsPanel( self._listbook, self._new_options, CG.client_controller.import_options_manager ) )
         self._listbook.AddPage( 'maintenance and processing', MaintenanceAndProcessingPanel.MaintenanceAndProcessingPanel( self._listbook ) )
         self._listbook.AddPage( 'media viewer', MediaViewerPanel.MediaViewerPanel( self._listbook ) )
         self._listbook.AddPage( 'media viewer hovers', MediaViewerHoversPanel.MediaViewerHoversPanel( self._listbook ) )
         self._listbook.AddPage( 'media playback', MediaPlaybackPanel.MediaPlaybackPanel( self._listbook ) )
-        self._listbook.AddPage( 'speed and memory', SpeedAndMemoryPanel.SpeedAndMemoryPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'system tray', SystemTrayPanel.SystemTrayPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'notes', NotesPanel.NotesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'open externally', OpenExternallyPanel.OpenExternallyPanel( self._listbook) )
         self._listbook.AddPage( 'popup notifications', PopupPanel.PopupPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'regex favourites', RegexPanel.RegexPanel( self._listbook ) )
-        self._listbook.AddPage( 'file sort/collect', FileSortCollectPanel.FileSortCollectPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'downloading', DownloadingPanel.DownloadingPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'duplicates', DuplicatesPanel.DuplicatesPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'importing', ImportingPanel.ImportingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'ratings', RatingsPanel.RatingsPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'regex favourites', RegexPanel.RegexPanel( self._listbook ) )
         self._listbook.AddPage( 'shortcuts', ShortcutsPanel.ShortcutsPanel( self._listbook, self._new_options, all_shortcuts ) )
+        self._listbook.AddPage( 'speed and memory', SpeedAndMemoryPanel.SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'style', StylePanel.StylePanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system', SystemPanel.SystemPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'system tray', SystemTrayPanel.SystemTrayPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag editing', TagEditingPanel.TagEditingPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag presentation', TagPresentationPanel.TagPresentationPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag sort', TagSortPanel.TagSortPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag suggestions', TagSuggestionsPanel.TagSuggestionsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'tag autocomplete tabs', TagsPanel.TagsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'thumbnails', ThumbnailsPanel.ThumbnailsPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'system', SystemPanel.SystemPanel( self._listbook, self._new_options ) )
-        self._listbook.AddPage( 'notes', NotesPanel.NotesPanel( self._listbook, self._new_options ) )
         
         self._listbook.SortList()
         
