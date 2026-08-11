@@ -1319,7 +1319,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMediaSingle.MediaSin
     exif_looking_good = mime in HC.FILES_THAT_CAN_HAVE_EXIF
     xmp_looking_good = mime in HC.FILES_THAT_CAN_HAVE_XMP
     iptc_looking_good = mime in HC.FILES_THAT_CAN_HAVE_IPTC
-    software_source_looking_good = mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA
+    software_source_looking_good = mime in HC.FILES_THAT_CAN_HAVE_SOFTWARE_SOURCE
     human_readable_looking_good = mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA
     
     looking_good_for_something = exif_looking_good or xmp_looking_good or iptc_looking_good or software_source_looking_good or human_readable_looking_good

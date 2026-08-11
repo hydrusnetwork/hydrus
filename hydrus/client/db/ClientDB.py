@@ -8207,20 +8207,62 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        if False: # on version where we are happy with human-readable file metadata. do not want to pull the trigger on this big job until we are content
-            # actually yeah now we want to do it for 'has xmp', 'has iptc', and 'has software/source', and we MUST make it optional through a yes/no dialog
+        if version == 682:
             
             try:
                 
-                self._controller.frame_splash_status.SetSubtext( f'scheduling embedded text maintenance' )
-                
-                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
-                
-                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                def ask_what_to_do_metadata_regen_682():
                     
-                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_human_readable_embedded_metadata USING ( hash_id ) CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.IMAGES ) ) ) )
+                    message = 'Hey, I have created some new metadata flags such that "human-readable" metadata is more useful and we discover new XMP, IPTC, and software/source information. I want to schedule some regeneration work for pretty much all your images.'
+                    message += '\n' * 2
+                    message += 'I would like to do it for everything you have, which could be millions of images and may take months of slow background work to eventually clear. I recommend clicking yes, even if you do have many files. If you want to handle this yourself, or your files are stored on the cloud and you do not want to spend bandwidth slowly loading them, just click no.'
                     
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    from qtpy import QtWidgets as QW
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( CG.client_controller.GetMainTLW(), message, title = 'Check all images for new metadata?', yes_label = 'yes, re-scan the images', no_label = 'no, do not do it' )
+                    
+                    return result == QW.QDialog.DialogCode.Accepted
+                    
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling file metadata regen maintenance' )
+
+                do_it = self._controller.CallBlockingToQtTLW( ask_what_to_do_metadata_regen_682 )
+                
+                if do_it:
+                    
+                    # xmp, iptc, software-source, human-readable
+                    
+                    all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
+                    
+                    with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'scheduling xmp' )
+                        
+                        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_CAN_HAVE_XMP ) ) ) )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'scheduling iptc' )
+                        
+                        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_CAN_HAVE_IPTC ) ) ) )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_IPTC )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'scheduling software/source' )
+                        
+                        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_CAN_HAVE_SOFTWARE_SOURCE ) ) ) )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_SOFTWARE_SOURCE )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'scheduling human-readable' )
+                        
+                        hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA ) ) ) )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'all good' )
+                        
                     
                 
             except Exception as e:

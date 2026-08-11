@@ -386,6 +386,7 @@ class FileImportJob( object ):
         has_xmp = False
         has_iptc = False
         has_software_source = False
+        has_human_readable_metadata = False
         
         raw_pil_image = None
         
@@ -446,7 +447,7 @@ class FileImportJob( object ):
         
         self._has_iptc = has_iptc
         
-        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+        if mime in HC.FILES_THAT_CAN_HAVE_SOFTWARE_SOURCE:
             
             try:
                 
@@ -463,9 +464,21 @@ class FileImportJob( object ):
                 
             
         
+        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            try:
+                
+                has_human_readable_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime, possible_raw_pil_image = raw_pil_image )
+                
+            except Exception as e:
+                
+                pass
+                
+            
+        
         self._has_software_source = has_software_source
         
-        self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime, possible_raw_pil_image = raw_pil_image )
+        self._has_human_readable_embedded_metadata = has_human_readable_metadata
         
         has_icc_profile = False
         

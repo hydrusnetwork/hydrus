@@ -635,7 +635,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         hash = media_result.GetHash()
         mime = media_result.GetMime()
         
-        if mime not in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+        if mime not in HC.FILES_THAT_CAN_HAVE_SOFTWARE_SOURCE:
             
             return False
             
