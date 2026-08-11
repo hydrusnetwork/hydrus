@@ -791,6 +791,59 @@ class TestComparatorHardcoded( unittest.TestCase ):
         self.assertFalse( comparator.Test( media_result_c, media_result_c ) )
         
     
+    def test_comparator_3_general_metadata( self ):
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_c = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_d = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        
+        media_result_a.GetFileInfoManager().has_exif = True
+        media_result_b.GetFileInfoManager().has_exif = True
+        media_result_a.GetFileInfoManager().has_iptc = True
+        media_result_c.GetFileInfoManager().has_exif = True
+        media_result_d.GetFileInfoManager().has_exif = True
+        media_result_d.GetFileInfoManager().has_human_readable_embedded_metadata = True
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertFalse( comparator.Test( media_result_b, media_result_a ) )
+        
+        self.assertFalse( comparator.Test( media_result_c, media_result_d ) )
+        self.assertTrue( comparator.Test( media_result_d, media_result_c ) )
+        
+        self.assertTrue( comparator.Test( media_result_b, media_result_c ) )
+        self.assertTrue( comparator.Test( media_result_c, media_result_b ) )
+        
+        #
+        
+        media_result_a = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_b = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_c = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        media_result_d = HelperFunctions.GetFakeMediaResult( HydrusData.GenerateKey() )
+        
+        media_result_a.GetFileInfoManager().has_icc_profile = True
+        media_result_b.GetFileInfoManager().has_icc_profile = True
+        media_result_c.GetFileInfoManager().has_icc_profile = False
+        media_result_d.GetFileInfoManager().has_icc_profile = False
+        
+        comparator = ClientDuplicatesAutoResolutionComparators.PairComparatorRelativeHardcoded( hardcoded_type = ClientDuplicatesAutoResolutionComparators.HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B )
+        
+        self.assertTrue( comparator.CanDetermineBetter() )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_b ) )
+        self.assertTrue( comparator.Test( media_result_b, media_result_a ) )
+        
+        self.assertTrue( comparator.Test( media_result_c, media_result_d ) )
+        self.assertTrue( comparator.Test( media_result_d, media_result_c ) )
+        
+        self.assertTrue( comparator.Test( media_result_a, media_result_c ) )
+        self.assertFalse( comparator.Test( media_result_c, media_result_a ) )
+        
+    
 
 class TestComparatorVisualDuplicates( unittest.TestCase ):
     

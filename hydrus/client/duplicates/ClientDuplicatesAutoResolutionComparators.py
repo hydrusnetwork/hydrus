@@ -471,6 +471,8 @@ HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_DIFFERS = 1
 HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME = 2
 HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME = 3
 HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY = 4
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B = 5
+HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B = 6
 
 hardcoded_comparator_type_two_files_str_lookup = {
     HARDCODED_COMPARATOR_TYPE_TWO_FILES_FILETYPE_SAME : 'A and B have the same filetype',
@@ -478,6 +480,8 @@ hardcoded_comparator_type_two_files_str_lookup = {
     HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_EXIF_SAME : 'A and B have the same "has exif" value',
     HARDCODED_COMPARATOR_TYPE_TWO_FILES_HAS_ICC_PROFILE_SAME : 'A and B have the same "has icc profile" value',
     HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY : 'A has clearly better jpeg quality than B',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B : 'A has same or better metadata flags to B',
+    HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B : 'A has ICC Profile if B does',
 }
 
 class PairComparatorRelativeHardcoded( PairComparator ):
@@ -508,7 +512,11 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def CanDetermineBetter( self ) -> bool:
         
-        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        if self._hardcoded_type in (
+            HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY,
+            HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B,
+            HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B,
+        ):
             
             return True
             
@@ -533,7 +541,11 @@ class PairComparatorRelativeHardcoded( PairComparator ):
     
     def OrderDoesNotMatter( self ):
         
-        if self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY:
+        if self._hardcoded_type in (
+                HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_CLEARLY_BETTER_JPEG_QUALITY,
+                HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B,
+                HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B,
+        ):
             
             return False
             
@@ -597,6 +609,36 @@ class PairComparatorRelativeHardcoded( PairComparator ):
                 
                 return quality_ratio < 0.7 # 0.7 is about our quality step here
                 
+            
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_METADATA_FLAGS_TO_B:
+            
+            a_file_info_manager = media_result_a.GetFileInfoManager()
+            b_file_info_manager = media_result_b.GetFileInfoManager()
+            
+            for ( value_a, value_b ) in (
+                ( a_file_info_manager.has_exif, b_file_info_manager.has_exif ),
+                ( a_file_info_manager.has_xmp, b_file_info_manager.has_xmp ),
+                ( a_file_info_manager.has_iptc, b_file_info_manager.has_iptc ),
+                ( a_file_info_manager.has_software_source, b_file_info_manager.has_software_source ),
+                ( a_file_info_manager.has_human_readable_embedded_metadata, b_file_info_manager.has_human_readable_embedded_metadata ),
+            ):
+                
+                if not value_a and value_b:
+                    
+                    return False
+                    
+                
+            
+            return True
+            
+        elif self._hardcoded_type == HARDCODED_COMPARATOR_TYPE_TWO_FILES_A_HAS_SAME_OR_BETTER_ICC_FLAG_TO_B:
+            
+            if media_result_b.GetFileInfoManager().has_icc_profile:
+                
+                return media_result_a.GetFileInfoManager().has_icc_profile
+                
+            
+            return True
             
         
         raise Exception( f'Do not understand what I should do with a type of {self._hardcoded_type}!' )

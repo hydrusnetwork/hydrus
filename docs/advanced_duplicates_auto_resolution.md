@@ -183,8 +183,10 @@ What's going on here?
     - **A is larger than B** - When two files are pixel-perfect duplicates, the larger filesize is probably the more original. The file header might be interesting, like an AI prompt or EXIF information, or it might be rubbish, like a 189KB XML document defining brushes and layers that was carried over from some PSD conversion, but either way the file is very probably more original, and, as makes sense, we lose less data by deleting the smaller.
     - **A is the same filesize as B and A was imported earlier than** - Sometimes, pixel-perfect duplicates are exactly the same filesize. I have seen this with successive conversions of an original file using different versions of imagemagick. I assume the file header simply has a different version enum somewhere. We want a tie-breaker, so we'll go with the earlier import.
 - **filetype the same** - A jpeg/png pixel pair has special rules, and so would a jpeg/jpeg xl, or a gif/tiff. Let's not get too clever and just compare like with like.
-- **EXIF** - This logic block is ugly, but it means "Do not allow an AB pair where A has no EXIF but B does have EXIF". We don't want to accidentally delete a B with EXIF.
-- **ICC Profile** - Same deal as EXIF. ICC Profiles are tricky because many IRL examples are inserted stubs. They don't always always point to originality. Let's be careful anyway.
+- **A has same or better metadata flags to B** - This means "Do not allow an AB pair where A has no interesting metadata but B does". It tests the "has x" flags for: EXIF, XMP, IPTC, software/source, and human-readable. If only A has EXIF, it passes, if both A and B have EXIF, it passes, if neither have it, it passes, but if only B has EXIF, it fails. If A has EXIF, XMP, and IPTC and B only has software/source, it fails because A does not have software/source. We don't want to accidentally delete a B with cool stuff.
+- **A has ICC Profile if B does** - Same deal as the metadata test, but only for "has icc profile". ICC Profiles are tricky because many IRL examples are inserted stubs. They don't always always point to originality. Let's be careful anyway.
+
+The Metadata and ICC Profile tests do not compare the _contents_ of the EXIF structure etc..., they only compare the "has_x" presence of that flag.
 
 Note we don't have to compare resolution because pixel-perfect files always have the same resolution.
 
