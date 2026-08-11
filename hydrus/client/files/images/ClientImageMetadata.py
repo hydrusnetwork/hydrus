@@ -204,6 +204,13 @@ def GetIPTCDict( pil_image: PILImage.Image ) -> dict | None:
                 clean_value = f'unknown IPTC value type: {bytes_or_bytes_list}'
                 
             
+            clean_value = clean_value.strip()
+            
+            if clean_value == '':
+                
+                continue
+                
+            
             if key_tuple in iptc_tuple_int_enums_to_strs_lookup:
                 
                 clean_key = iptc_tuple_int_enums_to_strs_lookup[ key_tuple ]
@@ -258,7 +265,7 @@ def GetXMPDict( pil_image: PILImage.Image ) -> dict | None:
             def get_name( node: bs4.element.Tag ) -> str:
                 
                 # Pillow removes namespace with regex. maybe that's nice? one assumes a user who wants XMP wants the full course, though
-                return node.name
+                return str( node.name )
                 
             
             def get_value( node: bs4.element.Tag ) -> str | dict | None:
@@ -269,7 +276,23 @@ def GetXMPDict( pil_image: PILImage.Image ) -> dict | None:
                     
                     if isinstance( value, bs4.element.AttributeValueList ):
                         
-                        value = list( value )
+                        value = [ v.strip() for v in value ]
+                        
+                        value = [ v for v in value if v != '' ]
+                        
+                        if len( value ) == 0:
+                            
+                            continue
+                            
+                        
+                    else:
+                        
+                        value = str( value ).strip()
+                        
+                        if value == '':
+                            
+                            continue
+                            
                         
                     
                     attribute_dict[ key ] = value
@@ -284,6 +307,15 @@ def GetXMPDict( pil_image: PILImage.Image ) -> dict | None:
                         key = get_name( child )
                         
                         value = get_value( child )
+                        
+                        if isinstance( value, str ) and value == '':
+                            
+                            continue
+                            
+                        elif isinstance( value, dict ) and len( value ) == 0:
+                            
+                            continue
+                            
                         
                         attribute_dict[ key ] = value
                         
