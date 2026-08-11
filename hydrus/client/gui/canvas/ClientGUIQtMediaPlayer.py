@@ -141,6 +141,8 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._background_colour_generator = background_colour_generator
         
         self._my_audio_placeholder = QW.QWidget( self )
+        self._my_audio_image_label = QW.QLabel( self )
+        self._my_audio_image_label.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         self._last_set_mute_state = False
         
@@ -159,8 +161,11 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._my_video_output.nativeSizeChanged.connect( self._RefitVideo )
         
         QP.SetBackgroundColour( self._my_audio_placeholder, QG.QColor( 0, 0, 0 ) )
+        QP.SetBackgroundColour( self._my_audio_image_label, QG.QColor( 0, 0, 0 ) )
         
         self._media_player = QM.QMediaPlayer( self )
+        
+        self._media_player.metaDataChanged.connect( self.NotifyQMetaDataChanged )
         
         self._my_audio_output: QM.QAudioOutput | None = None
         
@@ -179,6 +184,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         QP.AddToLayout( vbox, self._my_graphics_view, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._my_audio_placeholder, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._my_audio_image_label, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
         
@@ -195,6 +201,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         self._my_audio_placeholder.setMouseTracking( True )
+        self._my_audio_image_label.setMouseTracking( True )
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, self, [ shortcut_set ], catch_mouse = True )
         
@@ -543,6 +550,40 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         return self._media_player.playbackState() != QM.QMediaPlayer.PlaybackState.PlayingState
         
     
+    def NotifyQMetaDataChanged( self ):
+        
+        if self._media is not None:
+            
+            if self._media.GetMime() in HC.AUDIO:
+                
+                m = self._media_player.metaData()
+                
+                image = m.value( QM.QMediaMetaData.Key.CoverArtImage )
+                
+                if image is None:
+                    
+                    image = m.value( QM.QMediaMetaData.Key.ThumbnailImage )
+                    
+                
+                if image is not None:
+                    
+                    pixmap = QG.QPixmap.fromImage( image )
+                    
+                    pixmap = pixmap.scaled(
+                        self._my_audio_placeholder.size(), # placeholder, which is currently visible
+                        QC.Qt.AspectRatioMode.KeepAspectRatio,
+                        QC.Qt.TransformationMode.SmoothTransformation
+                    )
+                    
+                    self._my_audio_image_label.setPixmap( pixmap )
+                    
+                    self._my_audio_placeholder.setVisible( False )
+                    self._my_audio_image_label.setVisible( True )
+                    
+                
+            
+        
+    
     def Pause( self ):
         
         self._media_player.pause()
@@ -679,6 +720,7 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._my_graphics_view.setVisible( not is_audio )
         self._my_audio_placeholder.setVisible( is_audio )
+        self._my_audio_image_label.setVisible( False )
         
         path = CG.client_controller.client_files_manager.GetFilePath( self._media.GetHash(), self._media.GetMime() )
         
