@@ -1,6 +1,7 @@
 import itertools
 import sqlite3
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBFilesDuplicatesAutoResolutionStorage
@@ -151,6 +152,15 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         pair_to_work = get_row()
         
+        if pair_to_work is None and rule.HasResolutionWorkToDo():
+            
+            rule.SetPaused( True )
+            
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do resolution work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen.' )
+            # we likely have a bad count at the rule level
+            self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
+            
+        
         while pair_to_work is not None:
             
             ( smaller_media_id, larger_media_id ) = pair_to_work
@@ -186,6 +196,15 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         limit = 2000
         
         unsearched_pairs_and_distances = self.modules_files_duplicates_auto_resolution_storage.GetUnsearchedPairsAndDistances( rule, limit = limit )
+        
+        if len( unsearched_pairs_and_distances ) == 0 and rule.HasSearchWorkToDo():
+            
+            rule.SetPaused( True )
+            
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do search work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen.' )
+            # we likely have a bad count at the rule level
+            self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
+            
         
         work_still_to_do = len( unsearched_pairs_and_distances ) == limit
         

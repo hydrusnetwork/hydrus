@@ -393,7 +393,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._Reinit()
         
-        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_duplicates_auto_resolution_new_rules' )
         
     
     def FlipPausePlay( self, rule: ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule ):
@@ -760,7 +760,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         self._Reinit()
         
-        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_duplicates_auto_resolution_new_rules' )
         
         HydrusData.ShowText( 'Cached auto-resolution numbers cleared!' )
         

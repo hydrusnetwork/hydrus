@@ -1544,6 +1544,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                             return True
                             
                         
+                        if rule.IsPaused():
+                            
+                            return True
+                            
+                        
                     
                 finally:
                     
@@ -1608,6 +1613,11 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                             
                         
                         if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                            
+                            return True
+                            
+                        
+                        if rule.IsPaused():
                             
                             return True
                             
