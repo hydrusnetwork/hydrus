@@ -414,6 +414,9 @@ def GetSoftwareSourceFromPilInfo( pil_image: PILImage.Image ) -> str | None:
         components.append( info_dict[ 'Source' ] )
         
     
+    components = [ c.strip() for c in components ]
+    components = [ c for c in components if c != '' ]
+    
     if len( components ) == 0:
         
         return None
