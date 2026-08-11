@@ -1283,6 +1283,13 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         return file_service_ids_to_hash_ids
         
     
+    def HashIdIsCurrentlyIn( self, service_id, hash_id ):
+        
+        current_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        return self._Execute( f'SELECT 1 FROM {current_files_table_name} WHERE hash_id = ?;', ( hash_id, ) ).fetchone() is not None
+        
+    
     def PendFiles( self, service_id, hash_ids ):
         
         pending_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_PENDING )

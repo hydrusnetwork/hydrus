@@ -285,7 +285,9 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
         
         king_hash_id = self.modules_files_duplicates_storage.GetKingHashId( media_id )
         
-        if not self.modules_similar_files.FileIsInSystem( king_hash_id ):
+        # I previously did 'FileIsInSystem' here, but that's wrong; we want to test if the file is local, not that it is registered for search. the latter is a subset of the former
+        # video dedupe tools etc.. were broke because of this
+        if not self.modules_files_storage.HashIdIsCurrentlyIn( self.modules_services.hydrus_local_file_storage_service_id, king_hash_id ):
             
             return
             
@@ -301,7 +303,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             
             king_hash_id = self.modules_files_duplicates_storage.GetKingHashId( potential_duplicate_media_id )
             
-            if not self.modules_similar_files.FileIsInSystem( king_hash_id ):
+            if not self.modules_files_storage.HashIdIsCurrentlyIn( self.modules_services.hydrus_local_file_storage_service_id, king_hash_id ):
                 
                 continue
                 
