@@ -3537,8 +3537,46 @@ PRAGMA integrity_check;
 .exit
 </code></pre></div>
 <p>And wait a bit. It'll report its progress as it tries to copy your db. It will be slow. Remember to go '.exit' once it is done to close the shell neatly.</p>
-<p>If the clone says some errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! That probably isn't a real error, and even if it is, 'fts' stuff will be automatically fixed on the next boot. Same if you get any errors about 'sqlite_stat1' table.</p>
-<p>Some users have reported the sqlite terminal crashing during a very large clone. This has never happened to me, and I cannot explain it if your system is ok. I do not <em>think</em> SQLite will crash from bad data alone, but I guess it could just be some bug. The executable is going to be munching through a multi-GB file, so if you have a crash and your OS has strange temp/swap settings, that might be it. One user says they had crashes and discovered with a memtest that they had bad memory. Another possibility in our context is if the hard drive still has I/O issues. Try copying the .db file somewhere, with the intention of cloning it from a different area of your hard drive (or even a completely different drive)--if your OS has a serious read/write error trying to copy the file, then that's probably what was causing SQLite to have trouble, and you now need to think about more serious drive recovery before you move forward on fixing hydrus.</p>
+<div class="admonition note">
+<p class="admonition-title">table already exists</p>
+<p>If the clone gives errors involving 'fts' or 'fts4', like 'subtags_fts4_content already exists', but it keeps on working, don't worry about it! It isn't a real error, and you can ignore it.</p>
+<p>Same if you get any errors about 'sqlite_stat1' table.</p>
+</div>
+<details class="warning">
+<summary>clone crashes/halts</summary>
+<p>Some users have reported the sqlite terminal crashing during a clone. Typically it just halts while working, perhaps when it hits a table with known malformation. I do not know why this ever happens, but perhaps some damage is too much for SQLite to route around during a clone.</p>
+<p>One user says they had crashes and discovered with a memtest that they had bad memory. Another possibility in our context is if the hard drive still has I/O issues. Try copying the .db file somewhere, with the intention of cloning it from a different area of your hard drive (or even a completely different drive)--if your OS has a serious read/write error trying to copy the file, then that's probably what was causing SQLite to have trouble, and you now need to think about more serious drive recovery before you move forward on fixing hydrus.</p>
+<p>Another option is to try <code>.backup client_backup.db</code> before you do a <code>.clone</code>. The <code>.backup</code> command copies the file block for block, not trying to parse rows or skip over errors, and it <em>supposed</em> to make a byte-for-byte copy, but if you have I/O errors, perhaps a bad disk sector, it may be that <code>.backup</code> works where an OS file copy will not, and then a <code>.clone</code> on the new disk will be ok. Do something like this:</p>
+<div class="highlight"><pre><span></span><code>.open client.db
+.backup client_backup.db
+.exit
+
+.open client_backup.db
+.clone client_new.db
+.exit
+</code></pre></div>
+<p>If you need to do this, your disk is probably still damaged. You might like to specify a new drive for the backup destination, like this:</p>
+<div class="highlight"><pre><span></span><code>.backup E:\recovery\client_backup.db
+-or, on non-Windows-
+.backup /path/to/safe/partition/client_backup.db
+</code></pre></div>
+</details>
+<details class="danger">
+<summary>my clone will not work, I think because of one table</summary>
+<p>One user could not get a clone to work; they had a single really huge malformed table, ~90% of the total database size, that was malformed, unwanted, and would crash a clone. He discovered that you can hackily delist the table from SQLite and a clone would then work.</p>
+<p>THIS IS CLEVER AND DANGEROUS. YOU HAVE A BACKUP OF EVERYTHING, RIGHT?</p>
+<ul>
+<li>Let's say your bad table is <code>combined_files_tag_cache_17</code>, on client.caches.db</li>
+<li>Open up <code>sqlite3</code> on <code>client.caches.db</code>. Do not do any ATTACH work, if you know what that is.</li>
+<li><code>SELECT * FROM sqlite_schema WHERE name = 'combined_files_tag_cache_17';</code>. It should give you a nice line describing the table.</li>
+<li><code>PRAGMA writable_schema = ON</code></li>
+<li><code>DELETE FROM sqlite_schema WHERE name = 'combined_files_tag_cache_17';</code></li>
+<li><code>PRAGMA writable_schema = OFF</code></li>
+<li><code>.clone client.caches_new.db</code></li>
+<li><code>.exit</code></li>
+</ul>
+<p>By removing the table from the master schema, it is not queued up in the clone. Of course, by doing this, it is lost completely. Do not edit the sqlite_schema unless you know what you intend to do.</p>
+</details>
 <p>Once it is done, the cloned file may be significantly smaller than the original. 50% reduction in size is typical. If it is more than, say, 8% reduction, this probably means some data has been lost (a little bit is ok, since a clone is basically a VACUUM). If the loss is in client.caches.db, client.master.db or client.mappings.db, it is probably fine (particularly if you sync to a tag repository like the PTR), as we can regenerate that data once you are working again. If your client.db loses lots of data, I am afraid this is not a great situation.</p>
 <p>If the clone operation is successful, rename client.db to client_old.db and client_new.db to client.db, swapping in the good where the bad was.</p>
 <p>If a different file is broken, then use of these:</p>
@@ -3654,7 +3692,7 @@ PRAGMA integrity_check;
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 20, 2026 21:00:21 UTC">July 20, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 9, 2026 21:21:25 UTC">August 9, 2026</span>
   </span>
 
     
