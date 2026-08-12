@@ -8215,7 +8215,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'Hey, I have created some new metadata flags such that "human-readable" metadata is more useful and we discover new XMP, IPTC, and software/source information. I want to schedule some regeneration work for pretty much all your images.'
                     message += '\n' * 2
-                    message += 'I would like to do it for everything you have, which could be millions of images and may take months of slow background work to eventually clear. I recommend clicking yes, even if you do have many files. If you want to handle this yourself, or your files are stored on the cloud and you do not want to spend bandwidth slowly loading them, just click no.'
+                    message += 'I would like to do it for everything you have, which could be millions of images and may take months of slow background work to eventually clear (it usually works at 3-30 files/minute). I still recommend clicking yes, even if you do have many files. If you want to handle this yourself, or your files are stored on the cloud and you do not want to spend bandwidth slowly loading them, just click no.'
                     
                     from hydrus.client.gui import ClientGUIDialogsQuick
                     from qtpy import QtWidgets as QW
@@ -8226,7 +8226,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 self._controller.frame_splash_status.SetSubtext( f'scheduling file metadata regen maintenance' )
-
+                
                 do_it = self._controller.CallBlockingToQtTLW( ask_what_to_do_metadata_regen_682 )
                 
                 if do_it:

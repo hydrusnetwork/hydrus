@@ -35,6 +35,47 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_683"><a href="#version_683">version 683</a></h2>
+                    <ul>
+                        <li><h3>file metadata</h3></li>
+                        <li>I am ready to roll out the new file metadata flags. on update, you will be given a yes/no dialog asking if you want to schedule a big file metadata regen on pretty much all your images. I recommend all users click yes, but if you want to handle it yourself, you can click no, no worries</li>
+                        <li>it will schedule 'has xmp', 'has iptc', 'has software-source', and new 'has human-readable' flag inspection for all your jpegs and some other image formats depending on the type</li>
+                        <li>recall you can look at the maintenance progress under `database-&gt;file maintenance-&gt;manage scheduled jobs` and tweak the file maintenance background work velocity under `options-&gt;maintenance and processing`. as a general principle, I do not recommend you try to hurry huge work; just let it do its thing</li>
+                        <li>XMP, IPTC, and software/source values are now stripped of leading/trailing whitespace</li>
+                        <li>empty XMP, IPTC, and software/source values/list-items are now skipped</li>
+                        <li><h3>duplicates auto-resolution</h3></li>
+                        <li>I have added two new hardcoded comparators: "A has same or better metadata flags to B" and "A has ICC Profile if B does". the auto-suggested rules now use these, and the help talks about them, so we do away with the old and awkward and ugly 'both have same x OR B doesn't' formulation. also added some unit tests for this</li>
+                        <li>the metadata comparator tests each of EXIF, XMP, IPTC, software/source, and human-readable flags</li>
+                        <li>enthusiastic users of auto-resolution may like to swap over to the new comparators once these new flags populate so they can cover more situations</li>
+                        <li>if an auto-resolution rule thinks it wants to do search or resolution work but there is no actual pair in the queue, the database now auto-triggers some maintenance to safely temp-pause the rule, regenerate the cached (and miscounted) numbers, and continue. it makes a popup if this happens</li>
+                        <li>auto-resolution rules now stop work quickly when paused during a busy work cycle</li>
+                        <li>the maintenance jobs that regen auto-resolution rules numbers and clear all potential duplicate pairs generally now trigger a proper, full reload of any list of auto-resolution rules in UI. previously, these guys needed an explicit refresh button click to catch up</li>
+                        <li><h3>more UI features</h3></li>
+                        <li>a user has submitted more UI improvements!</li>
+                        <li>the media viewer's 'always on top' transition should now be flickerless for Windows</li>
+                        <li>further, we now have a tentative 'always on top (while playing)' option. the always-on-top transition in Linux is still flickery, and if you have mpv up it causes a buzzy-noise crash, so I patched it to simply not happen in this situation, and if you are on Linux, the 'eye' menu in the media viewer has a 'THIS MAY BE BUGGY/CRASHY' warning</li>
+                        <li>the new treeview test has several updates: double-clicking on treeview empty tab area opens the new page picker, treeview rows now use alternating colours, some bugs are fixed, the layout signaling is less janky, some code is cleaned, menu code is simplified, and there are several new user-controllable options (row height, indentation, alternating line colours)</li>
+                        <li>extra note from hydev: if you have been playing with the treeview, hit up the new cog icon menu and look at the in-menu 'tree row dimensions' sliders and give them a spin. absolute space magic</li>
+                        <li><h3>audio files with embedded images</h3></li>
+                        <li>the QtMediaPlayer will now show an embedded image if an audio file has one. I pulled this off with some slightly funky tech, so let me know how it goes IRL</li>
+                        <li>the default mpv.conf now has a `audio-display=embedded-first` line (thanks to a user, for this) that shows embedded images for audio files. if you never tweaked your mpv.conf, you might like to hit up `options-&gt;media playback` and reset back to the default mpv conf there (just hit the 'browse' button and it should start you in the static/mpv-conf dir)</li>
+                        <li><h3>misc</h3></li>
+                        <li>added a link to https://github.com/asadtoast/aether in the Client API help; this is an Android app with a bunch of features, including archive/delete and duplicate filtering</li>
+                        <li>fixed an issue that was stopping adding potential duplicate pair relationships to files not already registered in the duplicates system. this broke hydrus video duplicate detector and similar tools. sorry for the trouble--I was too keen last week with the valid pair filtering! (issue #2076)</li>
+                        <li>the 'external programs' options page is moved to 'default programs'</li>
+                        <li><h3>executable manager</h3></li>
+                        <li>the work on this system continues to go well. I fleshed out my previous skeleton, so most of the spinning wheels are connectable now</li>
+                        <li>advanced users will see a new 'external programs (TESTING)' options page. this has the first UI available. edit panel isn't ready yet, but you can load the defaults and see what I'm going for</li>
+                        <li>wrote out defaults for common OS file launchers and 'open file in web browser' commands</li>
+                        <li>I added 'open multiple files externally' tech in prep for finally actually doing this from thumbnail menu</li>
+                        <li>next step is to finish the edit panel for this first local call and start a test for advanced users. I'd like to get an early version of this working pretty soon, and get 'open externally' working on it and migrated over, and then I'll add new tech and pipelines to the live system; stuff like tag suggestions</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>added info to the 'help my db is broke' help page regarding `.clone` crashing/halting, the `.backup` command, and a very clever trick a user discovered regarding editing the `sqlite_schema` table to skip cloning a known-malformed table</li>
+                        <li>the Docker package is updated to `Alpine 3.24` and should have improved HEIF support</li>
+                        <li>skipped 'software/source' inspection when examining importing pdfs (this was silently failing, previously, because it was trying to load them as images)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_682"><a href="#version_682">version 682</a></h2>
                     <ul>
                         <li><h3>more file metadata</h3></li>
