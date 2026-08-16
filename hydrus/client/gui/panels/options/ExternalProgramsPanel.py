@@ -1,6 +1,7 @@
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -11,29 +12,390 @@ from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.parsing import ClientParsing
+
+class DefaultLaunchFileWidget( ClientGUICommon.BetterStaticText ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
+        
+        desc = 'This will try to launch the file using your OS\'s default file handler.'
+        desc += '\n\n'
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            desc += 'For Windows, this is a hardcoded system call.'
+            
+        elif HC.PLATFORM_MACOS:
+            
+            desc += 'For macOS, this is "open %path%" from the terminal.'
+            
+        elif HC.PLATFORM_HAIKU:
+            
+            desc += 'For Haiku, this is "open %path%" from the terminal.'
+            
+        else:
+            
+            desc += 'For Linux, this is "xdg-open %path%" from the terminal.'
+            
+        
+        super().__init__( parent, label = desc )
+        
+        self.setWordWrap( True )
+        
+    
+    def CheckValid( self ):
+        
+        pass
+        
+    
+    def GetValue( self ):
+        
+        return ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
+        
+    
+    def SetPipelineType( self, pipeline_type: int ):
+        
+        pass
+        
+    
+    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile, pipeline_type: int ):
+        
+        pass
+        
+    
+
+class DefaultLaunchURLWidget( ClientGUICommon.BetterStaticText ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
+        
+        desc = 'This will try to launch the URL using a library that attempts to figure out your OS\'s default URL handler. It may lose the "#anchor" fragment on the end of an URL.'
+        
+        super().__init__( parent, label = desc )
+        
+        self.setWordWrap( True )
+        
+    
+    def CheckValid( self ):
+        
+        pass
+        
+    
+    def GetValue( self ):
+        
+        return ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
+        
+    
+    def SetPipelineType( self, pipeline_type: int ):
+        
+        pass
+        
+    
+    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL ):
+        
+        pass
+        
+    
+
+class InputParameterProcessingRule( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule ):
+        
+        self._parameter_type = parameter_processing_rule.parameter_type
+        
+        super().__init__( parent )
+        
+        self._name = ClientGUICommon.BetterStaticText( self, label = ClientExecutablePipelines.parameter_types_to_strs[ self._parameter_type ] )
+        self._replacement_string = QW.QLineEdit( self, text = parameter_processing_rule.replacement_string )
+        self._string_processing_button = ClientGUIStringControls.StringProcessorWidget( self, parameter_processing_rule.string_processor, self._GetTestData )
+        self._enable = QW.QCheckBox( self )
+        
+        #
+        
+        self.SetValue( parameter_processing_rule )
+        
+        #
+        
+        # to effect a pseudo-table style, we'll force widths
+        
+        self._name.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._name, 20 ) )
+        self._replacement_string.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._replacement_string, 24 ) )
+        self._string_processing_button.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._string_processing_button, 36 ) )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._name, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._replacement_string, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._string_processing_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, label = 'use this input parameter: ' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._enable, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 0 )
+        
+        self.setLayout( hbox )
+        
+        #
+        
+        self._UpdateUI()
+        
+        self._enable.clicked.connect( self._UpdateUI )
+        
+        self._enable.clicked.connect( self.valueChanged )
+        self._replacement_string.textChanged.connect( self.valueChanged )
+        
+        
+    
+    def _GetTestData( self ) -> ClientParsing.ParsingTestData:
+        
+        texts = ClientExecutablePipelines.parameter_types_to_example_values[ self._parameter_type ]
+        
+        return ClientParsing.ParsingTestData( {}, texts = texts )
+        
+    
+    def _UpdateUI( self ):
+        
+        enabled = self._enable.isChecked()
+        
+        self._name.setEnabled( enabled )
+        self._replacement_string.setEnabled( enabled )
+        self._string_processing_button.setEnabled( enabled )
+        
+    
+    def GetValue( self ) -> ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule | None:
+        
+        if not self._enable.isChecked():
+            
+            return None
+            
+        
+        replacement_string = self._replacement_string.text()
+        string_processor = self._string_processing_button.GetValue()
+        
+        actual_call = ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule(
+            parameter_type = self._parameter_type,
+            replacement_string = replacement_string,
+            string_processor = string_processor
+        )
+        
+        return actual_call
+        
+    
+    def SetValue( self, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule | None ):
+        
+        if parameter_processing_rule is None:
+            
+            self._enable.setChecked( False )
+            
+            self._UpdateUI()
+            
+        else:
+            
+            self._enable.setChecked( True )
+            
+            self._UpdateUI()
+            
+            self._replacement_string.setText( parameter_processing_rule.replacement_string )
+            self._string_processing_button.SetValue( parameter_processing_rule.string_processor )
+            
+        
+    
+
+class EditProcessCallTemplatePanel( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget ):
+        
+        super().__init__( parent )
+        
+        self._we_are_initialised = False
+        self._pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE
+        
+        self._input_parameter_processing_rules_box = ClientGUICommon.StaticBox( self, 'input parameters' )
+        
+        self._parameter_types_to_input_parameter_processing_rule_panels = {}
+        
+        self._path_template = QW.QLineEdit( self )
+        self._path_template.setPlaceholderText( 'program %path%' )
+        
+        self._this_is_a_potentially_long_lived_external_guy = QW.QCheckBox( self )
+        self._this_is_a_potentially_long_lived_external_guy.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set this true if the command opens a new program that you will be interacting with, like an external file viewer. If Hydrus does not know when this will ever close out and return, this tells it to just spawn the guy and return immediately, without waiting.' ) )
+        
+        self._timeout = ClientGUITime.TimeDeltaWidget( self, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False )
+        self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and will try to terminate it. Be generous but not overly so.' ) )
+        
+        self._hide_terminal = QW.QCheckBox( self )
+        self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging.' ) )
+        
+        self._text = QW.QCheckBox( self )
+        self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdio), uncheck it.' ) )
+        
+        self._availability_call = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = '/path/to/program --version', none_phrase = 'do not use' )
+        self._availability_call.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you like, set this to something quick, harmless, and valid, like the absolute path of the exe with a --version parameter. Hydrus will try to call this when it needs to test availability.' ) )
+        
+        self._availability_which_name = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = 'program_name', none_phrase = 'do not use' )
+        self._availability_which_name.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the exe is on the PATH, set this to its name and hydrus will do a "which" on it when it needs to test availability.' ) )
+        
+        #
+        
+        self.SetValue( ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(), self._pipeline_type )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        rows = []
+        
+        QP.AddToLayout( vbox, self._input_parameter_processing_rules_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        rows.append( ( 'command template: ', self._path_template ) )
+        rows.append( ( 'this may stay alive for a very long time: ', self._this_is_a_potentially_long_lived_external_guy ) )
+        rows.append( ( 'timeout: ', self._timeout ) )
+        rows.append( ( 'hide terminal: ', self._hide_terminal ) )
+        rows.append( ( 'output is text: ', self._text ) )
+        rows.append( ( 'OPTIONAL - call to test availability: ', self._availability_call ) )
+        rows.append( ( 'OPTIONAL - "which" PATH name to test availability: ', self._availability_which_name ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.setLayout( vbox )
+        
+        self._this_is_a_potentially_long_lived_external_guy.clicked.connect( self._UpdateUI )
+        
+        self._path_template.textChanged.connect( self.valueChanged )
+        
+    
+    def _UpdateUI( self ):
+        
+        this_is_a_potentially_long_lived_external_guy = self._this_is_a_potentially_long_lived_external_guy.isChecked()
+        
+        self._timeout.setEnabled( not this_is_a_potentially_long_lived_external_guy )
+        
+        # same for any output params, when we add them
+        
+    
+    def CheckValid( self ):
+        
+        # TODO: check we are using at least one input param
+        # TODO: check the params we define have matching tokens in the path template
+        
+        # raise vetos I think
+        
+        pass
+        
+    
+    def GetValue( self ):
+        
+        path_template = self._path_template.text()
+        
+        input_parameter_processing_rules = []
+        
+        actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
+            path_template = path_template,
+            input_parameter_processing_rules = input_parameter_processing_rules,
+        )
+        
+        actual_call.SetTimeout( int( self._timeout.GetValue() ) )
+        actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( self._this_is_a_potentially_long_lived_external_guy.isChecked() )
+        actual_call.SetHideTerminal( self._hide_terminal.isChecked() )
+        actual_call.SetText( self._text.isChecked() )
+        actual_call.SetAvailabilityCall( self._availability_call.GetValue() )
+        actual_call.SetAvailabilityWhichName( self._availability_which_name.GetValue() )
+        
+    
+    def SetPipelineType( self, pipeline_type: int ):
+        
+        if pipeline_type == self._pipeline_type and self._we_are_initialised:
+            
+            return
+            
+        
+        self._pipeline_type = pipeline_type
+        
+        self._parameter_types_to_input_parameter_processing_rule_panels = {}
+        self._input_parameter_processing_rules_box.Clear()
+        
+        for parameter_type in ClientExecutablePipelines.executable_pipeline_types_to_input_params[ self._pipeline_type ]:
+            
+            parameter_processing_rule = ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule( parameter_type )
+            
+            input_parameter_processing_rule_panel = InputParameterProcessingRule( self._input_parameter_processing_rules_box, parameter_processing_rule )
+            input_parameter_processing_rule_panel.valueChanged.connect( self.valueChanged )
+            
+            self._input_parameter_processing_rules_box.Add( input_parameter_processing_rule_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            self._parameter_types_to_input_parameter_processing_rule_panels[ parameter_type ] = input_parameter_processing_rule_panel
+            
+        
+        self._UpdateUI()
+        
+        self.valueChanged.emit()
+        
+        self._we_are_initialised = True
+        
+    
+    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessCallTemplate, pipeline_type: int ):
+        
+        self.SetPipelineType( pipeline_type )
+        
+        self._path_template.setText( actual_call.GetPathTemplate() )
+        
+        input_parameter_processing_rules = actual_call.GetInputParameterProcessingRules()
+        
+        for input_parameter_processing_rule in input_parameter_processing_rules:
+            
+            if input_parameter_processing_rule.parameter_type in self._parameter_types_to_input_parameter_processing_rule_panels:
+                
+                self._parameter_types_to_input_parameter_processing_rule_panels[ input_parameter_processing_rule.parameter_type ].SetValue( input_parameter_processing_rule )
+                
+            
+        
+        self._timeout.SetValue( actual_call.GetTimeout() )
+        self._this_is_a_potentially_long_lived_external_guy.setChecked( actual_call.GetThisIsAPotentiallyLongLivedExternalGuy() )
+        self._hide_terminal.setChecked( actual_call.GetHideTerminal() )
+        self._text.setChecked( actual_call.GetText() )
+        self._availability_call.SetValue( actual_call.GetAvailabilityCall() )
+        self._availability_which_name.SetValue( actual_call.GetAvailabilityWhichName() )
+        
+        self._UpdateUI()
+        
+        self.valueChanged.emit()
+        
+    
 
 class EditClientExecutableActualCall( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, actual_call: ClientExecutableActualCall.ExecutableActualCall ):
+    def __init__( self, parent: QW.QWidget, actual_call: ClientExecutableActualCall.ExecutableActualCall, pipeline_type: int ):
         
         super().__init__( parent )
         
-        self._call_types = ClientGUICommon.BetterChoice( self )
+        self._pipeline_type = pipeline_type
         
-        # TODO: It'd be cool if I had a DropdownBook tbh. does that exist?
+        self._call_types = ClientGUICommon.BetterChoice( self )
         
         for ( label, call_type ) in [
             ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ),
-            ( 'windows startfile call', ClientExecutableActualCall.ExecutableLocalProcessWindowsStartFile )
+            ( 'default OS launch file call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile ),
+            ( 'default OS launch URL call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL ),
         ]:
             
             self._call_types.addItem( label, call_type )
@@ -41,34 +403,103 @@ class EditClientExecutableActualCall( QW.QWidget ):
         
         self._edit_actual_call_window = QW.QWidget( self )
         
-        self._call_types_to_windows = {}
-        
-        # TODO: We prob want a test panel for each type!
-        # put in the 'which' name etc.., and can actually test it
-        # put in fake path or something, and actually call it and get tags back
-        
-        # edit windows for each of the call types
+        self._call_types_to_windows = {
+            ClientExecutableActualCall.ExecutableLocalProcessCallTemplate : EditProcessCallTemplatePanel( self ),
+            ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile : DefaultLaunchFileWidget( self ),
+            ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL : DefaultLaunchURLWidget( self ),
+        }
         
         #
         
-        # SetValue
+        self.SetValue( actual_call, pipeline_type )
         
         #
         
-        # hook each window's valueChanged in to us
-        # on type change, switch visible window
-        # signal on type change too
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._call_types, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        for window in self._call_types_to_windows.values():
+            
+            QP.AddToLayout( vbox, window, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            window.valueChanged.connect( self.valueChanged )
+            
+        
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+        self._call_types.currentIndexChanged.connect( self._NotifyCallTypeChanged )
         
     
-    def _ShowCallTypePanel( self, call_type_to_show: type ):
+    def _NotifyCallTypeChanged( self ):
+        
+        self._UpdateCallTypePanel()
+        
+        self.valueChanged.emit()
+        
+    
+    def _UpdateCallTypePanel( self ):
+        
+        call_type_to_show = self._call_types.GetValue()
         
         for ( call_type, window ) in self._call_types_to_windows.items():
+            
+            window.SetPipelineType( self._pipeline_type )
             
             window.setVisible( call_type == call_type_to_show )
             
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableActualCall ):
+    def CheckValid( self ):
+        
+        call_type = self._call_types.GetValue()
+        
+        self._call_types_to_windows[ call_type ].CheckValid()
+        
+    
+    def GetValue( self ):
+        
+        call_type = self._call_types.GetValue()
+        
+        return self._call_types_to_windows[ call_type ].GetValue()
+        
+    
+    def SetPipelineType( self, pipeline_type: int ):
+        
+        self._pipeline_type = pipeline_type
+        
+        self._call_types.clear()
+        
+        labels_and_call_types: list[ tuple[ str, type ] ] = [
+            ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ),
+        ]
+        
+        if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+            
+            labels_and_call_types.append(
+                ( 'default OS launch file call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile )
+            )
+            
+        elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+            
+            labels_and_call_types.append(
+                ( 'default OS launch URL call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL )
+            )
+            
+        
+        for ( label, call_type ) in labels_and_call_types:
+            
+            self._call_types.addItem( label, call_type )
+            
+        
+        self._UpdateCallTypePanel()
+        
+        self.valueChanged.emit()
+        
+    
+    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableActualCall, pipeline_type: int ):
         
         call_type = type( actual_call )
         
@@ -81,9 +512,11 @@ class EditClientExecutableActualCall( QW.QWidget ):
         
         self._call_types.SetValue( call_type )
         
-        self._ShowCallTypePanel( call_type )
+        self.SetPipelineType( pipeline_type )
         
-        self._call_types_to_windows[ call_type ].SetValue( actual_call )
+        self._UpdateCallTypePanel()
+        
+        self._call_types_to_windows[ call_type ].SetValue( actual_call, pipeline_type )
         
         self.valueChanged.emit()
         
@@ -99,7 +532,8 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_type = ClientGUICommon.BetterChoice( self )
         
         for pipeline_type in [
-            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE
+            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
         ]:
             
             self._pipeline_type.addItem( ClientExecutablePipelines.executable_pipeline_types_to_strs[ pipeline_type ], pipeline_type )
@@ -111,7 +545,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._validity_text = ClientGUICommon.BetterStaticText( self )
         self._validity_text.setWordWrap( True )
         
-        self._actual_call = EditClientExecutableActualCall( self, call.GetCall() )
+        self._actual_call = EditClientExecutableActualCall( self, call.GetCall(), call.GetPipelineType() )
         
         #
         
@@ -140,14 +574,19 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._pipeline_type.currentIndexChanged.connect( self._UpdatePipelineType )
-        self._actual_call.valueChanged.connect( self._UpdateValidity() )
+        self._actual_call.valueChanged.connect( self._UpdateValidity )
         
     
     def _GetValiditySummary( self ):
         
-        # TODO: Do this
-        # if there are expected output params but the call doesn't give them, say them
-        # if there are inputs but none are used?? sounds reasonable; maybe we get clever with selectable if and when we have multivariate calls
+        try:
+            
+            self._actual_call.CheckValid()
+            
+        except Exception as e:
+            
+            return ( False, str( e ) )
+            
         
         return ( True, 'Everything looks good!' )
         
@@ -189,6 +628,8 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._pipeline_description.setText( pipeline_type_desc )
+        
+        self._actual_call.SetPipelineType( pipeline_type )
         
         self._UpdateValidity()
         
@@ -250,7 +691,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._UpdatePipelineType()
         
-        self._actual_call.SetValue( call.GetCall() )
+        self._actual_call.SetValue( call.GetCall(), call.GetPipelineType() )
         
         self._UpdateValidity()
         
@@ -308,8 +749,6 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def _AddCallableBrandNew( self ):
         
-        return
-        
         call = ClientExecutableCallables.ClientExecutableCallable( 'new call' )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit external program call' ) as dlg:
@@ -353,8 +792,6 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def _EditCallable( self ):
         
-        return
-        
         data = self._external_calls.GetTopSelectedData()
         
         if data is None:
@@ -386,8 +823,23 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def _GetDefaultCallables( self ) -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
         
-        external_callables = list( ClientExecutableDefaults.GetDefaultOpenExternally() )
-        external_callables.extend( ClientExecutableDefaults.GetDefaultOpenURL() )
+        message = f'Want to see the calls just for your platform ({HC.NICE_PLATFORM_STRING}) or everything?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'just for my platform', no_label = 'no, show me everything' )
+        
+        filter_by_platform = result == QW.QDialog.DialogCode.Accepted
+        
+        external_platforms_and_callables = list( ClientExecutableDefaults.GetDefaultOpenExternally() )
+        external_platforms_and_callables.extend( ClientExecutableDefaults.GetDefaultOpenURL() )
+        
+        if filter_by_platform:
+            
+            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
+            
+        else:
+            
+            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables ]
+            
         
         return external_callables
         

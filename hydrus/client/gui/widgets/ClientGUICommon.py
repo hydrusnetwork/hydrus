@@ -1928,6 +1928,8 @@ class StaticBox( QW.QFrame ):
         self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         self._spacer = QW.QSpacerItem( 0, 0, QW.QSizePolicy.Policy.Minimum, QW.QSizePolicy.Policy.MinimumExpanding )
         
+        self._my_widgets = []
+        
         normal_font = self.font()
         
         normal_font_size = normal_font.pointSize()
@@ -1990,7 +1992,21 @@ class StaticBox( QW.QFrame ):
         
         QP.AddToLayout( self._sizer, widget, flags )
         
+        self._my_widgets.append( widget )
+        
         self._sizer.addSpacerItem( self._spacer )
+        
+    
+    def Clear( self ):
+        
+        for widget in self._my_widgets:
+            
+            self._sizer.removeWidget( widget )
+            
+            widget.deleteLater()
+            
+        
+        self._my_widgets = []
         
     
     def ExpandCollapse( self ):

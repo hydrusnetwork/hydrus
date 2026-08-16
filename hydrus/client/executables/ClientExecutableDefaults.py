@@ -1,10 +1,12 @@
+from hydrus.core import HydrusConstants as HC
+
 from hydrus.client.executables import ClientExecutableActualCall
 from hydrus.client.executables import ClientExecutableCallables
 from hydrus.client.executables import ClientExecutablePipelines
 
 def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
     
-    parameter_processing_rules = [
+    input_parameter_processing_rules = [
         ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule(
             ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH,
             '%path%'
@@ -15,21 +17,33 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessWindowsStartFile()
+    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
     
     call = ClientExecutableCallables.ClientExecutableCallable(
-        'Windows Startfile',
+        'Default OS Launch File Command',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( True, call ) )
+    
+    #
+    
+    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
+    
+    call = ClientExecutableCallables.ClientExecutableCallable(
+        'Default OS Launch URL Command',
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        actual_call = actual_call
+    )
+    
+    callables.append( ( True, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'xdg-open "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'xdg-open' )
@@ -40,13 +54,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'gio open "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'gio' )
@@ -57,13 +71,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'kioclient exec "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'kioclient' )
@@ -74,13 +88,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'firefox "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'firefox' )
@@ -91,13 +105,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX or HC.PLATFORM_WINDOWS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'google-chrome "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'google-chrome' )
@@ -108,7 +122,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX, call ) )
     
     #
     
@@ -116,7 +130,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'chrome "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'chrome' )
@@ -127,13 +141,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_WINDOWS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'open -a "Firefox" "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityCall( 'open -Ra "Firefox"' )
@@ -144,13 +158,13 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_MACOS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'open -a "Google Chrome" "%path%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityCall( 'open -Ra "Google Chrome"' )
@@ -161,14 +175,14 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_MACOS, call ) )
     
     return callables
     
 
 def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
     
-    parameter_processing_rules = [
+    input_parameter_processing_rules = [
         ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule(
             ClientExecutablePipelines.PARAMETER_TYPE_URL,
             '%url%'
@@ -181,7 +195,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'firefox "%url%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'firefox' )
@@ -192,13 +206,13 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX or HC.PLATFORM_WINDOWS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'google-chrome "%url%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'google-chrome' )
@@ -209,7 +223,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_LINUX, call ) )
     
     #
     
@@ -217,7 +231,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'chrome "%url%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityWhichName( 'chrome' )
@@ -228,13 +242,13 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_WINDOWS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'open -a "Firefox" "%url%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityCall( 'open -Ra "Firefox"' )
@@ -245,13 +259,13 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_MACOS, call ) )
     
     #
     
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
         'open -a "Google Chrome" "%url%"',
-        parameter_processing_rules = parameter_processing_rules
+        input_parameter_processing_rules = input_parameter_processing_rules
     )
     
     actual_call.SetAvailabilityCall( 'open -Ra "Google Chrome"' )
@@ -262,7 +276,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
         actual_call = actual_call
     )
     
-    callables.append( call )
+    callables.append( ( HC.PLATFORM_MACOS, call ) )
     
     return callables
     

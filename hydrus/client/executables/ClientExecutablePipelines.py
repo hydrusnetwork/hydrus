@@ -33,6 +33,14 @@ else:
     parameter_types_to_example_values[ PARAMETER_TYPE_FILE_LOCAL_PATH_URIS ] = [ 'file:///home/me/hydrus_files/f88/88...mp3', 'file:///home/me/hydrus_files/f12/12...mp3', 'file:///home/me/hydrus_files/ffe/fe...mp3' ]
     
 
+parameter_types_to_default_token_names = {
+    PARAMETER_TYPE_FILE_PATH: '%path%',
+    PARAMETER_TYPE_FILE_PATHS: '%paths%',
+    PARAMETER_TYPE_FILE_LOCAL_PATH_URI: '%path_uri%',
+    PARAMETER_TYPE_FILE_LOCAL_PATH_URIS: '%paths_uri%',
+    PARAMETER_TYPE_URL: '%url%',
+}
+
 EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE = 1
 EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL = 2
 EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_MUPLITPLE_FILES = 3
