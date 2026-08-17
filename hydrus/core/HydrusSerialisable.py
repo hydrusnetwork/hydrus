@@ -466,7 +466,10 @@ class SerialisableBaseNamed( SerialisableBase ):
         
     
 
-class SerialisableDictionary( SerialisableBase, dict ):
+K = typing.TypeVar( 'K' )
+V = typing.TypeVar( 'V' )
+
+class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_DICTIONARY
     SERIALISABLE_NAME = 'Serialisable Dictionary'
@@ -629,8 +632,10 @@ class SerialisableDictionary( SerialisableBase, dict ):
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_DICTIONARY ] = SerialisableDictionary
 
+V_bytes = typing.TypeVar( 'V_bytes' )
+
 # yo now that SerialisableDict can handle bytes anywhere, is this guy obsolete?
-class SerialisableBytesDictionary( SerialisableBase, dict ):
+class SerialisableBytesDictionary( SerialisableBase, dict[ int | bytes, V_bytes ] ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BYTES_DICT
     SERIALISABLE_NAME = 'Serialisable Dictionary With Bytestring Key/Value Support'
@@ -705,7 +710,6 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
             
         
     
-
     def GetSerialisableDescription( self ):
         
         result = f'{self.SERIALISABLE_NAME} ({self.SERIALISABLE_TYPE})'
@@ -743,9 +747,12 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
         return result
         
     
+
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_BYTES_DICT ] = SerialisableBytesDictionary
 
-class SerialisableList( SerialisableBase, list ):
+T = typing.TypeVar( "T" )
+
+class SerialisableList( SerialisableBase, list[ T ] ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_LIST
     SERIALISABLE_NAME = 'Serialisable List'
