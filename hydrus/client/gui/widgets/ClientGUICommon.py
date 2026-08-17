@@ -1756,10 +1756,7 @@ class NoneableTextCtrl( QW.QWidget ):
             self._text.setText( default_text )
             
         
-        if placeholder_text != '':
-            
-            self._text.setPlaceholderText( placeholder_text )
-            
+        self._placeholder_text = placeholder_text
         
         if min_chars_width is not None:
             
@@ -1770,7 +1767,7 @@ class NoneableTextCtrl( QW.QWidget ):
         
         if len( message ) > 0:
             
-            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, BetterStaticText( self, message + ': ' ), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
         QP.AddToLayout( hbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1786,6 +1783,17 @@ class NoneableTextCtrl( QW.QWidget ):
         
         self.valueChanged.emit()
         
+    
+    def _UpdatePlaceholderText( self ):
+        
+        if self.GetValue() is None:
+            
+            self._text.setPlaceholderText( '' )
+            
+        else:
+            
+            self._text.setPlaceholderText( self._placeholder_text )
+            
         
     
     def EventCheckBox( self, state ):
@@ -1798,6 +1806,8 @@ class NoneableTextCtrl( QW.QWidget ):
             
             self._text.setEnabled( True )
             
+        
+        self._UpdatePlaceholderText()
         
     
     def GetValue( self ):
@@ -1814,7 +1824,9 @@ class NoneableTextCtrl( QW.QWidget ):
     
     def setPlaceholderText( self, text: str ):
         
-        self._text.setPlaceholderText( text )
+        self._placeholder_text = text
+        
+        self._UpdatePlaceholderText()
         
     
     def setReadOnly( self, value: bool ):
@@ -1851,6 +1863,8 @@ class NoneableTextCtrl( QW.QWidget ):
             
             self._text.setText( value )
             
+        
+        self._UpdatePlaceholderText()
         
     
 class OnOffButton( QW.QPushButton ):
