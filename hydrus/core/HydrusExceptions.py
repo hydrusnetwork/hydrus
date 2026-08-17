@@ -57,6 +57,7 @@ class QtDeadWindowException( HydrusException ): pass
 
 class ExecutableException( HydrusException ): pass
 class SubprocessTimedOut( ExecutableException ): pass
+class BadReturnCodeException( ExecutableException ): pass
 
 class UnsupportedFileException( HydrusException ): pass
 class ZeroSizeFileException( UnsupportedFileException ): pass

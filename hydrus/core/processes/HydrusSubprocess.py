@@ -136,7 +136,7 @@ def GetSubprocessHideTerminalStartupInfo():
     return startupinfo
     
 
-def GetSubprocessKWArgs( hide_terminal = True, text = False ):
+def GetSubprocessKWArgs( hide_terminal = True, text = False, shell = False ):
     
     sbp_kwargs = {}
     
@@ -147,6 +147,11 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False ):
         sbp_kwargs[ 'text' ] = True
         sbp_kwargs[ 'encoding' ] = 'utf-8'
         sbp_kwargs[ 'errors' ] = 'replace' # handling mp4s with invalid utf-8 metadata hooray
+        
+    
+    if shell:
+        
+        sbp_kwargs[ 'shell' ] = True
         
     
     if hide_terminal:
@@ -192,6 +197,37 @@ def RegisterLongLivedExternalProcess( process: subprocess.Popen ):
         
     
 
+def ReportBadReturnCode( cmd, returncode, stdout, stderr ):
+    
+    if stdout is None:
+        
+        stdout_text = 'no content'
+        
+    else:
+        
+        stdout_text = stdout[:256]
+        
+    
+    if stderr is None:
+        
+        stderr_text = 'no content'
+        
+    else:
+        
+        stderr_text = stderr[:256]
+        
+    
+    message = f'A call to another executable gave a non-zero return code ({returncode})! The call was: {cmd}'
+    message += '\n\n'
+    message += '========== stdout ==========\n'
+    message += repr( stdout_text ) + '\n'
+    message += '========== stderr ==========\n'
+    message += repr( stderr_text ) + '\n'
+    message += '============================\n'
+    
+    raise HydrusExceptions.BadReturnCodeException( message )
+    
+
 def ReportTimeoutError( cmd, timeout, stdout, stderr ):
     
     if stdout is None:
@@ -214,18 +250,21 @@ def ReportTimeoutError( cmd, timeout, stdout, stderr ):
     
     message = f'A call to another executable took too long (over {HydrusNumbers.ToHumanInt(timeout)} seconds) to finish! The call was: {cmd}'
     message += '\n\n'
-    message += '========== stdout =========='
-    message += repr( stdout_text )
-    message += '========== stderr =========='
-    message += repr( stderr_text )
-    message += '============================'
+    message += '========== stdout ==========\n'
+    message += repr( stdout_text ) + '\n'
+    message += '========== stderr ==========\n'
+    message += repr( stderr_text ) + '\n'
+    message += '============================\n'
     
     raise HydrusExceptions.SubprocessTimedOut( message )
     
 
-def RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text ):
+def RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal: bool, text: bool, shell: bool ):
     
-    sbp_kwargs = GetSubprocessKWArgs( hide_terminal = hide_terminal, text = text )
+    # just a reminder, the "shell" arg says "hey throw this _string_ cmd at a shell for parsing". it is not excellent, broadly speaking, but--
+    # --it allows for simple commands to be run without breaking into [ exe_name, '-p', '/path/to/blah' ]
+    
+    sbp_kwargs = GetSubprocessKWArgs( hide_terminal = hide_terminal, text = text, shell = shell )
     
     try:
         
@@ -254,7 +293,8 @@ def RunSubprocess(
     bufsize: int = 65536,
     this_is_a_potentially_long_lived_external_guy = False,
     hide_terminal = True,
-    text = True
+    text = True,
+    shell = False
 ):
     
     if this_is_a_potentially_long_lived_external_guy:
@@ -275,13 +315,13 @@ def RunSubprocess(
         stderr_pipe = subprocess.PIPE
         
     
-    process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text )
+    process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text, shell )
     
     if this_is_a_potentially_long_lived_external_guy:
         
         RegisterLongLivedExternalProcess( process )
         
-        return ( None, None )
+        return ( None, None, 0 )
         
     
     ( stdout, stderr ) = SubprocessCommunicate( cmd, process, timeout )
@@ -304,7 +344,7 @@ def RunSubprocess(
             
         
     
-    return ( stdout, stderr )
+    return ( stdout, stderr, process.returncode )
     
 
 def SubprocessCommunicate( cmd, process: subprocess.Popen, timeout: int ):
@@ -384,7 +424,7 @@ def TerminateAndReapProcess( process: subprocess.Popen ):
         
         try:
             
-            ( stdout, stderr ) = process.communicate()
+            ( stdout, stderr ) = process.communicate( timeout = 1 )
             
         except subprocess.TimeoutExpired:
             
@@ -395,9 +435,10 @@ def TerminateAndReapProcess( process: subprocess.Popen ):
     return ( stdout, stderr )
     
 
+# TODO: expand this to handle stderr better
 class SubprocessContext( object ):
     
-    def __init__( self, cmd, timeout: int = 15, bufsize: int = 65536, hide_terminal = True, text = True ):
+    def __init__( self, cmd, timeout: int = 15, bufsize: int = 65536, hide_terminal = True, text = True, shell = False ):
         
         self.finished = False
         
@@ -417,7 +458,7 @@ class SubprocessContext( object ):
         self._timeout = timeout
         self._bufsize = bufsize
         
-        self.process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text )
+        self.process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text, shell )
         
         HG.controller.CallToThread( self._THREADReader )
         
@@ -499,6 +540,11 @@ class SubprocessContext( object ):
             
             TerminateAndReapProcess( self.process )
             
+        
+    
+    def GetReturnCode( self ):
+        
+        return self.process.returncode
         
     
 

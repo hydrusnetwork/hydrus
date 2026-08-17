@@ -102,7 +102,7 @@ def RenderImageToRawRGBABytes( path ):
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
+        ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess( cmd, timeout = HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
         
     except HydrusExceptions.SubprocessTimedOut:
         
@@ -126,7 +126,7 @@ def RenderImageToPNGBytes( path ):
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
+        ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess( cmd, timeout = HydrusFFMPEG.FFMPEG_SUBPROCESS_TIMEOUT, bufsize = 1024 * 512, text = False )
         
     except HydrusExceptions.SubprocessTimedOut:
         

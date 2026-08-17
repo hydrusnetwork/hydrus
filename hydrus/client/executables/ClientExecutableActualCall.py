@@ -1,6 +1,5 @@
 import os
 import shutil
-import typing
 import webbrowser
 
 from hydrus.core import HydrusConstants as HC
@@ -17,7 +16,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Actual Call Superclass'
     SERIALISABLE_VERSION = 1
     
-    def _DoCall( self, input_parameters: dict ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
         
         raise NotImplementedError()
         
@@ -37,7 +36,17 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def GetCommandDescription( self ):
+    def GetCommandDescription( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ):
+        
+        raise NotImplementedError()
+        
+    
+    def GetInputParametersUsed( self ):
         
         raise NotImplementedError()
         
@@ -51,7 +60,12 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         
         return self._DoCall( input_parameters )
         
-
+    
+    def CallTest( self, input_parameters: dict ) -> dict:
+        
+        return self._DoCall( input_parameters, for_user_test = True )
+        
+    
     def TestAvailability( self ):
         
         return self._TestAvailability()
@@ -108,7 +122,7 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
             
             return path_template.index( self.replacement_string )
             
-        except IndexError:
+        except Exception as e:
             
             raise HydrusExceptions.ExecutableException( f'The path template "{path_template}" did not have the expected replacement string "{self.replacement_string}"!' )
             
@@ -128,6 +142,9 @@ class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.Se
     
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE ] = LocalProcessCallTemplateInputParameterProcessingRule
+
+# TODO: Make a LocalProcessCall that has a list of params, with slightly more complicated UI
+# Instead of the shell parsing, we can do better for difficult situations
 
 class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     
@@ -150,7 +167,7 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             
         
         self._path_template: str = path_template # the actual call
-        self._input_parameter_processing_rules: HydrusSerialisable.SerialisableList = HydrusSerialisable.SerialisableList( input_parameter_processing_rules )
+        self._input_parameter_processing_rules: HydrusSerialisable.SerialisableList[ LocalProcessCallTemplateInputParameterProcessingRule ] = HydrusSerialisable.SerialisableList( input_parameter_processing_rules )
         self._timeout: int = 15
         self._this_is_a_potentially_long_lived_external_guy = False
         self._hide_terminal = True
@@ -159,13 +176,57 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
         self._availability_which_name = None
         
     
-    def _DoCall( self, input_parameters: dict ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
+        
+        final_call = self._GetFinalCall( input_parameters )
+        
+        if for_user_test and self._this_is_a_potentially_long_lived_external_guy:
+            
+            ( timeout, this_is_a_potentially_long_lived_external_guy ) = ( 15, False )
+            
+        else:
+
+            ( timeout, this_is_a_potentially_long_lived_external_guy ) = ( self._timeout, self._this_is_a_potentially_long_lived_external_guy )
+            
+        
+        try:
+            
+            ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess(
+                final_call,
+                timeout = timeout,
+                this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy,
+                hide_terminal = self._hide_terminal,
+                text = self._text,
+                shell = True, # yes, we are sending a string, not a cmd list, so we want it as if we typed it in
+            )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.ExecutableException( f'Problem running external local process! Final call was "{final_call}", error was: {e}' ) from e
+            
+        
+        # if 1 is ok (e.g. on like imagemagick diff apparently), we'll have to filter this
+        if returncode != 0:
+            
+            HydrusSubprocess.ReportBadReturnCode( final_call, returncode, stdout, stderr )
+            
+        
+        # if this is a long-lived guy, no stdout/stderr processing
+        # if text, we can do json or whatever parsing on it
+        # if not text, we can eat a file bytes response
+        # can also be no response. maybe we were passed a temp file, the caller cares but we don't
+        # TODO: so yeah expand this guy to eat either text or bytes back and transmogrify that into a dict response that a higher guy will pick up
+        # if bytes, we should stream to a tempdir tbh that the Response can clean up
+        # TODO: consider validity parsing here when we _do_ get text back. standard veto content parser?
+        
+        return dict()
+        
+    
+    def _GetFinalCall( self, input_parameters: dict[ int, str ] ):
         
         insertion_tuples = []
         
         for parameter_processing_rule in self._input_parameter_processing_rules:
-            
-            parameter_processing_rule = typing.cast( LocalProcessCallTemplateInputParameterProcessingRule, parameter_processing_rule )
             
             insertion_index = parameter_processing_rule.GetInsertionIndex( self._path_template )
             
@@ -175,7 +236,7 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
                 
             except KeyError:
                 
-                raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ parameter_processing_rule.parameter_type ]}" was not in the call arguments!' )
+                raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.parameter_types_to_strs[ parameter_processing_rule.parameter_type ]}" was not in the call arguments!' )
                 
             
             if isinstance( input_parameter_value, str ):
@@ -202,30 +263,7 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             final_call = final_call.replace( replacement_string, insertion_string, 1 )
             
         
-        try:
-
-            ( stdout, stderr ) = HydrusSubprocess.RunSubprocess(
-                final_call,
-                timeout = self._timeout,
-                this_is_a_potentially_long_lived_external_guy = self._this_is_a_potentially_long_lived_external_guy,
-                hide_terminal = self._hide_terminal,
-                text = self._text
-            )
-            
-        except Exception as e:
-            
-            raise HydrusExceptions.ExecutableException( f'Problem running external local process! Final call was "{final_call}", error was: {e}' ) from e
-            
-        
-        # if this is a long-lived guy, no stdout/stderr processing
-        # if text, we can do json or whatever parsing on it
-        # if not text, we can eat a file bytes response
-        # can also be no response. maybe we were passed a temp file, the caller cares but we don't
-        # TODO: so yeah expand this guy to eat either text or bytes back and transmogrify that into a dict response that a higher guy will pick up
-        # if bytes, we should stream to a tempdir tbh that the Response can clean up
-        # TODO: consider validity parsing here when we _do_ get text back. standard veto content parser?
-        
-        return dict()
+        return final_call
         
     
     def _GetSerialisableInfo( self ):
@@ -266,20 +304,25 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
             
             try:
                 
-                HydrusSubprocess.RunSubprocess(
+                ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess(
                     self._availability_call,
                     this_is_a_potentially_long_lived_external_guy = False,
                     hide_terminal = True,
-                    text = True
+                    text = True,
+                    shell = True, # yes, we are sending a string, not a cmd list, so we want it as if we typed it in
                 )
-                
-                return True
                 
             except Exception as e:
                 
-                HydrusData.Print( f'While testing local process call with "{self._availability_call}", ran into the following error:' f' {e}' )
-                HydrusData.PrintException( e )
+                raise HydrusExceptions.ExecutableException( f'While testing local process call availability with "{self._availability_call}", ran into the following error:' f' {e}' ) from e
                 
+            
+            if returncode != 0:
+                
+                HydrusSubprocess.ReportBadReturnCode( self._availability_call, returncode, stdout, stderr )
+                
+            
+            return True
             
         
         if self._availability_which_name is not None:
@@ -305,14 +348,31 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
         return self._availability_which_name
         
     
-    def GetCommandDescription( self ):
+    def GetCommandDescription( self ) -> str:
         
         return 'CALL: ' + self._path_template
+        
+    
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+        
+        try:
+            
+            return self._GetFinalCall( input_params )
+            
+        except Exception as e:
+            
+            return f'Error! {e}'
+            
         
     
     def GetHideTerminal( self ):
         
         return self._hide_terminal
+        
+    
+    def GetInputParametersUsed( self ):
+        
+        return [ input_parameter_processing_rule.parameter_type for input_parameter_processing_rule in self._input_parameter_processing_rules ]
         
     
     def GetInputParameterProcessingRules( self ):
@@ -384,7 +444,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         super().__init__()
         
     
-    def _DoCall( self, input_parameters: dict ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
         
         try:
             
@@ -392,7 +452,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
             
         except KeyError:
             
-            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]}" was not in the call arguments!' )
+            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.parameter_types_to_strs[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]}" was not in the call arguments!' )
             
         
         if HC.PLATFORM_WINDOWS:
@@ -420,7 +480,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
             
             HydrusData.CheckProgramIsNotShuttingDown()
             
-            HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True )
+            HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = not for_user_test )
             
         
         return dict()
@@ -446,9 +506,26 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return True
         
     
-    def GetCommandDescription( self ):
+    def GetCommandDescription( self ) -> str:
         
-        return 'Call OS default file launcher'
+        return '-hardcoded- Call OS default file launcher'
+        
+    
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+        
+        try:
+            
+            return f'Ask OS to open "{input_params[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]}"'
+            
+        except Exception as e:
+            
+            return f'Error! {e}'
+            
+        
+    
+    def GetInputParametersUsed( self ):
+        
+        return [ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH ]
         
     
 
@@ -465,7 +542,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         super().__init__()
         
     
-    def _DoCall( self, input_parameters: dict ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
         
         try:
             
@@ -473,7 +550,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
             
         except KeyError:
             
-            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.PARAMETER_TYPE_URL ]}" was not in the call arguments!' )
+            raise HydrusExceptions.ExecutableException( f'The expected input parameter "{ClientExecutablePipelines.parameter_types_to_strs[ ClientExecutablePipelines.PARAMETER_TYPE_URL ]}" was not in the call arguments!' )
             
         
         webbrowser.open( url )
@@ -501,9 +578,26 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         return True
         
     
-    def GetCommandDescription( self ):
+    def GetCommandDescription( self ) -> str:
         
-        return 'Call OS default URL launcher'
+        return '-hardcoded- Call OS default URL launcher'
+        
+    
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+        
+        try:
+            
+            return f'Ask OS to open "{input_params[ ClientExecutablePipelines.PARAMETER_TYPE_URL ]}"'
+            
+        except Exception as e:
+            
+            return f'Error! {e}'
+            
+        
+    
+    def GetInputParametersUsed( self ):
+        
+        return [ ClientExecutablePipelines.PARAMETER_TYPE_URL ]
         
     
 

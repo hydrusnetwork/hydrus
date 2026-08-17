@@ -20,7 +20,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
     
     call = ClientExecutableCallables.ClientExecutableCallable(
-        'Default OS Launch File Command',
+        '-special- Default OS Launch File Command',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
         actual_call = actual_call
     )
@@ -200,7 +200,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
     
     call = ClientExecutableCallables.ClientExecutableCallable(
-        'Default OS Launch URL Command',
+        '-special- Default OS Launch URL Command',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
         actual_call = actual_call
     )

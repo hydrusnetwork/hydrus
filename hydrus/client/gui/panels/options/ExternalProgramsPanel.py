@@ -2,6 +2,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
@@ -11,6 +12,7 @@ from hydrus.client.executables import ClientExecutableCallables
 from hydrus.client.executables import ClientExecutableDefaults
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -259,17 +261,14 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         self._path_template.setPlaceholderText( 'program %path%' )
         self._path_template.setToolTip( ClientGUIFunctions.WrapToolTip( 'This line will be executed in your terminal with the given replacement strings swapped in.' ) )
         
-        self._this_is_a_potentially_long_lived_external_guy = QW.QCheckBox( self )
-        self._this_is_a_potentially_long_lived_external_guy.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set this true if the command opens a new program that you will be interacting with, like an external file viewer, rather than a processing script that will reliably return within a set time. If Hydrus does not know when this will ever close out and return, this tells it to just spawn the guy and return immediately, without waiting.' ) )
-        
-        self._timeout = ClientGUITime.TimeDeltaWidget( self, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False )
-        self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and will try to terminate it. Be generous but not overly so.' ) )
+        self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time' )
+        self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that you will be interacting with, like an external file viewer, set this to "this can live for a very long time", and hydrus will know to just spawn it and return immediately, without waiting for any response.' ) )
         
         self._hide_terminal = QW.QCheckBox( self )
         self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging.' ) )
         
         self._text = QW.QCheckBox( self )
-        self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdio), uncheck it.' ) )
+        self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdout), uncheck it.' ) )
         
         self._availability_call = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = '/path/to/program --version', none_phrase = 'do not use' )
         self._availability_call.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you like, set this to something quick, harmless, and valid, like the absolute path of the exe with a --version parameter. Hydrus will try to call this when it needs to test availability.' ) )
@@ -286,7 +285,6 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._input_parameter_processing_rules_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         rows.append( ( 'command template: ', self._path_template ) )
-        rows.append( ( 'this may stay alive for a very long time: ', self._this_is_a_potentially_long_lived_external_guy ) )
         rows.append( ( 'timeout: ', self._timeout ) )
         rows.append( ( 'hide terminal: ', self._hide_terminal ) )
         rows.append( ( 'output is text: ', self._text ) )
@@ -297,11 +295,16 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        vbox.addStretch( 0 )
+        
         self.setLayout( vbox )
         
-        self._this_is_a_potentially_long_lived_external_guy.clicked.connect( self._UpdateUI )
-        
         self._path_template.textChanged.connect( self.valueChanged )
+        self._timeout.timeDeltaChanged.connect( self.valueChanged )
+        self._hide_terminal.clicked.connect( self.valueChanged )
+        self._text.clicked.connect( self.valueChanged )
+        self._availability_call.valueChanged.connect( self.valueChanged )
+        self._availability_which_name.valueChanged.connect( self.valueChanged )
         
     
     def _GetCurrentInputParameterProcessingRules( self ) -> list[ ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule ]:
@@ -319,15 +322,6 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             
         
         return input_parameter_processing_rules
-        
-    
-    def _UpdateUI( self ):
-        
-        this_is_a_potentially_long_lived_external_guy = self._this_is_a_potentially_long_lived_external_guy.isChecked()
-        
-        self._timeout.setEnabled( not this_is_a_potentially_long_lived_external_guy )
-        
-        # same for any output params, when we add them
         
     
     def CheckValid( self ):
@@ -361,12 +355,25 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             input_parameter_processing_rules = input_parameter_processing_rules,
         )
         
-        actual_call.SetTimeout( int( self._timeout.GetValue() ) )
-        actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( self._this_is_a_potentially_long_lived_external_guy.isChecked() )
+        timeout = self._timeout.GetValue()
+        
+        if timeout is None:
+            
+            actual_call.SetTimeout( 15 )
+            actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
+            
+        else:
+            
+            actual_call.SetTimeout( timeout )
+            actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( False )
+            
+        
         actual_call.SetHideTerminal( self._hide_terminal.isChecked() )
         actual_call.SetText( self._text.isChecked() )
         actual_call.SetAvailabilityCall( self._availability_call.GetValue() )
         actual_call.SetAvailabilityWhichName( self._availability_which_name.GetValue() )
+        
+        return actual_call
         
     
     def SetPipelineType( self, pipeline_type: int ):
@@ -389,12 +396,12 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             input_parameter_processing_rule_panel = EditInputParameterProcessingRulePanel( self._input_parameter_processing_rules_box, parameter_processing_rule )
             input_parameter_processing_rule_panel.valueChanged.connect( self.valueChanged )
             
+            input_parameter_processing_rule_panel.SetValue( None )
+            
             self._input_parameter_processing_rules_box.Add( input_parameter_processing_rule_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self._parameter_types_to_input_parameter_processing_rule_panels[ parameter_type ] = input_parameter_processing_rule_panel
             
-        
-        self._UpdateUI()
         
         self.valueChanged.emit()
         
@@ -407,11 +414,6 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         self.SetPipelineType( pipeline_type )
         
-        for input_parameter_processing_rule_panel in self._parameter_types_to_input_parameter_processing_rule_panels.values():
-            
-            input_parameter_processing_rule_panel.SetValue( None )
-            
-        
         input_parameter_processing_rules = actual_call.GetInputParameterProcessingRules()
         
         for input_parameter_processing_rule in input_parameter_processing_rules:
@@ -423,14 +425,20 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             
         
         self._path_template.setText( actual_call.GetPathTemplate() )
-        self._timeout.SetValue( actual_call.GetTimeout() )
-        self._this_is_a_potentially_long_lived_external_guy.setChecked( actual_call.GetThisIsAPotentiallyLongLivedExternalGuy() )
+        
+        if actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
+            
+            self._timeout.SetValue( None )
+            
+        else:
+            
+            self._timeout.SetValue( actual_call.GetTimeout() )
+            
+        
         self._hide_terminal.setChecked( actual_call.GetHideTerminal() )
         self._text.setChecked( actual_call.GetText() )
         self._availability_call.SetValue( actual_call.GetAvailabilityCall() )
         self._availability_which_name.SetValue( actual_call.GetAvailabilityWhichName() )
-        
-        self._UpdateUI()
         
         self.blockSignals( False )
         
@@ -449,6 +457,8 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         self._pipeline_type = pipeline_type
         
         self._call_types_choice = ClientGUICommon.BetterChoice( self )
+        
+        self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate )
         
         self._edit_actual_call_window = QW.QWidget( self )
         
@@ -522,6 +532,8 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         self._pipeline_type = pipeline_type
         
+        self._call_types_choice.blockSignals( True )
+        
         self._call_types_choice.clear()
         
         labels_and_call_types: list[ tuple[ str, type ] ] = [
@@ -545,6 +557,8 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
             
             self._call_types_choice.addItem( label, call_type )
             
+        
+        self._call_types_choice.blockSignals( False )
         
         self._UpdateCallTypePanel()
         
@@ -578,15 +592,242 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
     
 
-class TestingCallablePanel( ClientGUICommon.StaticBox ):
+class EditInputParameterTestValuePanel( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, parameter_type: int ):
+        
+        self._parameter_type = parameter_type
+        
+        super().__init__( parent )
+        
+        if self._parameter_type not in PARAM_TYPES_TO_LAST_SEEN_VALUES:
+            
+            # TODO: Update this to handle multiple items nicely and ditch the [0]
+            PARAM_TYPES_TO_LAST_SEEN_VALUES[ self._parameter_type ] = ClientExecutablePipelines.parameter_types_to_example_values[ parameter_type ][0]
+            
+        
+        self._name = ClientGUICommon.BetterStaticText( self, label = ClientExecutablePipelines.parameter_types_to_strs[ self._parameter_type ] )
+        self._test_value = QW.QLineEdit( self, text = PARAM_TYPES_TO_LAST_SEEN_VALUES[ self._parameter_type ] )
+        
+        #
+        
+        # to effect a pseudo-table style, we'll force widths
+        
+        self._name.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._name, 12 ) )
+        self._test_value.setFixedWidth( ClientGUIFunctions.ConvertTextToPixelWidth( self._test_value, 44 ) )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._name, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._test_value, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        
+        self.setLayout( hbox )
+        
+        self._test_value.textChanged.connect( self.valueChanged )
+        
+    
+    def _GetTestData( self ) -> ClientParsing.ParsingTestData:
+        
+        texts = ClientExecutablePipelines.parameter_types_to_example_values[ self._parameter_type ]
+        
+        return ClientParsing.ParsingTestData( {}, texts = texts )
+        
+    
+    def GetValue( self ) -> str:
+        
+        value = self._test_value.text()
+        
+        PARAM_TYPES_TO_LAST_SEEN_VALUES[ self._parameter_type ] = value
+        
+        return value
+        
+    
+
+PARAM_TYPES_TO_LAST_SEEN_VALUES = {}
+
+class TestCallablePanel( ClientGUICommon.StaticBox ):
     
     def __init__( self, parent ):
         
         super().__init__( parent, 'testing' )
         
-        st = ClientGUICommon.BetterStaticText( self, 'hello' )
+        self._actual_call: ClientExecutableActualCall.ExecutableActualCall = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate()
         
-        self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._test_availability_button = ClientGUICommon.BetterButton( self, 'test availability!', self._TestAvailability )
+        
+        self._input_param_types_to_edit_panels = {}
+        
+        self._input_param_types_box = ClientGUICommon.StaticBox( self, 'input parameters' )
+        
+        self._actual_command_preview = QW.QLineEdit( self )
+        self._actual_command_preview.setReadOnly( True )
+        
+        self._test_call_button = ClientGUICommon.BetterButton( self, 'test call!', self._TestCall )
+        
+        # could make this a notebook in future, with the parsed output params as the first window and 'raw' response tucked away for debugging
+        self._raw_output_text_box = QW.QPlainTextEdit( self )
+        
+        #
+        
+        self._currently_running_availability_test = False
+        
+        self.Add( self._test_availability_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._input_param_types_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._actual_command_preview, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._test_call_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._raw_output_text_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+    
+    def _GetInputParams( self ) -> dict[ int, str ]:
+        
+        return { param_type : input_param_edit_panel.GetValue() for ( param_type, input_param_edit_panel ) in self._input_param_types_to_edit_panels.items() }
+        
+    
+    def _RecreateTestInputPanels( self ):
+        
+        self._input_param_types_to_edit_panels = {}
+        self._input_param_types_box.Clear()
+        
+        # don't do a sort here; the one we inherit is actually good
+        required_input_parameter_types = self._actual_call.GetInputParametersUsed()
+        
+        for required_input_parameter_type in required_input_parameter_types:
+            
+            panel = EditInputParameterTestValuePanel( self, required_input_parameter_type )
+            
+            panel.valueChanged.connect( self._UpdatePreview )
+            
+            self._input_param_types_to_edit_panels[ required_input_parameter_type ] = panel
+            
+            self._input_param_types_box.Add( panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        
+    
+    def _TestAvailability( self ):
+        
+        def work_callable():
+            
+            result = actual_call.TestAvailability()
+            
+            return result
+            
+        
+        def publish_callable( result ):
+            
+            if result:
+                
+                message = 'Availability test worked!'
+                
+            else:
+                
+                message = 'Availability test failed!'
+                
+            
+            self._raw_output_text_box.setPlainText( message )
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            self._raw_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
+            
+        
+        def ui_restoration_callable():
+            
+            self._currently_running_availability_test = False
+            
+            self._UpdateAvailabilityTestButton()
+            
+        
+        message = f'Testing{HC.UNICODE_ELLIPSIS}'
+        
+        actual_call = self._actual_call
+        
+        self._raw_output_text_box.setPlainText( message )
+        
+        self._currently_running_availability_test = True
+        
+        self._UpdateAvailabilityTestButton()
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable, ui_restoration_callable = ui_restoration_callable )
+        
+        job.start()
+        
+    
+    def _TestCall( self ):
+        
+        def work_callable():
+            
+            # we might have a special call that returns test data or populates a TestStatus object as it works, and then we can spool stdout/stderr or http response or whatever here
+            output_params = actual_call.CallTest( input_params )
+            
+            return output_params
+            
+        
+        def publish_callable( output_params ):
+            
+            message = 'Looks good!'
+            
+            self._raw_output_text_box.setPlainText( message )
+            
+        
+        def errback_callable( etype, value, tb ):
+            
+            self._raw_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
+            
+        
+        def ui_restoration_callable():
+            
+            self._test_call_button.setEnabled( True )
+            
+        
+        message = f'Testing{HC.UNICODE_ELLIPSIS}'
+        
+        input_params = self._GetInputParams()
+        actual_call = self._actual_call
+        
+        if isinstance( actual_call, ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
+            
+            message += ' (forcing a 15 second timeout for testing purposes)'
+            
+        
+        self._raw_output_text_box.setPlainText( message )
+        
+        self._test_call_button.setEnabled( False )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable, ui_restoration_callable = ui_restoration_callable )
+        
+        job.start()
+        
+    
+    def _UpdateAvailabilityTestButton( self ):
+        
+        self._test_availability_button.setEnabled( self._actual_call.CanTestAvailability() and not self._currently_running_availability_test )
+        
+    
+    def _UpdatePreview( self ):
+        
+        input_params = self._GetInputParams()
+        
+        self._actual_command_preview.setText( self._actual_call.GetCommandPreviewWithInputParams( input_params ) )
+        
+        self._raw_output_text_box.setPlainText( '' )
+        
+    
+    def SetActualCall( self, actual_call: ClientExecutableActualCall.ExecutableActualCall ):
+        
+        self._actual_call = actual_call
+        
+        required_input_parameter_types = self._actual_call.GetInputParametersUsed()
+        
+        if set( required_input_parameter_types ) != set( self._input_param_types_to_edit_panels.keys() ):
+            
+            self._RecreateTestInputPanels()
+            
+        
+        self._UpdateAvailabilityTestButton()
+        self._UpdatePreview()
         
     
 
@@ -612,13 +853,13 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_description = ClientGUICommon.BetterStaticText( self._pipeline_panel )
         self._pipeline_description.setWordWrap( True )
         
-        self._validity_text = ClientGUICommon.BetterStaticText( self._pipeline_panel )
+        self._actual_call_panel = EditClientExecutableActualCall( self, call.GetCall(), call.GetPipelineType() )
+        
+        self._validity_text = ClientGUICommon.BetterStaticText( self )
         self._validity_text.setWordWrap( True )
         self._validity_text.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
-        self._actual_call_panel = EditClientExecutableActualCall( self, call.GetCall(), call.GetPipelineType() )
-        
-        self._testing_panel = TestingCallablePanel( self )
+        self._test_panel = TestCallablePanel( self )
         
         #
         
@@ -635,17 +876,17 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._pipeline_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pipeline_panel.Add( self._pipeline_description, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._pipeline_panel.Add( self._validity_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._pipeline_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._actual_call_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._validity_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._testing_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( hbox )
         
@@ -653,6 +894,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._pipeline_type.currentIndexChanged.connect( self._UpdatePipelineType )
         self._actual_call_panel.valueChanged.connect( self._UpdateValidity )
+        self._actual_call_panel.valueChanged.connect( self._UpdateTestPanel )
         
     
     def _GetValiditySummary( self ):
@@ -710,6 +952,13 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._actual_call_panel.SetPipelineType( pipeline_type )
         
         self._UpdateValidity()
+        
+    
+    def _UpdateTestPanel( self ):
+        
+        actual_call = self._actual_call_panel.GetValue()
+        
+        self._test_panel.SetActualCall( actual_call )
         
     
     def _UpdateValidity( self ):
@@ -772,6 +1021,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._actual_call_panel.SetValue( call.GetCall(), call.GetPipelineType() )
         
         self._UpdateValidity()
+        self._UpdateTestPanel()
         
     
 
@@ -787,10 +1037,19 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         message = 'THIS SYSTEM IS STILL IN TESTING! ONLY ADVANCED USERS SEE THIS, AND IT IS NOT PLUGGED INTO ANYTHING YET.'
         message += '\n\n'
-        message += 'Feel free to play with it and let hydev know how you feel. Edit panel is not ready yet, so add/edit do nothing.'
+        message += 'Feel free to play with it and let hydev know how you feel. Edit panel is now ready and has a test area that works--try it out!'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
+        
+        warning_message = 'IF YOU IMPORT A CALL HERE THAT SOMEONE ELSE MADE, MAKE SURE YOU INSPECT IT BEFORE HOOKING IT UP TO ANYTHING.'
+        warning_message += '\n\n'
+        warning_message += 'USE YOUR BRAIN. DO NOT CALL THINGS BLINDLY.'
+        
+        warning = ClientGUICommon.BetterStaticText( self, warning_message )
+        warning.setWordWrap( True )
+        warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        warning.setObjectName( 'HydrusWarning' )
         
         external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
         
@@ -818,6 +1077,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, external_calls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #

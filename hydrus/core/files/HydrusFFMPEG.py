@@ -104,7 +104,7 @@ def GetFFMPEGInfoLines( path: str, video_stream_mapping_to_count_frames_manually
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
+        ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
         
     except HydrusExceptions.SubprocessTimedOut:
         
@@ -141,7 +141,7 @@ def GetFFMPEGVersion():
     
     try:
         
-        ( stdout, stderr ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
+        ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess( cmd, timeout = FFMPEG_SUBPROCESS_TIMEOUT )
         
     except FileNotFoundError:
         
