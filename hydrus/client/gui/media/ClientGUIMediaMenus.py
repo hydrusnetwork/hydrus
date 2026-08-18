@@ -26,6 +26,7 @@ from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaSingle
+from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.media import ClientMediaResultPrettyInfoObjects
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearchPredicate
@@ -846,7 +847,7 @@ def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProce
     ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
     
 
-def AddPrettyMediaResultInfoLines( menu: QW.QMenu, pretty_info_lines: list[ ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ] ):
+def AddPrettyMediaResultInfoLines( win: QW.QWidget, menu: QW.QMenu, media_result: ClientMediaResult.MediaResult ):
     
     def add_pretty_info_str( m: QW.QMenu, line: ClientMediaResultPrettyInfoObjects.PrettyMediaResultInfoLine ):
         
@@ -877,6 +878,11 @@ def AddPrettyMediaResultInfoLines( menu: QW.QMenu, pretty_info_lines: list[ Clie
                 
             
         
+    
+    pretty_info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( media_result )
+    
+    ClientGUIMenus.AppendMenuItem( menu, 'show detailed embedded file metadata', 'Open the window that shows the file\'s embedded metadata, including EXIF and human-readable metadata.', ClientGUIMediaModalActions.ShowFileEmbeddedMetadata, win, media_result )
+    ClientGUIMenus.AppendSeparator( menu )
     
     add_pretty_info_rows( menu, pretty_info_lines )
     

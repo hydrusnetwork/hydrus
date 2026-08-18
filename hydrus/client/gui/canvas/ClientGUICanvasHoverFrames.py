@@ -1154,7 +1154,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             return
             
         
-        ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, self._current_media )
+        ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, self._current_media.GetMediaResult() )
         
     
     def _ShowShortcutMenu( self ):

@@ -1304,9 +1304,7 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
                 
                 focus_singleton = self._GetFocusSingleton()
                 
-                pretty_info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( focus_singleton.GetMediaResult() )
-                
-                ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( selection_info_menu, pretty_info_lines )
+                ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( self, selection_info_menu, focus_singleton.GetMediaResult() )
                 
             
         
@@ -3590,9 +3588,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                 
                 focus_singleton = self._GetFocusSingleton()
                 
-                pretty_info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( focus_singleton.GetMediaResult() )
-                
-                ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( selection_info_menu, pretty_info_lines )
+                ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( self, selection_info_menu, focus_singleton.GetMediaResult() )
                 
             
         

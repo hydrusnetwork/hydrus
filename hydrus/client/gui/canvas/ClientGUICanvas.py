@@ -1824,11 +1824,9 @@ class CanvasPanel( Canvas ):
             
             #
             
-            info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult() )
-            
             info_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( info_menu, info_lines )
+            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( self, info_menu, self._current_media.GetMediaResult() )
             
             ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, (self._current_media,) )
             
@@ -4636,11 +4634,9 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             #
             
-            info_lines = ClientMediaResultPrettyInfo.GetPrettyMediaResultInfoLines( self._current_media.GetMediaResult() )
-            
             info_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( info_menu, info_lines )
+            ClientGUIMediaMenus.AddPrettyMediaResultInfoLines( self, info_menu, self._current_media.GetMediaResult() )
             
             ClientGUIMenus.AppendSeparator( info_menu )
             
