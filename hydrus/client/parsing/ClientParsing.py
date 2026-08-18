@@ -255,7 +255,7 @@ def ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types
             
         else:
             
-            bad_lines[ 'Has an unknown length' ].append( original_line )    
+            bad_lines[ 'Has a length that does not match to an expected hash' ].append( original_line )    
             
             continue
             

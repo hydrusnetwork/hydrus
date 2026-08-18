@@ -39,7 +39,6 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.media import ClientMediaList
 from hydrus.client.media import ClientMediaResult
-from hydrus.client.media import ClientMediaResultPrettyInfo
 from hydrus.client.media import ClientMediaSingle
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientRatings

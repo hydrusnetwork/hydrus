@@ -1310,42 +1310,45 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         ( parsed_bytes_hashes, suspected_hash_type, bad_lines ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = [ hash_type ] )
         
-        if suspected_hash_type is None:
+        if len( parsed_bytes_hashes ) > 0 or len( bad_lines ) > 0:
             
-            ( _, lenient_suspected_hash_type, _ ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = [ 'sha256', 'md5', 'sha1', 'sha512' ] )
-            
-            if lenient_suspected_hash_type is not None:
+            if suspected_hash_type is None:
                 
-                message = f'Hey, I think you have the wrong hash type set. You are set to {hash_type} but I think you are {lenient_suspected_hash_type}. Try clicking the button to auto-detect.'
+                ( _, lenient_suspected_hash_type, _ ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = [ 'sha256', 'md5', 'sha1', 'sha512' ] )
+                
+                if lenient_suspected_hash_type is not None:
+                    
+                    message = f'Hey, I think you have the wrong hash type set. You are set to {hash_type} but I think you are {lenient_suspected_hash_type}. Try clicking the button to auto-detect.'
+                    
+                    raise HydrusExceptions.CancelledException( message )
+                    
+                
+            
+            if len( bad_lines ) > 0:
+                
+                message = 'Unfortunately, some hashes did not parse correctly.\n\n'
+                
+                error_blocks = []
+                
+                for ( reason, list_of_lines ) in bad_lines.items():
+                    
+                    error_block = reason
+                    error_block += '\n'
+                    error_block += HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine( list_of_lines, 'lines', do_sort = False )
+                    
+                    error_blocks.append( error_block )
+                    
+                
+                message += '\n\n'.join( error_blocks )
                 
                 raise HydrusExceptions.CancelledException( message )
                 
-            
-        
-        if len( bad_lines ) > 0:
-            
-            message = 'Unfortunately, some hashes did not parse correctly.\n\n'
-            
-            error_blocks = []
-            
-            for ( reason, list_of_lines ) in bad_lines.items():
+            elif suspected_hash_type is None:
                 
-                error_block = reason
-                error_block += '\n'
-                error_block += HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine( list_of_lines, 'lines', do_sort = False )
+                message = 'Unfortunately, I cannot figure out which hash type those hashes are. Are they the wrong length, or a mix of lengths?'
                 
-                error_blocks.append( error_block )
+                raise HydrusExceptions.CancelledException( message )
                 
-            
-            message += '\n\n'.join( error_blocks )
-            
-            raise HydrusExceptions.CancelledException( message )
-            
-        elif suspected_hash_type is None:
-            
-            message = 'Unfortunately, I cannot figure out which hash type those hashes are. Are they the wrong length, or a mix of lengths?'
-            
-            raise HydrusExceptions.CancelledException( message )
             
         
         predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( parsed_bytes_hashes, hash_type ), inclusive = inclusive ), )
