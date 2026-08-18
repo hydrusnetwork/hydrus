@@ -383,6 +383,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'use_qt_locale_for_human_int' : False,
             'copy_notes_dialog_copy_all' : True,
             'copy_notes_dialog_copy_json' : True,
+            'force_enter_on_radio_buttons_to_do_dialog_ok' : False,
         }
         
         #

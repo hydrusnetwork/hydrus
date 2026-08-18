@@ -855,6 +855,22 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         return False
         
     
+
+class EnterCatchingRadioButton( QW.QRadioButton ):
+    
+    def keyPressEvent( self, event: QG.QKeyEvent ):
+        
+        if event.key() in ( QC.Qt.Key.Key_Return, QC.Qt.Key.Key_Enter ) and CG.client_controller.new_options.GetBoolean( 'force_enter_on_radio_buttons_to_do_dialog_ok' ):
+            
+            event.ignore()
+            return
+            
+        
+        super().keyPressEvent( event )
+        
+    
+
+# I tried making this a QGroupBox for a while, but it didn't add any bells or whistles I really wanted
 class BetterRadioBox( QW.QFrame ):
     
     radioBoxChanged = QC.Signal()
@@ -867,11 +883,11 @@ class BetterRadioBox( QW.QFrame ):
         
         if vertical:
             
-            self.setLayout( QP.VBoxLayout() )
+            layout = QP.VBoxLayout()
             
         else:
             
-            self.setLayout( QP.HBoxLayout() )
+            layout = QP.HBoxLayout()
             
         
         self._radio_buttons = []
@@ -889,29 +905,42 @@ class BetterRadioBox( QW.QFrame ):
                 ( text, data, tooltip ) = tup
                 
             
-            radiobutton = QW.QRadioButton( text, self )
+            radio_button = EnterCatchingRadioButton( self )
+            radio_button.setText( text )
             
             if tooltip is not None:
                 
-                radiobutton.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) ) 
+                radio_button.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) ) 
                 
             
-            self._radio_buttons.append( radiobutton )
+            self._radio_buttons.append( radio_button )
             
-            self._buttons_to_data[ radiobutton ] = data
+            self._buttons_to_data[ radio_button ] = data
             
-            radiobutton.clicked.connect( self.radioBoxChanged )
+            radio_button.clicked.connect( self.radioBoxChanged )
             
-            self.layout().addWidget( radiobutton )
+            if vertical:
+                
+                QP.AddToLayout( layout, radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+                
+            else:
+                
+                QP.AddToLayout( layout, radio_button, CC.FLAGS_CENTER_PERPENDICULAR )
+                
             
         
-        if vertical and len( self._radio_buttons ):
+        self.setLayout( layout )
+        
+        if len( self._radio_buttons ) > 0:
             
-            self._radio_buttons[0].setChecked( True )
-            
-        elif len( self._radio_buttons ) > 0:
-            
-            self._radio_buttons[-1].setChecked( True )
+            if vertical:
+                
+                self._radio_buttons[0].setChecked( True )
+                
+            else:
+                
+                self._radio_buttons[-1].setChecked( True )
+                
             
         
     
@@ -953,7 +982,7 @@ class BetterRadioBox( QW.QFrame ):
                 
             
         
-        QW.QFrame.setFocus( self, reason )
+        super().setFocus( reason )
         
     
     def Select( self, index ):
