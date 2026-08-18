@@ -1026,6 +1026,13 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     ClientGUIMediaSimpleActions.CopyMediaURLs( [ self._current_media ] )
                     
                 
+            elif action == CAC.SIMPLE_SHOW_DETAILED_EMBEDDED_FILE_METADATA_WINDOW:
+                
+                if self._current_media is not None:
+                    
+                    ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, self._current_media.GetMediaResult() )
+                    
+                
             elif action == CAC.SIMPLE_DELETE_FILE:
                 
                 self._Delete()

@@ -2156,6 +2156,15 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     ClientGUIMediaSimpleActions.CopyMediaURLs( ordered_selected_media )
                     
                 
+            elif action == CAC.SIMPLE_SHOW_DETAILED_EMBEDDED_FILE_METADATA_WINDOW:
+                
+                if self._HasFocusSingleton():
+                    
+                    media = self._GetFocusSingleton()
+                    
+                    ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, media.GetMediaResult() )
+                    
+                
             elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
                 
                 ordered_selected_media = self._GetSelectedMediaOrdered()
@@ -5016,6 +5025,15 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                 if len( ordered_selected_media ) > 0:
                     
                     ClientGUIMediaSimpleActions.CopyMediaURLs( ordered_selected_media )
+                    
+                
+            elif action == CAC.SIMPLE_SHOW_DETAILED_EMBEDDED_FILE_METADATA_WINDOW:
+                
+                if self._HasFocusSingleton():
+                    
+                    media = self._GetFocusSingleton()
+                    
+                    ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, media.GetMediaResult() )
                     
                 
             elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
