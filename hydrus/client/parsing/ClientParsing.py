@@ -1,3 +1,4 @@
+import collections
 import collections.abc
 
 import bs4
@@ -142,6 +143,8 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     # convert md5:abcd to abcd
     hex_hashes = [ hex_hash.split( ':' )[-1] for hex_hash in hex_hashes ]
     
+    hex_hashes = [ hex_hash.lower() for hex_hash in hex_hashes ]
+    
     hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
     
     expected_hex_length = hash_type_to_hex_length[ hash_type ]
@@ -164,6 +167,116 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
     
     return hashes
+    
+
+def ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = None ):
+    
+    hash_type_to_hex_length = {
+        'md5' : 32,
+        'sha1' : 40,
+        'sha256' : 64,
+        'sha512' : 128,
+        'pixel' : 64,
+        'perceptual' : 16
+    }
+    
+    if allowed_hash_types is None:
+        
+        allowed_hash_types = list( hash_type_to_hex_length.keys() )
+        
+    
+    allowed_hash_types = set( allowed_hash_types )
+    
+    hash_type_to_hex_length = { k : v for ( k, v ) in hash_type_to_hex_length.items() if k in allowed_hash_types }
+    
+    hex_length_to_hash_types = collections.defaultdict( list )
+    
+    for ( hash_type, length ) in hash_type_to_hex_length.items():
+        
+        hex_length_to_hash_types[ length ].append( hash_type )
+        
+    
+    bad_lines: collections.defaultdict[ str, list[ str ] ] = collections.defaultdict( list )
+    
+    seen_hash_types = set()
+    
+    #
+    
+    hash_lines = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
+    
+    clean_hex_hashes = []
+    
+    for hash_line in hash_lines:
+        
+        original_line = hash_line
+        
+        hex_hash = hash_line.lower()
+        
+        if ':' in hex_hash:
+            
+            ( prefix, hex_hash ) = hex_hash.split( ':', 1 )
+            
+            if prefix in allowed_hash_types:
+                
+                seen_hash_types.add( prefix )
+                
+            else:
+                
+                bad_lines[ 'Unknown hash type (unusual prefix)' ].append( original_line )
+                
+                continue
+                
+            
+        
+        if hex_hash.startswith( '0x' ):
+            
+            hex_hash = hex_hash[ 2 : ]
+            
+        
+        if HydrusText.HexFilter( hex_hash ) != hex_hash:
+            
+            bad_lines[ 'Includes non-hex characters' ].append( original_line )
+            
+            continue
+            
+        
+        hex_hash_len = len( hex_hash )
+        
+        if hex_hash_len % 2 != 0:
+            
+            bad_lines[ 'Has an odd number of characters' ].append( original_line )
+            
+            continue
+            
+        
+        if hex_hash_len in hex_length_to_hash_types:
+            
+            seen_hash_types.update( hex_length_to_hash_types[ hex_hash_len ] )
+            
+        else:
+            
+            bad_lines[ 'Has an unknown length' ].append( original_line )    
+            
+            continue
+            
+        
+        clean_hex_hashes.append( hex_hash )
+        
+    
+    clean_hex_hashes = HydrusLists.DedupeList( clean_hex_hashes )
+    
+    hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in clean_hex_hashes ] )
+    
+    if len( seen_hash_types ) != 1:
+        
+        suspected_hash_type = None
+        
+    else:
+        
+        suspected_hash_type = list( seen_hash_types )[0]
+        
+    
+    return ( hashes, suspected_hash_type, bad_lines )
     
 
 def RenderJSONParseRule( rule ):

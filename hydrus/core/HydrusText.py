@@ -271,6 +271,7 @@ def HexFilter( text ):
     
     return text
     
+
 def DeserialiseNewlinedTexts( text ):
     
     texts = text.splitlines()
@@ -281,6 +282,7 @@ def DeserialiseNewlinedTexts( text ):
     
     return texts
     
+
 def ElideText( text, max_length, elide_center = False ):
     
     if len( text ) > max_length:

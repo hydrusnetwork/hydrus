@@ -1178,6 +1178,12 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self._hashes.setPlaceholderText( 'enter hash (paste newline-separated for multiple hashes)' )
         
+        self._format_hashes_button = ClientGUICommon.BetterButton( self, 'clean up text and guess hash type', self._DoParseAndCleanUpText )
+        self._format_hashes_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'This widget will accept hashes that are a mix of upper or lower case; or those that have "sha256:" style prefixes; or those that start "0x". Feel free to try pasting whatever you have and click this to clean it up.' ) )
+        
+        self._format_hashes_button_forced = ClientGUICommon.BetterButton( self, 'clean up text and guess hash type (remove bad lines)', self._DoParseAndCleanUpTextForced )
+        self._format_hashes_button_forced.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you have a messy input of hashes and non-hashes, hit this to do the above button but instead of whining about errors, it will just skip those lines. Careful!' ) )
+        
         ( init_width, init_height ) = ClientGUIFunctions.ConvertTextToPixels( self._hashes, ( 60, 10 ) )
         
         self._hashes.setMinimumSize( QC.QSize( init_width, init_height ) )
@@ -1198,11 +1204,17 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         #
         
+        hashes_vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( hashes_vbox, self._hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hashes_vbox, self._format_hashes_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( hashes_vbox, self._format_hashes_button_forced, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:hash'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._hashes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, hashes_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._hash_type, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 0 )
@@ -1211,65 +1223,72 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self.setFocusProxy( self._sign )
         
-        self._hashes.textChanged.connect( self._StripOffPrefixes )
+    
+    def _DoParseAndCleanUpText( self ):
+        
+        hashes_text = self._hashes.toPlainText()
+
+        ( parsed_bytes_hashes, suspected_hash_type, bad_lines ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hashes_text, allowed_hash_types = [ 'sha256', 'md5', 'sha1', 'sha512' ] )
+        
+        if len( bad_lines ) > 0:
+            
+            message = 'Unfortunately, some hashes did not parse correctly.\n\n'
+            
+            error_blocks = []
+            
+            for ( reason, list_of_lines ) in bad_lines.items():
+                
+                error_block = reason
+                error_block += '\n\n'
+                error_block += HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine( list_of_lines, 'lines', do_sort = False )
+                
+                error_blocks.append( error_block )
+                
+            
+            message += '\n\n'.join( error_blocks )
+            
+            ClientGUIDialogsMessage.ShowWarning( self, message )
+            
+        elif suspected_hash_type is None:
+            
+            message = 'Unfortunately, I cannot figure out which hash type those hashes are. Are they the wrong length, or a mix of lengths?'
+            
+            ClientGUIDialogsMessage.ShowWarning( self, message )
+            
+        else:
+            
+            parsed_hashes = '\n'.join( ( parsed_bytes_hash.hex() for parsed_bytes_hash in parsed_bytes_hashes ) )
+            
+            self._hashes.setPlainText( parsed_hashes )
+            
+            self._hash_type.SetValue( suspected_hash_type )
+            
         
     
-    def _StripOffPrefixes( self ):
+    def _DoParseAndCleanUpTextForced( self ):
         
-        # it would be nice to generalise this into a 'hashes' widget that had the hash type and provided an ongoing (red text) commentary into the validity of the hashes entered
+        from hydrus.client.gui import ClientGUIDialogsQuick
+        
+        message = f'You sure?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
         
         hashes_text = self._hashes.toPlainText()
         
-        hashes_lines = HydrusText.DeserialiseNewlinedTexts( hashes_text )
+        ( parsed_bytes_hashes, suspected_hash_type, bad_lines ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hashes_text, allowed_hash_types = [ 'sha256', 'md5', 'sha1', 'sha512' ] )
         
-        seen_prefixes = set()
-        stripped_hashes = []
+        parsed_hashes = '\n'.join( ( parsed_bytes_hash.hex() for parsed_bytes_hash in parsed_bytes_hashes ) )
         
-        we_split_some = False
+        self._hashes.setPlainText( parsed_hashes )
         
-        for line in hashes_lines:
+        if suspected_hash_type is not None:
             
-            if ':' in line:
-                
-                ( prefix, hash ) = line.split( ':', 1 )
-                
-                if prefix in [ 'sha256', 'md5', 'sha1', 'sha512' ]:
-                    
-                    seen_prefixes.add( prefix )
-                    
-                    if len( seen_prefixes ) == 2:
-                        
-                        return
-                        
-                    
-                else:
-                    
-                    return
-                    
-                
-                stripped_hashes.append( hash )
-                
-                we_split_some = True
-                
-            else:
-                
-                stripped_hashes.append( line )
-                
-            
-        
-        if we_split_some and len( seen_prefixes ) == 1:
-            
-            self._hashes.setPlainText( '\n'.join( stripped_hashes ) )
-            
-            if len( seen_prefixes ) == 1:
-                
-                prefix = list( seen_prefixes )[0]
-                
-                if prefix in [ 'sha256', 'md5', 'sha1', 'sha512' ]:
-                    
-                    self._hash_type.SetValue( prefix )
-                    
-                
+            self._hash_type.SetValue( suspected_hash_type )
             
         
     
@@ -1289,9 +1308,47 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         hex_hashes_raw = self._hashes.toPlainText()
         
-        hashes = ClientParsing.ParseHashesFromRawHexText( hash_type, hex_hashes_raw )
+        ( parsed_bytes_hashes, suspected_hash_type, bad_lines ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = [ hash_type ] )
         
-        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ), inclusive = inclusive ), )
+        if suspected_hash_type is None:
+            
+            ( _, lenient_suspected_hash_type, _ ) = ClientParsing.ParseHashesFromRawHexTextUnknownHashType( hex_hashes_raw, allowed_hash_types = [ 'sha256', 'md5', 'sha1', 'sha512' ] )
+            
+            if lenient_suspected_hash_type is not None:
+                
+                message = f'Hey, I think you have the wrong hash type set. You are set to {hash_type} but I think you are {lenient_suspected_hash_type}. Try clicking the button to auto-detect.'
+                
+                raise HydrusExceptions.CancelledException( message )
+                
+            
+        
+        if len( bad_lines ) > 0:
+            
+            message = 'Unfortunately, some hashes did not parse correctly.\n\n'
+            
+            error_blocks = []
+            
+            for ( reason, list_of_lines ) in bad_lines.items():
+                
+                error_block = reason
+                error_block += '\n'
+                error_block += HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine( list_of_lines, 'lines', do_sort = False )
+                
+                error_blocks.append( error_block )
+                
+            
+            message += '\n\n'.join( error_blocks )
+            
+            raise HydrusExceptions.CancelledException( message )
+            
+        elif suspected_hash_type is None:
+            
+            message = 'Unfortunately, I cannot figure out which hash type those hashes are. Are they the wrong length, or a mix of lengths?'
+            
+            raise HydrusExceptions.CancelledException( message )
+            
+        
+        predicates = ( ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_HASH, ( parsed_bytes_hashes, hash_type ), inclusive = inclusive ), )
         
         return predicates
         
