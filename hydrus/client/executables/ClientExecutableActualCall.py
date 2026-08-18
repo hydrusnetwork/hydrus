@@ -75,7 +75,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
 class LocalProcessCallTemplateInputParameterProcessingRule(HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE
-    SERIALISABLE_NAME = 'Local Process Call - Input Parameter Processing Rule'
+    SERIALISABLE_NAME = 'Local Terminal Call - Input Parameter Processing Rule'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, parameter_type: int | None = None, replacement_string: str | None = None, string_processor: ClientStrings.StringProcessor | None = None ):
@@ -149,7 +149,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_TEMPLATE
-    SERIALISABLE_NAME = 'Local Process Call (Template)'
+    SERIALISABLE_NAME = 'Local Terminal Call (Template)'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, path_template = None, input_parameter_processing_rules = None ):
@@ -314,7 +314,7 @@ class ExecutableLocalProcessCallTemplate( ExecutableActualCall ):
                 
             except Exception as e:
                 
-                raise HydrusExceptions.ExecutableException( f'While testing local process call availability with "{self._availability_call}", ran into the following error:' f' {e}' ) from e
+                raise HydrusExceptions.ExecutableException( f'While testing local terminal call availability with "{self._availability_call}", ran into the following error:' f' {e}' ) from e
                 
             
             if returncode != 0:

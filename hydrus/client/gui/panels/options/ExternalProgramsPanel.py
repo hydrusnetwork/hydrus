@@ -1,4 +1,5 @@
 from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -7,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.executables import ClientExecutableActualCall
 from hydrus.client.executables import ClientExecutableCallables
 from hydrus.client.executables import ClientExecutableDefaults
@@ -282,6 +284,11 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         rows = []
         
+        
+        st = ClientGUICommon.BetterStaticText( self, label = 'This makes a simple command-line call in your terminal. Select which input parameter(s) you want to use and give them replacement tokens like \'%path%\', and then specify a launch template that includes those replacement tokens (e.g. \'my_program "%path%"\').\n\nThe final command is sent straight to your shell interpreter, as-is, just as if you typed it, so you need to put quote marks around parameters that may include whitespace.' )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._input_parameter_processing_rules_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         rows.append( ( 'command template: ', self._path_template ) )
@@ -458,7 +465,7 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         self._call_types_choice = ClientGUICommon.BetterChoice( self )
         
-        self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate )
+        self._call_types_choice.addItem( 'local terminal call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate )
         
         self._edit_actual_call_window = QW.QWidget( self )
         
@@ -474,6 +481,10 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         #
         
+        st = ClientGUICommon.BetterStaticText( self, label = 'Choose the type of call and then set it up. Availability tests are mostly for other users who might import your call. Do not forget to test it!' )
+        st.setWordWrap( True )
+        
+        self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._call_types_choice, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for window in self._call_types_to_windows.values():
@@ -537,7 +548,7 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         self._call_types_choice.clear()
         
         labels_and_call_types: list[ tuple[ str, type ] ] = [
-            ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ),
+            ( 'local terminal call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ),
         ]
         
         if self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
@@ -659,7 +670,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         self._input_param_types_to_edit_panels = {}
         
-        self._input_param_types_box = ClientGUICommon.StaticBox( self, 'input parameters' )
+        self._input_param_types_box = ClientGUICommon.StaticBox( self, 'test input parameters' )
         
         self._actual_command_preview = QW.QLineEdit( self )
         self._actual_command_preview.setReadOnly( True )
@@ -668,11 +679,17 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         # could make this a notebook in future, with the parsed output params as the first window and 'raw' response tucked away for debugging
         self._raw_output_text_box = QW.QPlainTextEdit( self )
+        self._raw_output_text_box.setReadOnly( True )
+        self._raw_output_text_box.setFont( QG.QFont( 'Monospace' ) )
         
         #
         
         self._currently_running_availability_test = False
         
+        st = ClientGUICommon.BetterStaticText( self, label = 'Test your call here. Put in a real path or URL in the provided input parameter box and click "test call!". It will fire for real, so don\'t screw around!' )
+        st.setWordWrap( True )
+        
+        self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._test_availability_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._input_param_types_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._actual_command_preview, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -874,6 +891,10 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
+        st = ClientGUICommon.BetterStaticText( self._pipeline_panel, label = 'Set a name for this external call and select the job it will do.' )
+        st.setWordWrap( True )
+        
+        self._pipeline_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pipeline_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pipeline_panel.Add( self._pipeline_description, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1037,21 +1058,23 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         message = 'THIS SYSTEM IS STILL IN TESTING! ONLY ADVANCED USERS SEE THIS, AND IT IS NOT PLUGGED INTO ANYTHING YET.'
         message += '\n\n'
-        message += 'Please test this and let me know how it goes. Load up the defaults for your system, pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors and where I need to add help text!'
+        message += 'Please test this and let me know how it goes. It will load up the defaults for your system. Pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors or if any of the help text is confusing!'
+        message += '\n\n----------\n\n'
+        message += 'Here we can teach your client about other programs it can call. Each job has a certain type, such as "open file in external program" or "download URL" or "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can be pass on to the external program (e.g. a tag profiler). There may also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
+        
+        external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
         
         warning_message = 'IF YOU IMPORT A CALL HERE THAT SOMEONE ELSE MADE, MAKE SURE YOU INSPECT IT BEFORE HOOKING IT UP TO ANYTHING.'
         warning_message += '\n\n'
         warning_message += 'USE YOUR BRAIN. DO NOT CALL THINGS BLINDLY.'
         
-        warning = ClientGUICommon.BetterStaticText( self, warning_message )
+        warning = ClientGUICommon.BetterStaticText( external_calls_panel, warning_message )
         warning.setWordWrap( True )
         warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         warning.setObjectName( 'HydrusWarning' )
-        
-        external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
         
         external_calls_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( external_calls_panel )
         
@@ -1070,6 +1093,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        external_calls_panel.Add( warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         external_calls_panel.Add( external_calls_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
@@ -1077,12 +1101,26 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, external_calls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
         self.setLayout( vbox )
+        
+        def add_defaults():
+            
+            external_platforms_and_callables = list( ClientExecutableDefaults.GetDefaultOpenExternally() )
+            external_platforms_and_callables.extend( ClientExecutableDefaults.GetDefaultOpenURL() )
+            
+            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
+            
+            for external_call in external_callables:
+                
+                self._AddCallableFullyFormed( external_call )
+                
+            
+        
+        CG.client_controller.CallAfterQtSafe( self, add_defaults )
         
     
     def _AddCallableBrandNew( self ):

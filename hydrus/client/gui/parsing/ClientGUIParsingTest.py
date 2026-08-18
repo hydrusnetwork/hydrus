@@ -3,6 +3,7 @@ import sys
 import traceback
 import typing
 
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -61,6 +62,7 @@ class TestPanel( QW.QWidget ):
         
         self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
         self._example_data_raw_preview.setReadOnly( True )
+        self._example_data_raw_preview.setFont( QG.QFont( 'Monospace' ) )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._example_data_raw_preview, ( 60, 9 ) )
         
@@ -482,6 +484,7 @@ class TestPanelPageParser( TestPanel ):
         self._refresh_post_conversion_button = ClientGUICommon.IconButton( post_conversion_panel, CC.global_icons().refresh, self._RefreshDataPreviews )
         self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
         self._example_data_post_conversion_preview.setReadOnly( True )
+        self._example_data_post_conversion_preview.setFont( QG.QFont( 'Monospace' ) )
         
         #
         
@@ -624,6 +627,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         self._refresh_post_separation_button = ClientGUICommon.IconButton( post_separation_panel, CC.global_icons().refresh, self._RefreshDataPreviews )
         self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
         self._example_data_post_separation_preview.setReadOnly( True )
+        self._example_data_post_separation_preview.setFont( QG.QFont( 'Monospace' ) )
         
         #
         
