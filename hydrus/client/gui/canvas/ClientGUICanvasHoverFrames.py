@@ -2094,9 +2094,16 @@ class NotePanel( QW.QWidget ):
         self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Left-click to edit, Middle-click to copy, Right-click to hide/show.' ) )
         
     
-    def _CopyNote( self ):
+    def _CopyNoteFromClick( self ):
         
-        copy_text = self._name + '\n\n' + self._note
+        if CG.client_controller.new_options.GetBoolean( 'copy_notes_quick_click_only_copies_text' ):
+            
+            copy_text = self._note
+            
+        else:
+            
+            copy_text = self._name + '\n\n' + self._note
+            
         
         CG.client_controller.pub( 'clipboard', 'text', copy_text )
         
@@ -2115,7 +2122,7 @@ class NotePanel( QW.QWidget ):
                     
                 elif event.button() == QC.Qt.MouseButton.MiddleButton:
                     
-                    self._CopyNote()
+                    self._CopyNoteFromClick()
                     
                 else:
                     

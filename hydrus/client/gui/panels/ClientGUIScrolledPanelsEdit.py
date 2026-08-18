@@ -1,5 +1,6 @@
 import collections.abc
 import json
+import re
 import typing
 
 from qtpy import QtCore as QC
@@ -889,6 +890,9 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
         self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from a copy from another notes dialog.' ) )
         
+        self._copy_urls_button = ClientGUICommon.IconButton( self, CC.global_icons().link, self._CopyURLs )
+        self._copy_urls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy all URLs from the current note text. Is not perfect--check the output for trailing periods etc..!' ) )
+        
         menu_template_items = []
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'copy_notes_dialog_copy_all' )
@@ -902,6 +906,20 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         tt = 'Copy as technical JSON, which the paste button will accept, or as prettier, human text?'
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'copy as JSON', tt, check_manager ) )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'start_note_editing_at_end' )
+        
+        tt = 'Start editing notes with the text cursor at the end of the document.'
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'start editing with text cursor at the end', tt, check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'copy_notes_quick_click_only_copies_text' )
+        
+        tt = 'Otherwise, copy title and text.'
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'on middle-click note hover copy, only copy text', tt, check_manager ) )
         
         self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
         
@@ -947,6 +965,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._copy_urls_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
@@ -1058,6 +1077,37 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             
+        
+    
+    def _CopyURLs( self ):
+        
+        current_page = self._notebook.currentWidget()
+        
+        if current_page is None:
+            
+            return
+            
+        
+        current_page = typing.cast( QW.QPlainTextEdit, current_page )
+        
+        note_text = HydrusText.CleanNoteText( current_page.toPlainText() )
+        
+        urls = re.findall(r'https?://[^\s<>"\']+', note_text )
+        
+        if len( urls ) > 0:
+            
+            urls_text = '\n'.join( urls )
+            
+            CG.client_controller.pub( 'clipboard', 'text', urls_text )
+            
+        
+        QW.QToolTip.showText(
+            self._copy_urls_button.mapToGlobal( self._copy_urls_button.rect().bottomLeft() ),
+            f'{HydrusNumbers.ToHumanInt( len( urls ) )} URLs!',
+            self._copy_urls_button,
+            self._copy_urls_button.rect(),
+            3000
+        )
         
     
     def _CurrentNoteChanged( self ):

@@ -385,6 +385,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'copy_notes_dialog_copy_json' : True,
             'force_enter_on_radio_buttons_to_do_dialog_ok' : False,
             'make_child_frames_qt_tool' : False,
+            'copy_notes_quick_click_only_copies_text' : False,
         }
         
         #
