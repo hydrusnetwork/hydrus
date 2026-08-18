@@ -154,9 +154,9 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         if pair_to_work is None and rule.HasResolutionWorkToDo():
             
-            rule.SetPaused( True )
+            self.modules_files_duplicates_auto_resolution_storage.FlipPausePlay( rule )
             
-            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do resolution work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen.' )
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do resolution work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen. The rule has been paused for safety.' )
             # we likely have a bad count at the rule level
             self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
             
@@ -199,9 +199,9 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
         
         if len( unsearched_pairs_and_distances ) == 0 and rule.HasSearchWorkToDo():
             
-            rule.SetPaused( True )
+            self.modules_files_duplicates_auto_resolution_storage.FlipPausePlay( rule )
             
-            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do search work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen.' )
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do search work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen. The rule has been paused for safety.' )
             # we likely have a bad count at the rule level
             self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
             
