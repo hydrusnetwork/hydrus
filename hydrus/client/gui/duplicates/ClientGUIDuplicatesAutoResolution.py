@@ -1599,7 +1599,7 @@ class ReviewDuplicatesAutoResolutionPanel( QW.QWidget ):
     
     def _DeleteOrphanPotentialPairs( self ):
         
-        text = f'This will scan the primary potential pairs table. If any are missing from the auto-resolution rule potential pair cache, they will be added. Orphans will be deleted.'
+        text = f'This will scan your database to ensure that rules are synced with the primary pair store. If any rule is missing pairs it should have, they will be added. If any rule has pairs it should not have, they will be removed.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
         

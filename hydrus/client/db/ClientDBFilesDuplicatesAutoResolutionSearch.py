@@ -156,9 +156,9 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             self.modules_files_duplicates_auto_resolution_storage.FlipPausePlay( rule )
             
-            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do resolution work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen. The rule has been paused for safety.' )
-            # we likely have a bad count at the rule level
-            self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do resolution work, but no work is actually pending. I am assuming there is a miscount or orphaned pair and am starting some maintenance. The rule has been paused for safety; unpause it and see what happens. If it carries on working with no more problems, you are great.' )
+            
+            self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs()
             
         
         while pair_to_work is not None:
@@ -201,9 +201,9 @@ class ClientDBFilesDuplicatesAutoResolutionSearch( ClientDBModule.ClientDBModule
             
             self.modules_files_duplicates_auto_resolution_storage.FlipPausePlay( rule )
             
-            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do search work, but no work is actually pending. I am assuming there is a miscount and am starting a number regen. The rule has been paused for safety.' )
-            # we likely have a bad count at the rule level
-            self.modules_files_duplicates_auto_resolution_storage.MaintenanceRegenNumbers()
+            HydrusData.ShowText( f'The auto-resolution rule "{rule.GetName()}" was called to do search work, but no work is actually pending. I am assuming there is a miscount or orphaned pair and am starting some maintenance. The rule has been paused for safety; unpause it and see what happens. If it carries on working with no more problems, you are great.' )
+            
+            self.modules_files_duplicates_auto_resolution_storage.MaintenanceFixOrphanPotentialPairs()
             
         
         work_still_to_do = len( unsearched_pairs_and_distances ) == limit

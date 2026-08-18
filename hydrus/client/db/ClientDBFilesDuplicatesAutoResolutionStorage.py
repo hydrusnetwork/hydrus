@@ -599,91 +599,78 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
     
     def MaintenanceFixOrphanPotentialPairs( self, pairs_to_sync_to = None, master_potential_duplicate_pairs_table_name = 'potential_duplicate_pairs' ):
         
+        # initially, this guy had some params that tried to set up "pairs_to_sync_to" and an alternate master pair table to sync to
+        # it caused a little logical hole where a pair that existing in a rule but not in potential_duplicate_pairs would not be deleted because we pre-set the valid pair search space
+        # this caused a painful '1 pair remaining' issue that I didn't figure out for like goes
+        # thus I'm doing a KISS push
+        
         if not self._have_initialised_rules:
             
             self._Reinit()
             
         
-        pairs_stored_in_duplicates_proper = None
-        
-        if pairs_to_sync_to is None:
-            
-            pairs_to_sync_to = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {master_potential_duplicate_pairs_table_name};' ) )
-            pairs_stored_in_duplicates_proper = set( pairs_to_sync_to )
-            
-        
         all_were_good = True
         
-        with self._MakeTemporaryIntegerTable( pairs_to_sync_to, ( 'smaller_media_id', 'larger_media_id' ) ) as temp_media_ids_table_name:
+        pairs_stored_in_duplicates_proper = set( self._Execute( 'SELECT smaller_media_id, larger_media_id FROM potential_duplicate_pairs;' ) )
+        
+        for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
             
-            self._AnalyzeTempTable( temp_media_ids_table_name )
+            pairs_i_should_have = set( self.modules_files_duplicates_storage.FilterMediaIdPairs( resolution_rule.GetLocationContext(), pairs_stored_in_duplicates_proper ) )
             
-            if pairs_stored_in_duplicates_proper is None:
+            statuses_to_table_names = GenerateAutoResolutionQueueTableNames( rule_id )
+            
+            statuses_to_pairs_i_have = collections.defaultdict( set )
+            
+            for ( status, table_name ) in statuses_to_table_names.items():
                 
-                table_join = f'{temp_media_ids_table_name} CROSS JOIN {master_potential_duplicate_pairs_table_name} USING ( smaller_media_id, larger_media_id )'
+                pairs_i_have = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_name};' ) )
                 
-                pairs_stored_in_duplicates_proper = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {table_join};' ) )
+                statuses_to_pairs_i_have[ status ] = pairs_i_have
                 
             
-            for ( rule_id, resolution_rule ) in self._rule_ids_to_rules.items():
+            all_my_pairs = HydrusLists.MassUnion( statuses_to_pairs_i_have.values() )
+            
+            pairs_we_should_add = pairs_i_should_have.difference( all_my_pairs )
+            
+            if len( pairs_we_should_add ) > 0:
                 
-                pairs_i_should_have = set( self.modules_files_duplicates_storage.FilterMediaIdPairs( resolution_rule.GetLocationContext(), pairs_stored_in_duplicates_proper ) )
+                self._ExecuteMany(
+                    f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
+                    pairs_we_should_add
+                )
                 
-                statuses_to_table_names = GenerateAutoResolutionQueueTableNames( rule_id )
+                num_added = self._GetRowCount()
                 
-                statuses_to_pairs_i_have = collections.defaultdict( set )
-                
-                for ( status, table_name ) in statuses_to_table_names.items():
+                if num_added > 0:
                     
-                    pairs_i_have = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {temp_media_ids_table_name} CROSS JOIN {table_name} USING ( smaller_media_id, larger_media_id );' ) )
+                    self._UpdateRuleCount( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED, num_added )
                     
-                    statuses_to_pairs_i_have[ status ] = pairs_i_have
+                    HydrusData.Print( f'During auto-resolution potential pair-sync, added {HydrusNumbers.ToHumanInt( num_added )} pairs for rule {resolution_rule.GetName()}, ({rule_id}).' )
+                    
+                    all_were_good = False
                     
                 
-                all_my_pairs = HydrusLists.MassUnion( statuses_to_pairs_i_have.values() )
+            
+            for ( status, pairs_i_have ) in statuses_to_pairs_i_have.items():
                 
-                pairs_we_should_add = pairs_i_should_have.difference( all_my_pairs )
+                pairs_we_should_remove = pairs_i_have.difference( pairs_i_should_have )
                 
-                if len( pairs_we_should_add ) > 0:
+                if len( pairs_we_should_remove ) > 0:
                     
                     self._ExecuteMany(
-                        f'INSERT OR IGNORE INTO {statuses_to_table_names[ ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED ]} ( smaller_media_id, larger_media_id ) VALUES ( ?, ? );',
-                        pairs_we_should_add
+                        f'DELETE FROM {statuses_to_table_names[ status ]} WHERE smaller_media_id = ? AND larger_media_id = ?;',
+                        pairs_we_should_remove
                     )
                     
-                    num_added = self._GetRowCount()
+                    num_deleted = self._GetRowCount()
                     
-                    if num_added > 0:
+                    if num_deleted > 0:
                         
-                        self._UpdateRuleCount( rule_id, ClientDuplicatesAutoResolution.DUPLICATE_STATUS_NOT_SEARCHED, num_added )
+                        self._UpdateRuleCount( rule_id, status, - num_deleted )
                         
-                        HydrusData.Print( f'During auto-resolution potential pair-sync, added {HydrusNumbers.ToHumanInt( num_added )} pairs for rule {resolution_rule.GetName()}, ({rule_id}).' )
+                        HydrusData.Print( f'During auto-resolution potential pair-sync, deleted {HydrusNumbers.ToHumanInt( num_deleted )} pairs for rule {resolution_rule.GetName()} ({rule_id}), status {status} ({ClientDuplicatesAutoResolution.duplicate_status_str_lookup[ status ]}).' )
                         
                         all_were_good = False
-                        
-                    
-                
-                for ( status, pairs_i_have ) in statuses_to_pairs_i_have.items():
-                    
-                    pairs_we_should_remove = pairs_i_have.difference( pairs_i_should_have )
-                    
-                    if len( pairs_we_should_remove ) > 0:
-                        
-                        self._ExecuteMany(
-                            f'DELETE FROM {statuses_to_table_names[ status ]} WHERE smaller_media_id = ? AND larger_media_id = ?;',
-                            pairs_we_should_remove
-                        )
-                        
-                        num_deleted = self._GetRowCount()
-                        
-                        if num_deleted > 0:
-                            
-                            self._UpdateRuleCount( rule_id, status, - num_deleted )
-                            
-                            HydrusData.Print( f'During auto-resolution potential pair-sync, deleted {HydrusNumbers.ToHumanInt( num_deleted )} pairs for rule {resolution_rule.GetName()} ({rule_id}), status {status} ({ClientDuplicatesAutoResolution.duplicate_status_str_lookup[ status ]}).' )
-                            
-                            all_were_good = False
-                            
                         
                     
                 
@@ -698,7 +685,7 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
             HydrusData.ShowText( 'All the duplicates auto-resolution potential pairs looked good--no orphans!' )
             
         
-        self._cursor_transaction_wrapper.pub_after_job( 'duplicates_auto_resolution_rules_properties_have_changed' )
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_duplicates_auto_resolution_new_rules' )
         
     
     def MaintenanceFixOrphanRules( self ):
