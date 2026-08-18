@@ -828,13 +828,25 @@ class DialogThatResizes( NewDialog ):
 
 class Frame( QW.QWidget ):
     
-    def __init__( self, parent, title ):
+    def __init__( self, parent: QW.QWidget | None, title ):
+        
+        if parent is not None and not parent.isWindow():
+            
+            parent = parent.window()
+            
+        
+        window_flag = QC.Qt.WindowType.Window
+        
+        if parent is not None and CG.client_controller.IsBooted() and CG.client_controller.new_options.GetBoolean( 'make_child_frames_qt_tool' ):
+            
+            window_flag = QC.Qt.WindowType.Tool
+            
         
         super().__init__( parent )
         
         self.setWindowTitle( title )
         
-        self.setWindowFlags( QC.Qt.WindowType.Window )
+        self.setWindowFlags( window_flag )
         self.setWindowFlag( QC.Qt.WindowType.WindowContextHelpButtonHint, on = False )
         
         self.setAttribute( QC.Qt.WidgetAttribute.WA_DeleteOnClose )
