@@ -686,7 +686,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         self._currently_running_availability_test = False
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'Test your call here. Put in a real path or URL in the provided input parameter box and click "test call!". It will fire for real, so don\'t screw around!' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'Test your call here. Put in a real path or URL in the provided input parameter box and click "test call!". It will fire for real, so don\'t screw around!\n\nRemember that if your application is inside a sandbox, for instance you installed it via flatpak, it needs to be able to see any paths you give it. Same deal for hydrus seeing an exe.' )
         st.setWordWrap( True )
         
         self.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )

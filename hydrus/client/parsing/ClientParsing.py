@@ -127,6 +127,7 @@ def GetSoup( html, force_parser = None ):
         
     
 
+# TODO: change all callers of this to use ParseHashesFromRawHexTextUnknownHashType for better errors and options on what to do
 def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     
     hash_type_to_hex_length = {
