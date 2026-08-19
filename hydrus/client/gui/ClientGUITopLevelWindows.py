@@ -870,6 +870,14 @@ class Frame( QW.QWidget ):
         self.CleanBeforeDestroy()
         
     
+    def show( self ):
+        
+        super().show()
+        
+        # tool windows do not activate
+        self.activateWindow()
+        
+    
 
 class MainFrame( QW.QMainWindow ):
     
