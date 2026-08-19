@@ -39,7 +39,7 @@ from hydrus.client.parsing import ClientParsingResults
 FILE_SEED_TYPE_HDD = 0
 FILE_SEED_TYPE_URL = 1
 
-def ConvertParsedPostsToParsedPostsAndFileSeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], source_url: str ) -> "list[ FileSeed ]":
+def ConvertParsedPostsToParsedPostsAndFileSeeds( parsed_posts: list[ ClientParsingResults.ParsedPost ], source_url: str ) -> "list[ tuple[ ClientParsingResults.ParsedPost, FileSeed ] ]":
     
     parsed_posts_and_file_seeds = []
     
@@ -176,7 +176,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     top_wew_default = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
     
-    def __init__( self, file_seed_type: int = None, file_seed_data: str = None ):
+    def __init__( self, file_seed_type: int | None = None, file_seed_data: str | None = None ):
         
         if file_seed_type is None:
             
@@ -190,8 +190,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
-        self.file_seed_type = file_seed_type
-        self.file_seed_data = file_seed_data
+        self.file_seed_type: int = file_seed_type
+        self.file_seed_data: str = file_seed_data
         self.file_seed_data_for_comparison = file_seed_data
         
         if self.file_seed_data != self.top_wew_default:
@@ -384,7 +384,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         (
             self.file_seed_type,
             self.file_seed_data,
-            self.file_seed_data_for_comparison,
+            file_seed_data_for_comparison,
             self.created,
             self.modified,
             self.source_time,
@@ -405,10 +405,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
         
         # fixing a problem when updating to v8 of this object, originally I accidentally reset this to None for local path guys
-        if self.file_seed_data_for_comparison is None:
+        if file_seed_data_for_comparison is None:
             
-            self.file_seed_data_for_comparison = self.file_seed_data
+            file_seed_data_for_comparison = self.file_seed_data
             
+        
+        self.file_seed_data_for_comparison = file_seed_data_for_comparison
         
         self._primary_urls = set( serialisable_primary_urls )
         self._source_urls = set( serialisable_source_urls )
@@ -839,9 +841,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             last_modified_time = network_job.GetLastModifiedTime()
             
             if self.source_time is not None and last_modified_time is not None:
-                
-                # even with timezone weirdness, does the current source time have something reasonable?
-                current_source_time_looks_good = HydrusTime.TimeHasPassed( self.source_time - 86400 )
                 
                 # if CF is delivering a timestamp from 17 days before source time, this is probably some unusual CDN situation or delayed post
                 # we don't _really_ want this CF timestamp since it throws the domain-based timestamp ordering out

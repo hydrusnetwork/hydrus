@@ -195,20 +195,20 @@ def RunTuningSuiteAlpha( test_dir: str ):
             
             #
             
-            def render_simple_image_to_report_string( base_filename, suffix_1, visual_data_1: ClientVisualData.VisualData, suffix_2, visual_data_2: ClientVisualData.VisualData ):
+            def render_simple_image_to_report_string( sub_base_filename, sub_suffix_1, sub_visual_data_1: ClientVisualData.VisualData, sub_suffix_2, sub_visual_data_2: ClientVisualData.VisualData ):
                 
                 components = []
                 
-                if visual_data_1.resolution == visual_data_2.resolution:
+                if sub_visual_data_1.resolution == sub_visual_data_2.resolution:
                     
-                    components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]}' )
+                    components.append( f'{sub_visual_data_1.resolution[0]}x{sub_visual_data_1.resolution[1]}' )
                     
                 else:
                     
-                    components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]} vs {visual_data_2.resolution[0]}x{visual_data_2.resolution[1]}' )
+                    components.append( f'{sub_visual_data_1.resolution[0]}x{sub_visual_data_1.resolution[1]} vs {sub_visual_data_2.resolution[0]}x{sub_visual_data_2.resolution[1]}' )
                     
                 
-                return f'{base_filename} ({suffix_1} vs {suffix_2}): ' + ', '.join( components )
+                return f'{sub_base_filename} ({sub_suffix_1} vs {sub_suffix_2}): ' + ', '.join( components )
                 
             
             #
@@ -484,38 +484,38 @@ def RunTuningSuite( test_dir: str ):
             
             #
             
-            def render_simple_image_to_report_string( base_filename, suffix_1, visual_data_1: ClientVisualData.VisualData, quality_1, subsampling_1, suffix_2, visual_data_2: ClientVisualData.VisualData, quality_2, subsampling_2 ):
+            def render_simple_image_to_report_string( sub_base_filename, sub_suffix_1, sub_visual_data_1: ClientVisualData.VisualData, sub_quality_1, sub_subsampling_1, sub_suffix_2, sub_visual_data_2: ClientVisualData.VisualData, sub_quality_2, sub_subsampling_2 ):
                 
                 components = []
                 
-                if visual_data_1.resolution == visual_data_2.resolution:
+                if sub_visual_data_1.resolution == sub_visual_data_2.resolution:
                     
-                    components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]}' )
-                    
-                else:
-                    
-                    components.append( f'{visual_data_1.resolution[0]}x{visual_data_1.resolution[1]} vs {visual_data_2.resolution[0]}x{visual_data_2.resolution[1]}' )
-                    
-                
-                if quality_1 == quality_2:
-                    
-                    components.append( f'{quality_1}' )
+                    components.append( f'{sub_visual_data_1.resolution[0]}x{sub_visual_data_1.resolution[1]}' )
                     
                 else:
                     
-                    components.append( f'{quality_1} vs {quality_2}' )
+                    components.append( f'{sub_visual_data_1.resolution[0]}x{sub_visual_data_1.resolution[1]} vs {sub_visual_data_2.resolution[0]}x{sub_visual_data_2.resolution[1]}' )
                     
                 
-                if subsampling_1 == subsampling_2:
+                if sub_quality_1 == sub_quality_2:
                     
-                    components.append( f'{subsampling_1}' )
+                    components.append( f'{sub_quality_1}' )
                     
                 else:
                     
-                    components.append( f'{subsampling_1} vs {subsampling_2}' )
+                    components.append( f'{sub_quality_1} vs {sub_quality_2}' )
                     
                 
-                return f'{base_filename} ({suffix_1} vs {suffix_2}): ' + ', '.join( components )
+                if sub_subsampling_1 == sub_subsampling_2:
+                    
+                    components.append( f'{sub_subsampling_1}' )
+                    
+                else:
+                    
+                    components.append( f'{sub_subsampling_1} vs {sub_subsampling_2}' )
+                    
+                
+                return f'{sub_base_filename} ({sub_suffix_1} vs {sub_suffix_2}): ' + ', '.join( components )
                 
             
             #
