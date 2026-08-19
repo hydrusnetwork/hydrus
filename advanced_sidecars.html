@@ -3329,25 +3329,25 @@ night sky
 <p><a href="images/sidecars_example_json_export.png"><img alt="" src="images/sidecars_example_json_export.png" /></a></p>
 <p>Here I have set the URLs of each file to be stored under <code>metadata-&gt;urls</code>, which will make this sort of structure:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;metadata&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;urls&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">            </span><span class="s2">&quot;http://example.com/123456&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="s2">&quot;https://site.org/post/45678&quot;</span>
+<span class="w">    </span><span class="nt">"metadata"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"urls"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="s2">"http://example.com/123456"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"https://site.org/post/45678"</span>
 <span class="w">        </span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
 <p>The cool thing about JSON files is I can export multiple times to the same file and it will update it! Lets say I made a second Router that grabbed the tags, and it was set to export to the same filename but under <code>metadata-&gt;tags</code>. The final sidecar would look like this:</p>
 <div class="highlight"><pre><span></span><code><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;metadata&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">            </span><span class="s2">&quot;blonde hair&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="s2">&quot;skirt&quot;</span>
+<span class="w">    </span><span class="nt">"metadata"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">"tags"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="s2">"blonde hair"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"blue eyes"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"skirt"</span>
 <span class="w">        </span><span class="p">],</span>
-<span class="w">        </span><span class="nt">&quot;urls&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">            </span><span class="s2">&quot;http://example.com/123456&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="s2">&quot;https://site.org/post/45678&quot;</span>
+<span class="w">        </span><span class="nt">"urls"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="s2">"http://example.com/123456"</span><span class="p">,</span>
+<span class="w">            </span><span class="s2">"https://site.org/post/45678"</span>
 <span class="w">        </span><span class="p">]</span>
 <span class="w">    </span><span class="p">}</span>
 <span class="p">}</span>

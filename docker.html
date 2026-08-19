@@ -3093,7 +3093,7 @@ The client runs with default permissions of <code>1000:1000</code>, <del>this ca
 <h4 id="the_container_will_not_fix_the_permissions_inside_the_db_folder_chown_your_db_folder_content_on_your_own">The container will <strong>NOT</strong> fix the permissions inside the db folder. <strong>CHOWN YOUR DB FOLDER CONTENT ON YOUR OWN</strong><a class="headerlink" href="#the_container_will_not_fix_the_permissions_inside_the_db_folder_chown_your_db_folder_content_on_your_own" title="Permanent link">&para;</a></h4>
 <p>If you have enough RAM, mount <code>/tmp</code> as tmpfs. If not, download more RAM.</p>
 <p>Example compose file:
-<div class="highlight"><pre><span></span><code><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
+<div class="highlight"><pre><span></span><code><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">'3.8'</span>
 <span class="nt">volumes</span><span class="p">:</span>
 <span class="w">  </span><span class="nt">tor-config</span><span class="p">:</span>
 <span class="w">    </span><span class="nt">driver</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">local</span>
@@ -3186,7 +3186,7 @@ The client runs with default permissions of <code>1000:1000</code>, <del>this ca
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hydrus-client:/hydb</span>
 
 <span class="w">  </span><span class="nt">tor-socks-proxy</span><span class="p">:</span>
-<span class="w">    </span><span class="c1">#network_mode: &quot;container:myvpn_container&quot; # in case you have a vpn container</span>
+<span class="w">    </span><span class="c1">#network_mode: "container:myvpn_container" # in case you have a vpn container</span>
 <span class="w">    </span><span class="nt">container_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tor-socks-proxy</span>
 <span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">peterdavehello/tor-socks-proxy:latest</span>
 <span class="w">    </span><span class="nt">restart</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">unless-stopped</span>
@@ -3202,12 +3202,12 @@ The client runs with default permissions of <code>1000:1000</code>, <del>this ca
 <span class="w">      </span><span class="nt">hybooru</span><span class="p">:</span>
 <span class="w">        </span><span class="nt">condition</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">service_started</span>
 <span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
-<span class="w">        </span><span class="nt">HYBOORU_TOR_SERVICE_HOSTS</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;80:hybooru:80&#39;</span>
-<span class="w">        </span><span class="nt">HYBOORU_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
+<span class="w">        </span><span class="nt">HYBOORU_TOR_SERVICE_HOSTS</span><span class="p">:</span><span class="w"> </span><span class="s">'80:hybooru:80'</span>
+<span class="w">        </span><span class="nt">HYBOORU_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">'3'</span>
 <span class="w">        </span><span class="nt">HYSERV_TOR_SERVICE_HOSTS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">45870:hydrusserver:45870,45871:hydrusserver:45871</span>
-<span class="w">        </span><span class="nt">HYSERV_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
+<span class="w">        </span><span class="nt">HYSERV_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">'3'</span>
 <span class="w">        </span><span class="nt">HYCLNT_TOR_SERVICE_HOSTS</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">45868:hydrusclient:45868,45869:hydrusclient:45869</span>
-<span class="w">        </span><span class="nt">HYCLNT_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3&#39;</span>
+<span class="w">        </span><span class="nt">HYCLNT_TOR_SERVICE_VERSION</span><span class="p">:</span><span class="w"> </span><span class="s">'3'</span>
 <span class="w">    </span><span class="nt">volumes</span><span class="p">:</span>
 <span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">tor-config:/var/lib/tor/hidden_service</span><span class="w"> </span>
 </code></pre></div>

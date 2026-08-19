@@ -3254,7 +3254,7 @@
 
 <h1 id="launch_arguments">launch arguments<a class="headerlink" href="#launch_arguments" title="Permanent link">&para;</a></h1>
 <p>You can launch the program with several different arguments to alter core behaviour. If you are not familiar with this, you are essentially putting additional text after the launch command that runs the program. You can run this straight from a terminal console (usually good to test with), or you can bundle it into an easy shortcut that you only have to double-click. An example of a launch command with arguments:</p>
-<div class="highlight"><pre><span></span><code>C:\Hydrus Network\hydrus_client.exe -d=&quot;E:\hydrus db&quot; --no_db_temp_files
+<div class="highlight"><pre><span></span><code>C:\Hydrus Network\hydrus_client.exe -d="E:\hydrus db" --no_db_temp_files
 </code></pre></div>
 <p>You can also add --help to your program path, like this:</p>
 <ul>
@@ -3265,7 +3265,7 @@
 <p>Which gives you a full listing of all below arguments, however this will not work with the built hydrus_client executables, which are bundled as a non-console programs and will not give you text output to any console they are launched from. As hydrus_client.exe is the most commonly run version of the program, here is the list, with some more help about each command:</p>
 <h2 id="-d_db_dir_--db_dir_db_dir"><strong><code>-d DB_DIR, --db_dir DB_DIR</code></strong><a class="headerlink" href="#-d_db_dir_--db_dir_db_dir" title="Permanent link">&para;</a></h2>
 <p>Lets you customise where hydrus should use for its database directory. This is install_dir/db by default, but many advanced deployments will move this around, as described <a href="database_migration.html">here</a>. When an argument takes a complicated value like a path that could itself include whitespace, you should wrap it in quote marks, like this:</p>
-<div class="highlight"><pre><span></span><code>-d=&quot;E:\my hydrus\hydrus db&quot;
+<div class="highlight"><pre><span></span><code>-d="E:\my hydrus\hydrus db"
 </code></pre></div>
 <p>You can set <code>~/hydrus_db</code> and it will expand to your userdir correctly.</p>
 <h2 id="--temp_dir_temp_dir"><strong><code>--temp_dir TEMP_DIR</code></strong><a class="headerlink" href="#--temp_dir_temp_dir" title="Permanent link">&para;</a></h2>

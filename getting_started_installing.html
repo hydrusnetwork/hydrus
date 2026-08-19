@@ -3393,7 +3393,7 @@
 <li>If the <code>help-&gt;about</code> window provides you an mpv error popup like this:<br />
 <div class="highlight"><pre><span></span><code>OSError: /lib/x86_64-linux-gnu/libgio-2.0.so.0: undefined symbol: g_module_open_full
 (traceback)
-pyimod04_ctypes.install.&lt;locals&gt;.PyInstallerImportError: Failed to load dynlib/dll &#39;libmpv.so.1&#39;. Most likely this dynlib/dll was not found when the application was frozen.
+pyimod04_ctypes.install.&lt;locals&gt;.PyInstallerImportError: Failed to load dynlib/dll 'libmpv.so.1'. Most likely this dynlib/dll was not found when the application was frozen.
 </code></pre></div>
 Then please do this:  <ol>
 <li>Search your /usr/ dir for <code>libgmodule*</code>. You are looking for something like <code>libgmodule-2.0.so</code>. Users report finding it in <code>/usr/lib64/</code> and <code>/usr/lib/x86_64-linux-gnu</code>.</li>

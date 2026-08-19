@@ -3210,7 +3210,7 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
 <span class="na">vm.overcommit_memory</span><span class="o">=</span><span class="s">1</span>
 
 <span class="c1">#force linux to reclaim pages if under a gigabyte </span>
-<span class="c1">#is available so large chunk allocates don&#39;t fire off the OOM killer</span>
+<span class="c1">#is available so large chunk allocates don't fire off the OOM killer</span>
 <span class="na">vm.min_free_kbytes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s">1153434</span>
 
 <span class="c1">#Start freeing up pages that have been written but which are in open files, after 2 hours.</span>
@@ -3219,11 +3219,11 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
 
 <span class="c1">#Have kswapd try to reclaim .7% = 70/10000 of pages before returning to sleep</span>
 <span class="c1">#This increases responsiveness by reclaiming a larger portion of pages in low memory condition</span>
-<span class="c1">#So that the next time you make a large allocation the kernel doesn&#39;t have to stall and look for pages to free immediately.</span>
+<span class="c1">#So that the next time you make a large allocation the kernel doesn't have to stall and look for pages to free immediately.</span>
 <span class="na">vm.watermark_scale_factor</span><span class="o">=</span><span class="s">70</span>
 
 <span class="c1">#Have the kernel prefer to reclaim I/O pages at 110% of the rate at which it frees other pages.</span>
-<span class="c1">#Don&#39;t set this value much over 100 or the kernel will spend all its time reclaiming I/O pages</span>
+<span class="c1">#Don't set this value much over 100 or the kernel will spend all its time reclaiming I/O pages</span>
 <span class="na">vm.vfs_cache_pressure</span><span class="o">=</span><span class="s">110</span>
 </code></pre></div>
 <h2 id="virtual_memory_under_linux_5_phenomenal_cosmic_power_itty_bitty_living_space">Virtual Memory Under Linux 5: Phenomenal Cosmic Power; Itty bitty living space<a class="headerlink" href="#virtual_memory_under_linux_5_phenomenal_cosmic_power_itty_bitty_living_space" title="Permanent link">&para;</a></h2>
