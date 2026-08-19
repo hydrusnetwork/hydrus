@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_684"><a href="#version_684">version 684</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>every thumb/viewer media menu now has 'show detailed embedded file metadata' in the top-row flyout; this is the same window that opens with the media viewer top hover, to which I've been adding EXIF and stuff</li>
+                        <li>there's a new shortcut command to spawn this window under the 'media' set, `open detailed embedded file metadata window`</li>
+                        <li>I finally got around to figuring out and adding a `Force that hitting Enter/Return on radio button lists triggers a dialog ok` checkbox to `options-&gt;gui`. On Windows, an Enter/Return on a radio button list triggers a dialog ok, but on other OSes, it does not. it is one of those platform policy things and Qt is being good and obeying. this casually annoyed me for years, particularly when doing advanced file delete dialogs where rather than a simple yes/no it has a couple of radio button lists, and since moving to Linux full time I finally got my finger out and figured it out. it is default off so I don't mess with anyone's muscle memory etc.., but if this was annoying you, try it out</li>
+                        <li>added `TEST: Set tool flag to child windows` to `options-&gt;gui`. this test sets a different flag and hopefully improves some window behaviour--specifically, stuff like "review services" should stay on top of the parent, not get a taskbar/alt+tab entry, but still look ok. let me know how it goes, and if no problems, I'll set everyone to it</li>
+                        <li>I gave the 'my auto-resolution rule says it has x pairs to search/resolve but it cannot clear them' issue another push. thanks to a user, we figured out an interesting orphaned pair situation. I fixed the logical hole in the maintenance code and updated the new error handling to A) indefinitely pause a rule that hits this, to stop pause/error loops, and B) run the full orphan-clearing maintenance code rather than just the re-count job</li>
+                        <li>noneable string widgets now blank their placeholder text when set to none</li>
+                        <li>test result text boxes in exe manager and parsing UI now have monospaced font</li>
+                        <li><h3>hash-search</h3></li>
+                        <li>system:hash gets a logical makeover. this thing has always been a bit of a mess as it tried to navigate prefixes like `sha256:abcd...`. I have made it simpler</li>
+                        <li>the edit dialog now lets you type or paste whatever, with no instant auto-correct. there are now two buttons underneath, `clean up text and guess hash type` and `clean up text and guess hash type (remove bad lines)`, which do the parsing on demand. the first button moans about any errors at all; the second removes errors, so if you want to post a mix of garbage and have hydrus filter it, go ahead</li>
+                        <li>the ok button is plugged into this tech too and, as the parsing is also improved, gives richer errors. if you hit ok and the hashes are fine but the hash type seems wrong, it now gives you a special error text</li>
+                        <li>hydrus hash parsing now recognises and removes an `0x` prefix from a hash</li>
+                        <li>hydrus hash parsing is now much better about case insensitivity. `MD5:AbCD...` is fine</li>
+                        <li>hydrus hash parsing now has an error state for hashes with a non-even number of hex characters</li>
+                        <li>hydrus hash parsing no longer attempts to hex filter an incoming line; if a hash includes a non-hex character, this now goes in a new error bucket for reporting</li>
+                        <li><h3>notes quality of life</h3></li>
+                        <li>added a 'when you middle-click to copy a note hover, only copy the text (not the title)' setting to `options-&gt;notes`</li>
+                        <li>added that and the 'put cursor at the end' checkboxes to the cog icon button in the edit notes panel</li>
+                        <li>added a 'link' icon button to notes that sucks up all the URLs from the current note text. it isn't perfect, but covers all normal 'http...' situations using a `https?://[^\s&lt;&gt;"\']+` regex</li>
+                        <li>in a new test, when you do this 'copy URLs in the note' job, it fires off a '3 URLs!' tooltip micro-notification for feedback. give it a go, let me know how it feels, and I think I'll spam this all over the place</li>
+                        <li><h3>exe manager</h3></li>
+                        <li>finished off the core edit UI for my exe manager, which still only advanced users can see under `options-&gt;external programs`. you can edit everything, and there's a fullly functional test panel that reports return code and stdout/stderr on failures. it isn't perfect, but I'm happy with it as a first step. I will again ask advanced users to check it out, with these instructions: look at the defaults, pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors and where I need to add help text!</li>
+                        <li>the defaults button now asks if you want all the default calls or just those for your platform</li>
+                        <li>many many other improvements and finishings-off here, and a touch of misc new subprocess tech</li>
+                        <li><h3>boring exe manager stuff</h3></li>
+                        <li>rewangled the 'windows startfile' hardcoded launch call to be a platform-agnostic 'OS launch file'</li>
+                        <li>added a 'OS launch URL' hardcoded launch call in the same way</li>
+                        <li>improved the hydrus subprocess 'this process has timed out' detection system. in doing exe manager work this week, I realised it was waiting after a kill fallback in a blocking way and only reporting the timeout after the final (indefinite) reap went through</li>
+                        <li>improved some subprocess error formatting</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_683"><a href="#version_683">version 683</a></h2>
                     <ul>
                         <li><h3>file metadata</h3></li>

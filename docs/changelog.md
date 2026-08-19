@@ -7,6 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 684](https://github.com/hydrusnetwork/hydrus/releases/tag/v684)
+
+### misc
+
+* every thumb/viewer media menu now has 'show detailed embedded file metadata' in the top-row flyout; this is the same window that opens with the media viewer top hover, to which I've been adding EXIF and stuff
+* there's a new shortcut command to spawn this window under the 'media' set, `open detailed embedded file metadata window`
+* I finally got around to figuring out and adding a `Force that hitting Enter/Return on radio button lists triggers a dialog ok` checkbox to `options->gui`. On Windows, an Enter/Return on a radio button list triggers a dialog ok, but on other OSes, it does not. it is one of those platform policy things and Qt is being good and obeying. this casually annoyed me for years, particularly when doing advanced file delete dialogs where rather than a simple yes/no it has a couple of radio button lists, and since moving to Linux full time I finally got my finger out and figured it out. it is default off so I don't mess with anyone's muscle memory etc.., but if this was annoying you, try it out
+* added `TEST: Set tool flag to child windows` to `options->gui`. this test sets a different flag and hopefully improves some window behaviour--specifically, stuff like "review services" should stay on top of the parent, not get a taskbar/alt+tab entry, but still look ok. let me know how it goes, and if no problems, I'll set everyone to it
+* I gave the 'my auto-resolution rule says it has x pairs to search/resolve but it cannot clear them' issue another push. thanks to a user, we figured out an interesting orphaned pair situation. I fixed the logical hole in the maintenance code and updated the new error handling to A) indefinitely pause a rule that hits this, to stop pause/error loops, and B) run the full orphan-clearing maintenance code rather than just the re-count job
+* noneable string widgets now blank their placeholder text when set to none
+* test result text boxes in exe manager and parsing UI now have monospaced font
+
+### hash-search
+
+* system:hash gets a logical makeover. this thing has always been a bit of a mess as it tried to navigate prefixes like `sha256:abcd...`. I have made it simpler
+* the edit dialog now lets you type or paste whatever, with no instant auto-correct. there are now two buttons underneath, `clean up text and guess hash type` and `clean up text and guess hash type (remove bad lines)`, which do the parsing on demand. the first button moans about any errors at all; the second removes errors, so if you want to post a mix of garbage and have hydrus filter it, go ahead
+* the ok button is plugged into this tech too and, as the parsing is also improved, gives richer errors. if you hit ok and the hashes are fine but the hash type seems wrong, it now gives you a special error text
+* hydrus hash parsing now recognises and removes an `0x` prefix from a hash
+* hydrus hash parsing is now much better about case insensitivity. `MD5:AbCD...` is fine
+* hydrus hash parsing now has an error state for hashes with a non-even number of hex characters
+* hydrus hash parsing no longer attempts to hex filter an incoming line; if a hash includes a non-hex character, this now goes in a new error bucket for reporting
+
+### notes quality of life
+
+* added a 'when you middle-click to copy a note hover, only copy the text (not the title)' setting to `options->notes`
+* added that and the 'put cursor at the end' checkboxes to the cog icon button in the edit notes panel
+* added a 'link' icon button to notes that sucks up all the URLs from the current note text. it isn't perfect, but covers all normal 'http...' situations using a `https?://[^\s<>"\']+` regex
+* in a new test, when you do this 'copy URLs in the note' job, it fires off a '3 URLs!' tooltip micro-notification for feedback. give it a go, let me know how it feels, and I think I'll spam this all over the place
+
+### exe manager
+
+* finished off the core edit UI for my exe manager, which still only advanced users can see under `options->external programs`. you can edit everything, and there's a fullly functional test panel that reports return code and stdout/stderr on failures. it isn't perfect, but I'm happy with it as a first step. I will again ask advanced users to check it out, with these instructions: look at the defaults, pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors and where I need to add help text!
+* the defaults button now asks if you want all the default calls or just those for your platform
+* many many other improvements and finishings-off here, and a touch of misc new subprocess tech
+
+### boring exe manager stuff
+
+* rewangled the 'windows startfile' hardcoded launch call to be a platform-agnostic 'OS launch file'
+* added a 'OS launch URL' hardcoded launch call in the same way
+* improved the hydrus subprocess 'this process has timed out' detection system. in doing exe manager work this week, I realised it was waiting after a kill fallback in a blocking way and only reporting the timeout after the final (indefinite) reap went through
+* improved some subprocess error formatting
+
 ## [Version 683](https://github.com/hydrusnetwork/hydrus/releases/tag/v683)
 
 ### file metadata
@@ -487,50 +529,3 @@ title: Changelog
 ### new dev machine
 
 * just as a side thing, over my vacation I moved to a new dev machine. I'm finally on Linux to dev. I took the opportunity to rework my very messy dev environment and personal workflow and note-taking. my situation is far less stupid now, with a sensible and pleasant IDE connection to the github repo, a browser not overflowing with tabs, and a zeroed-out desktop and daily todo and such. I've got dozens of pages of overflowing note mess to still slowly work through, but I'm going to devote some specific sunday work time to project management and try to stay on top of it going forward!
-
-## [Version 674](https://github.com/hydrusnetwork/hydrus/releases/tag/v674)
-
-### misc
-
-* you can now customise how mouse wheel events propagate out of the hover taglist in the media viewer. this has had a variety of hacky/patchy behaviour before; now you can hit up `options->media viewer hovers` and tell it to: never propagate; propagate only if no vertical scrollbar; propagate only if vertical scrollbar hasn't been used recently (the new default behaviour); and propagate immediately after scrollbar hits an end (which is what Qt _wants_ to do). this new 'has been used recently' tech locks you in the outer or outer context and uses a little voodoo, but I quite like it (issue #2024)
-* thanks to a user, the human-readable embedded text section in the media viewer little button up top will now decode and show an embedded `Character Card V2` spec. previously, it would just dump the json string under 'chara', but now it looks a good bit better
-* the help docs built into the Windows and Linux builds and the one built by the 'build_help.py' script by users running from source are now built in a more strict offline mode that caches the javascript for search tech locally. a user noticed they were previously fetching something from unpkg.com. now they should work properly even on a completely offline machine (iissue #2023)
-* a variety of file existence checks and merge functions now check for 'hey this seems to be a remote storage that is disconnected/timing out' error states. previously these guys were just doing 'file does not exist' catching. this means booting the client with your NAS defined in some way but not mounted has nicer error handling. you'll get the repair locations dialog with an updated message rather than 'oh god unhandled boot I/O error aieeeee'
-* added 'shutdown report mode' to the `help->debug->report modes` menu. this will report the shutdown calls, shutdown exception catches, and actual mainloop shutdown of all the program's thread workers and other mainloop daemons, with the intention of helping figure out some situations where the client will exit seemingly fine but with a silent low-resource process lingering (we think it is a thread orphaned from the signalling system or otherwise stuck in some deadlock)
-
-### cookies.txt and expiration fixes
-
-* when importing cookies.txt, 'session' cookies (i.e. those with no expiry) are now imported correctly. previously, they were being parsed as 'discard immediately' and were not being preserved
-* fixed issues with sessions not saving new cookies after import via cookies.txt or clipboard if the user closed the client before that session was actually used in a request
-* I hadn't realised, but hydrus was not being very aggressive about clearing 'session' cookies. after thinking about it, this is now intentional policy. I will add some buttons/options around this in future
-
-### some repository account refresh cleanup
-
-* the way repositories sync their accounts is a little cleaned up. clicking 'refresh account' is nicer and more reliable now
-* the awkward and confusing 'network'/'hydrus account' panels in 'review services' for a repo are now merged into one expand/collapse box called 'hydrus service'. service status/errors usually appear on the top box while most people need the bottom; now you always see both at once. hope this makes some 'oh, everything is paused' situations a bit clearer
-* the 'message' status text line in the 'account' panel now hides if there is no server message to show. this guy was just a weird UI gap for pretty much everyone
-* 'refresh account' no longer disables itself when a repo is non-functional. this was another 'technically true, but not helpful' UI thing. if you click it, any blocker now gives a richer reason, with several generic 'account cannot sync right now' reasons replaced with the actual part of bandwidth tracking or whatever that is complaining
-* if you try to hit 'refresh account', it now recognises if all network traffic is currently paused and breaks out early. previously, it would grey out and wait indefinitely until network traffic was unpaused
-* a 'refresh account' call no longer sets a temporary 'unknown/unsynced' account to the service. if the fetch job fails, you keep the old account info
-* errors from 'refresh account' are no longer put into toaster popups
-* the 'tag filter' button for tag repositories is moved from 'network sync' to the new 'account' panel, beside the permissions button
-
-### curl_cffi
-
-* the recent test of `curl_cffi`, which adds http 2 and 3 support to hydrus, has proven successful. I am maturing the test and allowing a permanent on setting
-* you now set the browser name under `options->connection`. http version selection is removed from the test--it seems it is doable and simpler to just let `curl_cffi` figure that out
-* the setup_venv.py script now asks if you want `curl_cffi`
-* `curl_cffi` is disabled for hydrus servers for now; we had some chunking issue when downloading from the PTR
-
-### domain manager background work
-
-* I moved forward my plans to launch a nicer unified 'here are the current statuses and settings for each network domain' UI and options system. this thing will eventually manage per-domain error timeouts, custom headers, perhaps some proxy settings, curl_cffi, and have some UI for recent errors. we'll migrate the stuff in `options->connection` to a 'global' entry and then allow more specific network context settings for particular domains; the usual deal
-* I was thinking I'd launch a stub of this system to allow for a per-domain `curl_cffi` test, but I didn't want to rush it out, so I just kept to prep work and there's nothing launching here yet. I rounded out the objects I already had and verified the direction I'm going; I feel overall good about it
-
-### boring stuff
-
-* refactored some of the 'render human-readable data' method for KISS
-* fixed some multi-line indenting in the human-readable rendering routine
-* KISSed some inelegant 'clear expired cookies' calls and code
-* added `help->debug->scan file storage folders`, which is just a test for a folder precache thing that I removed at the last minute last week when it performed terribly on an IRL spinning HDD. I rewrote it and will do some more testing
-* cleaned up some error handling in 'server busy, try again later' parsing
