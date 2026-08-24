@@ -156,6 +156,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         
         self._name = ClientGUICommon.BetterStaticText( self, label = ClientExecutablePipelines.parameter_types_to_strs[ self._parameter_type ] )
         self._replacement_string = QW.QLineEdit( self, text = parameter_processing_rule.replacement_string )
+        self._replacement_string.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is the replacement token. The value of this input parameter will be placed wherever this appears in command template\'s parameters.' ) )
         self._string_processing_button = ClientGUIStringControls.StringProcessorWidget( self, parameter_processing_rule.string_processor, self._GetTestData )
         self._enable = QW.QCheckBox( self )
         
@@ -191,7 +192,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         
         self._enable.clicked.connect( self.valueChanged )
         self._replacement_string.textChanged.connect( self.valueChanged )
-        
+        self._string_processing_button.valueChanged.connect( self.valueChanged )
         
     
     def _GetTestData( self ) -> ClientParsing.ParsingTestData:
@@ -511,7 +512,11 @@ class EditProcessCallPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'This makes a general process call. Select which input parameter(s) you want to use and make sure you are happy with their replacement tokens (the \'%path%\' stuff, which you can rename if you need to), and then insert those parameters in your command template (e.g. \'my_program "%path%"\'). The "availability" test for this call just does a "which" on the executable path, which may not always target what you need.' )
+        label = 'This makes a general process call. Select which input parameter(s) you want to use and make sure you are happy with their replacement tokens (the \'%path%\' stuff, which you can rename if you need to), and then insert those parameters in your command template (e.g. \'my_program "%path%"\'). When this call fires, the given input parameters will be placed into your template and the process launched.'
+        label += '\n\n'
+        label += 'The "availability" test for this call just does a "which" on the executable path, which may not always target what you need.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = label )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1313,7 +1318,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         message += '\n\n'
         message += 'Please test this and let me know how it goes. It will load up the defaults for your system. Pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors or if any of the help text is confusing!'
         message += '\n\n----------\n\n'
-        message += 'Here we can teach your client about other programs it can call. Each job has a certain type, such as "open file in external program" or "download URL" or "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can be pass on to the external program (e.g. a tag profiler). There may also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
+        message += 'Here we can teach your client about other programs it can call. Each job has a certain type, such as "open file in external program" or "download URL" or "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. a tag profiler). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )

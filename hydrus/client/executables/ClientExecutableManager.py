@@ -118,6 +118,8 @@ def OpenExternallySingleFile( executable_manager: ExecutableManager, id_and_name
     input_params = {
         ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH : file_path,
         ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URI : file_uri,
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH : hash.hex(),
+        ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_ID : media_result.GetHashId(),
     }
     
     call.Call( input_params )
