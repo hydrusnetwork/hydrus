@@ -85,13 +85,18 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_IDENTIFIER ] = GalleryIdentifier
 
+# TODO: This whole thing is a mess that could do with a complete re-think. if it only handles file repo and ipfs downloads, just rework it
 class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
     
     def __init__( self, controller ):
         
-        super().__init__( controller, 5 )
+        self._hashes_still_to_download_in_this_run = set()
+        self._total_hashes_in_this_run = 0
+        self._total_successful_hashes_in_this_run = 0
         
         self._pending_hashes = set()
+        
+        super().__init__( controller, 5 )
         
     
     def DownloadFiles( self, hashes ):
@@ -109,189 +114,182 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
         return 'quick downloader'
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        hashes_still_to_download_in_this_run = set()
-        total_hashes_in_this_run = 0
-        total_successful_hashes_in_this_run = 0
+        with self._lock:
+            
+            self._CheckShutdown()
+            
+            if len( self._pending_hashes ) > 0:
+                
+                if self._total_hashes_in_this_run == 0:
+                    
+                    job_status = ClientThreading.JobStatus( cancellable = True )
+                    
+                    job_status.SetStatusTitle( 'downloading' )
+                    
+                    job_status.SetStatusText( 'initialising downloader' )
+                    
+                    job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_status )
+                    
+                
+                num_before = len( self._hashes_still_to_download_in_this_run )
+                
+                self._hashes_still_to_download_in_this_run.update( self._pending_hashes )
+                
+                num_after = len( self._hashes_still_to_download_in_this_run )
+                
+                self._total_hashes_in_this_run += num_after - num_before
+                
+                self._pending_hashes = set()
+                
+            
         
-        while True:
+        if len( self._hashes_still_to_download_in_this_run ) == 0:
             
-            with self._lock:
-                
-                self._CheckShutdown()
-                
-                if len( self._pending_hashes ) > 0:
-                    
-                    if total_hashes_in_this_run == 0:
-                        
-                        job_status = ClientThreading.JobStatus( cancellable = True )
-                        
-                        job_status.SetStatusTitle( 'downloading' )
-                        
-                        job_status.SetStatusText( 'initialising downloader' )
-                        
-                        job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_status )
-                        
-                    
-                    num_before = len( hashes_still_to_download_in_this_run )
-                    
-                    hashes_still_to_download_in_this_run.update( self._pending_hashes )
-                    
-                    num_after = len( hashes_still_to_download_in_this_run )
-                    
-                    total_hashes_in_this_run += num_after - num_before
-                    
-                    self._pending_hashes = set()
-                    
-                
+            self._total_hashes_in_this_run = 0
+            self._total_successful_hashes_in_this_run = 0
             
-            if len( hashes_still_to_download_in_this_run ) == 0:
-                
-                total_hashes_in_this_run = 0
-                total_successful_hashes_in_this_run = 0
-                
-                self._wake_from_idle_sleep_event.wait( 5 )
-                
-                self._wake_from_work_sleep_event.clear()
-                self._wake_from_idle_sleep_event.clear()
-                
-                continue
-                
+            self._wake_from_idle_sleep_event.wait( 5 )
             
-            if job_status.IsCancelled():
+            self._wake_from_work_sleep_event.clear()
+            self._wake_from_idle_sleep_event.clear()
+            
+            return
+            
+        
+        if job_status.IsCancelled():
+            
+            self._hashes_still_to_download_in_this_run = set()
+            
+            return
+            
+        
+        hash = random.sample( list( self._hashes_still_to_download_in_this_run ), 1 )[0]
+        
+        self._hashes_still_to_download_in_this_run.discard( hash )
+        
+        total_done = self._total_hashes_in_this_run - len( self._hashes_still_to_download_in_this_run )
+        
+        job_status.SetStatusText( 'downloading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, self._total_hashes_in_this_run ) ) )
+        job_status.SetGauge( total_done, self._total_hashes_in_this_run )
+        
+        try:
+            
+            errors_occured = []
+            file_successful = False
+            
+            media_result = self._controller.Read( 'media_result', hash )
+            
+            service_keys = list( media_result.GetLocationsManager().GetCurrent() )
+            
+            random.shuffle( service_keys )
+            
+            if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in service_keys:
                 
-                hashes_still_to_download_in_this_run = set()
+                self._total_successful_hashes_in_this_run += 1
                 
-                continue
+                return
                 
             
-            hash = random.sample( list( hashes_still_to_download_in_this_run ), 1 )[0]
-            
-            hashes_still_to_download_in_this_run.discard( hash )
-            
-            total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
-            
-            job_status.SetStatusText( 'downloading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
-            job_status.SetGauge( total_done, total_hashes_in_this_run )
-            
-            try:
+            for service_key in service_keys:
                 
-                errors_occured = []
-                file_successful = False
-                
-                media_result = self._controller.Read( 'media_result', hash )
-                
-                service_keys = list( media_result.GetLocationsManager().GetCurrent() )
-                
-                random.shuffle( service_keys )
-                
-                if CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY in service_keys:
+                try:
                     
-                    total_successful_hashes_in_this_run += 1
+                    service = self._controller.services_manager.GetService( service_key )
+                    
+                except Exception as e:
                     
                     continue
                     
                 
-                for service_key in service_keys:
+                try:
                     
-                    try:
+                    if service.GetServiceType() == HC.FILE_REPOSITORY:
                         
-                        service = self._controller.services_manager.GetService( service_key )
+                        file_repository = service
                         
-                    except Exception as e:
-                        
-                        continue
-                        
-                    
-                    try:
-                        
-                        if service.GetServiceType() == HC.FILE_REPOSITORY:
+                        if file_repository.IsFunctional():
                             
-                            file_repository = service
+                            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'repo_file_import' )
                             
-                            if file_repository.IsFunctional():
+                            try:
                                 
-                                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'repo_file_import' )
+                                file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
                                 
-                                try:
-                                    
-                                    file_repository.Request( HC.GET, 'file', { 'hash' : hash }, temp_path = temp_path )
-                                    
-                                    prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
-                                    
-                                    prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
-                                    prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
-                                    prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
-                                    
-                                    file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
-                                    
-                                    file_filtering_import_options.SetAllowsDecompressionBombs( True )
-                                    file_filtering_import_options.SetExcludesDeleted( False ) # important
-                                    
-                                    import_options_container = ImportOptionsContainer.ImportOptionsContainer()
-                                    
-                                    import_options_container.SetImportOptions( prefetch_import_options )
-                                    import_options_container.SetImportOptions( file_filtering_import_options )
-                                    
-                                    full_import_options_container = CG.client_controller.import_options_manager.GenerateFullImportOptionsContainer( import_options_container, IOC.IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT )
-                                    
-                                    file_import_job = ClientImportFiles.FileImportJob( temp_path, full_import_options_container, human_file_description = f'Downloaded File - {hash.hex()}' )
-                                    
-                                    file_import_job.DoWork()
-                                    
-                                    file_successful = True
-                                    
-                                    break
-                                    
-                                finally:
-                                    
-                                    HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-                                    
+                                prefetch_import_options = PrefetchImportOptions.PrefetchImportOptions()
+                                
+                                prefetch_import_options.SetPreImportHashCheckType( PrefetchImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE )
+                                prefetch_import_options.SetPreImportURLCheckType( PrefetchImportOptions.DO_CHECK )
+                                prefetch_import_options.SetPreImportURLCheckLooksForNeighbourSpam( True )
+                                
+                                file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
+                                
+                                file_filtering_import_options.SetAllowsDecompressionBombs( True )
+                                file_filtering_import_options.SetExcludesDeleted( False ) # important
+                                
+                                import_options_container = ImportOptionsContainer.ImportOptionsContainer()
+                                
+                                import_options_container.SetImportOptions( prefetch_import_options )
+                                import_options_container.SetImportOptions( file_filtering_import_options )
+                                
+                                full_import_options_container = CG.client_controller.import_options_manager.GenerateFullImportOptionsContainer( import_options_container, IOC.IMPORT_OPTIONS_CALLER_TYPE_LOCAL_IMPORT )
+                                
+                                file_import_job = ClientImportFiles.FileImportJob( temp_path, full_import_options_container, human_file_description = f'Downloaded File - {hash.hex()}' )
+                                
+                                file_import_job.DoWork()
+                                
+                                file_successful = True
+                                
+                                break
+                                
+                            finally:
+                                
+                                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                                 
                             
                         
-                    except Exception as e:
-                        
-                        errors_occured.append( e )
-                        
+                    
+                except Exception as e:
+                    
+                    errors_occured.append( e )
                     
                 
-                if file_successful:
+            
+            if file_successful:
+                
+                self._total_successful_hashes_in_this_run += 1
+                
+            
+            if len( errors_occured ) > 0:
+                
+                if not file_successful:
                     
-                    total_successful_hashes_in_this_run += 1
+                    raise errors_occured[0]
                     
                 
-                if len( errors_occured ) > 0:
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            self._hashes_still_to_download_in_this_run = 0
+            
+        finally:
+            
+            if len( self._hashes_still_to_download_in_this_run ) == 0:
+                
+                job_status.DeleteStatusText()
+                job_status.DeleteGauge()
+                
+                if self._total_successful_hashes_in_this_run > 0:
                     
-                    if not file_successful:
-                        
-                        raise errors_occured[0]
-                        
+                    job_status.SetStatusText( HydrusNumbers.ToHumanInt( self._total_successful_hashes_in_this_run ) + ' files downloaded' )
                     
                 
-            except Exception as e:
+                job_status_pub_job.Cancel()
                 
-                HydrusData.ShowException( e )
-                
-                hashes_still_to_download_in_this_run = 0
-                
-            finally:
-                
-                if len( hashes_still_to_download_in_this_run ) == 0:
-                    
-                    job_status.DeleteStatusText()
-                    job_status.DeleteGauge()
-                    
-                    if total_successful_hashes_in_this_run > 0:
-                        
-                        job_status.SetStatusText( HydrusNumbers.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
-                        
-                    
-                    job_status_pub_job.Cancel()
-                    
-                    job_status.FinishAndDismiss( 1 )
-                    
+                job_status.FinishAndDismiss( 1 )
                 
             
         

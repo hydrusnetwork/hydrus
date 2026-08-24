@@ -2098,65 +2098,60 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        try:
+        with self._lock:
             
-            while True:
+            self._CheckShutdown()
+            
+            subscription = self._GetSubscriptionReadyToGo()
+            
+            if subscription is not None:
                 
-                with self._lock:
-                    
-                    self._CheckShutdown()
-                    
-                    subscription = self._GetSubscriptionReadyToGo()
-                    
-                    if subscription is not None:
-                        
-                        job = SubscriptionJob( self._controller, subscription )
-                        
-                        CG.client_controller.CallToThread( job.Work )
-                        
-                        self._names_to_running_subscription_info[ subscription.GetName() ] = ( job, subscription )
-                        
-                    
-                    self._ClearFinishedSubscriptions()
-                    
-                    wait_time = self._GetMainLoopWaitTime()
-                    
+                job = SubscriptionJob( self._controller, subscription )
                 
-                self._big_pauser.Pause()
+                CG.client_controller.CallToThread( job.Work )
                 
-                self._wake_from_work_sleep_event.wait( wait_time )
-                
-                self._wake_from_work_sleep_event.clear()
-                self._wake_from_idle_sleep_event.clear()
+                self._names_to_running_subscription_info[ subscription.GetName() ] = ( job, subscription )
                 
             
-        finally:
+            self._ClearFinishedSubscriptions()
             
-            self.PauseSubscriptionsForEditing()
+            wait_time = self._GetMainLoopWaitTime()
+            
+        
+        self._big_pauser.Pause()
+        
+        self._wake_from_work_sleep_event.wait( wait_time )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
+        
+    
+    def _DoPostMainLoopShutdown( self ):
+        
+        self.PauseSubscriptionsForEditing()
+        
+        with self._lock:
+            
+            for ( job, subscription ) in self._names_to_running_subscription_info.values():
+                
+                subscription.StopWorkForShutdown()
+                
+            
+        
+        while not HG.model_shutdown:
             
             with self._lock:
                 
-                for ( job, subscription ) in self._names_to_running_subscription_info.values():
+                self._ClearFinishedSubscriptions()
+                
+                if len( self._names_to_running_subscription_info ) == 0:
                     
-                    subscription.StopWorkForShutdown()
+                    break
                     
                 
-            
-            while not HG.model_shutdown:
-                
-                with self._lock:
-                    
-                    self._ClearFinishedSubscriptions()
-                    
-                    if len( self._names_to_running_subscription_info ) == 0:
-                        
-                        break
-                        
-                    
-                    time.sleep( 0.1 )
-                    
+                time.sleep( 0.1 )
                 
             
         

@@ -1385,7 +1385,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'file maintenance'
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
         # TODO: locking on CheckShutdown is lax, let's be good and smooth it all out
         
@@ -1418,83 +1418,80 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
             
         
-        while True:
+        self._CheckShutdown()
+        
+        did_work = False
+        
+        with self._maintenance_lock:
             
-            self._CheckShutdown()
+            hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
             
-            did_work = False
-            
-            with self._maintenance_lock:
+            if len( hashes_to_job_types ) > 0:
                 
-                hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
+                did_work = True
                 
-                if len( hashes_to_job_types ) > 0:
+                job_status = ClientThreading.JobStatus()
+                
+                i = 0
+                
+                try:
                     
-                    did_work = True
+                    hashes = set( hashes_to_job_types.keys() )
                     
-                    job_status = ClientThreading.JobStatus()
+                    media_results = self._controller.Read( 'media_results', hashes )
                     
-                    i = 0
+                    hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
                     
-                    try:
+                    media_results_to_job_types = { hashes_to_media_results[ hash ] : job_types for ( hash, job_types ) in hashes_to_job_types.items() }
+                    
+                    for ( media_result, job_types ) in media_results_to_job_types.items():
                         
-                        hashes = set( hashes_to_job_types.keys() )
+                        wait_on_maintenance()
                         
-                        media_results = self._controller.Read( 'media_results', hashes )
-                        
-                        hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
-                        
-                        media_results_to_job_types = { hashes_to_media_results[ hash ] : job_types for ( hash, job_types ) in hashes_to_job_types.items() }
-                        
-                        for ( media_result, job_types ) in media_results_to_job_types.items():
+                        if should_reset():
                             
-                            wait_on_maintenance()
-                            
-                            if should_reset():
-                                
-                                break
-                                
-                            
-                            with self._lock:
-                                
-                                self._RunJob( { media_result : job_types }, job_status )
-                                
+                            break
                             
                         
-                        time.sleep( 0.0001 )
-                        
-                        i += 1
-                        
-                        if i % 100 == 0:
+                        with self._lock:
                             
-                            self._controller.pub( 'notify_files_maintenance_done' )
+                            self._RunJob( { media_result : job_types }, job_status )
                             
                         
-                        self._CheckShutdown()
-                        
-                    finally:
+                    
+                    time.sleep( 0.0001 )
+                    
+                    i += 1
+                    
+                    if i % 100 == 0:
                         
                         self._controller.pub( 'notify_files_maintenance_done' )
                         
                     
+                    self._CheckShutdown()
+                    
+                finally:
+                    
+                    self._controller.pub( 'notify_files_maintenance_done' )
+                    
                 
             
-            if did_work:
-                
-                wake_event = self._wake_from_work_sleep_event
-                wait_time = 0.5
-                
-            else:
-                
-                wake_event = self._wake_from_idle_sleep_event
-                wait_time = 600
-                
+        
+        if did_work:
             
-            wake_event.wait( wait_time )
+            wake_event = self._wake_from_work_sleep_event
+            wait_time = 0.5
             
-            self._wake_from_work_sleep_event.clear()
-            self._wake_from_idle_sleep_event.clear()
+        else:
             
+            wake_event = self._wake_from_idle_sleep_event
+            wait_time = 600
+            
+        
+        wake_event.wait( wait_time )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
         
     
     def NotifyNewOptions( self ):

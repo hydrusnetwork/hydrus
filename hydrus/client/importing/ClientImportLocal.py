@@ -1577,49 +1577,46 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
         return 'import folders'
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        while True:
+        self._CheckShutdown()
+        
+        self._controller.WaitUntilViewFree()
+        
+        try:
             
-            self._CheckShutdown()
+            HG.import_folders_running = True
             
-            self._controller.WaitUntilViewFree()
+            self._DoWork()
             
-            try:
-                
-                HG.import_folders_running = True
-                
-                self._DoWork()
-                
-            except Exception as e:
-                
-                self._serious_error_encountered = True
-                
-                HydrusData.PrintException( e )
-                
-                message = 'There was an unexpected problem during import folders work! They will not run again this program boot. A full traceback of this error should be written to the log.'
-                message += '\n' * 2
-                message += str( e )
-                
-                HydrusData.ShowText( message )
-                
-                return
-                
-            finally:
-                
-                HG.import_folders_running = False
-                
+        except Exception as e:
             
-            with self._lock:
-                
-                wait_period = self._GetTimeUntilNextWork()
-                
+            self._serious_error_encountered = True
             
-            self._wake_from_idle_sleep_event.wait( wait_period )
+            HydrusData.PrintException( e )
             
-            self._wake_from_work_sleep_event.clear()
-            self._wake_from_idle_sleep_event.clear()
+            message = 'There was an unexpected problem during import folders work! They will not run again this program boot. A full traceback of this error should be written to the log.'
+            message += '\n' * 2
+            message += str( e )
             
+            HydrusData.ShowText( message )
+            
+            return
+            
+        finally:
+            
+            HG.import_folders_running = False
+            
+        
+        with self._lock:
+            
+            wait_period = self._GetTimeUntilNextWork()
+            
+        
+        self._wake_from_idle_sleep_event.wait( wait_period )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
         
     
     def NotifyImportFoldersHaveChanged( self ):

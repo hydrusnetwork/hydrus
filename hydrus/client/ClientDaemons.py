@@ -179,9 +179,12 @@ class ManagerWithMainLoop( object ):
             
         
     
-    def _DoMainLoop( self ):
+    def _DoPostMainLoopShutdown( self ):
         
-        # temporary method for while I harmonise the different mainloops into this class
+        pass
+        
+    
+    def _DoSingleLoop( self ):
         
         raise NotImplementedError()
         
@@ -221,8 +224,12 @@ class ManagerWithMainLoop( object ):
             
             self.DoPreMainLoopWait()
             
-            self._DoMainLoop()
+            while True:
+                
+                self._DoSingleLoop()
+                
             
+            # ok I moved from DoMainLoop to DoSingleLoop. now we can pull common parts out no here
             # we want to push towards:
             # have work to do?
             # can work?
@@ -246,6 +253,8 @@ class ManagerWithMainLoop( object ):
                 
                 HydrusData.DebugPrint( f'MainLoop Manager "{self}" is shut down!' )
                 
+            
+            self._DoPostMainLoopShutdown()
             
             self._mainloop_is_finished = True
             

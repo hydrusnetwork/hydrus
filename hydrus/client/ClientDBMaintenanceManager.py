@@ -114,88 +114,85 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        while True:
+        still_work_to_do = False
+        
+        with self._lock:
             
-            still_work_to_do = False
+            self._CheckShutdown()
+            
+        
+        self._controller.WaitUntilViewFree()
+        
+        with self._lock:
+            
+            able_to_work = self._AbleToDoBackgroundMaintenance()
+            expected_work_period = self._GetWorkPeriod()
+            
+        
+        if able_to_work:
+            
+            time_to_stop = HydrusTime.GetNowFloat() + expected_work_period
+            
+            start_time = HydrusTime.GetNowFloat()
+            
+            try:
+                
+                still_work_to_do = CG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
+                
+            except Exception as e:
+                
+                self._serious_error_encountered = True
+                
+                HydrusData.PrintException( e )
+                
+                message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this program boot. A full traceback of this error should be written to the log.'
+                message += '\n' * 2
+                message += str( e )
+                
+                HydrusData.ShowText( message )
+                
+            finally:
+                
+                self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
+                
+            
+            actual_work_period = HydrusTime.GetNowFloat() - start_time
             
             with self._lock:
                 
-                self._CheckShutdown()
+                wait_period = self._GetWaitPeriod( expected_work_period, actual_work_period, still_work_to_do )
                 
             
-            self._controller.WaitUntilViewFree()
-            
-            with self._lock:
+            if still_work_to_do:
                 
-                able_to_work = self._AbleToDoBackgroundMaintenance()
-                expected_work_period = self._GetWorkPeriod()
-                
-            
-            if able_to_work:
-                
-                time_to_stop = HydrusTime.GetNowFloat() + expected_work_period
-                
-                start_time = HydrusTime.GetNowFloat()
-                
-                try:
-                    
-                    still_work_to_do = CG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
-                    
-                except Exception as e:
-                    
-                    self._serious_error_encountered = True
-                    
-                    HydrusData.PrintException( e )
-                    
-                    message = 'There was an unexpected problem during deferred table delete database maintenance work! This maintenance system will not run again this program boot. A full traceback of this error should be written to the log.'
-                    message += '\n' * 2
-                    message += str( e )
-                    
-                    HydrusData.ShowText( message )
-                    
-                finally:
-                    
-                    self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
-                    
-                
-                actual_work_period = HydrusTime.GetNowFloat() - start_time
-                
-                with self._lock:
-                    
-                    wait_period = self._GetWaitPeriod( expected_work_period, actual_work_period, still_work_to_do )
-                    
-                
-                if still_work_to_do:
-                    
-                    wake_event = self._wake_from_work_sleep_event
-                    
-                else:
-                    
-                    wake_event = self._wake_from_idle_sleep_event
-                    
+                wake_event = self._wake_from_work_sleep_event
                 
             else:
                 
                 wake_event = self._wake_from_idle_sleep_event
-                wait_period = 600
                 
             
-            FORCED_WAIT_PERIOD = 0.25
+        else:
             
-            if wait_period > FORCED_WAIT_PERIOD:
-                
-                # forced wait when lots going on
-                time.sleep( FORCED_WAIT_PERIOD )
-                
-                wait_period -= FORCED_WAIT_PERIOD
-                
+            wake_event = self._wake_from_idle_sleep_event
+            wait_period = 600
             
-            wake_event.wait( wait_period )
+        
+        FORCED_WAIT_PERIOD = 0.25
+        
+        if wait_period > FORCED_WAIT_PERIOD:
             
-            self._wake_from_work_sleep_event.clear()
-            self._wake_from_idle_sleep_event.clear()
+            # forced wait when lots going on
+            time.sleep( FORCED_WAIT_PERIOD )
             
+            wait_period -= FORCED_WAIT_PERIOD
+            
+        
+        wake_event.wait( wait_period )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
         
     

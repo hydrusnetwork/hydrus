@@ -1326,92 +1326,89 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        while True:
+        with self._lock:
+            
+            self._CheckShutdown()
+            
+            able_to_work = self._AbleToWork()
+            
+        
+        still_work_to_do = False
+        
+        expected_work_period = self._GetWorkPeriod()
+        
+        if able_to_work:
+            
+            CG.client_controller.WaitUntilViewFree()
+            
+            with self._edit_work_lock:
+                
+                start_time = HydrusTime.GetNowFloat()
+                
+                try:
+                    
+                    still_work_to_do = self._WorkRules( expected_work_period )
+                    
+                except HydrusExceptions.DataMissing as e:
+                    
+                    time.sleep( 5 )
+                    
+                    HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. If you just deleted one yourself this second, let hydev know as this should not happen. You might need to run the "orphan rule" maintenance job off the cog icon on the duplicates resolution sidebar panel.' )
+                    HydrusData.PrintException( e )
+                    
+                except Exception as e:
+                    
+                    self._serious_error_encountered = True
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'There was an unexpected problem during duplicates auto-resolution work! This system will shut down and not start again until the program in restarted. A full traceback of this error should be written to the log.'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                
+                actual_work_period = HydrusTime.GetNowFloat() - start_time
+                
             
             with self._lock:
                 
-                self._CheckShutdown()
-                
-                able_to_work = self._AbleToWork()
+                wait_time = self._GetRestTime( expected_work_period, actual_work_period, still_work_to_do )
                 
             
-            still_work_to_do = False
-            
-            expected_work_period = self._GetWorkPeriod()
-            
-            if able_to_work:
+            if still_work_to_do:
                 
-                CG.client_controller.WaitUntilViewFree()
-                
-                with self._edit_work_lock:
-                    
-                    start_time = HydrusTime.GetNowFloat()
-                    
-                    try:
-                        
-                        still_work_to_do = self._WorkRules( expected_work_period )
-                        
-                    except HydrusExceptions.DataMissing as e:
-                        
-                        time.sleep( 5 )
-                        
-                        HydrusData.Print( 'While doing auto-resolution work, we discovered an id that should not exist. If you just deleted one yourself this second, let hydev know as this should not happen. You might need to run the "orphan rule" maintenance job off the cog icon on the duplicates resolution sidebar panel.' )
-                        HydrusData.PrintException( e )
-                        
-                    except Exception as e:
-                        
-                        self._serious_error_encountered = True
-                        
-                        HydrusData.PrintException( e )
-                        
-                        message = 'There was an unexpected problem during duplicates auto-resolution work! This system will shut down and not start again until the program in restarted. A full traceback of this error should be written to the log.'
-                        message += '\n' * 2
-                        message += str( e )
-                        
-                        HydrusData.ShowText( message )
-                        
-                    
-                    actual_work_period = HydrusTime.GetNowFloat() - start_time
-                    
-                
-                with self._lock:
-                    
-                    wait_time = self._GetRestTime( expected_work_period, actual_work_period, still_work_to_do )
-                    
-                
-                if still_work_to_do:
-                    
-                    wake_event = self._wake_from_work_sleep_event
-                    
-                else:
-                    
-                    wake_event = self._wake_from_idle_sleep_event
-                    
+                wake_event = self._wake_from_work_sleep_event
                 
             else:
-                
-                wait_time = 10
                 
                 wake_event = self._wake_from_idle_sleep_event
                 
             
-            FORCED_WAIT_PERIOD = 0.1
+        else:
             
-            if wait_time > FORCED_WAIT_PERIOD:
-                
-                # forced wait when lots going on
-                time.sleep( FORCED_WAIT_PERIOD )
-                
-                wait_time -= FORCED_WAIT_PERIOD
-                
+            wait_time = 10
             
-            wake_event.wait( wait_time )
+            wake_event = self._wake_from_idle_sleep_event
             
-            self._wake_from_work_sleep_event.clear()
-            self._wake_from_idle_sleep_event.clear()
+        
+        FORCED_WAIT_PERIOD = 0.1
+        
+        if wait_time > FORCED_WAIT_PERIOD:
             
+            # forced wait when lots going on
+            time.sleep( FORCED_WAIT_PERIOD )
+            
+            wait_time -= FORCED_WAIT_PERIOD
+            
+        
+        wake_event.wait( wait_time )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
         
     
     def _FilterToWorkingHardRules( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):

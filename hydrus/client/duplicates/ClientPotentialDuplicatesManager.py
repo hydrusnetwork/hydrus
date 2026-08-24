@@ -74,99 +74,96 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         CG.client_controller.sub( self, 'WakeIfNotWorking', 'notify_file_potential_search_reset' )
         
     
-    def _DoMainLoop( self ):
+    def _DoSingleLoop( self ):
         
-        while True:
+        with self._lock:
             
-            with self._lock:
-                
-                self._CheckShutdown()
-                
+            self._CheckShutdown()
             
-            self._controller.WaitUntilViewFree()
+        
+        self._controller.WaitUntilViewFree()
+        
+        if self._need_to_rebalance_tree.is_set():
             
-            if self._need_to_rebalance_tree.is_set():
+            expected_work_period = 0.1
+            
+            still_maintenance_work_to_do = CG.client_controller.WriteSynchronous( 'maintain_similar_files_tree', work_period = expected_work_period )
+            
+            if not still_maintenance_work_to_do:
                 
-                expected_work_period = 0.1
-                
-                still_maintenance_work_to_do = CG.client_controller.WriteSynchronous( 'maintain_similar_files_tree', work_period = expected_work_period )
-                
-                if not still_maintenance_work_to_do:
-                    
-                    self._need_to_rebalance_tree.clear()
-                    
+                self._need_to_rebalance_tree.clear()
                 
             
-            work_permitted = self._WorkPermitted()
-            work_to_do = self._WorkToDo()
+        
+        work_permitted = self._WorkPermitted()
+        work_to_do = self._WorkToDo()
+        
+        if work_permitted and not work_to_do:
             
-            if work_permitted and not work_to_do:
-                
-                self._work_hard.clear()
-                
+            self._work_hard.clear()
             
-            if work_permitted and work_to_do:
+        
+        if work_permitted and work_to_do:
+            
+            expected_work_period = self._GetWorkPeriod()
+            
+            start_time = HydrusTime.GetNowPrecise()
+            
+            search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            
+            ( still_search_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, work_period = expected_work_period )
+            
+            total_time_took = HydrusTime.GetNowPrecise() - start_time
+            
+            wait_time = self._GetRestTime( expected_work_period, total_time_took )
+            
+            if num_done > 0:
                 
-                expected_work_period = self._GetWorkPeriod()
+                PotentialDuplicatesMaintenanceNumbersStore.instance().RefreshMaintenanceNumbers()
                 
-                start_time = HydrusTime.GetNowPrecise()
-                
-                search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
-                
-                ( still_search_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, work_period = expected_work_period )
-                
-                total_time_took = HydrusTime.GetNowPrecise() - start_time
-                
-                wait_time = self._GetRestTime( expected_work_period, total_time_took )
-                
-                if num_done > 0:
-                    
-                    PotentialDuplicatesMaintenanceNumbersStore.instance().RefreshMaintenanceNumbers()
-                    
-                    self._i_triggered_a_numbers_regen_last_cycle = False
-                    
-                else:
-                    
-                    if not still_search_work_to_do:
-                        
-                        if self._i_triggered_a_numbers_regen_last_cycle:
-                            
-                            # infinite loop, it seems, let's bail out
-                            raise Exception( 'The similar files search daemon was informed it had work to do but then found nothing! It may be your search count numbers are incorrect--please regenerate them through the cog button on the preparation tab of a duplicates page and then restart the client. Let hydev know if that does not fix it!' )
-                            
-                        else:
-                            
-                            # it could be that a file got deleted or something in the moment before we did work
-                            # it could be that the count is wrong
-                            # let's fix it and see what happens next cycle
-                            CG.client_controller.WriteSynchronous( 'regenerate_similar_files_search_count_numbers' )
-                            
-                            PotentialDuplicatesMaintenanceNumbersStore.instance().RefreshMaintenanceNumbers()
-                            
-                            self._i_triggered_a_numbers_regen_last_cycle = True
-                            
-                        
-                    
-                
-                wake_event = self._wake_from_work_sleep_event
+                self._i_triggered_a_numbers_regen_last_cycle = False
                 
             else:
                 
-                wait_time = 30
-                
-                wake_event = self._wake_from_idle_sleep_event
+                if not still_search_work_to_do:
+                    
+                    if self._i_triggered_a_numbers_regen_last_cycle:
+                        
+                        # infinite loop, it seems, let's bail out
+                        raise Exception( 'The similar files search daemon was informed it had work to do but then found nothing! It may be your search count numbers are incorrect--please regenerate them through the cog button on the preparation tab of a duplicates page and then restart the client. Let hydev know if that does not fix it!' )
+                        
+                    else:
+                        
+                        # it could be that a file got deleted or something in the moment before we did work
+                        # it could be that the count is wrong
+                        # let's fix it and see what happens next cycle
+                        CG.client_controller.WriteSynchronous( 'regenerate_similar_files_search_count_numbers' )
+                        
+                        PotentialDuplicatesMaintenanceNumbersStore.instance().RefreshMaintenanceNumbers()
+                        
+                        self._i_triggered_a_numbers_regen_last_cycle = True
+                        
+                    
                 
             
-            with self._lock:
-                
-                self._CheckShutdown()
-                
+            wake_event = self._wake_from_work_sleep_event
             
-            wake_event.wait( wait_time )
+        else:
             
-            self._wake_from_work_sleep_event.clear()
-            self._wake_from_idle_sleep_event.clear()
+            wait_time = 30
             
+            wake_event = self._wake_from_idle_sleep_event
+            
+        
+        with self._lock:
+            
+            self._CheckShutdown()
+            
+        
+        wake_event.wait( wait_time )
+        
+        self._wake_from_work_sleep_event.clear()
+        self._wake_from_idle_sleep_event.clear()
         
     
     def _GetRestTime( self, expected_work_period, actual_work_period ):
