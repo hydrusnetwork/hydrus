@@ -1,3 +1,5 @@
+import shutil
+
 from qtpy import QtCore as QC
 from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
@@ -253,9 +255,6 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         
         super().__init__( parent )
         
-        # TODO: add another live 'example command' readonly guy here
-        # in validity testing, do a which test on the path
-        
         self._executable_path = QW.QLineEdit( self )
         self._executable_parameter_templates = ClientGUIListBoxes.QueueListBox(
             self,
@@ -264,6 +263,9 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
             self._AddParameter,
             self._EditParameter
         )
+        
+        self._example_full_command = QW.QLineEdit( self )
+        self._example_full_command.setReadOnly( True )
         
         self._copy_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._Copy )
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the full command to your clipboard.' ) )
@@ -282,6 +284,7 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         
         rows.append( ( 'executable command/path: ', self._executable_path ) )
         rows.append( ( 'parameters: ', self._executable_parameter_templates ) )
+        rows.append( ( 'current full template: ', self._example_full_command ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -305,7 +308,12 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         vbox.addStretch( 0 )
         
+        self._UpdateExample()
+        
         self.widget().setLayout( vbox )
+        
+        self._executable_path.textChanged.connect( self._UpdateExample )
+        self._executable_parameter_templates.listBoxChanged.connect( self._UpdateExample )
         
     
     def _AddParameter( self ):
@@ -315,11 +323,9 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
     
     def _Copy( self ):
         
-        ( executable_path, executable_parameter_templates ) = self.GetValue()
+        full_template = self._GetFullTemplate()
         
-        text = executable_path + ' ' + ' '.join( executable_parameter_templates )
-        
-        CG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', full_template )
         
     
     def _EditParameter( self, parameter: str ) -> str:
@@ -328,7 +334,7 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         message += '\n\n'
         message += 'my_program -o d a=virt profile="My Profile" path'
         message += '\n\n'
-        message += 'The parameters would be "-o", "d", "a=virt", "profile="My Profile"", and "path" (or, likely for our purposes here, "%path%"). While you may need quotes within a parameter, you should not, generally speaking, wrap a whole parameter in quotes to avoid whitespace issues--that is handled for you, so do not worry about it; trying to add extra quotes will just break things.'
+        message += 'The parameters would be "-o", "d", "a=virt", "profile="My Profile"", and "path" (or, likely for our purposes here, "%path%"). While you may need quotes within a parameter, you should not, generally speaking, wrap a whole parameter in quotes to avoid whitespace issues--that is handled for you, so do not worry about it; trying to add extra quotes may just break things.'
         message += '\n\n'
         message += 'You can mix a replacement token in amongst other text, or even have multiple tokens in the same parameter. "%parameter1%-%parameter2%" is fine. You cannot use the same token more than once per parameter, but you can use it in multiple parameters!'
         
@@ -350,6 +356,13 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
             
             raise HydrusExceptions.VetoException()
             
+        
+    
+    def _GetFullTemplate( self ):
+        
+        ( executable_path, executable_parameter_templates ) = self.GetValue()
+        
+        return executable_path + ' ' + ' '.join( executable_parameter_templates )
         
     
     def _Paste( self ):
@@ -410,13 +423,36 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
             self._executable_path.setText( executable_path )
             self._executable_parameter_templates.SetData( executable_parameter_templates )
             
+            self._UpdateExample()
+            
+        
+    
+    def _UpdateExample( self ):
+        
+        full_command = self._GetFullTemplate()
+        
+        self._example_full_command.setText( full_command )
         
     
     def UserIsOKToOK( self ):
         
-        if self._executable_path.text() == '':
+        executable_path = self._executable_path.text()
+        
+        if executable_path == '':
             
             message = 'Hey, you really need to put an exe name/path in the path box. Are you sure you want to save this?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return False
+                
+            
+        
+        if shutil.which( executable_path ) is None:
+            
+            message = f'Hey, I looked for the executable path "{executable_path}" but did not see it with a "which" call. You sure you are good?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
