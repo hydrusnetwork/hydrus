@@ -13,6 +13,7 @@ from hydrus.client import ClientRendering
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMediaResult
@@ -28,6 +29,8 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         self._media_results_to_thumbnail_pixmaps = {}
         self._media_results_being_loaded = set()
         
+        ( self._max_thumbnail_width, self._max_thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
+        
     
     def rowCount(self, parent = QC.QModelIndex() ):
         
@@ -36,7 +39,7 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
     
     def columnCount(self, parent = QC.QModelIndex() ):
         
-        raise NotImplemented()
+        raise NotImplementedError()
         
     
     def data( self, index: QC.QModelIndex, role: QC.Qt.ItemDataRole ):
@@ -49,18 +52,27 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         row = index.row()
         col = index.column()
         
-        if role == QC.Qt.ItemDataRole.DecorationRole and col <= 1:
+        if col <= 1:
             
-            media_result = self._data_rows[ row ][ col ]
+            # a thumbnail column!
             
-            if media_result in self._media_results_to_thumbnail_pixmaps:
+            if role == QC.Qt.ItemDataRole.DecorationRole:
                 
-                return self._media_results_to_thumbnail_pixmaps[ media_result ]
+                media_result = self._data_rows[ row ][ col ]
                 
-            else:
+                if media_result in self._media_results_to_thumbnail_pixmaps:
+                    
+                    return self._media_results_to_thumbnail_pixmaps[ media_result ]
+                    
+                else:
+                    
+                    self._LoadMediaResultThumbnailPixmap( index, media_result )
+                    
                 
-                self._LoadMediaResultThumbnailPixmap( index, media_result )
-                
+            
+            # I tried returning the TextAlignmentRole to get the thumbs to be horizontally centered, but that didn't work
+            # then I tried a custom QStyledItemDelegate and that also failed. might be we want to do data.setIcon instead of DecorationRole to pull this off
+            # at this point, whatever
             
         
         return None
@@ -85,6 +97,14 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         def publish_callable( thumbnail_hydrus_bmp: ClientRendering.HydrusBitmap ):
             
             pixmap = thumbnail_hydrus_bmp.GetQtPixmap()
+            
+            too_big = pixmap.width() > self._max_thumbnail_width or pixmap.height() > self._max_thumbnail_height
+            too_small = pixmap.width() < self._max_thumbnail_width and pixmap.height() < self._max_thumbnail_height
+            
+            if too_big or too_small:
+                
+                pixmap = pixmap.scaled( self._max_thumbnail_width, self._max_thumbnail_height, QC.Qt.AspectRatioMode.KeepAspectRatio, QC.Qt.TransformationMode.SmoothTransformation )
+                
             
             self._media_results_to_thumbnail_pixmaps[ media_result ] = pixmap
             
@@ -173,6 +193,11 @@ class ThumbnailPairListModel( QC.QAbstractTableModel ):
         self.beginResetModel()
         self._data_rows = data_rows
         self.endResetModel()
+        
+    
+    def SetMaxThumbnailSize( self, width, height ):
+        
+        ( self._max_thumbnail_width, self._max_thumbnail_height ) = ( width, height )
         
     
 
@@ -448,16 +473,24 @@ class ThumbnailPairList( QW.QTableView ):
         self.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
         
         ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
+
+        ( sane_min_width, sane_min_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 16, 8 ) )
+        ( sane_max_width, sane_max_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 64, 32 ) )
         
-        self.verticalHeader().setDefaultSectionSize( thumbnail_height )
+        thumb_column_width = max( sane_min_width, min( thumbnail_width, sane_max_width ) )
+        section_height = max( sane_min_height, min( thumbnail_height, sane_max_height ) )
+        
+        model.SetMaxThumbnailSize( thumb_column_width, section_height )
+        
+        self.verticalHeader().setDefaultSectionSize( section_height )
         self.verticalHeader().setSectionResizeMode( QW.QHeaderView.ResizeMode.Fixed )
         
         self.setVerticalScrollMode( QW.QAbstractItemView.ScrollMode.ScrollPerItem )
         self.verticalScrollBar().setSingleStep( 1 )
         
-        self.horizontalHeader().setDefaultSectionSize( thumbnail_width )
+        self.horizontalHeader().setDefaultSectionSize( thumb_column_width )
         
-        self.setColumnWidth( 0, thumbnail_width )
+        self.setColumnWidth( 0, thumb_column_width )
         
         column_count = model.columnCount()
         
@@ -473,12 +506,10 @@ class ThumbnailPairList( QW.QTableView ):
                 
             
         
-        my_width = thumbnail_width * model.columnCount() + 24
+        my_width = thumb_column_width * model.columnCount() + 24
         
-        # this was going bonkers dialog sizing for some users
-        max_thumbnail_height_for_min_height_calc = min( thumbnail_height, 200 )
-        
-        self.setMinimumSize( QC.QSize( my_width, max_thumbnail_height_for_min_height_calc * self.MIN_NUM_ROWS_HEIGHT ) )
+        # this helps layout gubbins in dialogs with scrollbars I believe; handle with care
+        self.setMinimumSize( QC.QSize( my_width, section_height * self.MIN_NUM_ROWS_HEIGHT ) )
         
         self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
         self.customContextMenuRequested.connect( self.ShowMenuFromSignal )
