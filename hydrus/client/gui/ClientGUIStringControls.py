@@ -244,6 +244,8 @@ class StringProcessorWidget( QW.QWidget ):
         
         CG.client_controller.pub( 'clipboard', 'text', text )
         
+        self._copy_button.ShowMicroNotification( 'Copied!' )
+        
     
     def _ImportObject( self, obj ):
         

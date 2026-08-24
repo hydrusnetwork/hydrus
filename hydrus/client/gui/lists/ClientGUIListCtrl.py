@@ -1984,6 +1984,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._UpdateButtons()
         
+        return button
+        
     
     def AddButton( self, label, clicked_func, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None, tooltip = None ):
         

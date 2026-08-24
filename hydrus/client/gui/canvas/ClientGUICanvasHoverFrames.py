@@ -2409,6 +2409,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         self._position_initialised_since_last_media = False
         
     
+
 class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     showPairInPage = QC.Signal()
@@ -2423,7 +2424,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_media = None
         
-        self._show_in_a_page_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self.showPairInPage.emit )
+        self._show_in_a_page_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._ShowPairInPage )
         self._show_in_a_page_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send pair to the duplicates media page, for later processing' ) )
         self._show_in_a_page_button.setFocusPolicy( QC.Qt.FocusPolicy.TabFocus )
         
@@ -2889,6 +2890,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self.layout().activate()
         
         self._SizeAndPosition()
+        
+    
+    def _ShowPairInPage( self ):
+        
+        self.showPairInPage.emit()
+        
+        self._show_in_a_page_button.ShowMicroNotification( f'Sent!' )
         
     
     def _UpdateTotalScore( self, finished = True ):

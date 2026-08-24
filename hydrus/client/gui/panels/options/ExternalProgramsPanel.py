@@ -328,6 +328,8 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         
         CG.client_controller.pub( 'clipboard', 'text', full_template )
         
+        self._copy_button.ShowMicroNotification( f'Copied!' )
+        
     
     def _EditParameter( self, parameter: str ) -> str:
         

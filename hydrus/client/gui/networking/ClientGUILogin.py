@@ -1331,6 +1331,8 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         CG.client_controller.pub( 'clipboard', 'text', self._downloaded_data )
         
+        self._data_copy_button.ShowMicroNotification( f'Copied!' )
+        
     
 class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     

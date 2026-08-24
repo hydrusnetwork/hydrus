@@ -552,6 +552,8 @@ class EditImportOptionsContainerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         CG.client_controller.pub( 'clipboard', 'text', payload )
         
+        self._copy_button.ShowMicroNotification( 'Copied!' )
+        
     
     def _CustomOverwrite( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
@@ -1138,6 +1140,8 @@ class DefaultableImportOptionsPanel( ClientGUICommon.StaticBox ):
         payload = import_options_container.DumpToString()
         
         CG.client_controller.pub( 'clipboard', 'text', payload )
+        
+        self._copy_button.ShowMicroNotification( f'Copied!' )
         
     
     def _Paste( self ):

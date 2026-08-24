@@ -65,7 +65,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         default_import_options_list_panel.AddButton( 'show stack', self._SeeDefaultStack, enabled_only_on_single_selection = True )
         default_import_options_list_panel.AddSeparator()
-        default_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyDefault, enabled_only_on_single_selection = True )
+        self._copy_default_button = default_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyDefault, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
@@ -99,7 +99,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         url_class_import_options_list_panel.AddButton( 'show stack', self._SeeURLClassStack, enabled_only_on_single_selection = True )
         url_class_import_options_list_panel.AddSeparator()
-        url_class_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyURLClass, enabled_only_on_single_selection = True )
+        self._copy_url_class_button = url_class_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyURLClass, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
@@ -298,6 +298,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         CG.client_controller.pub( 'clipboard', 'text', payload )
         
+        self._copy_default_button.ShowMicroNotification( f'Copied!' )
+        
     
     def _CopyURLClass( self ):
         
@@ -321,6 +323,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             payload = import_options_container.DumpToString()
             
             CG.client_controller.pub( 'clipboard', 'text', payload )
+            
+            self._copy_url_class_button.ShowMicroNotification( f'Copied!' )
             
         
     

@@ -909,6 +909,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 CG.client_controller.pub( 'clipboard', 'text', text )
                 
+                self._copy_button.ShowMicroNotification( f'Copied {HydrusNumbers.ToHumanInt(len( tags ))} tags!' )
+                
             
         
         def _DoIncrementalTagging( self ):

@@ -1885,7 +1885,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._subscriptions_panel.NewButtonRow()
         
         self._subscriptions_panel.AddWindow( ClientGUICommon.BetterStaticText( self._subscriptions_panel, label = 'import options:' ) )
-        self._subscriptions_panel.AddIconButton( CC.global_icons().copy, self._CopyImportOptionsContainer, enabled_only_on_single_selection = True )
+        self._copy_import_options_button = self._subscriptions_panel.AddIconButton( CC.global_icons().copy, self._CopyImportOptionsContainer, enabled_only_on_single_selection = True )
         
         menu_template_items = []
         
@@ -2398,6 +2398,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         payload = import_options_container.DumpToString()
         
         CG.client_controller.pub( 'clipboard', 'text', payload )
+        
+        self._copy_import_options_button.ShowMicroNotification( f'Copied!' )
         
     
     def _DoAsyncGetQueryLogContainers( self, query_headers: collections.abc.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):

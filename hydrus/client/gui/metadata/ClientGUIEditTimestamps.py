@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -397,6 +398,8 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         text = json.dumps( list_of_timestamp_data.GetSerialisableTuple() )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
+        
+        self._copy_button.ShowMicroNotification( f'Copied {HydrusNumbers.ToHumanInt(len( list_of_timestamp_data))} encoded time objects!' )
         
     
     def _AddDomainModifiedTimestamp( self ):
