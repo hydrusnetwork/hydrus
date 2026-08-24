@@ -588,7 +588,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        for child in self.children():
+        for child in self.window().children():
             
             if isinstance( child, ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel ):
                 
@@ -610,7 +610,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         title = 'manage tags'
         frame_key = 'manage_tags_frame'
         
-        manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
+        manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self.window(), title, frame_key )
         
         panel = ClientGUIManageTags.ManageTagsPanel( manage_tags, self._location_context, CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, [ self._current_media ], immediate_commit = True, canvas_key = self._canvas_key )
         
