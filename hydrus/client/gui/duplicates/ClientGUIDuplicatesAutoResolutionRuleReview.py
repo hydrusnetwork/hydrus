@@ -466,8 +466,6 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( _ ):
             
-            self._pending_actions_panel.setEnabled( True )
-            
             self._pending_action_pairs = [ pair for pair in self._pending_action_pairs if pair not in selected_pairs ]
             
             self._pending_actions_label.setText( f'{HydrusNumbers.ToHumanInt(len(self._pending_action_pairs))} pairs remaining.' )
@@ -502,11 +500,16 @@ class ReviewActionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
+        def ui_restoration_callable():
+            
+            self._pending_actions_panel.setEnabled( True )
+            
+        
         original_deny_button_label = self._deny_selected_button.text()
         
         self._pending_actions_panel.setEnabled( False )
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         

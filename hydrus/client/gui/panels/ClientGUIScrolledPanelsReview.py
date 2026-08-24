@@ -914,12 +914,15 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Jobs added!' )
             
-            self._add_new_job.setEnabled( True )
-            
             self._RefreshWorkDue()
             
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self._add_new_job.setEnabled( True )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -1032,6 +1035,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         def publish_callable( job_types_to_counts ):
             
             job_types = set()
+            
             self._job_types_to_due_counts = collections.Counter()
             self._job_types_to_not_due_counts = collections.Counter()
             
@@ -1069,12 +1073,15 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._run_search_st.setText( '{} files found'.format( HydrusNumbers.ToHumanInt( len( hash_ids ) ) ) )
             
-            self._run_search.setEnabled( True )
-            
             self._SetHashIds( hash_ids )
             
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self._run_search.setEnabled( True )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -1107,12 +1114,15 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( hash_ids ):
             
-            self._select_all_media_files.setEnabled( True )
-            
             self._SetHashIds( hash_ids )
             
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self._select_all_media_files.setEnabled( True )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         
@@ -1134,12 +1144,15 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( hash_ids ):
             
-            self._select_repo_files.setEnabled( True )
-            
             self._SetHashIds( hash_ids )
             
         
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self._select_repo_files.setEnabled( True )
+            
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         job.start()
         

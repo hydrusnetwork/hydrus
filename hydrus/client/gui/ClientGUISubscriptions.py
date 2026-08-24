@@ -971,12 +971,15 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def publish_callable( result ):
             
-            self.setEnabled( True )
-            
             self._CopyQualityInfo( result )
             
         
-        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self.setEnabled( True )
+            
+        
+        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         async_call.start()
         
@@ -1026,12 +1029,15 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def publish_callable( result ):
             
-            self.setEnabled( True )
-            
             self._ShowQualityInfo( result )
             
         
-        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        def ui_restoration_callable():
+            
+            self.setEnabled( True )
+            
+        
+        async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
         
         async_call.start()
         
@@ -2426,12 +2432,15 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
                     
                 
-                self.setEnabled( True )
-                
                 call()
                 
             
-            async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+            def ui_restoration_callable():
+                
+                self.setEnabled( True )
+                
+            
+            async_call = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
             
             async_call.start()
             

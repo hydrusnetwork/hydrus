@@ -4707,8 +4707,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            height_num_chars = 20
-            
             control = ClientGUITime.TimeDeltaWidget( panel, min = HydrusNetwork.MIN_NULLIFICATION_PERIOD, days = True, hours = True, minutes = True, seconds = True )
             
             control.SetValue( nullification_period )

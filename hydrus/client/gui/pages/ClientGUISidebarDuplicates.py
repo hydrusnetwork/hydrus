@@ -288,8 +288,6 @@ class FilterPanel( QW.QWidget ):
         
         def publish_callable( hashes ):
             
-            self._show_some_dupes.setEnabled( True )
-            
             self.setPageState.emit( CC.PAGE_STATE_NORMAL )
             
             if len( hashes ) == 0:
@@ -304,13 +302,20 @@ class FilterPanel( QW.QWidget ):
                 
             
         
+        def ui_restoration_callable():
+            
+            self._show_some_dupes.setEnabled( True )
+            
+        
         self._show_some_dupes.setEnabled( False )
         
         self.setPageState.emit( CC.PAGE_STATE_SEARCHING )
         
         potential_duplicates_search_context = self._potential_duplicates_search_context.GetValue()
         
-        ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable ).start()
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, ui_restoration_callable = ui_restoration_callable )
+        
+        job.start()
         
     
     def REPEATINGPageUpdate( self ):
