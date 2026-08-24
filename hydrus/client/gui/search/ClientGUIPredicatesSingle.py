@@ -3038,6 +3038,8 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         self._perceptual_hashes.setPlainText( '\n'.join( new_text_lines ) )
         
+        self._paste_button.ShowMicroNotification( f'Pasted!' )
+        
     
     def GetDefaultPredicate( self ):
         

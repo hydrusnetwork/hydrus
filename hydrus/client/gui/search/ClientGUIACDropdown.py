@@ -2852,6 +2852,12 @@ class AutoCompleteDropdownTagsRead( AutocompleteDropdownTagsFileSearchContextORC
                 
                 self._BroadcastChoices( predicates, shift_down )
                 
+                if not self._float_mode:
+                    
+                    # if in float mode, there's a flurry of focus flicker foolishness that makes this ugly
+                    self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(predicates))} search predicates!' )
+                    
+                
             
         except Exception as e:
             
@@ -3574,6 +3580,8 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             tags = HydrusTags.CleanTags( tags )
             
             self.tagsPasted.emit( list( tags ) )
+            
+            self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(tags))} tags!' )
             
         except Exception as e:
             

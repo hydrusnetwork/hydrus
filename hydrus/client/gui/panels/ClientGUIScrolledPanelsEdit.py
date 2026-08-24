@@ -1210,6 +1210,8 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
                 
             
         
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(new_names_to_notes))} new notes!' )
+        
     
     def _DeleteNote( self ):
         
@@ -1926,6 +1928,8 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             urls = HydrusText.DeserialiseNewlinedTexts( raw_text )
             
             self._EnterURLs( urls, only_add = True )
+            
+            self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(urls))} URLs!' )
             
         except Exception as e:
             

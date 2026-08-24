@@ -220,6 +220,8 @@ class TestPanel( QW.QWidget ):
             
             self._SetExampleData( raw_text, example_bytes = raw_bytes )
             
+            self._paste_button.ShowMicroNotification( f'Pasted!' )
+            
         except Exception as e:
             
             ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'UTF-8 text', e )

@@ -3,6 +3,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -368,6 +369,8 @@ class AutoCompleteDropdownMetadataConditional( ClientGUIACDropdown.AutocompleteD
                 shift_down = False
                 
                 self._BroadcastChoices( predicates, shift_down )
+                
+                self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(predicates))} predicates!' )
                 
             
         except Exception as e:

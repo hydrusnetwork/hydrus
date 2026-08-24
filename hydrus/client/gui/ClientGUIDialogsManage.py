@@ -155,6 +155,8 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             panel.SetRatingClipboardPairs( rating_clipboard_pairs )
             
         
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(rating_clipboard_pairs))} ratings!' )
+        
     
     def EventOK( self ):
         

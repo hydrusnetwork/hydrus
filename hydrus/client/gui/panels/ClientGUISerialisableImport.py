@@ -645,6 +645,8 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._ImportPayloads( payloads )
         
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(payloads))} items!' )
+        
     
     def EventLainClick( self, event ):
         
@@ -773,6 +775,8 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         self._ImportPayloads( payloads )
+        
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(payloads))} items!' )
         
     
     def EventImageClick( self, event ):

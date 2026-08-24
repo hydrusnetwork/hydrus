@@ -75,7 +75,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteDefaultMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
         
-        default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        self._paste_default_button = default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
         self._default_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_manager, edit_allowed = True )
         default_import_options_list_panel.AddWindow( self._default_favourites_button )
@@ -109,7 +109,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteURLClassMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
         
-        url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        self._paste_url_class_button = url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
         self._url_class_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_manager, edit_allowed = True )
         url_class_import_options_list_panel.AddWindow( self._url_class_favourites_button )
@@ -595,6 +595,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._default_import_options_list.UpdateDatas( import_options_caller_types )
         
+        self._paste_default_button.ShowMicroNotification( f'Pasted!' )
+        
     
     def _PasteDefaultCustom( self ):
         
@@ -608,6 +610,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         self._LoadFavouriteDefault( pasted_import_options_container )
+        
+        self._paste_default_button.ShowMicroNotification( f'Pasted!' )
         
     
     def _PasteDefaultFillIn( self ):
@@ -669,6 +673,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._url_class_import_options_list.UpdateDatas( url_classes )
         
+        self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
+        
     
     def _PasteURLClassCustom( self ):
         
@@ -682,6 +688,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
         self._LoadFavouriteURLClass( pasted_import_options_container )
+        
+        self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
         
     
     def _PasteURLClassFillIn( self ):

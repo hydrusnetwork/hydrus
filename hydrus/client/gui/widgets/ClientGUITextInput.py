@@ -2,6 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -66,6 +67,8 @@ class TextAndPasteCtrl( QW.QWidget ):
             if len( texts ) > 0:
                 
                 self._add_callable( texts )
+                
+                self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(texts))} texts!' )
                 
             
         except Exception as e:

@@ -280,6 +280,8 @@ class StringProcessorWidget( QW.QWidget ):
             
             self._ImportObject( obj )
             
+            self._paste_button.ShowMicroNotification( f'Pasted!' )
+            
         except Exception as e:
             
             ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )

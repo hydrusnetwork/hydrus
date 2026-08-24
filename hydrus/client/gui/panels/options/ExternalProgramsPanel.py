@@ -428,6 +428,8 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
             
             self._UpdateExample()
             
+            self._paste_button.ShowMicroNotification( f'Pasted!' )
+            
         
     
     def _UpdateExample( self ):

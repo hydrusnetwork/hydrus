@@ -892,16 +892,18 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         try:
             
-            urls = HydrusText.DeserialiseNewlinedTexts( raw_text )
+            texts = HydrusText.DeserialiseNewlinedTexts( raw_text )
             
         except Exception as e:
             
-            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of text', e )
             
             raise
             
         
-        self.AddDatas( urls )
+        self.AddDatas( texts )
+        
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(texts))} items!' )
         
     
     def _SetNonDupeName( self, obj ):
@@ -1500,6 +1502,8 @@ class QueueListBox( QW.QWidget ):
         
         self.listBoxContentsChanged.emit()
         self.listBoxChanged.emit()
+        
+        self._paste_button.ShowMicroNotification( f'Pasted {HydrusNumbers.ToHumanInt(len(datas))} items!' )
         
     
     def _Up( self ):

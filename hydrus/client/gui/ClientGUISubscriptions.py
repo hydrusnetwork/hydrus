@@ -1895,7 +1895,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteImportOptionsContainersMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteImportOptionsContainersFillIn ) )
         
-        self._subscriptions_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        self._paste_import_options_button = self._subscriptions_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
         self._import_options_containers_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, CG.client_controller.import_options_manager, edit_allowed = True )
         self._subscriptions_panel.AddWindow( self._import_options_containers_favourites_button )
@@ -2640,6 +2640,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions.UpdateDatas( subscriptions )
         
+        self._paste_import_options_button.ShowMicroNotification( f'Pasted!' )
+        
     
     def _PasteImportOptionsContainerCustom( self ):
         
@@ -2653,6 +2655,8 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._LoadFavouriteImportOptionsContainer( pasted_import_options_container )
+        
+        self._paste_import_options_button.ShowMicroNotification( f'Pasted!' )
         
     
     def _PasteImportOptionsContainersFillIn( self ):
