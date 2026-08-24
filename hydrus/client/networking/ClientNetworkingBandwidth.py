@@ -413,15 +413,26 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNetworkContextsForUser( self, history_time_delta_threshold = None ):
+    def GetNetworkContextsForUser( self, history_time_delta_threshold: int | None, show_those_with_bandwidth_rules: bool ):
         
         with self._lock:
             
             result = set()
             
+            if show_those_with_bandwidth_rules or history_time_delta_threshold is None:
+                
+                # this construct holds the like 'watcher default' and friends, so we'll exclude them
+                result.update( [ network_context for network_context in self._network_contexts_to_bandwidth_rules.keys() if network_context.context_data is not None ] )
+                
+            
             for tracker_container in self._network_contexts_to_tracker_containers.values():
                 
                 network_context = tracker_container.network_context
+                
+                if network_context in result:
+                    
+                    continue
+                    
                 
                 if network_context.IsDefault() or network_context.IsEphemeral():
                     

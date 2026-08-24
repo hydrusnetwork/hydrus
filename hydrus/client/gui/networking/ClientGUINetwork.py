@@ -646,10 +646,13 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         super().__init__( parent )
         
         self._history_time_delta_threshold = ClientGUITime.TimeDeltaButton( self, days = True, hours = True, minutes = True, seconds = True )
-        self._history_time_delta_threshold.timeDeltaChanged.connect( self.EventTimeDeltaChanged )
+        self._history_time_delta_threshold.timeDeltaChanged.connect( self._NotifyTimeDeltaChanged )
+        
+        self._show_those_with_bandwidth_rules = QW.QCheckBox( 'show anything with specific bandwidth rules', self )
+        self._show_those_with_bandwidth_rules.clicked.connect( self._NotifyShowThoseWithBandwidthRulesClicked )
         
         self._history_time_delta_none = QW.QCheckBox( 'show all', self )
-        self._history_time_delta_none.clicked.connect( self.EventTimeDeltaChanged )
+        self._history_time_delta_none.clicked.connect( self._NotifyTimeDeltaChanged )
         
         self._bandwidths_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -679,6 +682,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._history_time_delta_none.setChecked( True )
             
+            self._show_those_with_bandwidth_rules.setEnabled( False )
+            
         else:
             
             self._history_time_delta_threshold.SetValue( last_review_bandwidth_search_distance )
@@ -694,6 +699,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'Show network contexts with usage in the past: '), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._history_time_delta_threshold, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._show_those_with_bandwidth_rules, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._history_time_delta_none, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
@@ -877,6 +883,33 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _NotifyShowThoseWithBandwidthRulesClicked( self ):
+        
+        self._update_job.Wake()
+        
+    
+    def _NotifyTimeDeltaChanged( self ):
+        
+        if self._history_time_delta_none.isChecked():
+            
+            self._history_time_delta_threshold.setEnabled( False )
+            self._show_those_with_bandwidth_rules.setEnabled( False )
+            
+            last_review_bandwidth_search_distance = None
+            
+        else:
+            
+            self._history_time_delta_threshold.setEnabled( True )
+            self._show_those_with_bandwidth_rules.setEnabled( True )
+            
+            last_review_bandwidth_search_distance = self._history_time_delta_threshold.GetValue()
+            
+        
+        self._controller.new_options.SetNoneableInteger( 'last_review_bandwidth_search_distance', last_review_bandwidth_search_distance )
+        
+        self._update_job.Wake()
+        
+    
     def _ResetDefaultBandwidthRules( self ):
         
         message = 'Reset your \'default\' and \'global\' bandwidth rules to default?'
@@ -917,29 +950,11 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             history_time_delta_threshold = self._history_time_delta_threshold.GetValue()
             
         
-        network_contexts = self._controller.network_engine.bandwidth_manager.GetNetworkContextsForUser( history_time_delta_threshold )
+        show_those_with_bandwidth_rules = self._show_those_with_bandwidth_rules.isChecked()
+        
+        network_contexts = self._controller.network_engine.bandwidth_manager.GetNetworkContextsForUser( history_time_delta_threshold, show_those_with_bandwidth_rules )
         
         self._bandwidths.SetData( network_contexts )
-        
-    
-    def EventTimeDeltaChanged( self ):
-        
-        if self._history_time_delta_none.isChecked():
-            
-            self._history_time_delta_threshold.setEnabled( False )
-            
-            last_review_bandwidth_search_distance = None
-            
-        else:
-            
-            self._history_time_delta_threshold.setEnabled( True )
-            
-            last_review_bandwidth_search_distance = self._history_time_delta_threshold.GetValue()
-            
-        
-        self._controller.new_options.SetNoneableInteger( 'last_review_bandwidth_search_distance', last_review_bandwidth_search_distance )
-        
-        self._update_job.Wake()
         
     
     def ShowNetworkContext( self ):

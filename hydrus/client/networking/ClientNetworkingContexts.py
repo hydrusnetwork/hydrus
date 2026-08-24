@@ -124,7 +124,14 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                sortable_data = ClientNetworkingFunctions.ConvertDomainIntoSortable( self.context_data )
+                if self.context_data is None: # basically 'is default'
+                    
+                    sortable_data = tuple()
+                    
+                else:
+                    
+                    sortable_data = ClientNetworkingFunctions.ConvertDomainIntoSortable( self.context_data )
+                    
                 
             except Exception as e:
                 
