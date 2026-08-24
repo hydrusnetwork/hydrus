@@ -87,7 +87,16 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     return menu_item
     
 
-def AppendMenuSlider( menu: QW.QMenu, label: str, description: str, initial_value: int, min_value: int, max_value: int, step: int, value_changed_callable ):
+def AppendMenuSlider(
+    menu: QW.QMenu,
+    label: str,
+    description: str,
+    initial_value: int,
+    min_value: int,
+    max_value: int,
+    step: int,
+    value_changed_callable
+):
     
     slider_menu_item = QW.QWidgetAction( menu )
     

@@ -171,31 +171,23 @@ def AddAudioVolumeMenu( menu, canvas_type, media_container ):
     
     ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ volume_volume_type ]
     
-    # 0-100 inclusive
-    volumes = list( range( 0, 110, 10 ) )
-    
     current_volume = CG.client_controller.new_options.GetInteger( volume_option_name )
     
-    if current_volume not in volumes:
+    def change_volume_from_slider( v ):
         
-        volumes.append( current_volume )
-        
-        volumes.sort()
+        ClientGUIMediaControls.ChangeVolume( volume_volume_type, v )
         
     
-    for volume in volumes:
-        
-        label = 'volume: {}'.format( volume )
-        
-        if volume == current_volume:
-            
-            ClientGUIMenus.AppendMenuCheckItem( volume_menu, label, 'Set the volume.', True, ClientGUIMediaControls.ChangeVolume, volume_volume_type, volume )
-            
-        else:
-            
-            ClientGUIMenus.AppendMenuItem( volume_menu, label, 'Set the volume.', ClientGUIMediaControls.ChangeVolume, volume_volume_type, volume )
-            
-        
+    ClientGUIMenus.AppendMenuSlider(
+        volume_menu,
+        'volume',
+        'Set the volume directly',
+        current_volume,
+        0,
+        100,
+        1,
+        change_volume_from_slider
+    )
     
     ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
     
