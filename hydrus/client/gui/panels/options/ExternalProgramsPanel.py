@@ -5,7 +5,9 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -22,6 +24,7 @@ from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -46,15 +49,15 @@ class DefaultLaunchFileWidget( QW.QWidget ):
             
         elif HC.PLATFORM_MACOS:
             
-            desc += 'For macOS, this is "open %path%" from the terminal.'
+            desc += 'For macOS, this is "open %path%".'
             
         elif HC.PLATFORM_HAIKU:
             
-            desc += 'For Haiku, this is "open %path%" from the terminal.'
+            desc += 'For Haiku, this is "open %path%".'
             
         else:
             
-            desc += 'For Linux, this is "xdg-open %path%" from the terminal.'
+            desc += 'For Linux, this is "xdg-open %path%".'
             
         
         st = ClientGUICommon.BetterStaticText( self, label = desc )
@@ -143,7 +146,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule ):
+    def __init__( self, parent, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule ):
         
         self._parameter_type = parameter_processing_rule.parameter_type
         
@@ -205,7 +208,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         self._string_processing_button.setEnabled( enabled )
         
     
-    def GetValue( self ) -> ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule | None:
+    def GetValue( self ) -> ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule | None:
         
         if not self._enable.isChecked():
             
@@ -215,7 +218,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         replacement_string = self._replacement_string.text()
         string_processor = self._string_processing_button.GetValue()
         
-        actual_call = ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule(
+        actual_call = ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule(
             parameter_type = self._parameter_type,
             replacement_string = replacement_string,
             string_processor = string_processor
@@ -224,7 +227,7 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         return actual_call
         
     
-    def SetValue( self, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule | None ):
+    def SetValue( self, parameter_processing_rule: ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule | None ):
         
         if parameter_processing_rule is None:
             
@@ -244,7 +247,198 @@ class EditInputParameterProcessingRulePanel( QW.QWidget ):
         
     
 
-class EditProcessCallTemplatePanel( QW.QWidget ):
+class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, executable_path: str, executable_parameter_templates: list[ str ] ):
+        
+        super().__init__( parent )
+        
+        # TODO: add another live 'example command' readonly guy here
+        # in validity testing, do a which test on the path
+        
+        self._executable_path = QW.QLineEdit( self )
+        self._executable_parameter_templates = ClientGUIListBoxes.QueueListBox(
+            self,
+            8,
+            str,
+            self._AddParameter,
+            self._EditParameter
+        )
+        
+        self._copy_button = ClientGUICommon.IconButton( self, CC.global_icons().copy, self._Copy )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the full command to your clipboard.' ) )
+        
+        self._paste_button = ClientGUICommon.IconButton( self, CC.global_icons().paste, self._Paste )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a full command from the clipboard.' ) )
+        
+        #
+        
+        self._executable_path.setText( executable_path )
+        self._executable_parameter_templates.SetData( executable_parameter_templates )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'executable command/path: ', self._executable_path ) )
+        rows.append( ( 'parameters: ', self._executable_parameter_templates ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        message = 'Set the command and its parameters. Do not put parameters in the command input section. Put the %path% or %url% style parameter replacement token in the appropriate place in your parameter list. For quick entry, you can paste the whole template and I will try and figure it out.'
+        message += '\n\n'
+        message += 'Remember to keep it simple. If you need to set up environment variables or use ten different awkward parameters or pipe and grep around, just write a .sh script to do it all and point to that instead.'
+        
+        st = ClientGUICommon.BetterStaticText( self, label = message )
+        st.setWordWrap( True )
+        
+        vbox = QP.VBoxLayout()
+        
+        hbox = QP.HBoxLayout()
+        
+        hbox.addStretch( 0 )
+        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        vbox.addStretch( 0 )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _AddParameter( self ):
+        
+        return self._EditParameter( '' )
+        
+    
+    def _Copy( self ):
+        
+        ( executable_path, executable_parameter_templates ) = self.GetValue()
+        
+        text = executable_path + ' ' + ' '.join( executable_parameter_templates )
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+    def _EditParameter( self, parameter: str ) -> str:
+        
+        message = 'Edit the parameter. This should just be one thing, typically separated by whitespace in a command. In a command like this:'
+        message += '\n\n'
+        message += 'my_program -o d a=virt profile="My Profile" path'
+        message += '\n\n'
+        message += 'The parameters would be "-o", "d", "a=virt", "profile="My Profile"", and "path" (or, likely for our purposes here, "%path%"). While you may need quotes within a parameter, you should not, generally speaking, wrap a whole parameter in quotes to avoid whitespace issues--that is handled for you, so do not worry about it; trying to add extra quotes will just break things.'
+        message += '\n\n'
+        message += 'You can mix a replacement token in amongst other text, or even have multiple tokens in the same parameter. "%parameter1%-%parameter2%" is fine. You cannot use the same token more than once per parameter, but you can use it in multiple parameters!'
+        
+        try:
+            
+            result = ClientGUIDialogsQuick.EnterText(
+                self,
+                message,
+                default = parameter,
+                placeholder = '-o',
+                allow_blank = False,
+                allow_whitespace = True,
+                title = 'Enter parameter'
+            )
+            
+            return result
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise HydrusExceptions.VetoException()
+            
+        
+    
+    def _Paste( self ):
+        
+        try:
+            
+            raw_text = CG.client_controller.GetClipboardText()
+            
+        except HydrusExceptions.DataMissing as e:
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', str( e ) )
+            
+            return
+            
+        
+        try:
+            
+            raw_text = raw_text.strip()
+            
+            items = raw_text.split( ' ' )
+            
+        except Exception as e:
+            
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A command like "my_progam -d -e -a %path%"', e )
+            
+            return
+            
+        
+        if len( items ) == 0:
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error!', 'Did not parse anything from the clipboard!' )
+            
+            return
+            
+        
+        executable_path = items[0]
+        executable_parameter_templates = items[1:]
+        
+        message = f'I took your paste and got a command "{executable_path}" and {HydrusNumbers.ToHumanInt(len(executable_parameter_templates))} parameters'
+        
+        if len( executable_parameter_templates ) > 0:
+            
+            message += ':'
+            message += HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( executable_parameter_templates, do_sort = False, no_trailing_whitespace = True )
+            
+        else:
+            
+            message += '.'
+            
+        
+        message += '\n\n'
+        message += 'Look good?'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.DialogCode.Accepted:
+            
+            self._executable_path.setText( executable_path )
+            self._executable_parameter_templates.SetData( executable_parameter_templates )
+            
+        
+    
+    def UserIsOKToOK( self ):
+        
+        if self._executable_path.text() == '':
+            
+            message = 'Hey, you really need to put an exe name/path in the path box. Are you sure you want to save this?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def GetValue( self ):
+        
+        executable_path = self._executable_path.text()
+        executable_parameter_templates = self._executable_parameter_templates.GetData()
+        
+        return ( executable_path, executable_parameter_templates )
+        
+    
+
+class EditProcessCallPanel( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
@@ -255,48 +449,49 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         self._we_are_initialised = False
         self._pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE
         
+        self._executable_path = ''
+        self._executable_parameter_templates = []
+        
         self._input_parameter_processing_rules_box = ClientGUICommon.StaticBox( self, 'input parameters' )
         
         self._parameter_types_to_input_parameter_processing_rule_panels: dict[ int, EditInputParameterProcessingRulePanel ] = {}
         
-        self._path_template = QW.QLineEdit( self )
-        self._path_template.setPlaceholderText( 'program %path%' )
-        self._path_template.setToolTip( ClientGUIFunctions.WrapToolTip( 'This line will be executed in your terminal with the given replacement strings swapped in.' ) )
+        self._example_command_template = QW.QLineEdit( self )
+        self._example_command_template.setToolTip( ClientGUIFunctions.WrapToolTip( 'What will be executed.' ) )
+        self._example_command_template.setReadOnly( True )
+        
+        self._edit_executable_command_and_parameters_button = ClientGUICommon.BetterButton( self, 'edit', self._EditCommandAndParameters )
         
         self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time' )
         self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that you will be interacting with, like an external file viewer, set this to "this can live for a very long time", and hydrus will know to just spawn it and return immediately, without waiting for any response.' ) )
         
         self._hide_terminal = QW.QCheckBox( self )
-        self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging.' ) )
+        self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging. Note: it will regularly be ignored by certain OS/call situations, so do not panic if unchecking it does not seem to change anything.' ) )
         
         self._text = QW.QCheckBox( self )
         self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdout), uncheck it.' ) )
-        
-        self._availability_call = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = '/path/to/program --version', none_phrase = 'do not use' )
-        self._availability_call.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you like, set this to something quick, harmless, and valid, like the absolute path of the exe with a --version parameter. Hydrus will try to call this when it needs to test availability.' ) )
-        
-        self._availability_which_name = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = 'program_name', none_phrase = 'do not use' )
-        self._availability_which_name.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the exe is on the PATH, set this to its name and hydrus will do a "which" on it when it needs to test availability.' ) )
         
         #
         
         vbox = QP.VBoxLayout()
         
-        rows = []
-        
-        
-        st = ClientGUICommon.BetterStaticText( self, label = 'This makes a simple command-line call in your terminal. Select which input parameter(s) you want to use and give them replacement tokens like \'%path%\', and then specify a launch template that includes those replacement tokens (e.g. \'my_program "%path%"\').\n\nThe final command is sent straight to your shell interpreter, as-is, just as if you typed it, so you need to put quote marks around parameters that may include whitespace.' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'This makes a general process call. Select which input parameter(s) you want to use and make sure you are happy with their replacement tokens (the \'%path%\' stuff, which you can rename if you need to), and then insert those parameters in your command template (e.g. \'my_program "%path%"\'). The "availability" test for this call just does a "which" on the executable path, which may not always target what you need.' )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._input_parameter_processing_rules_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        rows.append( ( 'command template: ', self._path_template ) )
+        rows = []
+        
+        command_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( command_hbox, self._example_command_template, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( command_hbox, self._edit_executable_command_and_parameters_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        rows.append( ( 'command template: ', command_hbox ) )
         rows.append( ( 'timeout: ', self._timeout ) )
         rows.append( ( 'hide terminal: ', self._hide_terminal ) )
         rows.append( ( 'output is text: ', self._text ) )
-        rows.append( ( 'OPTIONAL - call to test availability: ', self._availability_call ) )
-        rows.append( ( 'OPTIONAL - "which" PATH name to test availability: ', self._availability_which_name ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -306,15 +501,31 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         self.setLayout( vbox )
         
-        self._path_template.textChanged.connect( self.valueChanged )
         self._timeout.timeDeltaChanged.connect( self.valueChanged )
         self._hide_terminal.clicked.connect( self.valueChanged )
         self._text.clicked.connect( self.valueChanged )
-        self._availability_call.valueChanged.connect( self.valueChanged )
-        self._availability_which_name.valueChanged.connect( self.valueChanged )
         
     
-    def _GetCurrentInputParameterProcessingRules( self ) -> list[ ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule ]:
+    def _EditCommandAndParameters( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit command and parameters' ) as dlg:
+            
+            panel = EditProcessCallExecutableAndParametersPanel( dlg, self._executable_path, self._executable_parameter_templates )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                ( self._executable_path, self._executable_parameter_templates ) = panel.GetValue()
+                
+                self._UpdateExampleCommandTemplate()
+                
+                self.valueChanged.emit()
+                
+            
+        
+    
+    def _GetCurrentInputParameterProcessingRules( self ) -> list[ ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule ]:
         
         input_parameter_processing_rules = []
         
@@ -331,7 +542,17 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         return input_parameter_processing_rules
         
     
+    def _UpdateExampleCommandTemplate( self ):
+        
+        self._example_command_template.setText( self._executable_path + ' ' + ' '.join( self._executable_parameter_templates ) )
+        
+    
     def CheckValid( self ):
+        
+        if self._executable_path == '':
+            
+            raise HydrusExceptions.VetoException( 'No executable path is set!' )
+            
         
         input_parameter_processing_rules = self._GetCurrentInputParameterProcessingRules()
         
@@ -340,11 +561,9 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             raise HydrusExceptions.VetoException( 'No input parameters are being used! This is only appropriate if you just want to send a notification signal every time this event happens.' )
             
         
-        path_template = self._path_template.text()
-        
         for input_parameter_processing_rule in input_parameter_processing_rules:
             
-            if input_parameter_processing_rule.replacement_string not in path_template:
+            if True not in ( input_parameter_processing_rule.replacement_string in parameter for parameter in self._executable_parameter_templates ):
                 
                 raise HydrusExceptions.VetoException( f'The replacement string "{input_parameter_processing_rule.replacement_string}" for input parameter "{ClientExecutablePipelines.parameter_types_to_strs[ input_parameter_processing_rule.parameter_type ]}" is not in the command template!' )
                 
@@ -353,12 +572,11 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
     
     def GetValue( self ):
         
-        path_template = self._path_template.text()
-        
         input_parameter_processing_rules = self._GetCurrentInputParameterProcessingRules()
         
-        actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate(
-            path_template = path_template,
+        actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+            executable_path = self._executable_path,
+            executable_parameter_templates = self._executable_parameter_templates,
             input_parameter_processing_rules = input_parameter_processing_rules,
         )
         
@@ -371,14 +589,12 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
             
         else:
             
-            actual_call.SetTimeout( timeout )
+            actual_call.SetTimeout( int( timeout ) )
             actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( False )
             
         
         actual_call.SetHideTerminal( self._hide_terminal.isChecked() )
         actual_call.SetText( self._text.isChecked() )
-        actual_call.SetAvailabilityCall( self._availability_call.GetValue() )
-        actual_call.SetAvailabilityWhichName( self._availability_which_name.GetValue() )
         
         return actual_call
         
@@ -398,7 +614,7 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         for parameter_type in ClientExecutablePipelines.executable_pipeline_types_to_input_params[ self._pipeline_type ]:
             
-            parameter_processing_rule = ClientExecutableActualCall.LocalProcessCallTemplateInputParameterProcessingRule( parameter_type )
+            parameter_processing_rule = ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule( parameter_type )
             
             input_parameter_processing_rule_panel = EditInputParameterProcessingRulePanel( self._input_parameter_processing_rules_box, parameter_processing_rule )
             input_parameter_processing_rule_panel.valueChanged.connect( self.valueChanged )
@@ -415,11 +631,14 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         self._we_are_initialised = True
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessCallTemplate, pipeline_type: int ):
+    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessCall, pipeline_type: int ):
         
         self.blockSignals( True )
         
         self.SetPipelineType( pipeline_type )
+        
+        self._executable_path = actual_call.GetExecutablePath()
+        self._executable_parameter_templates = actual_call.GetExecutableParameterTemplates()
         
         input_parameter_processing_rules = actual_call.GetInputParameterProcessingRules()
         
@@ -431,7 +650,7 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
                 
             
         
-        self._path_template.setText( actual_call.GetPathTemplate() )
+        self._UpdateExampleCommandTemplate()
         
         if actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
             
@@ -444,8 +663,6 @@ class EditProcessCallTemplatePanel( QW.QWidget ):
         
         self._hide_terminal.setChecked( actual_call.GetHideTerminal() )
         self._text.setChecked( actual_call.GetText() )
-        self._availability_call.SetValue( actual_call.GetAvailabilityCall() )
-        self._availability_which_name.SetValue( actual_call.GetAvailabilityWhichName() )
         
         self.blockSignals( False )
         
@@ -465,12 +682,12 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         self._call_types_choice = ClientGUICommon.BetterChoice( self )
         
-        self._call_types_choice.addItem( 'local terminal call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate )
+        self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall )
         
         self._edit_actual_call_window = QW.QWidget( self )
         
         self._call_types_to_windows = {
-            ClientExecutableActualCall.ExecutableLocalProcessCallTemplate : EditProcessCallTemplatePanel( self ),
+            ClientExecutableActualCall.ExecutableLocalProcessCall : EditProcessCallPanel( self ),
             ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile : DefaultLaunchFileWidget( self ),
             ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL : DefaultLaunchURLWidget( self ),
         }
@@ -548,7 +765,7 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         self._call_types_choice.clear()
         
         labels_and_call_types: list[ tuple[ str, type ] ] = [
-            ( 'local terminal call', ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ),
+            ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall ),
         ]
         
         if self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
@@ -664,7 +881,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         super().__init__( parent, 'testing' )
         
-        self._actual_call: ClientExecutableActualCall.ExecutableActualCall = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate()
+        self._actual_call: ClientExecutableActualCall.ExecutableActualCall = ClientExecutableActualCall.ExecutableLocalProcessCall()
         
         self._test_availability_button = ClientGUICommon.BetterButton( self, 'test availability!', self._TestAvailability )
         
@@ -804,7 +1021,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         input_params = self._GetInputParams()
         actual_call = self._actual_call
         
-        if isinstance( actual_call, ClientExecutableActualCall.ExecutableLocalProcessCallTemplate ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
+        if isinstance( actual_call, ClientExecutableActualCall.ExecutableLocalProcessCall ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
             
             message += ' (forcing a 15 second timeout for testing purposes)'
             
@@ -1118,6 +1335,8 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 
                 self._AddCallableFullyFormed( external_call )
                 
+            
+            self._external_calls.Sort()
             
         
         CG.client_controller.CallAfterQtSafe( self, add_defaults )

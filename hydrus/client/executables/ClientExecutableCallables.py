@@ -21,7 +21,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         
         if actual_call is None:
             
-            actual_call = ClientExecutableActualCall.ExecutableLocalProcessCallTemplate()
+            actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall()
             
         
         self._callable_key = HydrusData.GenerateKey()
