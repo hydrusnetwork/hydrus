@@ -31,17 +31,17 @@ Running the program from source takes a little extra first-time setup, but it al
 
 === "Linux"
     
-    I generally recommend Linux users [run from source](running_from_source.md), but I do offer an Ubuntu-built built release every week. To set up this built release:
+    I generally recommend Linux users [run from source](running_from_source.md), but I do offer an Ubuntu-built built release every week:
     
-    *   Get the .tar.zst from the github releases page. Extract it anywhere you like and create a shortcut to the 'hydrus_client' executable in the base install dir. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
-    *   If you have problems running the Ubuntu build, [running from source](running_from_source.md) is almost always an improvement.
+    *   For the built release, just get the .tar.zst from the github releases page. Extract it anywhere you like and create a shortcut to the 'hydrus_client' executable in the base install dir. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
+    *   **If you have problems running the Ubuntu build, [running from source](running_from_source.md) is almost always an improvement.**
     *   You can also try [running the Windows version in Wine/Bottles](wine.md).
     *   **Third parties (not maintained by Hydrus Developer)**:  
-        * (These both run from source, so if you have trouble with the built release, they may work better for you!)
+        * (These both run from source under the hood, so if you have trouble with the built release, they may work better for you!)
         * [AUR package](https://aur.archlinux.org/packages/hydrus/) - *Although please note that since AUR packages work off your system python, this has been known to cause issues when Arch suddenly updates to the latest Qt or something before we have had a chance to test things and it breaks hydrus. If you can, try just [running from source](running_from_source.md) yourself instead, where we can control things better!*
         * [flatpak](https://flathub.org/apps/details/io.github.hydrusnetwork.hydrus) 
     
-    Then please check which of these notes may apply to you:
+    Also, please check which of these notes may apply to you:
     
     !!! note "Qt compatibility"
         
@@ -78,8 +78,8 @@ Running the program from source takes a little extra first-time setup, but it al
         I expect to revisit this question in future versions of Qt and Wayland, and I plan to try a different mpv embedding technique that I know Wayland should support--we'll see if the situation stabilises.
     
     !!! note "installing mpv"
-        *   You might need to get 'libmpv1' or 'libmpv2' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
-            * `sudo apt install libmpv1` or `sudo apt install libmpv2`
+        *   You might need to get `libmpv1` or `libmpv2` or `mpv-libs` to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
+            * `sudo apt install libmpv1` or `sudo apt install libmpv2`. For Fedora you are looking at `sudo dnf install mpv-libs`.
             * Use _options->media_ to set your audio/video/animations to 'show using mpv' once you have it installed.
             * If the `help->about` window provides you an mpv error popup like this:  
         ```

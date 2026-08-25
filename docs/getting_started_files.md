@@ -118,8 +118,31 @@ The hydrus client's workflows are not designed for half-finished files that you 
 
 Similarly, hydrus does not expect its files to ever change! Do not go into the `client_files` folder and edit files in-place. The file storage is strictly read-only, and if you violate that, hydrus will eventually notice and assume it was hard drive damage. If you want to transform files, you should export them, edit them, and re-import them.
 
-In general, Hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.
+In general, hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.
 
-If you are looking for a comic manager to supplement hydrus, check out this user-made guide to other archiving software [here](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)! [ComicRackCE](https://github.com/maforget/ComicRackCE) and [Lanraragi](https://github.com/Difegue/LANraragi) are both worth looking into. For ebooks, I personally use and recommend [Calibre](https://github.com/kovidgoyal/calibre).
+### Other Software
 
-And although the client can manage millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui window. As you learn to use it, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total _items_, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy. One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million URLs queued up! Just try and take things slow until you figure out what your computer's limits are.
+If you are looking for another media manager to supplement hydrus, check out this user-made guide to other archiving software [here](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)!
+
+[ComicRackCE](https://github.com/maforget/ComicRackCE) and [Lanraragi](https://github.com/Difegue/LANraragi) are both worth looking into for comics. For ebooks, I personally use and recommend [Calibre](https://github.com/kovidgoyal/calibre). Similarly, hydrus can be a good fit for small isolated audio like voice clips, but if you want a clean and lightweight music player, try [Deadbeef](https://deadbeef.sourceforge.io/) or [Foobar](https://www.foobar2000.org/).
+
+Furthermore, hydrus is not for everyone! Some people prefer a nicer UI or want to keep filenames; others want something more intricate and powerful, or simply something less buggy. It is fine to try hydrus and bounce off it--if you do, check out these similar media-management projects:
+
+Easier solutions:
+
+- [Tag Studio](https://docs.tagstud.io/) - A clean and nice media manager. Does similar jobs to hydrus, but much more user-friendly and with a great UI.
+- [TagSpaces](https://www.tagspaces.org/) - A clean and nice media manager. Many features and integrations and a great UI.
+
+Created by hydrus users:
+
+- [IDHAN](https://github.com/KJNeko/IDHAN) - (In testing 2026-08) A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.
+- [Naiad](https://github.com/scoopscoop/naiad-net) - (Recently launched 2026-08) A hydrus-like media manager with its own PTR-style tag-sharing solution.
+- [refr](https://github.com/therandomlance/refr) - (Recently launched 2026-08) An Immich-like with a focus on managing art reference images.
+
+## File Limits
+
+Although the client can manage millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui page. The whole session will tend to chug around 150,000 files, but some users with strong computers have 800k+ regularly and claim no problems.
+
+As you learn to use hydrus, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total _items_, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy.
+
+One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million URLs queued up! Just try and take things slow until you figure out what your computer's limits are.

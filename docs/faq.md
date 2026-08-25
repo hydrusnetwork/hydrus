@@ -143,6 +143,14 @@ If you are feeling adventurous, you can also explore the newer [AI-tagging tools
 
 Ultimately, though, a good and simple way to backfill your files' tags is just rely on normal downloading workflows. Try downloading your favourite artists (and later set up subscriptions) and you will naturally get files you like, with tags, and if, by (expected) serendipity, a file on the site is the same as one you already imported, hydrus will add the tags to it retroactively. 
 
+## Can I run the Client headless (no GUI)? { id="headless" }
+
+_As the Client API has become more useful, some users want to run a database "node" on a headless server and then dial into it with various Client API browsing tools._
+
+You cannot do this yet, sorry! I wrote hydrus without much planning, and the core components of the application are a huge and tangled knot. The GUI (Qt) components are critical to startup, shutdown, and general operation, so I can't just say 'boot without any UI' via a launch switch without a _ton_ of refactoring.
+
+This is all doable, and when I do pertinent code cleanup, I refactor in this direction, but to get it done properly, it will need a real, full push. We will probably want nicer options-configuration-by-API too at that point. This is all coming, but I can't say when. It may well be AI that does it, once it gets good enough!
+
 ## Does Hydrus run ok off an encrypted drive partition? { id="encryption" }
 
 Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.
