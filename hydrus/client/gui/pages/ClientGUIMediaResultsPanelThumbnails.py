@@ -2848,6 +2848,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         #self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.MasonryLayout( ClientGUIThumbnailLayouts.MasonryLayout.VariableDimension.WIDTH )
         self._thumbnail_layout: ClientGUIThumbnailLayouts.ThumbnailLayout = ClientGUIThumbnailLayouts.RegularGridLayout()
         
+        self._currently_animating = False
         self._last_animation_update_time_float = HydrusTime.GetNowFloat()
         
         super().__init__( parent, page_key, page_manager, media_results )
@@ -2866,8 +2867,6 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         CG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
-        
-        CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
     
     def _ArrangeThumbnails( self ):
@@ -2938,7 +2937,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
     
     def _FadeThumbnails( self, media ):
         
-        fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
+        fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' ) and self.isVisible()
         
         for m in media:
             
@@ -2956,6 +2955,13 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                     HydrusData.Print( f'fade thumbs - fade in {m.GetHash().hex()}' )
                     
                 
+                if not self._currently_animating:
+                    
+                    self._currently_animating = True
+                    
+                    CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+                    
+                
                 thumb.StartFadeIn()
                 
             else:
@@ -2964,6 +2970,8 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                     
                     HydrusData.Print( f'fade thumbs - immediate update {m.GetHash().hex()}' )
                     
+                
+                thumb.Invalidate()
                 
                 thumb.update()
                 
@@ -4349,20 +4357,31 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             return
             
         
-        if HG.thumbnail_graphics_view_report_mode:
-            
-            HydrusData.Print( f'animation update on {HydrusNumbers.ToHumanInt(len(self._possibly_visible_thumbnails))} thumbs' )
-            
+        num_animating = 0
         
         for thumb in self._possibly_visible_thumbnails:
             
             if thumb.is_animating:
                 
+                num_animating += 1
+                
                 thumb.AnimationUpdate()
                 
             
         
+        if HG.thumbnail_graphics_view_report_mode:
+            
+            HydrusData.Print( f'animation update on {HydrusNumbers.ValueRangeToPrettyString( num_animating, len(self._possibly_visible_thumbnails))} thumbs' )
+            
+        
         self._last_animation_update_time_float = HydrusTime.GetNowFloat()
+        
+        if num_animating == 0:
+            
+            self._currently_animating = False
+            
+            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            
         
     
     def WaterfallThumbnails( self, page_key, medias ):
@@ -4474,8 +4493,6 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
             self._fade_in_started_time_float = None
             
             self._cached_old_pixmap_for_fade = None
-            
-            self.is_animating = False # now this is great that the only possible animation we have is the fading but if in the future we have multiple types we can't just set it to False here
             
             return 1.0
             
@@ -5117,6 +5134,11 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
         
         try:
             
+            if HG.thumbnail_graphics_view_report_mode:
+                
+                HydrusData.Print( f'painting a thumb: {self.boundingRect()} / {option.exposedRect}' )
+                
+            
             thumbnails_cache = CG.client_controller.thumbnails_cache_graphics_view_test
             
             dpr = painter.device().devicePixelRatio()
@@ -5157,6 +5179,8 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
                         painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
                         
                     
+                    self.is_animating = False
+                    
                     return
                     
                 
@@ -5177,6 +5201,11 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
             
             fade_opacity = self._GetFadeInOpacity()
             
+            if fade_opacity >= 1.0:
+                
+                self.is_animating = False
+                
+            
             if fade_opacity < 1.0 and self._cached_old_pixmap_for_fade is not None: # fade-in in progress, draw the old image first if available
                 
                 painter.drawPixmap( 0, 0, self._cached_old_pixmap_for_fade )
@@ -5187,6 +5216,8 @@ class ThumbnailGraphicsViewTest( QW.QGraphicsItem ):
             painter.drawPixmap( 0, 0, self._cached_pixmap )
             
         except Exception as e:
+            
+            self.is_animating = False
             
             ClientGUIExceptionHandling.HandlePaintEventException( self._view, e )
             
