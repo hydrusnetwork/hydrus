@@ -3585,6 +3585,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file report mode', 'Have the file manager report file request information, where supported.', HG.file_report_mode, self._SwitchBoolean, 'file_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file import report mode', 'Have the db and file manager report file import progress.', HG.file_import_report_mode, self._SwitchBoolean, 'file_import_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'file sort report mode', 'Have the file sorter spam you with sort key results.', HG.file_sort_report_mode, self._SwitchBoolean, 'file_sort_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'graphics view thumbnail update report mode', 'Have the new thumbnail graphics view test report update calls.', HG.thumbnail_graphics_view_report_mode, self._SwitchBoolean, 'thumbnail_graphics_view_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'gui report mode', 'Have the gui report inside information, where supported.', HG.gui_report_mode, self._SwitchBoolean, 'gui_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'hover window report mode', 'Have the hover windows report their show/hide logic.', HG.hover_window_report_mode, self._SwitchBoolean, 'hover_window_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'idle report mode', 'Make popups about idle mode on/off decisions.', HG.idle_report_mode, self._SwitchBoolean, 'idle_report_mode' )
@@ -7037,6 +7038,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'thumbnail_debug_mode':
             
             HG.thumbnail_debug_mode = not HG.thumbnail_debug_mode
+            
+        elif name == 'thumbnail_graphics_view_report_mode':
+            
+            HG.thumbnail_graphics_view_report_mode = not HG.thumbnail_graphics_view_report_mode
             
         elif name == 'force_idle_mode':
             

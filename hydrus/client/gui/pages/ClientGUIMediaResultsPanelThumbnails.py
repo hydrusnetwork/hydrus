@@ -1988,7 +1988,6 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
         
-        
     
     def WaterfallThumbnails( self, page_key, thumbnails ):
         
@@ -2952,9 +2951,19 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             
             if fade_thumbnails:
                 
+                if HG.thumbnail_graphics_view_report_mode:
+                    
+                    HydrusData.Print( f'fade thumbs - fade in {m.GetHash().hex()}' )
+                    
+                
                 thumb.StartFadeIn()
                 
             else:
+                
+                if HG.thumbnail_graphics_view_report_mode:
+                    
+                    HydrusData.Print( f'fade thumbs - immediate update {m.GetHash().hex()}' )
+                    
                 
                 thumb.update()
                 
@@ -3070,6 +3079,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         SAFETY_MARGIN_PX = 64 # 512
         
         rect = rect.marginsAdded( QC.QMarginsF( SAFETY_MARGIN_PX, SAFETY_MARGIN_PX, SAFETY_MARGIN_PX, SAFETY_MARGIN_PX ) )
+        
+        if HG.thumbnail_graphics_view_report_mode:
+            
+            HydrusData.Print( f'visible rect changed with rect {rect}' )
+            
         
         new_possibly_visible_thumbnails: set[ ThumbnailGraphicsViewTest ] = set( self.scene().items( rect, QC.Qt.ItemSelectionMode.IntersectsItemBoundingRect ) )
         
@@ -4245,6 +4259,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             self._media_to_thumbnails[ media ].ClearCachesAndInvalidate()
             
         
+        if HG.thumbnail_graphics_view_report_mode:
+            
+            HydrusData.Print( f'update scene - redraw all thumbs' )
+            
+        
         self.scene().update()
         
     
@@ -4315,6 +4334,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         
         self._ArrangeThumbnails()
         
+        if HG.thumbnail_graphics_view_report_mode:
+            
+            HydrusData.Print( f'update scene - thumbs reset' )
+            
+        
         self.scene().update()
         
     
@@ -4323,6 +4347,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         if HydrusTime.GetNowFloat() - self._last_animation_update_time_float < FRAME_DURATION_60FPS:
             
             return
+            
+        
+        if HG.thumbnail_graphics_view_report_mode:
+            
+            HydrusData.Print( f'animation update on {HydrusNumbers.ToHumanInt(len(self._possibly_visible_thumbnails))} thumbs' )
             
         
         for thumb in self._possibly_visible_thumbnails:

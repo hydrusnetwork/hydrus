@@ -74,6 +74,7 @@ pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False
 potential_duplicates_report_mode = False
+thumbnail_graphics_view_report_mode = False
 
 # just to note for this guy, we are looking at:
     # MainLoop: quick downloader
