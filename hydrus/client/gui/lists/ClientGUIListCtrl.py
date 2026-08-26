@@ -2089,6 +2089,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._UpdateButtons()
         
+        return button
+        
     
     def AddSeparator( self, pixels = 12 ):
         

@@ -380,13 +380,7 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def ShowMicroNotification( self, text ):
         
-        QW.QToolTip.showText(
-            self.mapToGlobal( self.rect().bottomLeft() ),
-            text,
-            self,
-            self.rect(),
-            3000
-        )
+        ClientGUIFunctions.ShowMicroNotification( self, text )
         
     
 
@@ -1446,13 +1440,7 @@ class IconButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def ShowMicroNotification( self, text ):
         
-        QW.QToolTip.showText(
-            self.mapToGlobal( self.rect().bottomLeft() ),
-            text,
-            self,
-            self.rect(),
-            3000
-        )
+        ClientGUIFunctions.ShowMicroNotification( self, text )
         
     
 

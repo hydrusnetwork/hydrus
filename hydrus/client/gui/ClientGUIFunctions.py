@@ -383,6 +383,23 @@ def SetFocusLater( win: QW.QWidget ):
     CG.client_controller.CallAfterQtSafe( win, win.setFocus, QC.Qt.FocusReason.OtherFocusReason )
     
 
+def ShowMicroNotification( widget: QW.QWidget, text ):
+    
+    # we add a tiny delay here because many 'paste' events and such will trigger some ui updates and/or focus bouncing that will clear an instantaneous tooltip
+    
+    CG.client_controller.CallLaterQtSafe(
+        widget,
+        0.05,
+        'tooltip micro-notification',
+        QW.QToolTip.showText,
+        widget.mapToGlobal( widget.rect().bottomLeft() ),
+        text,
+        widget,
+        widget.rect(),
+        3000
+    )
+    
+
 def TLWIsActive( window ):
     
     return window.window() == QW.QApplication.activeWindow()
