@@ -147,9 +147,9 @@ Ultimately, though, a good and simple way to backfill your files' tags is just r
 
 _As the Client API has become more useful, some users want to run a database "node" on a headless server and then dial into it with various Client API browsing tools._
 
-You cannot do this yet, sorry! I wrote hydrus without much planning, and the core components of the application are a huge and tangled knot. The GUI (Qt) components are critical to startup, shutdown, and general operation, so I can't just say 'boot without any UI' via a launch switch without a _ton_ of refactoring.
+You cannot do this yet, sorry! I wrote hydrus without much planning, and the core components of the application are a huge and tangled knot. The GUI (Qt) components are critical to startup, shutdown, and general operation, so I can't just say 'boot without Qt UI components' via a launch switch without a _ton_ of refactoring.
 
-This is all doable, and when I do pertinent code cleanup, I refactor in this direction, but to get it done properly, it will need a real, full push. We will probably want nicer options-configuration-by-API too at that point. This is all coming, but I can't say when. It may well be AI that does it, once it gets good enough!
+This is all doable, and when I do pertinent code cleanup, I refactor in this direction, but to get it done properly, it will need a real, full push. We will probably want nicer options-configuration-by-API too, at that point. This is all coming, but I can't say when. It may well be AI that does it, once it gets good enough!
 
 **That said, one user says installing `libglib2.0-0` and setting `QT_QPA_PLATFORM=offscreen` environment variable does the job. I would be interested in feedback!**
 

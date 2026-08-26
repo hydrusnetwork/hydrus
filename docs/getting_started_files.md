@@ -122,9 +122,9 @@ In general, hydrus is good for individual files like you commonly find on imageb
 
 ### Other Software
 
-If you are looking for another media manager to supplement hydrus, check out this user-made guide to other archiving software [here](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)!
+If you are looking for another media manager to supplement hydrus, check out [this user-made guide to other archiving software](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software)!
 
-[ComicRackCE](https://github.com/maforget/ComicRackCE) and [Lanraragi](https://github.com/Difegue/LANraragi) are both worth looking into for comics. For ebooks, I personally use and recommend [Calibre](https://github.com/kovidgoyal/calibre). Similarly, hydrus can be a good fit for small isolated audio like voice clips, but if you want a clean and lightweight music player, try [Deadbeef](https://deadbeef.sourceforge.io/) or [Foobar](https://www.foobar2000.org/).
+[ComicRackCE](https://github.com/maforget/ComicRackCE) and [Lanraragi](https://github.com/Difegue/LANraragi) are both worth looking into for comics/manga. For ebooks, I personally use and recommend [Calibre](https://github.com/kovidgoyal/calibre). Similarly, hydrus can be a good fit for small isolated audio like voice clips, but if you want a clean and lightweight music player that does playlists properly, try [Deadbeef](https://deadbeef.sourceforge.io/) or [Foobar](https://www.foobar2000.org/).
 
 Furthermore, hydrus is not for everyone! Some people prefer a nicer UI or want to keep filenames; others want something more intricate and powerful, or simply something less buggy. It is fine to try hydrus and bounce off it--if you do, check out these similar media-management projects:
 

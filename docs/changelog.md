@@ -7,6 +7,50 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 685](https://github.com/hydrusnetwork/hydrus/releases/tag/v685)
+
+### misc
+
+* the 3-second tooltip micro-notification experiment on the 'edit notes' 'copy urls' button worked out, so I wrote the code up properly and made it so all 20+ copy icon buttons across the program say something like 'Copied!' or 'Copied x ratings!' on click, all 23+ paste icon buttons similarly do 'Pasted!' or 'Pasted x texts!'. I'll slowly integrate this into other buttons that do a thing that isn't immediately obvious
+* the media viewer right-click menu's 'volume' submenu now has a volume slider rather than the list of checkboxes
+* fixed a recent regression that was stopping the media viewer from finding and activating an already-existing manage tags window when you did 'manage tags' from the media viewer--it was instead creating multiple windows, which is not desired (#2085)
+* if you have very large or very small thumbnails, the thumbnail pair lists in auto-resolution now size better, setting saner min/max sizes for the thumbnail item cells and scaling thumbs to that size when a min/max limit applies (#2079)
+* added a 'show anything with specific bandwidth rules' checkbox to 'review bandwidth usage'. if you import a downloader and it comes with bandwidth rules, you can now find those without having to actually use the site
+* added a 'can you run the client headless? (not yet)' to the FAQ page, and then added a test line to it from a user who found a possible way
+
+### alternate software
+
+* expanded and formalised the 'if you like hydrus, maybe you will like this software too/instead' section in the help here: https://hydrusnetwork.github.io/hydrus/getting_started_files.html#other_software
+* as part of this, I am listing three hydrus-adjacent projects that are coming into public this month, same way as I list stuff in the Client API page. feel free to check them out! they are--
+* IDHAN (https://github.com/KJNeko/IDHAN) -  A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.
+* Naiad (https://github.com/scoopscoop/naiad-net) - A hydrus-like media manager with its own PTR-style tag-sharing solution.
+* refr (https://github.com/therandomlance/refr) - An Immich-like with a focus on managing art reference images.
+* if you create your own hydrus-like or similar tech that hydrus users may like, please link me and I'll list it there!
+
+### executable manager
+
+* I invite advanced users to play with this again (`options->external programs`). there's a little change in the call we were playing with last week
+* after talking it out with people, I realised it would be better not to have two 'local process calls' for 'one template string' vs 'command + list of params', and updated the current prototype object, which was the former, to be the latter. thus the current terminal call is updated to have an exe and a list of params with replacement strings, rather than just one template string. it calls the process directly with the params all nice and separate rather than a raw string to your shell, so no quotespam needed. although editing separate params is more of a pain than just a text box, it is neater and more secure to only do it like this, saving us several headaches, and the only blocking cost of eliminating the worse yet easier option is writing some good UI to make editing the better option easier
+* I've therefore tried to make some decent edit UI. nice and simple exe and param list, and copy/paste buttons so you can just paste a raw template if you have a nice simple one
+* the 'availability call' and 'which availability call' settings are gone; we now just do a `which` on the given exe. this breaks the macOS 'open "Google Chrome" blah' calls, but we'll revisit this if it ever proves a big problem
+* the 'open externally' job now provides 'file hash (sha256)' and 'file id' input parameters
+* some stuff is renamed from, say, 'local terminal call' to 'local process call' and so on to reflect the changes around here
+* improved some labels and update signals in the ui--stuff like updating the example templates on a string processor change
+
+### new thumbnail grid test
+
+* advanced users are encouraged to play with this more (`options->thumbnails->New Rendering Tech Test`). I think we have it pretty much nailed down now and so I'm mostly just optimising and cleaning in prep for switching everyone over, and I'd like to see if there are any more visual bugs lurking
+* a bug in the new thumbnail grid test where thumbnails would not redraw is fixed. it turned out there was some duff redraw logic when the 'fade thumbnails' option was off
+* set it so the new thumbnail grid only registers with the animation timer while it has thumbs animating--as soon as there is no more work, it delists itself
+* the new thumbnail grid no longer attempts to animate thumbs if it is not currently on a visible page; it just schedules them for instant draw
+* a thumbnail now correctly understands it is no longer animating if its paint errors out or its fade-in time or backing pixmap are invalidated, which triggers the above delisting
+* added `help->debug->report modes->graphics view thumbnail update report mode`, which spams a bunch of decisions about the new painting tech to log
+
+### boring cleanup
+
+* did some MainLoop Daemon refactoring, just getting over a hump to move some responsibility to the superclass
+* moved to nicer ui-cleanup calls in a bunch of my async code
+
 ## [Version 684](https://github.com/hydrusnetwork/hydrus/releases/tag/v684)
 
 ### misc
@@ -493,39 +537,3 @@ title: Changelog
 * updated the 'running from source' help to talk about `pyenv`, which makes it easy to install and use a different version of python with hydrus
 * updated the 'running Windows version in Wine' help document for the newest version and added info about Bottles: https://hydrusnetwork.github.io/hydrus/wine.html . I managed to get v675 up with a minimum of fuss and not too much weirdness (even ffmpeg and mpv worked!?!), so I now have a basic Windows test environment, hooray. doing it manually with winetricks on my system wine-9.0 did not work, it needed Bottles's newer wine-11.0
 * added easy copy buttons to the command quotes in 'running from source' help
-
-## [Version 675](https://github.com/hydrusnetwork/hydrus/releases/tag/v675)
-
-### misc
-
-* the command palette will now _not_ highlight an item if the initial results list opens underneath the mouse. I'm trying to resolve a common annoyance here, but I don't use this much IRL, so let me know how this feels to you
-* the new 'recognise an unmounted NAS as similar to a missing path on boot' error catching now detects a locked bitlocker drive on Windows. updated the UI text in the dialogs around this, too
-* fixed an unhelpful old status check that said 'if all network traffic is paused, repository sync maintenance daemon will not work', which was blocking local-only repo processing
-* added a link to 'Hydrus Slideshow Frame', a user-made KDE Plasma Widget for a hydrus photo/slideshow frame, to the Client API help (https://github.com/apampurin/hydrus-slideshow)
-
-### custom stylesheets
-
-* A hydrus user created a bunch of great 'Nereid' stylesheets right here: https://github.com/6788-00/nereid-theme-hydrus . these are now rolled into hydrus by default
-* for stylesheet creators, I had an idea how to fix the external asset relative/absolute path problems we've had. I have written a test and would love to have some feedback on Windows and macOS. To do the test--
-    * create/copy a new stylesheet into your `db/static/qss` folder. change any 'url' paths from any existing `url("path/to/my/db/static/qss/blah/my_image.svg")`, to `url("static/qss/blah/my_image.svg)`, as if it were loading from and relative to the install dir. if you are copying from the install qss dir, maybe the paths are already in this format
-    * hit up `help->debug->debug modes->qss absolute path test mode`
-    * load your QSS file in the `options->style` section. ok the dialog if you need to hunt around for an asset. did the assets load ok?
-* let me know how it went. in that test mode, I detect paths in the normalised format and swap them with the absolutes on load. if things worked multiplat, I'll make this normal behaviour and this problem is fixed
-
-### new thumbnail GraphicsView test
-
-* a user has rewritten my ancient old thumbnail grid to a new Qt-nice rendering system. I really appreciate his work. I have integrated his code as a new test, and early results are very promising
-* it is not ready for normal use yet and still has bugs/jank. it is under `options->thumbnails` as an EXPERIMENTAL TEST, DO NOT CLICK checkbox
-* I'll keep working on this, but as it matures, we should have masonry layouts, vertical grids, more dynamic thumbnail sizes, and all sorts, all in a nicer drawing system with more animation options and so on. some bad old design ideas are being swept away at the same time
-
-### boring cleanup
-
-* if `twisted` (the networking library we use to host a server) fails to un-set the current hosting services on program close, the error is now printed to log. previously it was silenced. I'm narrowing down on a 'the program seemed to shut down but the process is still alive' issue, and I think it might be an overloaded/deadlocked Client API doing it
-* updated the 'help my db is broke' file a little regarding clone vs repair
-* fixed a note in the example .desktop file
-* did some misc linting
-* fixed missing executable permissions on the scripts in the main repo. sorry for the long-time problem here
-
-### new dev machine
-
-* just as a side thing, over my vacation I moved to a new dev machine. I'm finally on Linux to dev. I took the opportunity to rework my very messy dev environment and personal workflow and note-taking. my situation is far less stupid now, with a sensible and pleasant IDE connection to the github repo, a browser not overflowing with tabs, and a zeroed-out desktop and daily todo and such. I've got dozens of pages of overflowing note mess to still slowly work through, but I'm going to devote some specific sunday work time to project management and try to stay on top of it going forward!

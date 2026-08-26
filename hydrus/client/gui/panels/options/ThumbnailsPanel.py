@@ -124,7 +124,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'TEST, ADVANCED USERS ARE INVITED TO TENTATIVELY TRY: Try out the new thumbnail rendering tech (only applies to new pages): ', self._test_thumbnails_graphics_view ) )
+        rows.append( ( 'TEST, ADVANCED USERS ARE INVITED TO TRY: Try out the new thumbnail rendering tech (only applies to new pages): ', self._test_thumbnails_graphics_view ) )
         
         gridbox = ClientGUICommon.WrapInGrid( graphics_view_test_box, rows )
         

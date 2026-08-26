@@ -88,6 +88,7 @@ class TestDaemons( unittest.TestCase ):
                 
                 with mock.patch.object( TG.test_controller, 'WriteSynchronous', side_effect = write_db_side_effect ) as write_mock_object:
                     
+                    # noinspection PyUnresolvedReferences
                     with mock.patch.object( TG.test_controller.client_files_manager, 'GetFilePath', return_value = fake_file_path ) as client_files_mock_object:
                         
                         ClientDaemons.DAEMONCheckExportFolders()

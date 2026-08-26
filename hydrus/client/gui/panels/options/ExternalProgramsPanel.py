@@ -1320,9 +1320,11 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         message = 'THIS SYSTEM IS STILL IN TESTING! ONLY ADVANCED USERS SEE THIS, AND IT IS NOT PLUGGED INTO ANYTHING YET.'
         message += '\n\n'
-        message += 'Please test this and let me know how it goes. It will load up the defaults for your system. Pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors or if any of the help text is confusing!'
+        message += 'Please test this and let me know how it goes. It will load up the defaults for your system. Pick a call that you should have, and then double-click into it and put in a sensible file path or URL in the test panel and try it! If you like, set up a call for another exe you have and give it a go. Let me know if you have any errors or if any of the help text is confusing!'
         message += '\n\n----------\n\n'
-        message += 'Here we can teach your client about other programs it can call. Each job has a certain type, such as "open file in external program" or "download URL" or "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. a tag profiler). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
+        message += 'This system is incomplete and under active development.'
+        message += '\n\n'
+        message += 'Here we can teach your client about other programs it can call to complete jobs. Each job has a certain type, starting with simple things like "open file in external program", and, as I write the pipelines for them, we will have "download URL" and "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. an AI model for tagging). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
