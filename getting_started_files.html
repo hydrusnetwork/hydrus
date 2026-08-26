@@ -699,6 +699,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What Hydrus is for">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#other_software" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other Software
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file_limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Limits
+      
+    </span>
+  </a>
+  
 </li>
       
     </ul>
@@ -3161,6 +3189,34 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="What Hydrus is for">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#other_software" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other Software
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#file_limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        File Limits
+      
+    </span>
+  </a>
+  
 </li>
       
     </ul>
@@ -3267,9 +3323,26 @@
 <h2 id="what_hydrus_is_for">What Hydrus is for<a class="headerlink" href="#what_hydrus_is_for" title="Permanent link">&para;</a></h2>
 <p>The hydrus client's workflows are not designed for half-finished files that you are still working on. Think of it as a giant archive for everything excellent you have decided to store away. It lets you find and remember these things quickly.</p>
 <p>Similarly, hydrus does not expect its files to ever change! Do not go into the <code>client_files</code> folder and edit files in-place. The file storage is strictly read-only, and if you violate that, hydrus will eventually notice and assume it was hard drive damage. If you want to transform files, you should export them, edit them, and re-import them.</p>
-<p>In general, Hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.</p>
-<p>If you are looking for a comic manager to supplement hydrus, check out this user-made guide to other archiving software <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software">here</a>! <a href="https://github.com/maforget/ComicRackCE">ComicRackCE</a> and <a href="https://github.com/Difegue/LANraragi">Lanraragi</a> are both worth looking into. For ebooks, I personally use and recommend <a href="https://github.com/kovidgoyal/calibre">Calibre</a>.</p>
-<p>And although the client can manage millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui window. As you learn to use it, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total <em>items</em>, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy. One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million URLs queued up! Just try and take things slow until you figure out what your computer's limits are.</p>
+<p>In general, hydrus is good for individual files like you commonly find on imageboards or boorus. Although advanced users can cobble together some page-tag-based solutions, it is not yet great for multi-file media like comics and definitely not as a typical playlist-based music player.</p>
+<h3 id="other_software">Other Software<a class="headerlink" href="#other_software" title="Permanent link">&para;</a></h3>
+<p>If you are looking for another media manager to supplement hydrus, check out <a href="https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/wiki/0-Alternative-Programs-and-Resources#software">this user-made guide to other archiving software</a>!</p>
+<p><a href="https://github.com/maforget/ComicRackCE">ComicRackCE</a> and <a href="https://github.com/Difegue/LANraragi">Lanraragi</a> are both worth looking into for comics/manga. For ebooks, I personally use and recommend <a href="https://github.com/kovidgoyal/calibre">Calibre</a>. Similarly, hydrus can be a good fit for small isolated audio like voice clips, but if you want a clean and lightweight music player that does playlists properly, try <a href="https://deadbeef.sourceforge.io/">Deadbeef</a> or <a href="https://www.foobar2000.org/">Foobar</a>.</p>
+<p>Furthermore, hydrus is not for everyone! Some people prefer a nicer UI or want to keep filenames; others want something more intricate and powerful, or simply something less buggy. It is fine to try hydrus and bounce off it--if you do, check out these similar media-management projects:</p>
+<p>Easier solutions:</p>
+<ul>
+<li><a href="https://docs.tagstud.io/">Tag Studio</a> - A clean and nice media manager. Does similar jobs to hydrus, but much more user-friendly and with a great UI.</li>
+<li><a href="https://www.tagspaces.org/">TagSpaces</a> - A clean and nice media manager. Many features and integrations and a great UI.</li>
+</ul>
+<p>Created by hydrus users:</p>
+<ul>
+<li><a href="https://github.com/KJNeko/IDHAN">IDHAN</a> - (In testing 2026-08) A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.</li>
+<li><a href="https://github.com/scoopscoop/naiad-net">Naiad</a> - (Recently launched 2026-08) A hydrus-like media manager with its own PTR-style tag-sharing solution.</li>
+<li><a href="https://github.com/therandomlance/refr">refr</a> - (Recently launched 2026-08) An Immich-like with a focus on managing art reference images.</li>
+</ul>
+<h2 id="file_limits">File Limits<a class="headerlink" href="#file_limits" title="Permanent link">&para;</a></h2>
+<p>Although the client can manage millions of files, it starts to creak and chug when displaying or otherwise tracking more than about 40,000 or so in a single gui page. The whole session will tend to chug around 150,000 files, but some users with strong computers have 800k+ regularly and claim no problems.</p>
+<p>As you learn to use hydrus, please try not to let your download queues or general search pages regularly sit at more than 40 or 50k total <em>items</em>, or you'll start to slow other things down. Another common mistake is to leave one large 'system:everything' or 'system:inbox' page open with 70k+ files. For these sorts of 'ongoing processing' pages, try adding a 'system:limit=256' to keep them snappy.</p>
+<p>One user mentioned he had regular gui hangs of thirty seconds or so, and when we looked into it, it turned out his handful of download pages had three million URLs queued up! Just try and take things slow until you figure out what your computer's limits are.</p>
 
 
 
@@ -3290,7 +3363,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 25, 2026 22:07:16 UTC">February 25, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 26, 2026 19:14:26 UTC">August 26, 2026</span>
   </span>
 
     

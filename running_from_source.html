@@ -3668,6 +3668,7 @@
 <p>If you are in the Arch family, you may be on <code>pacman</code>. In this case, where I might say in this help to do <code>sudo apt install package</code>, you are probably looking at <code>sudo pacman -S package</code>, so:</p>
 <div class="highlight"><pre><span></span><code>sudo<span class="w"> </span>pacman<span class="w"> </span>-S<span class="w"> </span>git
 </code></pre></div>
+<p>Fedora will be <code>dnf</code>. If you need help for your special situation, ask a chatbot.</p>
 <p>You should already have a fairly new python. Hydrus is fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing <code>python3</code> or <code>python</code>.</p>
 <p>You are going to need <code>pip</code> and <code>venv</code>. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:</p>
 <p><div class="highlight"><pre><span></span><code>python3<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>--version
@@ -3765,7 +3766,7 @@
 <li>
 <p>mpv  </p>
 <p>Linux can provide what we need in a couple of different ways. It is important that we get <code>libmpv</code>, rather than just the <code>mpv</code> player. Some Linux installs of mpv do also bring libmpv, but others do not. If your package manager provides mpv and it says it comes with libmpv, you are probably good just to get that.</p>
-<p>Otherwise, try just running <code>sudo apt install libmpv1</code> or <code>sudo apt install libmpv2</code> in a new terminal. You can also try <code>apt show libmpv2</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, <code>libmpv2</code>, or again, just <code>mpv</code> on that.</p>
+<p>Otherwise, try just running <code>sudo apt install libmpv1</code> or <code>sudo apt install libmpv2</code> in a new terminal. You can also try <code>apt show libmpv2</code> to see any current version. Or, if you use a different package manager, try searching <code>libmpv</code>, <code>libmpv1</code>, <code>libmpv2</code>, <code>mpv-libs</code>, or again, just <code>mpv</code> on that. For Fedora you are looking at <code>sudo dnf install mpv-libs</code>.</p>
 <ol>
 <li>If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.</li>
 <li>If you have 0.34.1 or later, you can run the normal setup script.</li>
@@ -4166,7 +4167,7 @@ C:\Users\Me\Hydrus\venv\Source\python.exe C:\Users\Me\Hydrus\hydrus_client.py
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="July 20, 2026 22:18:33 UTC">July 20, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 25, 2026 21:25:44 UTC">August 25, 2026</span>
   </span>
 
     

@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_685"><a href="#version_685">version 685</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the 3-second tooltip micro-notification experiment on the 'edit notes' 'copy urls' button worked out, so I wrote the code up properly and made it so all 20+ copy icon buttons across the program say something like 'Copied!' or 'Copied x ratings!' on click, all 23+ paste icon buttons similarly do 'Pasted!' or 'Pasted x texts!'. I'll slowly integrate this into other buttons that do a thing that isn't immediately obvious</li>
+                        <li>the media viewer right-click menu's 'volume' submenu now has a volume slider rather than the list of checkboxes</li>
+                        <li>fixed a recent regression that was stopping the media viewer from finding and activating an already-existing manage tags window when you did 'manage tags' from the media viewer--it was instead creating multiple windows, which is not desired (#2085)</li>
+                        <li>if you have very large or very small thumbnails, the thumbnail pair lists in auto-resolution now size better, setting saner min/max sizes for the thumbnail item cells and scaling thumbs to that size when a min/max limit applies (#2079)</li>
+                        <li>added a 'show anything with specific bandwidth rules' checkbox to 'review bandwidth usage'. if you import a downloader and it comes with bandwidth rules, you can now find those without having to actually use the site</li>
+                        <li>added a 'can you run the client headless? (not yet)' to the FAQ page, and then added a test line to it from a user who found a possible way</li>
+                        <li><h3>alternate software</h3></li>
+                        <li>expanded and formalised the 'if you like hydrus, maybe you will like this software too/instead' section in the help here: https://hydrusnetwork.github.io/hydrus/getting_started_files.html#other_software</li>
+                        <li>as part of this, I am listing three hydrus-adjacent projects that are coming into public this month, same way as I list stuff in the Client API page. feel free to check them out! they are--</li>
+                        <li>IDHAN (https://github.com/KJNeko/IDHAN) -  A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.</li>
+                        <li>Naiad (https://github.com/scoopscoop/naiad-net) - A hydrus-like media manager with its own PTR-style tag-sharing solution.</li>
+                        <li>refr (https://github.com/therandomlance/refr) - An Immich-like with a focus on managing art reference images.</li>
+                        <li>if you create your own hydrus-like or similar tech that hydrus users may like, please link me and I'll list it there!</li>
+                        <li><h3>executable manager</h3></li>
+                        <li>I invite advanced users to play with this again (`options-&gt;external programs`). there's a little change in the call we were playing with last week</li>
+                        <li>after talking it out with people, I realised it would be better not to have two 'local process calls' for 'one template string' vs 'command + list of params', and updated the current prototype object, which was the former, to be the latter. thus the current terminal call is updated to have an exe and a list of params with replacement strings, rather than just one template string. it calls the process directly with the params all nice and separate rather than a raw string to your shell, so no quotespam needed. although editing separate params is more of a pain than just a text box, it is neater and more secure to only do it like this, saving us several headaches, and the only blocking cost of eliminating the worse yet easier option is writing some good UI to make editing the better option easier</li>
+                        <li>I've therefore tried to make some decent edit UI. nice and simple exe and param list, and copy/paste buttons so you can just paste a raw template if you have a nice simple one</li>
+                        <li>the 'availability call' and 'which availability call' settings are gone; we now just do a `which` on the given exe. this breaks the macOS 'open "Google Chrome" blah' calls, but we'll revisit this if it ever proves a big problem</li>
+                        <li>the 'open externally' job now provides 'file hash (sha256)' and 'file id' input parameters</li>
+                        <li>some stuff is renamed from, say, 'local terminal call' to 'local process call' and so on to reflect the changes around here</li>
+                        <li>improved some labels and update signals in the ui--stuff like updating the example templates on a string processor change</li>
+                        <li><h3>new thumbnail grid test</h3></li>
+                        <li>advanced users are encouraged to play with this more (`options-&gt;thumbnails-&gt;New Rendering Tech Test`). I think we have it pretty much nailed down now and so I'm mostly just optimising and cleaning in prep for switching everyone over, and I'd like to see if there are any more visual bugs lurking</li>
+                        <li>a bug in the new thumbnail grid test where thumbnails would not redraw is fixed. it turned out there was some duff redraw logic when the 'fade thumbnails' option was off</li>
+                        <li>set it so the new thumbnail grid only registers with the animation timer while it has thumbs animating--as soon as there is no more work, it delists itself</li>
+                        <li>the new thumbnail grid no longer attempts to animate thumbs if it is not currently on a visible page; it just schedules them for instant draw</li>
+                        <li>a thumbnail now correctly understands it is no longer animating if its paint errors out or its fade-in time or backing pixmap are invalidated, which triggers the above delisting</li>
+                        <li>added `help-&gt;debug-&gt;report modes-&gt;graphics view thumbnail update report mode`, which spams a bunch of decisions about the new painting tech to log</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>did some MainLoop Daemon refactoring, just getting over a hump to move some responsibility to the superclass</li>
+                        <li>moved to nicer ui-cleanup calls in a bunch of my async code</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_684"><a href="#version_684">version 684</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
