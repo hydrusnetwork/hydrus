@@ -95,7 +95,8 @@ def AppendMenuSlider(
     min_value: int,
     max_value: int,
     step: int,
-    value_changed_callable
+    value_changed_callable,
+    min_width_chars: int | None = None
 ):
     
     slider_menu_item = QW.QWidgetAction( menu )
@@ -116,6 +117,11 @@ def AppendMenuSlider(
     slider.setPageStep( step * 5 )
     slider.setValue( initial_value )
     slider.setToolTip( ClientGUIFunctions.WrapToolTip( description ) )
+    
+    if min_width_chars is not None:
+        
+        slider.setMinimumWidth( ClientGUIFunctions.ConvertTextToPixelWidth( slider, min_width_chars ) )
+        
     
     value_label = QW.QLabel( str( initial_value ), widget )
     value_label.setMinimumWidth( 32 )

@@ -186,7 +186,8 @@ def AddAudioVolumeMenu( menu, canvas_type, media_container ):
         0,
         100,
         1,
-        change_volume_from_slider
+        change_volume_from_slider,
+        min_width_chars = 15
     )
     
     ClientGUIMenus.AppendMenu( menu, volume_menu, 'volume' )
