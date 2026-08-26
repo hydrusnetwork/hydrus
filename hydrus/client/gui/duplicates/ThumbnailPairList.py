@@ -475,7 +475,7 @@ class ThumbnailPairList( QW.QTableView ):
         ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
 
         ( sane_min_width, sane_min_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 16, 8 ) )
-        ( sane_max_width, sane_max_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 64, 32 ) )
+        ( sane_max_width, sane_max_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 48, 24 ) )
         
         thumb_column_width = max( sane_min_width, min( thumbnail_width, sane_max_width ) )
         section_height = max( sane_min_height, min( thumbnail_height, sane_max_height ) )
