@@ -151,6 +151,8 @@ You cannot do this yet, sorry! I wrote hydrus without much planning, and the cor
 
 This is all doable, and when I do pertinent code cleanup, I refactor in this direction, but to get it done properly, it will need a real, full push. We will probably want nicer options-configuration-by-API too at that point. This is all coming, but I can't say when. It may well be AI that does it, once it gets good enough!
 
+**That said, one user says installing `libglib2.0-0` and setting `QT_QPA_PLATFORM=offscreen` environment variable does the job. I would be interested in feedback!**
+
 ## Does Hydrus run ok off an encrypted drive partition? { id="encryption" }
 
 Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.
