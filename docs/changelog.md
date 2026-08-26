@@ -22,7 +22,7 @@ title: Changelog
 
 * expanded and formalised the 'if you like hydrus, maybe you will like this software too/instead' section in the help here: https://hydrusnetwork.github.io/hydrus/getting_started_files.html#other_software
 * as part of this, I am listing three hydrus-adjacent projects that are coming into public this month, same way as I list stuff in the Client API page. feel free to check them out! they are--
-* IDHAN (https://github.com/KJNeko/IDHAN) -  A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.
+* IDHAN (https://github.com/KJNeko/IDHAN) - A high-performance hydrus-like media manager server with a web UI. Very sophisticated.
 * Naiad (https://github.com/scoopscoop/naiad-net) - A hydrus-like media manager with its own PTR-style tag-sharing solution.
 * refr (https://github.com/therandomlance/refr) - An Immich-like with a focus on managing art reference images.
 * if you create your own hydrus-like or similar tech that hydrus users may like, please link me and I'll list it there!

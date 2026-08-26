@@ -135,7 +135,7 @@ Easier solutions:
 
 Created by hydrus users:
 
-- [IDHAN](https://github.com/KJNeko/IDHAN) - (In testing 2026-08) A high-performance hydrus-like media manager meant for Docker with a web UI. Very sophisticated.
+- [IDHAN](https://github.com/KJNeko/IDHAN) - (In testing 2026-08) A high-performance hydrus-like media manager server with a web UI. Very sophisticated.
 - [Naiad](https://github.com/scoopscoop/naiad-net) - (Recently launched 2026-08) A hydrus-like media manager with its own PTR-style tag-sharing solution.
 - [refr](https://github.com/therandomlance/refr) - (Recently launched 2026-08) An Immich-like with a focus on managing art reference images.
 
