@@ -19,10 +19,10 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options = new_options
         
-        graphics_view_test_box = ClientGUICommon.StaticBox( self, 'New Rendering Tech Test' )
+        graphics_view_test_box = ClientGUICommon.StaticBox( self, 'New Rendering Tech' )
         
         self._test_thumbnails_graphics_view = QW.QCheckBox( graphics_view_test_box )
-        tt = 'Test out a new rendering method that uses more advanced, Qt-native drawing tech. Will only apply to new thumbnail pages, so you might need to do a client restart to guarantee a full reset either way.'
+        tt = 'Use a new rendering method that uses more advanced, Qt-native drawing tech to draw thumbnails. Will only apply to new thumbnail pages, so you might need to do a client restart to guarantee a full reset either way. This was tested a bunch and is now the default; if you have big thumbnail problems, switch this off, restart your client, and tell hydev.'
         self._test_thumbnails_graphics_view.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         thumbnail_appearance_box = ClientGUICommon.StaticBox( self, 'appearance' )
@@ -124,7 +124,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows = []
         
-        rows.append( ( 'TEST, ADVANCED USERS ARE INVITED TO TRY: Try out the new thumbnail rendering tech (only applies to new pages): ', self._test_thumbnails_graphics_view ) )
+        rows.append( ( 'Use the new thumbnail rendering tech (only applies to new pages): ', self._test_thumbnails_graphics_view ) )
         
         gridbox = ClientGUICommon.WrapInGrid( graphics_view_test_box, rows )
         
