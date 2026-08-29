@@ -2618,15 +2618,18 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         elif command.IsInteractiveContentCommand():
             
-            content_command = ClientGUIMediaModalActions.GetContentApplicationCommandFromInteractiveContentCommand( self, command, self._GetSelectedFlatMedia()[ 0 ] )
+            selected_flat_media = self._GetSelectedFlatMedia()
             
-            if content_command.IsContentCommand():
+            command_processed = False
+            
+            if len( selected_flat_media ) > 0:
                 
-                command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, self._GetSelectedFlatMedia() )
+                content_command = ClientGUIMediaModalActions.GetContentApplicationCommandFromInteractiveContentCommand( self, command, selected_flat_media[ 0 ] )
                 
-            else:
-                
-                command_processed = False
+                if content_command.IsContentCommand():
+                    
+                    command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
+                    
                 
             
         else:
@@ -5481,6 +5484,22 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             else:
                 
                 command_processed = False
+                
+            
+        elif command.IsInteractiveContentCommand():
+            
+            selected_flat_media = self._GetSelectedFlatMedia()
+            
+            command_processed = False
+            
+            if len( selected_flat_media ) > 0:
+                
+                content_command = ClientGUIMediaModalActions.GetContentApplicationCommandFromInteractiveContentCommand( self, command, selected_flat_media[ 0 ] )
+                
+                if content_command.IsContentCommand():
+                    
+                    command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
+                    
                 
             
         elif command.IsContentCommand():
