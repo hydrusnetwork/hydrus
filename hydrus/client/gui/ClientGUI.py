@@ -8384,9 +8384,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.PresentImportedFilesToPage( hashes, page_name )
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -8556,15 +8556,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def ProposeSaveGUISession( self, name = None, suggested_name = '', notebook = None ):

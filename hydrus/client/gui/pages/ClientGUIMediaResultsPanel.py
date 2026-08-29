@@ -2068,9 +2068,9 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -2078,16 +2078,15 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             if action == CAC.SIMPLE_COPY_FILE_BITMAP:
                 
-                if not self._HasFocusSingleton():
+                if self._HasFocusSingleton():
                     
-                    return
                     
-                
-                focus_singleton = self._GetFocusSingleton()
-                
-                bitmap_type = command.GetSimpleData()
-                
-                ClientGUIMediaSimpleActions.CopyMediaBitmap( focus_singleton, bitmap_type )
+                    focus_singleton = self._GetFocusSingleton()
+                    
+                    bitmap_type = command.GetSimpleData()
+                    
+                    ClientGUIMediaSimpleActions.CopyMediaBitmap( focus_singleton, bitmap_type )
+                    
                 
             elif action == CAC.SIMPLE_COPY_FILES:
                 
@@ -2609,18 +2608,16 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         elif command.IsContentCommand():
             
-            command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
+            ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
             
         elif command.IsInteractiveContentCommand():
             
             selected_flat_media = self._GetSelectedFlatMedia()
-            
-            command_processed = False
             
             if len( selected_flat_media ) > 0:
                 
@@ -2628,16 +2625,16 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                 
                 if content_command.IsContentCommand():
                     
-                    command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
+                    ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
                     
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
@@ -4942,9 +4939,9 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -4952,16 +4949,14 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             
             if action == CAC.SIMPLE_COPY_FILE_BITMAP:
                 
-                if not self._HasFocusSingleton():
+                if self._HasFocusSingleton():
                     
-                    return
+                    focus_singleton = self._GetFocusSingleton()
                     
-                
-                focus_singleton = self._GetFocusSingleton()
-                
-                bitmap_type = command.GetSimpleData()
-                
-                ClientGUIMediaSimpleActions.CopyMediaBitmap( focus_singleton, bitmap_type )
+                    bitmap_type = command.GetSimpleData()
+                    
+                    ClientGUIMediaSimpleActions.CopyMediaBitmap( focus_singleton, bitmap_type )
+                    
                 
             elif action == CAC.SIMPLE_COPY_FILES:
                 
@@ -5103,12 +5098,10 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                         
                     
                 
-                if insertion_index is None:
+                if insertion_index is not None:
                     
-                    return True
+                    self.MoveMedia( ordered_selected_media, insertion_index = insertion_index )
                     
-                
-                self.MoveMedia( ordered_selected_media, insertion_index = insertion_index )
                 
             elif action == CAC.SIMPLE_SHOW_DUPLICATES:
                 
@@ -5483,14 +5476,12 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         elif command.IsInteractiveContentCommand():
             
             selected_flat_media = self._GetSelectedFlatMedia()
-            
-            command_processed = False
             
             if len( selected_flat_media ) > 0:
                 
@@ -5498,20 +5489,20 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                 
                 if content_command.IsContentCommand():
                     
-                    command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
+                    ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, content_command, selected_flat_media )
                     
                 
             
         elif command.IsContentCommand():
             
-            command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
+            ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, self._GetSelectedFlatMedia() )
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):

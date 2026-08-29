@@ -1279,7 +1279,7 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class ApplicationCommandProcessorMixin( object ):
     
-    def ProcessApplicationCommand( self, command: ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: ApplicationCommand ) -> bool:
         
         # TODO: eventually expand this guy to do the main if and have separate methods for 'do simple command( action )' and 'do complex command( command )', then objects just implement that
         # only thing they need to do is return False if they don't eat the command, or we move to Qt style event processing and set command.ignore() or similar

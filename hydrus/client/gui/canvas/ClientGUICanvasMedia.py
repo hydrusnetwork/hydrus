@@ -693,9 +693,9 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._paused = False
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -725,15 +725,15 @@ class Animation( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def resizeEvent( self, event ):
@@ -3986,9 +3986,9 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -4004,15 +4004,15 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def SetBackgroundColourGenerator( self, background_colour_generator ):

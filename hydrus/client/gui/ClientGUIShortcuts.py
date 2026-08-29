@@ -1686,9 +1686,9 @@ class ShortcutsHandler( QC.QObject ):
         
         if command is not None:
             
-            command_processed = self._command_processor.ProcessApplicationCommand( command )
+            command_matched = self._command_processor.ProcessApplicationCommand( command )
             
-            if command_processed:
+            if command_matched:
                 
                 shortcut_processed = True
                 
@@ -1697,7 +1697,7 @@ class ShortcutsHandler( QC.QObject ):
                 
                 message = 'Shortcut "{}" matched to command "{}" on {}.'.format( shortcut.ToString(), command.ToString(), repr( self._parent ) )
                 
-                if command_processed:
+                if command_matched:
                     
                     message += ' It was processed.'
                     
@@ -2010,7 +2010,7 @@ class ShortcutsManager( QC.QObject ):
             
         
     
-    def GetCommand( self, shortcuts_names: collections.abc.Iterable[ str ], shortcut: Shortcut ):
+    def GetCommand( self, shortcuts_names: collections.abc.Iterable[ str ], shortcut: Shortcut ) -> CAC.ApplicationCommand | None:
         
         # process more specific shortcuts with higher priority
         shortcuts_names_list = list( shortcuts_names )

@@ -261,9 +261,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -279,15 +279,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 from hydrus.client.gui.canvas import ClientGUICanvasFrame
                 
-                command_processed = False
-                
                 for tlw in tlws:
                     
                     if isinstance( tlw, ClientGUICanvasFrame.CanvasFrame ):
                         
                         tlw.TakeFocusForUser()
-                        
-                        command_processed = True
                         
                         break
                         
@@ -299,15 +295,15 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def MovePageRight( self ):
@@ -1135,9 +1131,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self.okSignal.emit()
             
         
-        def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
             
-            command_processed = True
+            command_matched = True
             
             if command.IsSimpleCommand():
                 
@@ -1157,15 +1153,15 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                 else:
                     
-                    command_processed = False
+                    command_matched = False
                     
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
-            return command_processed
+            return command_matched
             
         
         def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):

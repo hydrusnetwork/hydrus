@@ -59,9 +59,7 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
         
     except HydrusExceptions.DataMissing:
         
-        command_processed = False
-        
-        return command_processed
+        return
         
     
     service_type = service.GetServiceType()
@@ -119,12 +117,12 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
                 
             else:
                 
-                return True
+                return
                 
             
         else:
             
-            return False
+            return
             
         
         def do_it():
@@ -158,7 +156,7 @@ def ApplyContentApplicationCommandToMedia( win: QW.QWidget, command: CAC.Applica
         CG.client_controller.CallToThread( do_it )
         
     
-    return True
+    return
     
 
 def ClearDeleteRecord( win, media ):

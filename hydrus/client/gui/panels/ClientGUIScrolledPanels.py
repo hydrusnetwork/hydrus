@@ -257,9 +257,9 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         return self._control.value()
         
     
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
         
-        command_processed = True
+        command_matched = True
         
         if command.IsSimpleCommand():
             
@@ -271,15 +271,15 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
                 
             else:
                 
-                command_processed = False
+                command_matched = False
                 
             
         else:
             
-            command_processed = False
+            command_matched = False
             
         
-        return command_processed
+        return command_matched
         
     
     def SetControl( self, control, perpendicular = False ):
