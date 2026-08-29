@@ -2,6 +2,7 @@ import collections
 import collections.abc
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -319,8 +320,8 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         hash_a = media_result_a.GetHash()
         hash_b = media_result_b.GetHash()
         
-        a_work = collections.defaultdict( list )
-        b_work = collections.defaultdict( list )
+        a_work = collections.defaultdict( HydrusData.default_dict_list )
+        b_work = collections.defaultdict( HydrusData.default_dict_list )
         
         for content_update_package in content_update_packages:
             
@@ -329,17 +330,17 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 for content_update in content_updates:
                     
                     hashes = content_update.GetHashes()
-                    
-                    s = content_update.ToActionSummary()
+
+                    ( action_and_content_string, value_string ) = content_update.ToActionSummary()
                     
                     if hash_a in hashes:
                         
-                        a_work[ service_key ].append( s )
+                        a_work[ service_key ][ action_and_content_string ].append( value_string )
                         
                     
                     if hash_b in hashes:
                         
-                        b_work[ service_key ].append( s )
+                        b_work[ service_key ][ action_and_content_string ].append( value_string )
                         
                     
                 
@@ -352,17 +353,30 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             ( 'B', b_work )
         ]:
             
-            work_flat = sorted( [ ( CG.client_controller.services_manager.GetNameSafe( service_key ), sorted( summary_strings ) ) for ( service_key, summary_strings ) in work.items() ] )
+            service_lines = []
             
-            gubbins = '|'.join( [ name + ': ' + ', '.join( summary_strings ) for ( name, summary_strings ) in work_flat ] )
-            
-            if len( gubbins ) == 0:
+            for ( service_key, action_and_content_strings_to_value_strings ) in work.items():
                 
-                work_string = hash_name + ': no changes'
+                service_name = CG.client_controller.services_manager.GetNameSafe( service_key )
+                
+                content_update_lines_sorted_flat = [ ( action_and_content_string, ', '.join( sorted( value_strings ) ) ) for ( action_and_content_string, value_strings ) in action_and_content_strings_to_value_strings.items() ]
+                
+                content_update_lines = [ f'{action_and_content_string}: {value_strings_concatenated}' if value_strings_concatenated != '' else action_and_content_string for ( action_and_content_string, value_strings_concatenated ) in content_update_lines_sorted_flat ]
+                
+                service_lines.append( service_name + ': ' + ' | '.join( content_update_lines ) )
+                
+            
+            s = '\n    '
+            
+            work_string = hash_name + ':' + s
+            
+            if len( service_lines ) == 0:
+                
+                work_string += 'no changes'
                 
             else:
                 
-                work_string = hash_name + ': ' + gubbins
+                work_string += s.join( service_lines )
                 
             
             work_strings.append( work_string )

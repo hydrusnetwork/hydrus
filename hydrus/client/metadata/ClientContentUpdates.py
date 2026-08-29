@@ -236,7 +236,7 @@ class ContentUpdate( object ):
         self._hashes = None
         
     
-    def ToActionSummary( self ):
+    def ToActionSummary( self ) -> tuple[ str, str ]:
         
         value_string = ''
         
@@ -290,18 +290,13 @@ class ContentUpdate( object ):
                 
             
         
-        if value_string != '':
-            
-            value_string = ': ' + value_string
-            
-        
         try:
             
-            return f'{HC.content_update_string_lookup[ self._action ]} {HC.content_type_string_lookup[ self._data_type ]}{value_string}'
+            return ( f'{HC.content_update_string_lookup[ self._action ]} {HC.content_type_string_lookup[ self._data_type ]}', value_string )
             
         except Exception as e:
             
-            return 'could not parse this content update!'
+            return ( 'unknown', 'could not parse this content update!' )
             
         
     
