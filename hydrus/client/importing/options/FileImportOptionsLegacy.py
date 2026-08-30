@@ -180,7 +180,7 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
             
             ( exclude_deleted, do_not_check_known_urls_before_importing, do_not_check_hashes_before_importing, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
             
-            filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
+            filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_CLASSES_OF_FILETYPE ) )
             
             serialisable_filetype_filter_predicate = filetype_filter_predicate.GetSerialisableTuple()
             

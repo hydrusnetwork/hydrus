@@ -169,7 +169,14 @@ def ConvertSummaryFiletypesToSpecific( summary_mimes: collections.abc.Collection
     
     for mime in summary_mimes:
         
-        if mime in HC.GENERAL_FILETYPES:
+        if mime == HC.GENERAL_FILE:
+            
+            for mime_group in HC.general_mimetypes_to_mime_groups.values():
+                
+                specific_mimes.update( mime_group )
+                
+            
+        elif mime in HC.GENERAL_CLASSES_OF_FILETYPE:
             
             specific_mimes.update( HC.general_mimetypes_to_mime_groups[ mime ] )
             
@@ -189,7 +196,7 @@ def ConvertSummaryFiletypesToSpecific( summary_mimes: collections.abc.Collection
 
 def ConvertSummaryFiletypesToString( summary_mimes: collections.abc.Collection[ int ] ) -> str:
     
-    if set( summary_mimes ) == HC.GENERAL_FILETYPES:
+    if set( summary_mimes ) == HC.GENERAL_CLASSES_OF_FILETYPE or HC.GENERAL_FILE in summary_mimes:
         
         mime_text = 'all filetypes'
         

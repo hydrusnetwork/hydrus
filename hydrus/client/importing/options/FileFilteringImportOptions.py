@@ -24,7 +24,7 @@ class FileFilteringImportOptions( IOC.ImportOptionsMetatype ):
         
         self._exclude_deleted = True
         self._allow_decompression_bombs = True
-        self._filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
+        self._filetype_filter_predicate = ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_CLASSES_OF_FILETYPE ) )
         self._min_size = None
         self._max_size = None
         self._max_gif_size = None

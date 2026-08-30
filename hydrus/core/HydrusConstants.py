@@ -845,10 +845,11 @@ APPLICATION_PAINT_DOT_NET = 86
 UNDETERMINED_JXL = 87
 ANIMATION_JXL = 88
 IMAGE_OPENRASTER = 89
+GENERAL_FILE = 90
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
-GENERAL_FILETYPES = {
+GENERAL_CLASSES_OF_FILETYPE = {
     GENERAL_APPLICATION,
     GENERAL_AUDIO,
     GENERAL_IMAGE,
@@ -1327,7 +1328,8 @@ mime_string_lookup = {
     GENERAL_AUDIO : 'audio',
     GENERAL_IMAGE : 'image',
     GENERAL_VIDEO : 'video',
-    GENERAL_ANIMATION : 'animation'
+    GENERAL_ANIMATION : 'animation',
+    GENERAL_FILE : 'file',
 }
 
 string_enum_lookup = { s : enum for ( enum, s ) in mime_string_lookup.items() }
@@ -1418,7 +1420,8 @@ mime_mimetype_string_lookup = {
     GENERAL_AUDIO : 'audio',
     GENERAL_IMAGE : 'image',
     GENERAL_VIDEO : 'video',
-    GENERAL_ANIMATION : 'animation'
+    GENERAL_ANIMATION : 'animation',
+    GENERAL_FILE : 'file',
 }
 
 mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_WMA ], mime_mimetype_string_lookup[ VIDEO_WMV ] )

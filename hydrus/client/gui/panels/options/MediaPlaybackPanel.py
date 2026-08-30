@@ -519,7 +519,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         pretty_mime = HC.mime_string_lookup[ mime ]
         
-        if mime not in HC.GENERAL_FILETYPES:
+        if mime not in HC.GENERAL_CLASSES_OF_FILETYPE:
             
             pretty_mime = '{}: {}'.format( HC.mime_string_lookup[ HC.mimes_to_general_mimetypes[ mime ] ], pretty_mime )
             
