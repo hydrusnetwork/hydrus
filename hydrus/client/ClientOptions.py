@@ -1,3 +1,4 @@
+import collections
 import os
 import threading
 
@@ -25,7 +26,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_NAME = 'Client Options'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__( self ):
         
@@ -688,7 +689,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'favourite_file_lookup_script' : None,
             'suggested_tags_layout' : 'notebook',
             'backup_path' : None,
-            'web_browser_path' : None,
             'last_png_export_dir' : None,
             'media_background_bmp_path' : None,
             'http_proxy' : None,
@@ -743,6 +743,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'tab_tree_splitter_sizes_right' : [ 1000, 200 ],
             'treeview_expanding_panel_splitter_size' : [ 700, 150 ],
         }
+        
+        #
+        
+        self._dictionary[ 'web_browser_launch_paths' ] = HydrusSerialisable.SerialisableList( [ None ] )
+        self._dictionary[ 'open_externally_launch_paths' ] = HydrusSerialisable.SerialisableDictionary( { HC.GENERAL_FILE : HydrusSerialisable.SerialisableList( [ None ] ) } )
         
         #
         
@@ -929,15 +934,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'frame_locations' ][ 'quick_select_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         self._dictionary[ 'frame_locations' ][ 'quick_yesno_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
         self._dictionary[ 'frame_locations' ][ 'quick_entry_dialog' ] = ( False, False, None, None, ( -1, -1 ), 'center', False, False )
-        
-        #
-        
-        self._dictionary[ 'media_launch' ] = HydrusSerialisable.SerialisableDictionary() # integer keys, so got to be cleverer dict
-        
-        for mime in HC.SEARCHABLE_MIMES:
-            
-            self._dictionary[ 'media_launch' ][ mime ] = None
-            
         
         #
         
@@ -1234,6 +1230,121 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
             
             return ( 7, new_serialisable_info )
+            
+        
+        if version == 7:
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info )
+            
+            # web browser conversion
+            
+            if 'web_browser_path' in loaded_dictionary[ 'noneable_strings' ]:
+                
+                launch_path = loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
+                
+                if isinstance( launch_path, str ):
+                    
+                    launch_path = launch_path.replace( '%path%', '%url%' )
+                    
+                
+                web_browser_launch_paths = HydrusSerialisable.SerialisableList( [ launch_path ] )
+                
+                del loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
+                
+            else:
+                
+                web_browser_launch_paths = HydrusSerialisable.SerialisableList( [ None ] )
+                
+            
+            loaded_dictionary[ 'web_browser_launch_paths' ] = web_browser_launch_paths
+            
+            # open externally conversion
+            
+            # old structure is individual mimes to one path
+            # we are converting to general mimetimes and more specific overrides to multiple, and prepping for conversion to exe manager key-and-id objects
+            
+            # first off, there's a default 'open with default call' for all files that we won't erase
+            open_externally_launch_paths = HydrusSerialisable.SerialisableDictionary( { HC.GENERAL_FILE : HydrusSerialisable.SerialisableList( [ None ] ) } )
+            
+            if 'media_launch' in loaded_dictionary:
+                
+                media_launch = loaded_dictionary[ 'media_launch' ]
+                
+                open_externally_launch_paths = HydrusSerialisable.SerialisableDictionary()
+                
+                mimetypes_to_launch_paths = dict()
+                general_mimetypes_to_seen_launch_paths = collections.defaultdict( set )
+                
+                for mime in HC.SEARCHABLE_MIMES:
+                    
+                    if mime in media_launch:
+                        
+                        launch_path_or_none = media_launch[ mime ]
+                        
+                    else:
+                        
+                        launch_path_or_none = None
+                        
+                    
+                    mimetypes_to_launch_paths[ mime ] = launch_path_or_none
+                    general_mimetypes_to_seen_launch_paths[ HC.mimes_to_general_mimetypes[ mime ] ].add( launch_path_or_none )
+                    general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ].add( launch_path_or_none )
+                    
+                
+                if len( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] ) == 1:
+                    
+                    # everything uses the same launch, so we can set up a very simple default options
+                    open_externally_launch_paths[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] )
+                    
+                else:
+                    
+                    mimetypes_we_handled_with_a_metatype = set()
+                    
+                    for general_class_of_filetype in HC.GENERAL_CLASSES_OF_FILETYPE:
+                        
+                        if len( general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ] ) == 1:
+                            
+                            # all images use the same path, so we can set this up
+                            
+                            seen_launch_paths = general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ]
+                            
+                            # no different than the overall default; nothing interesting to record
+                            if seen_launch_paths == { None }:
+                                
+                                continue
+                                
+                            
+                            open_externally_launch_paths[ general_class_of_filetype ] = HydrusSerialisable.SerialisableList( seen_launch_paths )
+                            
+                            mimetypes_we_handled_with_a_metatype.update( HC.general_mimetypes_to_mime_groups[ general_class_of_filetype ] )
+                            
+                        
+                    
+                    for ( mime, launch_path ) in mimetypes_to_launch_paths.items():
+                        
+                        if mime in mimetypes_we_handled_with_a_metatype:
+                            
+                            continue
+                            
+                        
+                        # no different than the overall default; nothing interesting to record
+                        if launch_path is None:
+                            
+                            continue
+                            
+                        
+                        open_externally_launch_paths[ mime ] = HydrusSerialisable.SerialisableList( [ launch_path ] )
+                        
+                    
+                
+            
+            loaded_dictionary[ 'open_externally_launch_paths' ] = open_externally_launch_paths
+            
+            #
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 8, new_serialisable_info )
             
         
     
@@ -1640,19 +1751,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetMimeLaunch( self, mime ):
-        
-        with self._lock:
-            
-            if mime not in self._dictionary[ 'media_launch' ]:
-                
-                self._dictionary[ 'media_launch' ][ mime ] = None
-                
-            
-            return self._dictionary[ 'media_launch' ][ mime ]
-            
-        
-    
     def GetNoneableInteger( self, name ):
         
         with self._lock:
@@ -1821,11 +1919,80 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetOpenExternallyLaunchPaths( self, mime ):
+        
+        with self._lock:
+            
+            open_externally_launch_paths = self._dictionary[ 'open_externally_launch_paths' ]
+            
+            if mime in open_externally_launch_paths:
+                
+                result = list( open_externally_launch_paths[ mime ] )
+                
+            else:
+                
+                general_mimetype = HC.mimes_to_general_mimetypes[ mime ]
+                
+                if general_mimetype in open_externally_launch_paths:
+                    
+                    result = list( open_externally_launch_paths[ general_mimetype ] )
+                    
+                elif HC.GENERAL_FILE in open_externally_launch_paths:
+                    
+                    result = list( open_externally_launch_paths[ HC.GENERAL_FILE ] )
+                    
+                else:
+                    
+                    result = []
+                    
+                
+            
+            if len( result ) == 0:
+                
+                result = [ None ]
+                
+            
+            return result
+            
+        
+    
+    def GetAllOpenExternallyLaunchPaths( self ):
+        
+        with self._lock:
+            
+            open_externally_launch_paths = self._dictionary[ 'open_externally_launch_paths' ]
+            
+            return { mime : list( launch_paths ) for ( mime, launch_paths ) in open_externally_launch_paths.items() }
+            
+        
+    
     def GetTagSummaryGenerator( self, name ):
         
         with self._lock:
             
             return self._dictionary[ 'tag_summary_generators' ][ name ]
+            
+        
+    
+    def GetWebBrowserLaunchPaths( self ) -> list[ str | None ]:
+        
+        with self._lock:
+            
+            if 'web_browser_launch_paths' in self._dictionary:
+                
+                result = list( self._dictionary[ 'web_browser_launch_paths' ] )
+                
+                if len( result ) == 0:
+                    
+                    result = [ None ]
+                    
+                
+            else:
+                
+                result = [ None ]
+                
+            
+            return result
             
         
     
@@ -2152,14 +2319,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetMimeLaunch( self, mime, launch_path ):
-        
-        with self._lock:
-            
-            self._dictionary[ 'media_launch' ][ mime ] = launch_path
-            
-        
-    
     def SetNoneableInteger( self, name, value ):
         
         with self._lock:
@@ -2173,6 +2332,26 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'noneable_strings' ][ name ] = value
+            
+        
+    
+    def SetOpenExternallyLaunchPaths( self, open_externally_launch_paths: dict[ int, list[ str | None ] ] ):
+        
+        with self._lock:
+            
+            open_externally_launch_paths_proper_objects = HydrusSerialisable.SerialisableDictionary()
+            
+            for ( mime, launch_paths ) in open_externally_launch_paths.items():
+                
+                open_externally_launch_paths_proper_objects[ mime ] = HydrusSerialisable.SerialisableList( launch_paths )
+                
+            
+            if HC.GENERAL_FILE not in open_externally_launch_paths_proper_objects or len( open_externally_launch_paths_proper_objects[ HC.GENERAL_FILE ] ) == 0:
+                
+                open_externally_launch_paths_proper_objects[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList( [ None ] )
+                
+            
+            self._dictionary[ 'open_externally_launch_paths' ] = open_externally_launch_paths_proper_objects
             
         
     
@@ -2251,4 +2430,18 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetWebBrowserLaunchPaths( self, web_browser_launch_paths: list[ str | None ] ):
+        
+        with self._lock:
+            
+            if len( web_browser_launch_paths ) == 0:
+                
+                web_browser_launch_paths = [ None ]
+                
+            
+            self._dictionary[ 'web_browser_launch_paths' ] = HydrusSerialisable.SerialisableList( web_browser_launch_paths )
+            
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS ] = ClientOptions

@@ -11,7 +11,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
@@ -886,11 +885,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = CG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
+                ClientPaths.LaunchFileDefault( path, mime )
                 
                 return
                 
@@ -2474,7 +2469,20 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                     focused_singleton = self._GetFocusSingleton()
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton )
+                    data = command.GetSimpleData()
+                    
+                    if data is not None:
+                        
+                        # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
+                        # ditch the _ gumpf when I am using id_and_name
+                        ( _, open_externally_launch_path ) = data
+                        
+                        it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton, open_externally_launch_path )
+                        
+                    else:
+                        
+                        it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( focused_singleton )
+                        
                     
                     if it_worked:
                         
@@ -3679,11 +3687,7 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = CG.client_controller.new_options
-                
-                launch_path = new_options.GetMimeLaunch( mime )
-                
-                HydrusPaths.LaunchFile( path, launch_path )
+                ClientPaths.LaunchFileDefault( path, mime )
                 
                 return
                 
@@ -5342,7 +5346,20 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                     
                     focused_singleton = self._GetFocusSingleton()
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton )
+                    data = command.GetSimpleData()
+                    
+                    if data is not None:
+                        
+                        # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
+                        # ditch the _ gumpf when I am using id_and_name
+                        ( _, open_externally_launch_path ) = data
+                        
+                        it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton, open_externally_launch_path )
+                        
+                    else:
+                        
+                        it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( focused_singleton )
+                        
                     
                     if it_worked:
                         

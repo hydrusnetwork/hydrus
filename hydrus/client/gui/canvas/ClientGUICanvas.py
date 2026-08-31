@@ -1038,7 +1038,20 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
-                it_worked = ClientGUIMediaSimpleActions.OpenExternally( self._current_media )
+                data = command.GetSimpleData()
+                
+                if data is not None:
+                    
+                    # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
+                    # ditch the _ gumpf when I am using id_and_name
+                    ( _, open_externally_launch_path ) = data
+                    
+                    it_worked = ClientGUIMediaSimpleActions.OpenExternally( self._current_media, open_externally_launch_path )
+                    
+                else:
+                    
+                    it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( self._current_media )
+                    
                 
                 if it_worked:
                     

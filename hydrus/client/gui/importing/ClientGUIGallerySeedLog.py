@@ -582,7 +582,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for gallery_seed in gallery_seeds:
                 
-                ClientPaths.LaunchURLInWebBrowser( gallery_seed.url )
+                ClientPaths.LaunchURLInDefaultWebBrowser( gallery_seed.url )
                 
             
         

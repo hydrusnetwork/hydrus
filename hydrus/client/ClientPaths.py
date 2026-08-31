@@ -1,9 +1,14 @@
 import collections.abc
+import os
+import shlex
+import threading
 import webbrowser
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core.processes import HydrusSubprocess
 
 from hydrus.client import ClientGlobals as CG
 
@@ -47,23 +52,152 @@ def DeletePath( path, always_delete_fully = False ):
         
     
 
-def LaunchPathInWebBrowser( path ):
+def GetDefaultLaunchPath():
     
-    LaunchURLInWebBrowser( 'file:///' + path )
+    if HC.PLATFORM_WINDOWS:
+        
+        return 'windows is called directly'
+        
+    elif HC.PLATFORM_MACOS:
+        
+        return 'open "%path%"'
+        
+    elif HC.PLATFORM_LINUX:
+        
+        return 'xdg-open "%path%"'
+        
+    elif HC.PLATFORM_HAIKU:
+        
+        return 'open "%path%"'
+        
     
 
-def LaunchURLInWebBrowser( url ):
+def LaunchFileDefault( path, mime ):
     
-    web_browser_path = CG.client_controller.new_options.GetNoneableString( 'web_browser_path' )
+    launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( mime )
     
-    if web_browser_path is None:
+    LaunchFile( path, launch_paths[0] )
+    
+
+def LaunchFile( path, open_externally_launch_path: str | None ):
+    
+    # TODO: This is temporary and will instead soon get an ExecutableCall, and/or the ExecutableManager will handle it itself
+    
+    def do_it( launch_path ):
         
-        webbrowser.open( url )
+        if HC.PLATFORM_WINDOWS and launch_path is None:
+            
+            os.startfile( path )
+            
+        else:
+            
+            if launch_path is None:
+                
+                launch_path = GetDefaultLaunchPath()
+                
+            
+            complete_launch_path = launch_path.replace( '%path%', path )
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                cmd = complete_launch_path
+                
+            else:
+                
+                cmd = shlex.split( complete_launch_path )
+                
+            
+            if HG.subprocess_report_mode:
+                
+                message = 'Attempting to launch "' + path + '" using command ' + repr( cmd ) + '.'
+                
+                HydrusData.ShowText( message )
+                
+            
+            try:
+                
+                HydrusData.CheckProgramIsNotShuttingDown()
+                
+                HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True, hide_terminal = False )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'Could not launch a file! Command used was:' + '\n' + str( cmd ) )
+                
+                HydrusData.ShowException( e )
+                
+            
         
-    else:
+    
+    thread = threading.Thread( target = do_it, args = ( open_externally_launch_path, ) )
+    
+    thread.daemon = True
+    
+    thread.start()
+    
+
+def LaunchPathInWebBrowser( path ):
+    
+    LaunchURLInDefaultWebBrowser( 'file:///' + path )
+    
+
+def LaunchURLInDefaultWebBrowser( url ):
+    
+    web_browser_launch_paths = CG.client_controller.new_options.GetWebBrowserLaunchPaths()
+    
+    LaunchURLInWebBrowser( url, web_browser_launch_paths[0] )
+    
+
+def LaunchURLInWebBrowser( url, web_browser_launch_path: str | None ):
+    
+    # TODO: This is temporary and will instead soon get an ExecutableCall, and/or the ExecutableManager will handle it itself
+    
+    def do_it():
         
-        HydrusPaths.LaunchFile( url, launch_path = web_browser_path )
+        if web_browser_launch_path is None:
+            
+            webbrowser.open( url )
+            
+        else:
+            
+            complete_launch_path = web_browser_launch_path.replace( '%url%', url )
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                cmd = complete_launch_path
+                
+            else:
+                
+                cmd = shlex.split( complete_launch_path )
+                
+            
+            if HG.subprocess_report_mode:
+                
+                message = 'Attempting to launch "' + url + '" using command ' + repr( cmd ) + '.'
+                
+                HydrusData.ShowText( message )
+                
+            
+            try:
+                
+                HydrusData.CheckProgramIsNotShuttingDown()
+                
+                HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = True, hide_terminal = False )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'Could not launch an URL! Command used was:' + '\n' + str( cmd ) )
+                
+                HydrusData.ShowException( e )
+                
+            
         
+    
+    thread = threading.Thread( target = do_it )
+    
+    thread.daemon = True
+    
+    thread.start()
     
 
 def OpenFileLocation( path: str ):
@@ -71,7 +205,7 @@ def OpenFileLocation( path: str ):
     if SHOW_IN_FILE_MANAGER_OK:
         
         show_in_file_manager( path )
-                
+        
     else:
         
         HydrusPaths.OpenFileLocation( path )

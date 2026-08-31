@@ -2271,7 +2271,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
             
             url = '{}://127.0.0.1:{}/'.format( scheme, self._service.GetPort() )
             
-            ClientPaths.LaunchURLInWebBrowser( url )
+            ClientPaths.LaunchURLInDefaultWebBrowser( url )
             
         
     

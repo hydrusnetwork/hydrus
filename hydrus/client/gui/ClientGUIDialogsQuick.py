@@ -280,7 +280,7 @@ def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
             url = '/'.join( ( HC.REMOTE_HELP.rstrip( '/' ), HC.DOCUMENTATION_ABOUT_DOCS.lstrip( '/' ) ) )
             
         
-        ClientPaths.LaunchURLInWebBrowser( url )
+        ClientPaths.LaunchURLInDefaultWebBrowser( url )
         
     
 

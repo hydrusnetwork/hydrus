@@ -826,7 +826,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 for file_seed in file_seeds:
                     
-                    ClientPaths.LaunchURLInWebBrowser( file_seed.file_seed_data )
+                    ClientPaths.LaunchURLInDefaultWebBrowser( file_seed.file_seed_data )
                     
                 
             else:

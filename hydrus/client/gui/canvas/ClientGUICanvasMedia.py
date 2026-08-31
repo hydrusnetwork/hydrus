@@ -9,7 +9,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusImageHandling
@@ -17,6 +16,7 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
 from hydrus.client import ClientUgoiraHandling
 from hydrus.client.gui import ClientGUIExceptionHandling
@@ -28,7 +28,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
 from hydrus.client.gui.canvas import ClientGUITransparency
-from hydrus.client.gui.media import ClientGUIMediaControls, ClientGUIMediaVolume
+from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaSingle
@@ -3491,9 +3492,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
         path = client_files_manager.GetFilePath( hash, mime )
         
-        launch_path = self._new_options.GetMimeLaunch( mime )
-        
-        HydrusPaths.LaunchFile( path, launch_path )
+        ClientPaths.LaunchFileDefault( path, mime )
         
     
 

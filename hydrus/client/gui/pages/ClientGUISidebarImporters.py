@@ -1944,7 +1944,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             
             for watcher in watchers:
                 
-                ClientPaths.LaunchURLInWebBrowser( watcher.GetURL() )
+                ClientPaths.LaunchURLInDefaultWebBrowser( watcher.GetURL() )
                 
             
         

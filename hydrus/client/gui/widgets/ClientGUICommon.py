@@ -1095,7 +1095,7 @@ class BetterHyperLink( BetterStaticText ):
     
     def Activated( self ):
         
-        ClientPaths.LaunchURLInWebBrowser( self._url )
+        ClientPaths.LaunchURLInDefaultWebBrowser( self._url )
         
     
     def get_link_color( self ):

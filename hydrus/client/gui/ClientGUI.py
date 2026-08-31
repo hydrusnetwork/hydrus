@@ -3505,15 +3505,15 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         links = ClientGUIMenus.GenerateMenu( menu )
         
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_icons().hydrus_black_square, ClientPaths.LaunchURLInWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_icons().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_icons().eight_chan, ClientPaths.LaunchURLInWebBrowser, 'https://8chan.moe/t/catalog.html' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'x', 'Open hydrus dev\'s X account, where he makes general progress updates and emergency notifications.', CC.global_icons().x, ClientPaths.LaunchURLInWebBrowser, 'https://x.com/hydrusnetwork' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_icons().tumblr, ClientPaths.LaunchURLInWebBrowser, 'https://hydrus.tumblr.com/' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_icons().discord, ClientPaths.LaunchURLInWebBrowser, 'https://discord.gg/wPHPCUZ' )
-        site = ClientGUIMenus.AppendMenuIconItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_icons().patreon, ClientPaths.LaunchURLInWebBrowser, 'https://www.patreon.com/hydrus_dev' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_icons().hydrus_black_square, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_icons().eight_chan, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://8chan.moe/t/catalog.html' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'x', 'Open hydrus dev\'s X account, where he makes general progress updates and emergency notifications.', CC.global_icons().x, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://x.com/hydrusnetwork' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_icons().tumblr, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://hydrus.tumblr.com/' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_icons().discord, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://discord.gg/wPHPCUZ' )
+        site = ClientGUIMenus.AppendMenuIconItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_icons().patreon, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://www.patreon.com/hydrus_dev' )
         
         ClientGUIMenus.AppendMenu( menu, links, 'links' )
         
@@ -3809,7 +3809,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-        ClientGUIMenus.AppendMenuIconItem( submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
+        ClientGUIMenus.AppendMenuIconItem( submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
         ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
         
         ClientGUIMenus.AppendSeparator( submenu )

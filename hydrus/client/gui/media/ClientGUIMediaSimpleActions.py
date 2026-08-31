@@ -6,7 +6,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageHandling
 
@@ -306,7 +305,7 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
     return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys )
     
 
-def OpenExternally( media: ClientMediaSingle.MediaSingle | None ) -> bool:
+def OpenExternally( media: ClientMediaSingle.MediaSingle | None, open_externally_launch_path: str | None ) -> bool:
     
     if media is None:
         
@@ -323,11 +322,23 @@ def OpenExternally( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
-    launch_path = CG.client_controller.new_options.GetMimeLaunch( mime )
-    
-    HydrusPaths.LaunchFile( path, launch_path )
+    ClientPaths.LaunchFile( path, open_externally_launch_path )
     
     return True
+    
+
+def OpenExternallyDefault( media: ClientMediaSingle.MediaSingle | None ) -> bool:
+    
+    if media is None:
+        
+        return False
+        
+    
+    mime = media.GetMime()
+    
+    launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( mime )
+    
+    return OpenExternally( media, launch_paths[0] )
     
 
 def OpenFileLocation( media: ClientMediaSingle.MediaSingle | None ) -> bool:
