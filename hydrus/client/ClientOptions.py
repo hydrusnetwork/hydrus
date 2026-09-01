@@ -1240,16 +1240,26 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if 'web_browser_path' in loaded_dictionary[ 'noneable_strings' ]:
                 
-                launch_path = loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
-                
-                if isinstance( launch_path, str ):
+                try:
                     
-                    launch_path = launch_path.replace( '%path%', '%url%' )
+                    launch_path = loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
                     
-                
-                web_browser_launch_paths = HydrusSerialisable.SerialisableList( [ launch_path ] )
-                
-                del loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
+                    if isinstance( launch_path, str ):
+                        
+                        launch_path = launch_path.replace( '%path%', '%url%' )
+                        
+                    
+                    web_browser_launch_paths = HydrusSerialisable.SerialisableList( [ launch_path ] )
+                    
+                    del loaded_dictionary[ 'noneable_strings' ][ 'web_browser_path' ]
+                    
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem updating options web browser launch path:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                    web_browser_launch_paths = HydrusSerialisable.SerialisableList( [ None ] )
+                    
                 
             else:
                 
@@ -1268,73 +1278,83 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             if 'media_launch' in loaded_dictionary:
                 
-                media_launch = loaded_dictionary[ 'media_launch' ]
-                
-                open_externally_launch_paths = HydrusSerialisable.SerialisableDictionary()
-                
-                mimetypes_to_launch_paths = dict()
-                general_mimetypes_to_seen_launch_paths = collections.defaultdict( set )
-                
-                for mime in HC.SEARCHABLE_MIMES:
+                try:
                     
-                    if mime in media_launch:
+                    media_launch = loaded_dictionary[ 'media_launch' ]
+                    
+                    open_externally_launch_paths = HydrusSerialisable.SerialisableDictionary()
+                    
+                    mimetypes_to_launch_paths = dict()
+                    general_mimetypes_to_seen_launch_paths = collections.defaultdict( set )
+                    
+                    for mime in HC.SEARCHABLE_MIMES:
                         
-                        launch_path_or_none = media_launch[ mime ]
+                        if mime in media_launch:
+                            
+                            launch_path_or_none = media_launch[ mime ]
+                            
+                        else:
+                            
+                            launch_path_or_none = None
+                            
+                        
+                        mimetypes_to_launch_paths[ mime ] = launch_path_or_none
+                        general_mimetypes_to_seen_launch_paths[ HC.mimes_to_general_mimetypes[ mime ] ].add( launch_path_or_none )
+                        general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ].add( launch_path_or_none )
+                        
+                    
+                    if len( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] ) == 1:
+                        
+                        # everything uses the same launch, so we can set up a very simple default options
+                        open_externally_launch_paths[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] )
                         
                     else:
                         
-                        launch_path_or_none = None
+                        mimetypes_we_handled_with_a_metatype = set()
                         
-                    
-                    mimetypes_to_launch_paths[ mime ] = launch_path_or_none
-                    general_mimetypes_to_seen_launch_paths[ HC.mimes_to_general_mimetypes[ mime ] ].add( launch_path_or_none )
-                    general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ].add( launch_path_or_none )
-                    
-                
-                if len( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] ) == 1:
-                    
-                    # everything uses the same launch, so we can set up a very simple default options
-                    open_externally_launch_paths[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList( general_mimetypes_to_seen_launch_paths[ HC.GENERAL_FILE ] )
-                    
-                else:
-                    
-                    mimetypes_we_handled_with_a_metatype = set()
-                    
-                    for general_class_of_filetype in HC.GENERAL_CLASSES_OF_FILETYPE:
+                        for general_class_of_filetype in HC.GENERAL_CLASSES_OF_FILETYPE:
+                            
+                            if len( general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ] ) == 1:
+                                
+                                # all images use the same path, so we can set this up
+                                
+                                seen_launch_paths = general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ]
+                                
+                                # no different than the overall default; nothing interesting to record
+                                if seen_launch_paths == { None }:
+                                    
+                                    continue
+                                    
+                                
+                                open_externally_launch_paths[ general_class_of_filetype ] = HydrusSerialisable.SerialisableList( seen_launch_paths )
+                                
+                                mimetypes_we_handled_with_a_metatype.update( HC.general_mimetypes_to_mime_groups[ general_class_of_filetype ] )
+                                
+                            
                         
-                        if len( general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ] ) == 1:
+                        for ( mime, launch_path ) in mimetypes_to_launch_paths.items():
                             
-                            # all images use the same path, so we can set this up
-                            
-                            seen_launch_paths = general_mimetypes_to_seen_launch_paths[ general_class_of_filetype ]
-                            
-                            # no different than the overall default; nothing interesting to record
-                            if seen_launch_paths == { None }:
+                            if mime in mimetypes_we_handled_with_a_metatype:
                                 
                                 continue
                                 
                             
-                            open_externally_launch_paths[ general_class_of_filetype ] = HydrusSerialisable.SerialisableList( seen_launch_paths )
+                            # no different than the overall default; nothing interesting to record
+                            if launch_path is None:
+                                
+                                continue
+                                
                             
-                            mimetypes_we_handled_with_a_metatype.update( HC.general_mimetypes_to_mime_groups[ general_class_of_filetype ] )
+                            open_externally_launch_paths[ mime ] = HydrusSerialisable.SerialisableList( [ launch_path ] )
                             
                         
                     
-                    for ( mime, launch_path ) in mimetypes_to_launch_paths.items():
-                        
-                        if mime in mimetypes_we_handled_with_a_metatype:
-                            
-                            continue
-                            
-                        
-                        # no different than the overall default; nothing interesting to record
-                        if launch_path is None:
-                            
-                            continue
-                            
-                        
-                        open_externally_launch_paths[ mime ] = HydrusSerialisable.SerialisableList( [ launch_path ] )
-                        
+                except Exception as e:
+                    
+                    HydrusData.Print( 'Problem updating options open externally launch paths:' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                    open_externally_launch_paths = HydrusSerialisable.SerialisableDictionary( { HC.GENERAL_FILE : HydrusSerialisable.SerialisableList( [ None ] ) } )
                     
                 
             
