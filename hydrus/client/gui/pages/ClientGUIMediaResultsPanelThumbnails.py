@@ -2859,7 +2859,10 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         
         self._ArrangeThumbnails()
         
-        self._ResetThumbnailScrollSingleStep()
+        # WOOP WOOP, this does not work well when called here!
+        # if we set it here, it sets to 126 or whatever, and then when the page is later, actually shown, it gets transmogrified into half, 63
+        # therefore we do it on the next frame and reset on pageshown, let's go
+        CG.client_controller.CallAfterQtSafe( self, self._ResetThumbnailScrollSingleStep )
         
         CG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
         CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
@@ -3208,6 +3211,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         
     
     def _ResetThumbnailScrollSingleStep( self ):
+        
+        if not self.isVisible():
+            
+            return
+            
         
         # No idea what to do if thumbnail height and/or width isn't constant.
         # For now, use the "generic"/"average" thumbnail size for this purpose.
@@ -4168,6 +4176,19 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             
         
         self._RedrawMedia( affected_media )
+        
+    
+    def PageShown( self ):
+        
+        super().PageShown()
+        
+        # yeah so if we don't set this on the frame after every show, it seems to cut in half!?
+        # maybe it is something to do with the position preservation in this method's super?
+        # maybe a relayout is doing it, maybe something like fitInView. it isn't going to a clean 50 default either, but actually half, so 126->63
+        # the halving happens _after_ showEvent completes
+        # it re-breaks on every hide but does not compound, so there is an idempotent mess-up here. I think a misfiring 'adjust for device independent pixels' call somewhere
+        # I worked on this a bit and think it is a QGV Qt bug. wasn't true for QWidget
+        CG.client_controller.CallAfterQtSafe( self, self._ResetThumbnailScrollSingleStep )
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ) -> bool:
