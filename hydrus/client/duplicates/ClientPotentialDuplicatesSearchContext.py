@@ -1,6 +1,7 @@
 import collections
 import math
 import random
+import threading
 
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusLists
@@ -521,6 +522,8 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
     
     def __init__( self, potential_duplicates_search_context: "PotentialDuplicatesSearchContext", is_searching_full_space: bool ):
         
+        self._lock = threading.Lock()
+        
         self._potential_duplicates_search_context = potential_duplicates_search_context
         self._is_searching_full_space = is_searching_full_space
         
@@ -535,75 +538,150 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         self._desired_num_hits = None
         
     
-    def AddHits( self, matching_pairs_and_distances: tuple[ int, int, int ] ):
-        
-        self._potential_duplicate_id_pairs_and_distances_that_hit.AddRows( matching_pairs_and_distances )
-        
-    
-    def DoingFileBasedSearchIsOK( self ):
-        
-        # don't do it for partial searches, and a sanity check
-        return self._is_searching_full_space and self.NumPairsInSearchSpace() > 10000 and not self.ThereIsJustABitLeftBro() and CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
-        
-    
-    def EstimatedNumHits( self ):
-        
-        num_hits = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
-        num_searched = self.NumPairsSearched()
-        
-        if num_searched == 0:
-            
-            return 0
-            
-        
-        estimate = int( num_hits * ( self.NumPairsInSearchSpace() / self.NumPairsSearched() ) )
-        
-        return estimate
-        
-    
-    def EstimatedNumRowsStillToSearch( self ):
-        
-        num_still_to_search = self.NumPairsStillToSearch()
-        
-        num_hits = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
-        
-        if self._desired_num_hits is not None and num_hits > 0:
-            
-            num_hits_still_to_get = self._desired_num_hits - num_hits
-            
-            if num_hits_still_to_get > 0:
-                
-                rows_per_hit = self.NumPairsSearched() / num_hits
-                
-                expected_remaining_rows_until_we_are_good = int( rows_per_hit * num_hits_still_to_get )
-                
-                return expected_remaining_rows_until_we_are_good
-                
-            
-        
-        return num_still_to_search
-        
-    
-    def FilterWiderPotentialGroup( self, media_ids: collections.abc.Collection[ int ] ):
-        
-        group_potential_duplicate_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_search_space.FilterWiderPotentialGroup( media_ids )
-        
-        return { media_id for pair in group_potential_duplicate_id_pairs_and_distances.GetRows() for media_id in pair }
-        
-    
-    def GetLocationContext( self ) -> ClientLocation.LocationContext:
-        
-        return self._potential_duplicates_search_context.GetLocationContext()
-        
-    
-    def GetNumHits( self ) -> int:
+    def _NumHits( self ) -> int:
         
         return len( self._potential_duplicate_id_pairs_and_distances_that_hit )
         
     
+    def _NumPairsInSearchSpace( self ) -> int:
+        
+        return len( self._potential_duplicate_id_pairs_and_distances_search_space )
+        
+    
+    def _NumPairsSearched( self ) -> int:
+        
+        return self._NumPairsInSearchSpace() - self._NumPairsStillToSearch()
+        
+    
+    def _NumPairsStillToSearch( self ) -> int:
+        
+        return len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+        
+    
+    def _ResetSearchSpace( self ):
+        
+        self._potential_duplicate_id_pairs_and_distances_search_space = PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
+        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
+        
+        self._search_space_initialised = False
+        self._search_space_fetch_started = False
+        self._search_space_initialised_time = 0
+        
+    
+    def _StartNewSearch( self ):
+        
+        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances_search_space.Duplicate()
+        
+        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
+        
+    
+    def _ThereIsJustABitLeftBro( self ):
+        
+        # we are in a '1700 out of 1703 rows' situation. in this case we don't want any funny business--just do those last three
+        
+        num_in_search_space = self._NumPairsInSearchSpace()
+        num_still_to_search = self._NumPairsStillToSearch()
+        
+        if num_still_to_search < 1024:
+            
+            return True
+            
+        
+        if num_still_to_search < num_in_search_space * 0.05:
+            
+            return True
+            
+        
+        return False
+        
+    
+    def AddHits( self, matching_pairs_and_distances: tuple[ int, int, int ] ):
+        
+        with self._lock:
+            
+            self._potential_duplicate_id_pairs_and_distances_that_hit.AddRows( matching_pairs_and_distances )
+            
+        
+    
+    def DoingFileBasedSearchIsOK( self ):
+        
+        options_ok = CG.client_controller.new_options.GetBoolean( 'potential_duplicate_pairs_search_can_do_file_search_based_optimisation' )
+        
+        with self._lock:
+            
+            # don't do it for partial searches, and a sanity check
+            return self._is_searching_full_space and self._NumPairsInSearchSpace() > 10000 and not self._ThereIsJustABitLeftBro() and options_ok
+            
+        
+    
+    def EstimatedNumHits( self ):
+        
+        with self._lock:
+            
+            num_hits = self._NumHits()
+            num_searched = self._NumPairsSearched()
+            
+            if num_searched == 0:
+                
+                return 0
+                
+            
+            estimate = int( num_hits * ( self._NumPairsInSearchSpace() / num_searched ) )
+            
+            return estimate
+            
+        
+    
+    def EstimatedNumRowsStillToSearch( self ):
+        
+        with self._lock:
+            
+            num_hits = self._NumHits()
+            num_still_to_search = self._NumPairsStillToSearch()
+            
+            if self._desired_num_hits is not None and num_hits > 0:
+                
+                num_hits_still_to_get = self._desired_num_hits - num_hits
+                
+                if num_hits_still_to_get > 0:
+                    
+                    rows_per_hit = self._NumPairsSearched() / num_hits
+                    
+                    expected_remaining_rows_until_we_are_good = int( rows_per_hit * num_hits_still_to_get )
+                    
+                    return expected_remaining_rows_until_we_are_good
+                    
+                
+            
+            return num_still_to_search
+            
+        
+    
+    def FilterWiderPotentialGroup( self, media_ids: collections.abc.Collection[ int ] ):
+        
+        with self._lock:
+            
+            group_potential_duplicate_id_pairs_and_distances = self._potential_duplicate_id_pairs_and_distances_search_space.FilterWiderPotentialGroup( media_ids )
+            
+            return { media_id for pair in group_potential_duplicate_id_pairs_and_distances.GetRows() for media_id in pair }
+            
+        
+    
+    def GetLocationContext( self ) -> ClientLocation.LocationContext:
+        
+        with self._lock:
+            
+            return self._potential_duplicates_search_context.GetLocationContext()
+            
+        
+    
     def GetPotentialDuplicatesSearchContext( self ):
         
-        return self._potential_duplicates_search_context
+        with self._lock:
+            
+            return self._potential_duplicates_search_context
+            
         
     
     def GetRelativeErrorAt95Certainty( self ):
@@ -678,175 +756,234 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             return rel
             
         
-        x = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
-        n = self.NumPairsSearched()
-        N = self.NumPairsInSearchSpace()
-        
-        if x > n: # something went wrong mate, didn't reset a count properly somewhere
+        with self._lock:
             
-            return 1.0
+            x = self._NumHits()
+            n = self._NumPairsSearched()
+            N = self._NumPairsInSearchSpace()
             
-        
-        if n == N:
+            if n < 0 or n > N or x > n: # something went wrong mate, didn't reset a count properly somewhere
+                
+                return 1.0
+                
             
-            return 0.0
+            if n == N:
+                
+                return 0.0
+                
             
-        
-        rel = relative_halfwidth_from_counts( x, n, N )
-        
-        return rel
+            rel = relative_halfwidth_from_counts( x, n, N )
+            
+            return rel
+            
         
     
     def NotifyPotentialDuplicatePairsUpdate( self, update_type, *args ):
         
-        if not self._search_space_initialised:
+        with self._lock:
             
-            return
-            
-        
-        if update_type in ( PAIRS_UPDATE_ADD_ROWS, PAIRS_UPDATE_DELETE_PAIRS ):
-            
-            ( location_context, rows_of_data ) = args
-            
-            if location_context != self._potential_duplicates_search_context.GetLocationContext():
+            if not self._search_space_initialised:
                 
                 return
                 
             
-        
-        self._potential_duplicate_id_pairs_and_distances_search_space.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
-        self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
-        
-        if update_type != PAIRS_UPDATE_ADD_ROWS:
+            if update_type in ( PAIRS_UPDATE_ADD_ROWS, PAIRS_UPDATE_DELETE_PAIRS ):
+                
+                ( location_context, rows_of_data ) = args
+                
+                if location_context != self._potential_duplicates_search_context.GetLocationContext():
+                    
+                    return
+                    
+                
             
-            self._potential_duplicate_id_pairs_and_distances_that_hit.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+            self._potential_duplicate_id_pairs_and_distances_search_space.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+            self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+            
+            if update_type != PAIRS_UPDATE_ADD_ROWS:
+                
+                self._potential_duplicate_id_pairs_and_distances_that_hit.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
+                
             
         
     
     def NotifySearchSpaceFetchStarted( self ):
         
-        self._search_space_fetch_started = True
+        with self._lock:
+            
+            self._search_space_fetch_started = True
+            
         
     
     def NotifyWorkTimeForAutothrottle( self, actual_work_period: float, ideal_work_period: float ):
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, ideal_work_period )
+        with self._lock:
+            
+            self._potential_duplicate_id_pairs_and_distances_still_to_search.NotifyWorkTimeForAutothrottle( actual_work_period, ideal_work_period )
+            
         
     
-    def NumPairsInSearchSpace( self ):
+    def NumHits( self ) -> int:
         
-        return len( self._potential_duplicate_id_pairs_and_distances_search_space )
-        
-    
-    def NumPairsSearched( self ):
-        
-        return self.NumPairsInSearchSpace() - self.NumPairsStillToSearch()
+        with self._lock:
+            
+            return self._NumHits()
+            
         
     
-    def NumPairsStillToSearch( self ):
+    def NumPairsInSearchSpace( self ) -> int:
         
-        return len( self._potential_duplicate_id_pairs_and_distances_still_to_search )
+        with self._lock:
+            
+            return self._NumPairsInSearchSpace()
+            
+        
+    
+    def NumPairsSearched( self ) -> int:
+        
+        with self._lock:
+            
+            return self._NumPairsSearched()
+            
+        
+    
+    def NumPairsStillToSearch( self ) -> int:
+        
+        with self._lock:
+            
+            return self._NumPairsStillToSearch()
+            
         
     
     def PopBlock( self ):
         
-        return self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
+        with self._lock:
+            
+            return self._potential_duplicate_id_pairs_and_distances_still_to_search.PopBlock()
+            
         
     
     def PopRemaining( self ):
         
-        result = self._potential_duplicate_id_pairs_and_distances_still_to_search.GetRows()
-        
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
-        
-        return result
+        with self._lock:
+            
+            result = self._potential_duplicate_id_pairs_and_distances_still_to_search.GetRows()
+            
+            self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
+            
+            return result
+            
         
     
     def ResetSearchSpace( self ):
         
-        self._potential_duplicate_id_pairs_and_distances_search_space = PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = PotentialDuplicateIdPairsAndDistances( [] )
-        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
-        
-        self._search_space_initialised = False
-        self._search_space_fetch_started = False
-        self._search_space_initialised_time = 0
+        with self._lock:
+            
+            self._ResetSearchSpace()
+            
         
     
     def SearchDone( self ):
         
-        return self.NumPairsStillToSearch() == 0
+        with self._lock:
+            
+            return self._NumPairsStillToSearch() == 0
+            
         
     
     def SearchSpaceFetchStarted( self ):
         
-        return self._search_space_fetch_started
+        with self._lock:
+            
+            return self._search_space_fetch_started
+            
         
     
     def SearchSpaceInitialised( self ) -> bool:
         
-        return self._search_space_initialised
+        with self._lock:
+            
+            return self._search_space_initialised
+            
         
     
     def SearchSpaceIsEmpty( self ):
         
-        return len( self._potential_duplicate_id_pairs_and_distances_search_space ) == 0
+        with self._lock:
+            
+            return len( self._potential_duplicate_id_pairs_and_distances_search_space ) == 0
+            
         
     
     def SearchSpaceIsStale( self ):
         
-        return HydrusTime.TimeHasPassed( self._search_space_initialised_time + POTENTIAL_PAIRS_REFRESH_TIMEOUT )
+        with self._lock:
+            
+            return HydrusTime.TimeHasPassed( self._search_space_initialised_time + POTENTIAL_PAIRS_REFRESH_TIMEOUT )
+            
         
     
     def SetDesiredNumHits( self, desired_num_hits: int ):
         
-        self._desired_num_hits = desired_num_hits
+        with self._lock:
+            
+            self._desired_num_hits = desired_num_hits
+            
         
     
     def SetPotentialDuplicatesSearchContext( self, potential_duplicates_search_context: "PotentialDuplicatesSearchContext" ):
         
-        reset_search_space = self._potential_duplicates_search_context.GetLocationContext() != potential_duplicates_search_context.GetLocationContext()
-        
-        self._potential_duplicates_search_context = potential_duplicates_search_context
-        
-        if reset_search_space:
+        with self._lock:
             
-            self.ResetSearchSpace()
+            reset_search_space = self._potential_duplicates_search_context.GetLocationContext() != potential_duplicates_search_context.GetLocationContext()
+            
+            self._potential_duplicates_search_context = potential_duplicates_search_context
+            
+            if reset_search_space:
+                
+                self._ResetSearchSpace()
+                
             
         
     
     def SetSearchSpace( self, potential_duplicate_id_pairs_and_distances: PotentialDuplicateIdPairsAndDistances ):
         
-        if self._desired_num_hits is None and not self._is_searching_full_space:
+        with self._lock:
             
-            potential_duplicate_id_pairs_and_distances.RandomiseForFastSearch()
+            if self._desired_num_hits is None and not self._is_searching_full_space:
+                
+                potential_duplicate_id_pairs_and_distances.RandomiseForFastSearch()
+                
+            else:
+                
+                potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
+                
             
-        else:
+            self._potential_duplicate_id_pairs_and_distances_search_space = potential_duplicate_id_pairs_and_distances
             
-            potential_duplicate_id_pairs_and_distances.RandomiseForRichEstimate()
+            self._StartNewSearch()
             
-        
-        self._potential_duplicate_id_pairs_and_distances_search_space = potential_duplicate_id_pairs_and_distances
-        
-        self._search_space_initialised = True
-        self._search_space_fetch_started = False
-        self._search_space_initialised_time = HydrusTime.GetNowFloat()
-        
-        self.StartNewSearch()
+            self._search_space_initialised = True
+            self._search_space_fetch_started = False
+            self._search_space_initialised_time = HydrusTime.GetNowFloat()
+            
         
     
     def SpawnMediaIdFilteredSearch( self, media_ids ) -> "PotentialDuplicatePairsFragmentarySearch":
         
-        my_copy = PotentialDuplicatePairsFragmentarySearch(
-            self._potential_duplicates_search_context,
-            False
-        )
-        
-        potential_duplicate_id_pairs_and_distances_for_media_ids = self._potential_duplicate_id_pairs_and_distances_search_space.FilterWiderPotentialGroup( media_ids )
-        
-        my_copy.SetSearchSpace( potential_duplicate_id_pairs_and_distances_for_media_ids )
-        
-        return my_copy
+        with self._lock:
+            
+            my_copy = PotentialDuplicatePairsFragmentarySearch(
+                self._potential_duplicates_search_context,
+                False
+            )
+            
+            potential_duplicate_id_pairs_and_distances_for_media_ids = self._potential_duplicate_id_pairs_and_distances_search_space.FilterWiderPotentialGroup( media_ids )
+            
+            my_copy.SetSearchSpace( potential_duplicate_id_pairs_and_distances_for_media_ids )
+            
+            return my_copy
+            
         
     
     def SpawnNewSearch( self ) -> "PotentialDuplicatePairsFragmentarySearch":
@@ -854,48 +991,40 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
         # we do this when the caller has a mix of async re-init and search work
         # spawning a new search ditches the old 'still to search', so we don't have to worry about an ongoing search messing with any new search space
         
-        my_copy = PotentialDuplicatePairsFragmentarySearch(
-            self._potential_duplicates_search_context,
-            self._is_searching_full_space
-        )
-        
-        if self._search_space_initialised:
+        with self._lock:
             
-            my_copy.SetSearchSpace( self._potential_duplicate_id_pairs_and_distances_search_space )
+            my_copy = PotentialDuplicatePairsFragmentarySearch(
+                self._potential_duplicates_search_context,
+                self._is_searching_full_space
+            )
             
-        else:
+            if self._search_space_initialised:
+                
+                my_copy.SetSearchSpace( self._potential_duplicate_id_pairs_and_distances_search_space.Duplicate() )
+                
+            else:
+                
+                my_copy.StartNewSearch()
+                
             
-            my_copy.StartNewSearch()
+            return my_copy
             
-        
-        return my_copy
         
     
     def StartNewSearch( self ):
         
-        self._potential_duplicate_id_pairs_and_distances_still_to_search = self._potential_duplicate_id_pairs_and_distances_search_space.Duplicate()
-        
-        self._potential_duplicate_id_pairs_and_distances_that_hit = PotentialDuplicateIdPairsAndDistances( [] )
+        with self._lock:
+            
+            self._StartNewSearch()
+            
         
     
     def ThereIsJustABitLeftBro( self ):
         
-        # we are in a '1700 out of 1703 rows' situation. in this case we don't want any funny business--just do those last three
-        
-        num_in_search_space = self.NumPairsInSearchSpace()
-        num_still_to_search = self.NumPairsStillToSearch()
-        
-        if num_still_to_search < 1024:
+        with self._lock:
             
-            return True
+            return self._ThereIsJustABitLeftBro()
             
-        
-        if num_still_to_search < num_in_search_space * 0.05:
-            
-            return True
-            
-        
-        return False
         
     
     def ThisAppearsToHaveAHitRateLowerThan( self, percentage_float ):
@@ -923,18 +1052,38 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             return U # We are 95% confident the hitrate will be below this
             
         
-        x = len( self._potential_duplicate_id_pairs_and_distances_that_hit )
-        n = self.NumPairsSearched()
-        N = self.NumPairsInSearchSpace()
+        # interesting bug report here for v685, but probably has been true for a long time:
+        #     num = p_hat + z_squared/(2*n) + z*math.sqrt(var + z_squared/(4*n**2))
+        #     ValueError: expected a nonnegative input, got -0.0014206531762895852
+        #
+        # what caused the negative value inside the square-root? I looked through the possibles and it has to be 'n'
+        # x and N are >=0 always, but n is negative if 'still to search' is larger than the total search space
+        # this just happened to a guy out of nowhere and then did not happen again
+        # it _did_ spam the error 4k times (which feels odd for a race condition, but bleh), but then it was fine. he was clearing pairs while this work was going on
+        # I think best assumption for now is that it was a race condition due to lazy locking for this class, and this stats routine ran on the, say, DB thread while the GUI was mid-applying a pair update
+        # the filter (notifypotentialduplicatepairsupdate) had applied and removed from search space but not searched space
+        # therefore, we'll add proper locking and more generous guard-checking
         
-        if n == 0:
+        with self._lock:
             
-            return False
+            x = self._NumHits()
+            n = self._NumPairsSearched()
+            N = self._NumPairsInSearchSpace()
             
-        
-        U = wilson_upper_one_sided()
-        
-        return U < percentage_float
+            if n < 0 or n > N or x > n: # ruh roh
+                
+                return False
+                
+            
+            if n == 0:
+                
+                return False
+                
+            
+            U = wilson_upper_one_sided()
+            
+            return U < percentage_float
+            
         
     
 

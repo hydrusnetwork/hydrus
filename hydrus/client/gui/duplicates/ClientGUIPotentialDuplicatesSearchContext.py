@@ -528,7 +528,7 @@ class EditPotentialDuplicatesSearchContextPanel( ClientGUICommon.StaticBox ):
         
         self._potential_duplicate_pairs_fragmentary_search.NotifyPotentialDuplicatePairsUpdate( update_type, *args )
         
-        self._num_potential_duplicate_pairs = self._potential_duplicate_pairs_fragmentary_search.GetNumHits()
+        self._num_potential_duplicate_pairs = self._potential_duplicate_pairs_fragmentary_search.NumHits()
         
         self._DoCountWork()
         
