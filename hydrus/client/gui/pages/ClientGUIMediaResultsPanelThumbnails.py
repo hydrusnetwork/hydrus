@@ -3033,26 +3033,37 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             
         
     
-    def _MediaToUseWhenMovingFocus( self ):
+    def _MediaToUseWhenMovingFocus( self, shift: bool ):
         
         media_to_use = None
-        next_best = False
+        you_should_just_select_this_guy = False
         
-        if self._last_hit_media is not None:
+        last_hit_media_is_important = shift or CG.client_controller.new_options.GetBoolean( 'on_shift_click_move_ghost_focus_to_last_hit' )
+        
+        if last_hit_media_is_important and self._last_hit_media is not None:
             
             media_to_use = self._last_hit_media
             
-        elif self._next_best_media_if_focuses_removed is not None:
+        elif self._focused_media is not None:
             
-            media_to_use = self._next_best_media_if_focuses_removed
+            media_to_use = self._focused_media
             
-            next_best = True
+        elif self._previously_focused_media_when_nothing_now is not None:
+            
+            media_to_use = self._previously_focused_media_when_nothing_now
+            
+            you_should_just_select_this_guy = True
+            
+        elif not last_hit_media_is_important and self._last_hit_media is not None:
+            
+            media_to_use = self._last_hit_media
             
         elif len( self._sorted_media ) > 0:
             
             media_to_use = self._sorted_media[ 0 ]
             
-        return media_to_use, next_best
+        
+        return ( media_to_use, you_should_just_select_this_guy )
         
     
     def _MoveThumbnailFocus( self, new_position, shift ):
@@ -3065,6 +3076,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                 
                 new_position = len( self._sorted_media ) - 1
                 
+            
             new_media = self._sorted_media[ new_position ]
             
             self._HitMedia( new_media, False, shift )
@@ -4183,48 +4195,48 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
                         self._ScrollEnd( shift )
                         
                     
-                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
-                    
-                    if move_direction == CAC.MOVE_PAGE_UP:
-                        
-                        direction = -1
-                        
-                    else: # MOVE_PAGE_DOWN
-                        
-                        direction = 1
-                        
-                    focus_media, _ = self._MediaToUseWhenMovingFocus()
-                    
-                    if focus_media:
-                        
-                        scene_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
-                        media_index = self._sorted_media.index( focus_media )
-                        percent_visible = CG.client_controller.new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
-                        
-                        new_index = self._thumbnail_layout.JumpPage( scene_rect, media_index, direction, percent_visible )
-                        
-                        self._MoveThumbnailFocus( new_index, shift )
-                    
                 else:
                     
-                    focus_media, is_next_best = self._MediaToUseWhenMovingFocus()
+                    ( focus_media, you_should_just_select_this_guy ) = self._MediaToUseWhenMovingFocus( shift )
                     
-                    if focus_media:
+                    if you_should_just_select_this_guy:
                         
-                        # TODO
-                        # I expanded this check so rows & columns behave symmetrically (previously there was only an equivalent condition for columns i.e. the MOVE_LEFT case inside _MoveThumbnailFocus).
-                        # Symmetric behavior will be important when we have non-uniform grids or grids scrolling horizontally,
-                        # but honestly even after playing around with the original implementation, I still don't fully understand what this is supposed to achieve.
-                        # If this logic weren't needed we could remove this ugly is_next_best return value when determining the focus media...
-                        if is_next_best and ( move_direction == CAC.MOVE_LEFT or move_direction == CAC.MOVE_UP ): # treat it as if the focused area is between this and the next
+                        # ok user hit 'left' after removing the previous selection, something like that
+                        # it is difficult to make a general nice 'continue from this ghost position', so we intercept and select the current ghost so the user has reliable feedback
+                        self._HitMedia( focus_media, False, shift )
+                        
+                    else:
+                        
+                        if move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
                             
-                            pass
+                            if move_direction == CAC.MOVE_PAGE_UP:
+                                
+                                direction = -1
+                                
+                            else: # MOVE_PAGE_DOWN
+                                
+                                direction = 1
+                                
+                            
+                            if focus_media is not None and focus_media in self._sorted_media:
+                                
+                                scene_rect = self.mapToScene( self.viewport().rect() ).boundingRect()
+                                media_index = self._sorted_media.index( focus_media )
+                                percent_visible = CG.client_controller.new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
+                                
+                                new_index = self._thumbnail_layout.JumpPage( scene_rect, media_index, direction, percent_visible )
+                                
+                                self._MoveThumbnailFocus( new_index, shift )
+                                
                             
                         else:
                             
-                            focus_media_index = self._sorted_media.index( focus_media )
-                            
-                            self._MoveThumbnailFocus( self._thumbnail_layout.MoveFromIndex( focus_media_index, move_direction ), shift )
+                            if focus_media is not None and focus_media in self._sorted_media:
+                                
+                                focus_media_index = self._sorted_media.index( focus_media )
+                                
+                                self._MoveThumbnailFocus( self._thumbnail_layout.MoveFromIndex( focus_media_index, move_direction ), shift )
+                                
                             
                         
                     

@@ -2938,7 +2938,7 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         
         self._focused_media = None
         self._last_hit_media = None
-        self._next_best_media_if_focuses_removed = None
+        self._previously_focused_media_when_nothing_now = None
         self._shift_select_started_with_this_media = None
         self._media_added_in_current_shift_select = set()
         
@@ -4161,7 +4161,69 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
     
     def _RemoveMediaDirectly( self, singleton_media, collected_media ):
         
+        # ok we are about to remove the current focus. let's get ahead of it and set up our new ghost index
+        if self._focused_media is not None and ( self._focused_media in singleton_media or self._focused_media in collected_media ):
+            
+            self._SetFocusedMedia( None )
+            
+        
+        # ghost index is now set up. let's now slide it out of the removees
+        if self._previously_focused_media_when_nothing_now is not None and self._previously_focused_media_when_nothing_now in self._sorted_media:
+            
+            try:
+                
+                new_candidate_for_previously_focused_media_when_nothing_now = self._previously_focused_media_when_nothing_now
+                
+                index = self._sorted_media.index( new_candidate_for_previously_focused_media_when_nothing_now )
+                
+                while index < len( self._sorted_media ) - 1 and ( new_candidate_for_previously_focused_media_when_nothing_now in singleton_media or new_candidate_for_previously_focused_media_when_nothing_now in collected_media ):
+                    
+                    index += 1
+                    
+                    new_candidate_for_previously_focused_media_when_nothing_now = self._sorted_media[ index ]
+                    
+                
+                if index == len( self._sorted_media ) - 1:
+                    
+                    # ok going forward produced no result. selection probably until the end of the thumbs. let's try and step back
+                    
+                    new_candidate_for_previously_focused_media_when_nothing_now = self._previously_focused_media_when_nothing_now
+                    
+                    while index > 0 and ( new_candidate_for_previously_focused_media_when_nothing_now in singleton_media or new_candidate_for_previously_focused_media_when_nothing_now in collected_media ):
+                        
+                        index -= 1
+                        
+                        new_candidate_for_previously_focused_media_when_nothing_now = self._sorted_media[ index ]
+                        
+                    
+                
+                if 0 <= index <= len( self._sorted_media ) - 1:
+                    
+                    self._previously_focused_media_when_nothing_now = new_candidate_for_previously_focused_media_when_nothing_now
+                    
+                
+            except:
+                
+                self._previously_focused_media_when_nothing_now = None
+                
+            
+        
         super()._RemoveMediaDirectly( singleton_media, collected_media )
+        
+        if self._last_hit_media is not None and self._last_hit_media not in self._sorted_media:
+            
+            self._last_hit_media = None
+            
+        
+        if self._shift_select_started_with_this_media is not None and self._shift_select_started_with_this_media not in self._sorted_media:
+            
+            self._shift_select_started_with_this_media = None
+            
+        
+        if len( self._media_added_in_current_shift_select ) > 0:
+            
+            self._media_added_in_current_shift_select = { item for item in self._media_added_in_current_shift_select if item in self._sorted_media }
+            
         
         self._MaintainMediaAssociatedGraphics( singleton_media )
         self._MaintainMediaAssociatedGraphics( collected_media )
@@ -4617,55 +4679,35 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         self._SetDuplicates( HC.DUPLICATE_POTENTIAL, media_group = media_group )
         
     
-    def _SetFocusedMedia( self, media, focus_page = False ):
+    def _SetFocusedMedia( self, new_focused_media, focus_page = False ):
         
-        if media == self._focused_media:
+        if new_focused_media == self._focused_media:
             
             return
             
         
-        self._next_best_media_if_focuses_removed = None
-        
-        for m in [ media, self._focused_media ]:
+        # I used to have a whole thing here that tried to find the least previous media that was not selected, since those are removed a bunch
+        # it caused confusion in certain situations, particularly stuff where non-selected files were removed (after A/D and delete-file weirdness)
+        # ultimately I added a thing in removemediadirectly to handle it nicer in there, _and_ we moved to _next_ rather than previous since it feels better
+        # this guy is now just a convenient 'where were we?' fallback than some predetermined landing zone
+
+        if new_focused_media is None and self._focused_media is not None and self._focused_media in self._sorted_media:
             
-            if m is None:
-                
-                continue
-                
+            self._previously_focused_media_when_nothing_now = self._focused_media
             
-            if m in self._sorted_media:
-                
-                next_best_media = m
-                
-                i = self._sorted_media.index( next_best_media )
-                
-                while next_best_media in self._selected_media:
-                    
-                    if i == 0:
-                        
-                        next_best_media = None
-                        
-                        break
-                        
-                    
-                    i -= 1
-                    
-                    next_best_media = self._sorted_media[ i ]
-                    
-                
-                if next_best_media is not None:
-                    
-                    self._next_best_media_if_focuses_removed = next_best_media
-                    
-                    break
-                    
-                
+        else:
+            
+            self._previously_focused_media_when_nothing_now = None
             
         
         publish_media = None
         
-        self._focused_media = media
-        self._last_hit_media = media
+        self._focused_media = new_focused_media
+        
+        if self._focused_media is not None:
+            
+            self._last_hit_media = new_focused_media
+            
         
         if self._focused_media is not None:
             
