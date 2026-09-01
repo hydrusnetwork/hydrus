@@ -8286,6 +8286,8 @@ class DB( HydrusDB.HydrusDB ):
                 new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
                 
                 new_options.SetBoolean( 'test_thumbnails_graphics_view', True )
+                new_options.SetBoolean( 'make_child_frames_qt_tool', True )
+                new_options.SetBoolean( 'force_enter_on_radio_buttons_to_do_dialog_ok', True )
                 
                 self.modules_serialisable.SetJSONDump( new_options )
                 
