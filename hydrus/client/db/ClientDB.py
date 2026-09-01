@@ -8304,18 +8304,25 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
-                    self._controller.frame_splash_status.SetSubtext( f'scheduling blank square search data' )
+                    self._controller.frame_splash_status.SetSubtext( f'scheduling similar file search data fixes' )
                     
                     hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_HAVE_PERCEPTUAL_HASH ) ) ) )
                     
                     with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name_for_phashes:
+                        
+                        # these are files that are delisted currently and unexpectedly, including a bug of previously deleted files that were re-imported
+                        delisted_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name_for_phashes} WHERE NOT EXISTS ( SELECT 1 FROM shape_search_cache WHERE hash_id = {temp_hash_ids_table_name_for_phashes}.hash_id );' ) )
+                        
+                        HydrusData.Print( f'Found {HydrusNumbers.ToHumanInt(len(delisted_hash_ids))} files that might be in duplicate file pair search but are not.' )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( delisted_hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP )
                         
                         # these are files that should have phashes but do not; probably blank files that were previously discarded
                         blank_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name_for_phashes} WHERE NOT EXISTS ( SELECT 1 FROM shape_perceptual_hash_map WHERE hash_id = {temp_hash_ids_table_name_for_phashes}.hash_id );' ) )
                         
                         HydrusData.Print( f'Found {HydrusNumbers.ToHumanInt(len(blank_hash_ids))} files that should have phashes but did not (probably blank squares).' )
                         
-                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES )
+                        self.modules_files_maintenance_queue.AddJobs( blank_hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES )
                         
                     
                 
