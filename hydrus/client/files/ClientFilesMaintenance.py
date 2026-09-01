@@ -6,8 +6,8 @@ REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES = 4
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD = 5
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD = 6
 REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS = 7
-REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP = 8
-REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA = 9
+REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP = 8
+REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES = 9
 REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP = 10
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL = 11
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL = 12
@@ -42,8 +42,8 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 'if file is missing/incorrect, then move file out, and if has URL try to redownload, else remove record',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 'if file is incorrect, move file out',
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 'fix file read/write permissions',
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'check for membership in the similar files search system',
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'regenerate perceptual hashes',
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP : 'check for membership in the potential duplicate pairs search system',
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES : 'regenerate perceptual hashes',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'regenerate file modified time',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY: 'determine if the file has transparency',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 'determine if the file has EXIF metadata',
@@ -113,8 +113,8 @@ All incorrect files will be exported to a new folder in your database directory 
 All missing/incorrect files will also have their hashes, tags, and URLs exported to a new folder in your database directory for later manual recovery attempts if you wish.''',
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : '''If the file is where it is expected, this ensures its file content, byte-for-byte, is correct. This is a heavy job, so be wary. If the file is incorrect, it will be exported to your database directory along with its known URLs. The client's file record will not be deleted. This is useful if you have a valid backup and need to clear out invalid files from your live db so you can fill in gaps from your backup with a program like FreeFileSync.''',
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : '''This ensures that files in the file system are readable and writeable. For Linux/macOS users, it specifically sets 644. If you wish to run this job on Linux/macOS, ensure you are first the file owner of all your files.''',
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : '''This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.''',
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : '''This forces a regeneration of the file's similar-files 'phashes'. It is not useful unless you know there is missing data to repair.''',
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP : '''This checks to see if files should be in the search system that looks for potential duplicate pairs, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.''',
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES : '''This forces a regeneration of the file's similar-files 'phashes'. If phashes change and are useful, files will be queued into potential duplicate pair search. It is not useful unless you know there is missing data to repair or that the phash generation tech has changed (e.g. it fixes some file rotation), meaning for new phashes if re-generated.''',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : '''This rechecks the file's modified timestamp and saves it to the database.''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : '''This loads the file to see if it has an alpha channel with useful data (the strictness of this test is determined in the options). Only works for images and some animations.''',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : '''This loads the file to see if it has EXIF metadata, which can be shown in the media viewer and searched with "system:has exif".''',
@@ -145,8 +145,8 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 100,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 100,
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 25,
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 1,
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 100,
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP : 1,
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES : 100,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 25,
@@ -175,8 +175,8 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : [ REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_LOG_ONLY, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_REMOVE_RECORD, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL, REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_REMOVE_RECORD ],
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : [],
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : [],
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : [],
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ],
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP : [],
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES : [ REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP ], # yes, this is correct; phash regen does this job
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : [],
@@ -203,8 +203,8 @@ ALL_REGEN_JOBS_IN_RUN_ORDER = [
     REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL,
     REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL,
     REGENERATE_FILE_DATA_JOB_BLURHASH,
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA,
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP,
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES,
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP,
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP,
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES,
@@ -234,10 +234,10 @@ ALL_REGEN_JOBS_IN_HUMAN_ORDER = [
     REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL,
     REGENERATE_FILE_DATA_JOB_BLURHASH,
     REGENERATE_FILE_DATA_JOB_PIXEL_HASH,
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA,
+    REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP,
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES,
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP,
+    REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_XMP,

@@ -3685,7 +3685,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if pixel_hash is None:
                 
-                self.modules_similar_files.ClearPixelHash( hash_id )
+                self.modules_similar_files.DisassociatePixelHash( hash_id )
                 
             else:
                 
@@ -3698,7 +3698,11 @@ class DB( HydrusDB.HydrusDB ):
             
             perceptual_hashes = file_import_job.GetPerceptualHashes()
             
-            if perceptual_hashes is not None:
+            if perceptual_hashes is None:
+                
+                self.modules_similar_files.SetPerceptualHashes( hash_id, set() )
+                
+            else:
                 
                 if HG.file_import_report_mode:
                     
@@ -7271,7 +7275,7 @@ class DB( HydrusDB.HydrusDB ):
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES )
                 
             except Exception as e:
                 
@@ -8290,6 +8294,36 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.hydrus_local_file_storage_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    self._controller.frame_splash_status.SetSubtext( f'scheduling blank square search data' )
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusLists.SplayListForDB( HC.FILES_THAT_HAVE_PERCEPTUAL_HASH ) ) ) )
+                    
+                    with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name_for_phashes:
+                        
+                        # these are files that should have phashes but do not; probably blank files that were previously discarded
+                        blank_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name_for_phashes} WHERE NOT EXISTS ( SELECT 1 FROM shape_perceptual_hash_map WHERE hash_id = {temp_hash_ids_table_name_for_phashes}.hash_id );' ) )
+                        
+                        HydrusData.Print( f'Found {HydrusNumbers.ToHumanInt(len(blank_hash_ids))} files that should have phashes but did not (probably blank squares).' )
+                        
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file maintenance failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
                 

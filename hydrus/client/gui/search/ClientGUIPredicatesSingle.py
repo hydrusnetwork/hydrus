@@ -2944,7 +2944,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 
-                perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashesNumPy( numpy_image )
+                perceptual_hashes = { ClientImagePerceptualHashes.GenerateShapePerceptualHashNumPy( numpy_image ) }
                 
             except Exception as e:
                 
@@ -2996,7 +2996,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                         
                         pixel_hash = HydrusImageHandling.GetImagePixelHash( path, mime )
                         
-                        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( path, mime )
+                        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, mime )
                         
                     else:
                         

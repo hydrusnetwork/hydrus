@@ -50,7 +50,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         
         self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
         self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
-        self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+        self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES )
         
         # no need for blurhash here, thumbnail forces it
         
@@ -254,7 +254,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     new_modified_timestamps_info.add( ( hash_id, hash ) )
                     possibly_new_auto_resolution_hash_ids.add( hash_id )
                     
-                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
+                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES:
                     
                     perceptual_hashes = additional_data
                     
@@ -265,25 +265,19 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         possibly_new_auto_resolution_hash_ids.add( hash_id )
                         
                     
-                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP:
+                elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP:
                     
-                    should_include = additional_data
+                    mime_says_should_include = additional_data
                     
-                    if should_include:
+                    if mime_says_should_include:
                         
-                        if not self.modules_similar_files.FileIsInSystem( hash_id ):
-                            
-                            self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
-                            self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
-                            
-                            possibly_new_auto_resolution_hash_ids.add( hash_id )
-                            
+                        self.modules_similar_files.EnsureFileIsCorrectlyInOrOutOfPairDiscoverySearch( hash_id )
                         
                     else:
                         
                         # This is now normally called by modules_files_duplicates_updates.NotifyFileLeavingHydrusLocalFileStorage, but since this maintenance job is just the similar search part, let's leave it as-is now
                         
-                        if self.modules_similar_files.FileIsInSystem( hash_id ):
+                        if self.modules_similar_files.FileIsInPairDiscoverySearch( hash_id ):
                             
                             self.modules_similar_files.StopSearchingFile( hash_id )
                             

@@ -161,7 +161,7 @@ def AddDuplicatesMenu( win: QW.QWidget, command_processor: CAC.ApplicationComman
     
     if len( duplicates_menu.actions() ) == 0:
         
-        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'this file has no duplicate relationships' )
+        ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'this file has no duplicate relationships', description = 'note that blank squares are not searched for duplicates' )
         
     
     ClientGUIMenus.AppendSeparator( duplicates_menu )

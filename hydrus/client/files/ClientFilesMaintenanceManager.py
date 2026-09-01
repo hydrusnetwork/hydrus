@@ -753,6 +753,36 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _RegenBlurhash( self, media_result ):
+        
+        if media_result.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+            
+            return None
+            
+        
+        try:
+            
+            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( media_result )
+            
+        except HydrusExceptions.FileMissingException as e:
+            
+            return None
+            
+        
+        try:
+            
+            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+            
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
+            
+            return HydrusBlurhash.GetBlurhashFromNumPy( numpy_image )
+            
+        except Exception as e:
+            
+            return None
+            
+        
+    
     def _RegenFileMetadata( self, media_result ):
         
         hash = media_result.GetHash()
@@ -887,6 +917,32 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _RegenPerceptualHashes( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        # do not have to trigger a 'check we are in the system' job here; the set-phashes job at db level handles it KISS
+        
+        if mime not in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
+            
+            return []
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( path, mime )
+        
+        return perceptual_hashes
+        
+    
     def _RegenPixelHash( self, media_result ):
         
         hash = media_result.GetHash()
@@ -925,63 +981,6 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             return None
             
-        
-    
-    def _RegenBlurhash( self, media_result ):
-        
-        if media_result.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
-            
-            return None
-            
-        
-        try:
-            
-            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( media_result )
-            
-        except HydrusExceptions.FileMissingException as e:
-            
-            return None
-            
-        
-        try:
-            
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
-            
-            numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
-            
-            return HydrusBlurhash.GetBlurhashFromNumPy( numpy_image )
-            
-        except Exception as e:
-            
-            return None
-            
-        
-    
-    
-    def _RegenSimilarFilesMetadata( self, media_result ):
-        
-        hash = media_result.GetHash()
-        mime = media_result.GetMime()
-        
-        if mime not in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
-            
-            self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
-            
-            return []
-            
-        
-        try:
-            
-            path = self._controller.client_files_manager.GetFilePath( hash, mime )
-            
-        except HydrusExceptions.FileMissingException:
-            
-            return None
-            
-        
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( path, mime )
-        
-        return perceptual_hashes
         
     
     def _ReInitialiseWorkRules( self ):
@@ -1120,13 +1119,13 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                             
                             self._DeleteNeighbourDupes( media_result )
                             
-                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP:
+                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP:
                             
                             additional_data = self._CheckSimilarFilesMembership( media_result )
                             
-                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA:
+                        elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_PERCEPTUAL_HASHES:
                             
-                            additional_data = self._RegenSimilarFilesMetadata( media_result )
+                            additional_data = self._RegenPerceptualHashes( media_result )
                             
                         elif job_type == ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS:
                             

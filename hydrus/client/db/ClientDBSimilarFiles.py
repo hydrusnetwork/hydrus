@@ -17,6 +17,7 @@ from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBServices
+from hydrus.client.files.images import ClientImagePerceptualHashes
 
 class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
@@ -342,6 +343,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def _GetPerceptualHashes( self, perceptual_hash_ids: collections.abc.Collection[ int ] ) -> set[ bytes ]:
         
+        if len( perceptual_hash_ids ) == 0:
+            
+            return set()
+            
+        
         with self._MakeTemporaryIntegerTable( perceptual_hash_ids, 'phash_id' ) as temp_table_name:
             
             perceptual_hashes = self._STS( self._Execute( f'SELECT phash FROM shape_perceptual_hashes NATURAL JOIN {temp_table_name};' ) )
@@ -660,34 +666,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
         
     
-    def AssociatePerceptualHashes( self, hash_id, perceptual_hash_ids ):
-        
-        self._ExecuteMany( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( ( perceptual_hash_id, hash_id ) for perceptual_hash_id in perceptual_hash_ids ) )
-        
-        if self._GetRowCount() > 0:
-            
-            self._DeltaShapeSearchCacheNumbersRemoveFile( hash_id )
-            
-            # yes, replace--these files' phashes have just changed, so we want to search again with this new data
-            self._Execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, -1 ) )
-            
-        else:
-            
-            # emergency backstop to ensure we do add this to the system in the case of a weird re-association gap
-            self._Execute( 'INSERT OR IGNORE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, -1 ) )
-            
-        
-        self._DeltaShapeSearchCacheNumbers( -1, 1 )
-        
-    
-    def ClearPixelHash( self, hash_id: int ):
-        
-        self._Execute( 'DELETE FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) )
-        
-    
     def DisassociatePerceptualHashes( self, hash_id, perceptual_hash_ids ):
         
         self._ExecuteMany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ? AND hash_id = ?;', ( ( perceptual_hash_id, hash_id ) for perceptual_hash_id in perceptual_hash_ids ) )
+        
+        #
         
         useful_perceptual_hash_ids = { perceptual_hash for ( perceptual_hash, ) in self._Execute( 'SELECT phash_id FROM shape_perceptual_hash_map WHERE phash_id IN ' + HydrusLists.SplayListForDB( perceptual_hash_ids ) + ';' ) }
         
@@ -698,7 +681,50 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_shape_search_branch_maintenance_work' )
         
     
-    def FileIsInSystem( self, hash_id ):
+    def DisassociatePixelHash( self, hash_id: int ):
+        
+        self._Execute( 'DELETE FROM pixel_hash_map WHERE hash_id = ?;', ( hash_id, ) )
+        
+    
+    def EnsureFileIsCorrectlyInOrOutOfPairDiscoverySearch( self, hash_id: int ) -> bool:
+        
+        changes_made = False
+        
+        phash_ids = self._GetPerceptualHashIdsFromHashId( hash_id )
+        
+        phashes = self._GetPerceptualHashes( phash_ids )
+        
+        useful_phashes = ClientImagePerceptualHashes.DiscardBlankPerceptualHashes( phashes )
+        
+        if len( useful_phashes ) > 0:
+            
+            # this file has non-blank hashes--it is worth searching
+            
+            if not self.FileIsInPairDiscoverySearch( hash_id ):
+                
+                self._Execute( 'INSERT OR IGNORE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, -1 ) )
+                
+                self._DeltaShapeSearchCacheNumbers( -1, 1 )
+                
+                changes_made = True
+                
+            
+        else:
+            
+            # this is a blank file--it is not worth searching
+            
+            if self.FileIsInPairDiscoverySearch( hash_id ):
+                
+                self.StopSearchingFile( hash_id )
+                
+                changes_made = True
+                
+            
+        
+        return changes_made
+        
+    
+    def FileIsInPairDiscoverySearch( self, hash_id ):
         
         result = self._Execute( 'SELECT 1 FROM shape_search_cache WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
@@ -1178,29 +1204,27 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def SetPixelHash( self, hash_id: int, pixel_hash_id: int ):
         
+        # This method does _not_ trigger checks for 'are we searching for potential pairs off this guy' since only phashes matter for that decision (no blank squares)
+        
         existing_pixel_hash_id = self._GetPixelHashId( hash_id )
         
-        if existing_pixel_hash_id is not None and existing_pixel_hash_id == pixel_hash_id:
+        changes_made = False
+        
+        if existing_pixel_hash_id is not None:
             
-            return False
+            if existing_pixel_hash_id == pixel_hash_id:
+                
+                return changes_made
+                
+            
+            self.DisassociatePixelHash( hash_id )
             
         
-        self.ClearPixelHash( hash_id )
+        changes_made = True
         
-        self._Execute( 'INSERT INTO pixel_hash_map ( hash_id, pixel_hash_id ) VALUES ( ?, ? );', ( hash_id, pixel_hash_id ) )
+        self._Execute( 'INSERT OR IGNORE INTO pixel_hash_map ( hash_id, pixel_hash_id ) VALUES ( ?, ? );', ( hash_id, pixel_hash_id ) )
         
-        ( count, ) = self._Execute( 'SELECT COUNT( * ) FROM pixel_hash_map WHERE pixel_hash_id = ?;', ( pixel_hash_id, ) ).fetchone()
-        
-        if count > 1:
-            
-            self._DeltaShapeSearchCacheNumbersRemoveFile( hash_id )
-            
-            self._Execute( 'REPLACE INTO shape_search_cache ( hash_id, searched_distance ) VALUES ( ?, ? );', ( hash_id, -1 ) )
-            
-            self._DeltaShapeSearchCacheNumbers( -1, 1 )
-            
-        
-        return True
+        return changes_made
         
     
     def SetPerceptualHashes( self, hash_id, perceptual_hashes ):
@@ -1216,22 +1240,47 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             perceptual_hash_ids.add( perceptual_hash_id )
             
         
-        if perceptual_hash_ids == current_perceptual_hash_ids:
+        changes_made = False
+        
+        if perceptual_hash_ids != current_perceptual_hash_ids:
             
-            return False
+            # the phashes have changed for whatever reason. maybe this is the initial set call
+            
+            deletee_perceptual_hash_ids = current_perceptual_hash_ids - perceptual_hash_ids
+            new_perceptual_hash_ids = perceptual_hash_ids - current_perceptual_hash_ids
+            
+            if len( deletee_perceptual_hash_ids ) > 0:
+                
+                self.DisassociatePerceptualHashes( hash_id, deletee_perceptual_hash_ids )
+                
+            
+            if len( new_perceptual_hash_ids ) > 0:
+                
+                self._ExecuteMany( 'INSERT OR IGNORE INTO shape_perceptual_hash_map ( phash_id, hash_id ) VALUES ( ?, ? );', ( ( perceptual_hash_id, hash_id ) for perceptual_hash_id in perceptual_hash_ids ) )
+                
+            
+            in_or_out_changed = self.EnsureFileIsCorrectlyInOrOutOfPairDiscoverySearch( hash_id )
+            
+            if not in_or_out_changed and self.FileIsInPairDiscoverySearch( hash_id ):
+                
+                # ok this file has _changed_ and was in the system beforehand. we should re-search it
+                
+                self.ResetSearch( ( hash_id, ) )
+                
+            
+            changes_made = True
+            
+        else:
+            
+            if len( perceptual_hash_ids ) > 0:
+                
+                # ok nothing changed in phash terms; let's see if it is missing nonetheless
+                
+                changes_made = self.EnsureFileIsCorrectlyInOrOutOfPairDiscoverySearch( hash_id )
+                
             
         
-        if len( current_perceptual_hash_ids ) > 0:
-            
-            self.DisassociatePerceptualHashes( hash_id, current_perceptual_hash_ids )
-            
-        
-        if len( perceptual_hashes ) > 0:
-            
-            self.AssociatePerceptualHashes( hash_id, perceptual_hash_ids )
-            
-        
-        return True
+        return changes_made
         
     
     def SetSearchStatus( self, hash_id, search_distance ):

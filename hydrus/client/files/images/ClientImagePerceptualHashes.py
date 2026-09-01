@@ -19,7 +19,7 @@ def DiscardBlankPerceptualHashes( perceptual_hashes ):
     return perceptual_hashes
     
 
-def GenerateUsefulShapePerceptualHashes( path, mime ):
+def GenerateShapePerceptualHashes( path, mime ) -> set[ bytes ]:
     
     if HG.phash_generation_report_mode:
         
@@ -30,7 +30,7 @@ def GenerateUsefulShapePerceptualHashes( path, mime ):
         
         numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
         
-        return GenerateUsefulShapePerceptualHashesNumPy( numpy_image )
+        return { GenerateShapePerceptualHashNumPy( numpy_image ) }
         
     except Exception as e:
         
@@ -55,7 +55,7 @@ def PILDCT( greyscale_numpy_image: numpy.ndarray ) -> numpy.ndarray:
     return numpy.real(numpy.multiply(Norm,dct_))
     
 
-def GenerateShapePerceptualHashNumPy( numpy_image: numpy.ndarray, phash_length = 64 ):
+def GenerateShapePerceptualHashNumPy( numpy_image: numpy.ndarray, phash_length = 64 ) -> bytes:
     
     if phash_length == 64:
         
@@ -237,27 +237,4 @@ def GenerateShapePerceptualHashNumPy( numpy_image: numpy.ndarray, phash_length =
         
     
     return perceptual_hash
-    
-
-def GenerateUsefulShapePerceptualHashesNumPy( numpy_image: numpy.ndarray ):
-    
-    perceptual_hash = GenerateShapePerceptualHashNumPy( numpy_image )
-    
-    # now discard the blank hash, which is 1000000... and not useful
-    # 2025-12 Update: Interesting submission by a user of two white pages that matched in the system--they were pure white, so phashes were being discarded ok here, but they were the same res, and thus pixel dupes!
-    
-    perceptual_hashes = set()
-    
-    perceptual_hashes.add( perceptual_hash )
-    
-    perceptual_hashes = DiscardBlankPerceptualHashes( perceptual_hashes )
-    
-    if HG.phash_generation_report_mode:
-        
-        HydrusData.ShowText( 'phash generation: final perceptual_hashes: {}'.format( [ phash.hexh() for phash in perceptual_hashes ] ) )
-        
-    
-    # we good
-    
-    return perceptual_hashes
     

@@ -10,9 +10,9 @@ class TestImageHandling( unittest.TestCase ):
     
     def test_perceptual_hash( self ):
         
-        perceptual_hashes = ClientImagePerceptualHashes.GenerateUsefulShapePerceptualHashes( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), HC.IMAGE_PNG )
+        perceptual_hashes = ClientImagePerceptualHashes.GenerateShapePerceptualHashes( HydrusStaticDir.GetStaticPath( 'hydrus.png' ), HC.IMAGE_PNG )
         
-        self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
+        self.assertEqual( perceptual_hashes, { b'\xb4M\xc7\xb2M\xcb8\x1c' } )
         
         perceptual_hashes = ClientImagePerceptualHashes.DiscardBlankPerceptualHashes( { CC.BLANK_PERCEPTUAL_HASH } )
         
@@ -20,6 +20,6 @@ class TestImageHandling( unittest.TestCase ):
         
         perceptual_hashes = ClientImagePerceptualHashes.DiscardBlankPerceptualHashes( { b'\xb4M\xc7\xb2M\xcb8\x1c', CC.BLANK_PERCEPTUAL_HASH } )
         
-        self.assertEqual( perceptual_hashes, set( [ b'\xb4M\xc7\xb2M\xcb8\x1c' ] ) )
+        self.assertEqual( perceptual_hashes, { b'\xb4M\xc7\xb2M\xcb8\x1c' } )
         
     
