@@ -37,7 +37,7 @@ class EditMimeLaunchPathsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        text = f'Editing launch paths for {HC.mime_mimetype_string_lookup[ mime ]}. You can set several different commands for multiple programs, and these choices will be exposed where reasonable; the top-most is the default.'
+        text = f'Editing launch paths for {HC.mime_mimetype_string_lookup[ mime ]}. You can set several different commands for multiple programs, and these choices will be exposed in the media "url" menus; for quicker actions like button clicks or shortcuts, the top-most is the default.'
         text += '\n' * 2
         text += 'The command here must include a "%path%" component, normally ideally within those quote marks, which is where hydrus will place the URL when it executes the command. A good example would be:'
         text += '\n' * 2
@@ -74,6 +74,15 @@ class EditMimeLaunchPathsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditLaunchPath( self, launch_path: str | None ) -> str | None:
         
+        if launch_path is None:
+            
+            launch_path_for_editing = ''
+            
+        else:
+            
+            launch_path_for_editing = launch_path
+            
+        
         message = 'Edit the launch path. Do not forget the "%path%". Leave blank to select the default OS call.'
         
         try:
@@ -81,7 +90,7 @@ class EditMimeLaunchPathsPanel( ClientGUIScrolledPanels.EditPanel ):
             edited_launch_path = ClientGUIDialogsQuick.EnterText(
                 self,
                 message,
-                default = launch_path,
+                default = launch_path_for_editing,
                 allow_blank = True,
                 title = 'Enter launch path',
             )
@@ -221,6 +230,15 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def _EditWebBrowserPath( self, launch_path: str | None ) -> str | None:
         
+        if launch_path is None:
+            
+            launch_path_for_editing = ''
+            
+        else:
+            
+            launch_path_for_editing = launch_path
+            
+        
         message = 'Edit the launch path. Do not forget the "%url%". Leave blank to select the default OS call.'
         
         try:
@@ -228,7 +246,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             edited_launch_path = ClientGUIDialogsQuick.EnterText(
                 self,
                 message,
-                default = launch_path,
+                default = launch_path_for_editing,
                 allow_blank = True,
                 title = 'Enter launch path',
             )
