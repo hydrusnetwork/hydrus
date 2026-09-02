@@ -7,6 +7,54 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 686](https://github.com/hydrusnetwork/hydrus/releases/tag/v686)
+
+### misc
+
+* the 'give child windows a tool flag' test setting went well, and I am switching everyone to use this mode as default now. if you have trouble with 'review services' or similar, please hit `options->gui` and hit the new `BUGFIX: Set child windows as non-tool flagged`
+* the `force that hitting Enter/Return on radio button lists triggers a dialog ok` checkbox is now set to true by default, and everyone is switched over this week. same as before, the test went well. if you prefer it the other way, please hit up `options->gui` and switch it back
+* the content summary strings in the duplicate auto-resolution thumbnail pair lists have some formatting improvements: the 'add mappings a, add mappings b, add mappings c...' stuff is now 'add mappings: a, b, c'; different service lines are now newline-separated; and the thumbnail rows are a little taller by minimum to typically fit this text in better
+* decided to finally remove the long-time disabled 'potential pairs' line from Mr Bones. the newer duplicates page with its fragmentary and cancellable search handles all this better, and since the potential pairs space exists only for local files rather than Mr Bones's ability to look into deleted files, it is best just not to bring this number back here. He now only handles total dupes and alternates made
+* improved the maths behind the alternates counts in Mr Bones. it also works a bit faster. the 'x alternate groups' number is now filtered correctly according to the current search context, and some interesting edge cases are consciously handled so a search for 'system:file relationships - number of alternates = 0' produces the correct 0/0 results. there's a couple of ways of looking at these numbers and I've taken the most conservative to occasionally undercount but never overcount
+
+### new thumbnail grid rendering tech
+
+* we've been testing out a new, cleverer way of rendering the thumbnail grid. it works and looks basically exactly like the old system for now but will support new layouts and resizable thumbs in future. we are happy with the test, so I am switching everyone to use it today. ideally, you do not notice any differences. if you suddenly do have trouble with your thumbs, hit up `options->thumbnails`, switch off the new rendering mode, restart the client, and let me know
+* I made the 'which file to select when you press an arrow/page key' work more humanly in the new grid; now, if your current focus file is removed and you then press a movement key, the 'ghost selection' media is now selected, re-initialising your position. previously, it would navigate _from_ the ghost to a neighbour, which always felt weird. also, the ghost is now the _next_ non-removed file (used to be previous), unless the removees stretch to the end of the list, in which case the _previous_ is chosen. this feels a bit more natural and catches some odd cases since previously it worked on selections rather than removees
+* this is more controversial and may mess with muscle memory, but I have also made it so a shift-select does not move the "navigate from here" ghost. this ghost now sticks to the current focus. if this drives you crazy, there is a new checkbox under `options->thumbnails` to switch back to moving the ghost to the last file you hit to alter the shift-selection. if you understand what this means, you are a true patrician and I personally recommend mapping ctrl and shift to your mouse. also, I may start rendering the ghost as a dotted line or something just like you'd get in a file explorer or something
+* as part of this, I fixed an issue with the new tech where it could have trouble finding a new media to select after certain removal of non-selected items, for instance after zero-selection archive/delete filtering or a background file delete
+* fixed the enable-reactivity of the ctrl- and shift-selection checkboxes under `options->thumbnails`
+* I fixed up some various other focus items and 'these were selected in the current shift-select' variables that were not properly cleansing themselves after a media remove event
+* the new graphics view thumbgrid test can now process an interactive 'entry dialog' content update shortcut
+* fixed a trace error with the interactive 'entry dialog' command when nothing is selected in the thumbgrid
+
+### new ways to open files and urls externally
+
+* in prep for the exe manager taking over, the options for 'default programs' that handles web browser calls and 'open externally' for different filetypes are updated
+* the web browser setting is now a list of calls, so you can set up alternate web browsers or profiles if you like. if you have multiple, the top one is selected for quick/default url-openings and in the media 'urls' menu you now get multiple submenus to choose which one you want
+* the file 'open externally' has two changes--now you can set the default 'open externally' call for "all files" and "all images/videos/whatever" as well as for individual filetypes. I hope this makes it simpler to just switch from x image viewer to y for everything while still allowing something special for avif or whatever. your existing options are going to be eaten up and converted to the simplest suitable umbrella solution
+* and, secondly, each of those entries now support multiple calls, so you can say 'open images with x program or y' and then, like with the urls, the top item is the default for quick actions but otherwise your media 'open externally' menu is going to dynamically expand into multiple options if you set that up
+* the string program cals are all going to be converted to the exe manager in a week or two. feel free to add new paths now, or wait for that, at which point you'll be selecting from a dropdown here
+
+### potential pair discovery scheduling logic
+
+* I cleaned up a bunch of edge-case logic around how files are set to be searched for potential pairs. an interesting bug (#2086) revealed that previously-deleted files were not being scheduled for re-entry into the potential pairs search system, and when I looked into it, this revealed some more messy logic. I've cleaned it up and now blank square files are 'find similar files' searchable
+* first off, when a previously deleted file is re-imported, it is now scheduled for potential-pair discovery as expected
+* further, the determinant of whether a file should be searched for potentiar-pair discovery is now strictly that it has non-blank phashes. files with blank or near-blank phashes are now entered into the search tree, but they are not scheduled for potential pair discovery (blank files produce many false positive pairs, so we do not want them)
+* the 'ensure file is in similar files search system' job is now careful to only consider that question, and it no longer triggers any pixel or phash regens
+* files that are discovered to have no useful phashes are deregistered from the system correctly. previously, some pixel hash and re-import events would trigger an accidental listing or not trigger a proper delisting; now the logic is KISS
+* all files that currently have no phashes (blank files and some weird non-renderable things) are scheduled for a phash regen on update, which will make 'system:similar to' work for them
+* identical blank files (we had an example of two pure white comic pages with the same resolution, once) that share the same pixel hash will no longer naturally appear in the potential pair search
+* pasting a blank or near-blank image into the 'system:similar files' panel also now produces phashes in the box. it is now possible to search for blank and blank-like images with this system. if you are interested, the blank phash is `8000000000000000`. paste it in once the maintenance has caught up here and brace yourself for a rollercoaster ride
+* the names and descriptions of the 'check for membership in...' and 'regenerate perceptual hashes' file maintenance jobs are clarified
+
+### boring stuff
+
+* fixed an issue where non-advanced users saw the 'external programs (TESTING)' page in the options lol
+* cleaned up the application processing code's responses and formalised that a shortcut will be caught if it matches an entry, not only if it matches and the command produced an arbitrary result. if you say 'copy bitmap' when no file is selected, the shortcut is swallowed there; it won't go "ok nothing happened" and see if anything higher matches your shortcut
+* a user reported an interesting statistical bug in the duplicate pairs fragmentary search; where it does a confidence interval check, in one case it had more searched items than the entire search space. it seems this was a race condition. I have wrapped all the code in proper locking, added nicer guards before the math, and tidied up some redundant code along the way
+* misc linting and typing, blah
+
 ## [Version 685](https://github.com/hydrusnetwork/hydrus/releases/tag/v685)
 
 ### misc
@@ -474,66 +522,3 @@ title: Changelog
    - fixed thumb resolution stuff for non-resolution-having media when cache entry is invalidated
    - made thumbnail 'media' (and the new 'is_selected') bools public
    - tiny bit of thumb gen optimisation
-
-## [Version 676](https://github.com/hydrusnetwork/hydrus/releases/tag/v676)
-
-### more UI updates
-
-* thanks to a user, we have a slew of additional UI improvements: (#2037)
-* per-viewer mute under media viewer right-click menu!
-* slideshows can now shuffle and 'play media once through' on a per-viewer basis
-* the 'stop' slideshow menu entry now shows the current slideshow period
-* a new type of 'interactive' shortcut action, for the media shortcut set. you set a tag or rating service but nothing else. when you hit the shortcut, it asks you which tag or rating you want to set!
-* new options to choose which types of zoom 'zoom switch' switches between and configure how collapsed the 'eye menu' is under `options->media viewer hovers`, in the new `top hover button/menu controls` panel
-* persistent 'be silent on crashy stuff' mpv option unher `help->debug->debug modes`
-
-### misc
-
-* the `-d` launch parameter for the program now expands a userpath db path correctly. `-d=~/hydrus` now resolves to your user dir properly
-* in the parsing UI, the 'test' panel's preview area, where it shows what you downloaded/pasted, will now show up to 500,000 characters before clipping (up from 65536 chars), and the upper description is now clear when this happens
-* added `TEST: import local files directly from source, do not copy to temp dir beforehand` option to let some advanced users try out direct import. we needed to copy to tempdir in the old days so that some media scanning libraries would not have to deal with cyrillic or other uncode characters in paths, but this situation seems to be resolved these days, so let's try without. if it works ok IRL, I'll keep this for those who do still need a temp dir interim but flip the default behaviour
-
-### stylesheet paths
-
-* me and the guys who make qss stylesheets have been fighting an issue for a while regarding loading external assets, like a little .svg for a button. I solve this today, and it will make loading up stylesheets with assets from your db dir or in the built release much more reliable
-* anyone who was on the `_built_release` versions of the stylesheets will be migrated to the normal ones on update. the `_built_release` versions are deleted from the defults qss dir as the problem they addressed is solved in a better way
-* for the specific change, the new 'absolute path qss test mode' proved successful, so it is now the norm. stylesheets now have to specify their paths in one particular way and I handle the path juggling on my end, on load. the readme.txt in the qss dir is now explicit about this, so if you make qss stylesheets and haven't seen it yet, check it out
-
-### opening new pages with the client api
-
-* thanks to a user who did a really comprehensive job, the Client API gets a new `/manage_pages/new_page` command. it covers pretty much everything, including, say, a new local import page with a list of files. check out the new documentation here: https://hydrusnetwork.github.io/hydrus/developer_api.html#manage_pages_new_page
-* the user also fixed Client API file sorts not defaulting to asc=true and a focus issue when pages are closed
-* the Client API version is now 93
-
-### parsing logic fixes
-
-* _this is for advanced users who make downloaders_
-* with the help of a couple users who poked around my tangle of gallery parsing code, I think we've fixed some stupid parent-child inheritance stuff where a gallery object would take too manytagsfromcertainpostparsesandthenpassthatontoa'nextpage'galleryurl,particularly,say,ifthatnextpageurlwasauto-generatedbtwmyspacebarbrokewhenwritingthis (issue #2035)
-* keyboard fixed. so, I KISSed how gallery objects create child file import objects and sub-gallery urls and next-page gallery urls. there is less overlap of responsibility between an object passing metadata down and a post parse passing metadata down (this latter system is much better these days, and old hacks in the former pipeline were causing the main issues here). gallery import objects will now not update themselves with parsed tags and referral urls after the fact; only their children will get the metadata from their parses
-* relatedly, I cleaned up how file objects create child file download objects. previously, there were separate pathways for file parses that uses subsidiary parsers vs those that simply had a flat content parser that produced multiple urls and then another for a single url that turned out to match a post url class. this has all been collapsed into a single KISS route that says 'if one file url, eat up the metadata from the parsed post and then download it; else create n child objects'. some bespoke error states like 'hey I grabbed one url, it was a post url, but there's no parser for that url' are now deferred and will just get processed as a normal child file import object
-* also cleaned up some crazy python module inheritance happening here
-* overall, things should be more reliable, and the inheritance of metadata from one import object to the next should be clearer. let me know how it all goes for you
-
-### source setup
-
-* `setup_venv.py` now takes an optional `-i` parameter for non-interative (i.e. automated) installs. `-i=s` will do the simple mode, `-i=a` will do the advanced mode with all test/yes choices
-* `setup_venv.py` now expands a userpath venv path correctly. `-v=~/hydrusvenvs/venv313` now resolves to your user dir properly
-
-### safer builds
-
-* thanks to a user, our github build scripts, including Docker, now freeze the various github actions we use (e.g. a thing that says 'ok grab that build zip you just made and upload it to the release') to known good sha256 hashes, rather than getting the latest, say, 'v6'. this insulates against a supply attack, like we've seen recently, ensuring we won't use an action that was updated two hours ago by a bad guy to do bad things
-* there's a script also that updates the hashes. I'll be running this regularly to keep up and verifying every time it does. dependbot apparently interrupts whenever it is a big deal, too
-
-### startup/shutdown
-
-* the `twisted` library, which we use to host the client api and server services, is now started and stopped in a nicer way. previously, it was hacked into the boot scripts. now the main hydrus controller handles it and delivers some additional hydrus shutdown signals
-* `twisted` now only spins up on the client if you actually start up the Client API
-* when 'shutdown report mode' is on, the final client exit moment now prints all alive threads with their name and daemon status. if you have been working with me on the 'program is down but process is still alive', let's see if this catches it
-
-### some help docs work
-
-* rearranged and brushed up the Linux section in 'getting started - installing' and added more notes/links to 'hey running from source is over here'
-* removed the old Win 7 support comments and updated the Win 10 bits to be 'time to move to Linux m8'
-* updated the 'running from source' help to talk about `pyenv`, which makes it easy to install and use a different version of python with hydrus
-* updated the 'running Windows version in Wine' help document for the newest version and added info about Bottles: https://hydrusnetwork.github.io/hydrus/wine.html . I managed to get v675 up with a minimum of fuss and not too much weirdness (even ffmpeg and mpv worked!?!), so I now have a basic Windows test environment, hooray. doing it manually with winetricks on my system wine-9.0 did not work, it needed Bottles's newer wine-11.0
-* added easy copy buttons to the command quotes in 'running from source' help
