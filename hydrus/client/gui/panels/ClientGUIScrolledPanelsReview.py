@@ -1211,6 +1211,8 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         vbox = QP.VBoxLayout()
         
         self._mr_bones_text = ClientGUICommon.BetterStaticText( self )
+        self._mr_bones_text.setWordWrap( True )
+        self._mr_bones_text.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         boned_path = HydrusStaticDir.GetStaticPath( 'boned.jpg' )
         
@@ -1219,7 +1221,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         self._mr_bones_image = QW.QLabel( self, pixmap = boned_qt_pixmap )
         
         QP.AddToLayout( vbox, self._mr_bones_image, CC.FLAGS_CENTER )
-        QP.AddToLayout( vbox, self._mr_bones_text, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._mr_bones_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -1677,7 +1679,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
             elif num_total + num_deleted < 1000:
                 
-                special_message = 'I hope you enjoy my software. You might like to check out the downloaders! :^)'
+                special_message = 'I hope you enjoy my software. You might like to think about workflows to import your backlog and new files. :^)'
                 
             elif num_inbox <= num_archive / 99:
                 

@@ -78,7 +78,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'duplicates', DuplicatesPanel.DuplicatesPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'exporting', ExportingPanel.ExportingPanel( self._listbook ) )
         
-        if self._new_options:
+        if self._new_options.GetBoolean( 'advanced_mode' ):
             
             self._listbook.AddPage( 'external programs (TESTING)', ExternalProgramsPanel.ExternalProgramsPanel( self._listbook, self._new_options ) )
             

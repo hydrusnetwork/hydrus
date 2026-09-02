@@ -1329,7 +1329,7 @@ mime_string_lookup = {
     GENERAL_IMAGE : 'image',
     GENERAL_VIDEO : 'video',
     GENERAL_ANIMATION : 'animation',
-    GENERAL_FILE : 'file',
+    GENERAL_FILE : 'all files',
 }
 
 string_enum_lookup = { s : enum for ( enum, s ) in mime_string_lookup.items() }

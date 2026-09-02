@@ -69,7 +69,9 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( thumbnail_interaction_box )
         self._focus_preview_on_shift_click = QW.QCheckBox( thumbnail_interaction_box )
         self._focus_preview_on_shift_click_only_static = QW.QCheckBox( thumbnail_interaction_box )
+        
         self._on_shift_click_move_ghost_focus_to_last_hit = QW.QCheckBox( thumbnail_interaction_box )
+        self._on_shift_click_move_ghost_focus_to_last_hit.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a tricky one, but if you decide not to move your focus on shift-selection changes (with the above checkboxes) and then press a non-shift movement key, where do you want to start from--the current focus, or where you last changed your shift select? If the current way feels non-intuitive and you are always de-selecting your stuff by accident rather than navigating within it, try flipping this.' ) )
         
         self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( thumbnail_interaction_box, min=1, max=99 )
         self._thumbnail_visibility_scroll_percent.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' ) )
@@ -107,9 +109,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
         self._focus_preview_on_shift_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click' ) )
         self._focus_preview_on_shift_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ) )
-        
         self._on_shift_click_move_ghost_focus_to_last_hit.setChecked( self._new_options.GetBoolean( 'on_shift_click_move_ghost_focus_to_last_hit' ) )
-        self._on_shift_click_move_ghost_focus_to_last_hit.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a tricky one, but if you decide not to move your focus on shift-selection changes and then press a non-shift movement key, where do you want to start from--the current focus, or where you last changed your shift select? If the current way feels non-intuitive and you are always de-selecting your stuff by accident rather than navigating within it, try flipping this.' ) )
         
         self._thumbnail_visibility_scroll_percent.setValue( self._new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) )
         
@@ -192,6 +192,7 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self.setLayout( vbox )
         
         self._focus_preview_on_shift_click.clicked.connect( self._UpdatePreviewCheckboxes )
+        self._focus_preview_on_shift_click_only_static.clicked.connect( self._UpdatePreviewCheckboxes )
         self._focus_preview_on_ctrl_click.clicked.connect( self._UpdatePreviewCheckboxes )
         
         self._UpdatePreviewCheckboxes()
