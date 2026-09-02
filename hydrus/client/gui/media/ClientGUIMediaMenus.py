@@ -871,7 +871,9 @@ def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProce
             prefix = ''
             
         
-        open_externally_launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( focused_media.GetMime() )
+        focused_media_single = focused_media.GetDisplayMedia()
+        
+        open_externally_launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( focused_media_single.GetMime() )
         
         for open_externally_launch_path in open_externally_launch_paths:
             
@@ -895,7 +897,7 @@ def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProce
         
         ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in web browser', 'Show this file in your OS\'s web browser.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER ) )
         
-        if focused_media.GetLocationsManager().IsLocal():
+        if focused_media_single.GetLocationsManager().IsLocal():
             
             show_windows_native_options = HC.PLATFORM_WINDOWS
             

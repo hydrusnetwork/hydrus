@@ -8345,6 +8345,7 @@ class DB( HydrusDB.HydrusDB ):
                         self.modules_files_maintenance_queue.AddJobs( delisted_hash_ids, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_CHECK_POTENTIAL_DUPLICATE_PAIR_SEARCH_MEMBERSHIP )
                         
                         # these are files that should have phashes but do not; probably blank files that were previously discarded
+                        # also includes non-renderable PSDs; no worries
                         blank_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name_for_phashes} WHERE NOT EXISTS ( SELECT 1 FROM shape_perceptual_hash_map WHERE hash_id = {temp_hash_ids_table_name_for_phashes}.hash_id );' ) )
                         
                         HydrusData.Print( f'Found {HydrusNumbers.ToHumanInt(len(blank_hash_ids))} files that should have phashes but did not (probably blank squares).' )
