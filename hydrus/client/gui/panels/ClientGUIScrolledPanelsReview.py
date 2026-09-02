@@ -1266,8 +1266,6 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         panel_vbox = QP.VBoxLayout()
         
-        self._potentials_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
-        self._potentials_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._duplicates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
         self._duplicates_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         self._alternates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
@@ -1278,7 +1276,6 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         
         QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( panel_vbox, self._potentials_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( panel_vbox, self._duplicates_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( panel_vbox, self._alternates_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -1411,14 +1408,10 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         total_alternate_files = boned_stats[ 'total_alternate_files' ]
         total_alternate_groups = boned_stats[ 'total_alternate_groups' ]
         total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
-        #total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
         
-        #potentials_label = f'Total duplicate potential pairs: {HydrusNumbers.ToHumanInt( total_potential_pairs )}'
-        potentials_label = f'Total potential duplicate pairs: disabled for now'
         duplicates_label = f'Total files in duplicate groups: {HydrusNumbers.ToHumanInt( total_duplicate_files )}'
         alternates_label = f'Total files in alternate groups: {HydrusNumbers.ToHumanInt( total_alternate_files )} ({HydrusNumbers.ToHumanInt( total_alternate_groups )} groups)'
         
-        self._potentials_st.setText( potentials_label )
         self._duplicates_st.setText( duplicates_label )
         self._alternates_st.setText( alternates_label )
         
@@ -1719,7 +1712,6 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( self._files_content_vbox, self._files_content_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self._potentials_st.setText( '' )
         self._duplicates_st.setText( '' )
         self._alternates_st.setText( '' )
         

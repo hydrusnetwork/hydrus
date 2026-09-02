@@ -529,7 +529,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AllowsEverything( self ):
+    def AllowsEverything( self ) -> bool:
         
         with self._lock:
             

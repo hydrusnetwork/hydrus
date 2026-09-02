@@ -72,7 +72,6 @@ from hydrus.client.db import ClientDBTagSearch
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBTagSuggestions
 from hydrus.client.db import ClientDBURLMap
-from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.metadata import ClientContentUpdates
@@ -554,7 +553,7 @@ class DB( HydrusDB.HydrusDB ):
             ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
             ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( tag_service_id )
             
-            def GetWeightedSiblingRow( sibling_rows, index ):
+            def GetWeightedSiblingRow( sibling_rows: set[ tuple[ int, int ] ], index ) -> tuple[ int, tuple[ int, int ] ]:
                 
                 # when you change the sibling A->B in the _lookup table_:
                 # you need to add/remove about A number of mappings for B and all it implies. the weight is: A * count( all the B->X implications )
@@ -574,7 +573,7 @@ class DB( HydrusDB.HydrusDB ):
                 return weight_and_rows[ index ]
                 
             
-            def GetWeightedParentRow( parent_rows, index ):
+            def GetWeightedParentRow( parent_rows: set[ tuple[ int, int ] ], index ) -> tuple[ int, tuple[ int, int ] ]:
                 
                 # when you change the parent A->B in the _lookup table_:
                 # you need to add/remove mappings (of B) for all instances of A and all that implies it. the weight is: sum( all the X->A implications )
@@ -602,12 +601,15 @@ class DB( HydrusDB.HydrusDB ):
             
             possibly_affected_tag_ids = set()
             
+            previous_chain_tag_ids_to_implied_by = {}
+            after_chain_tag_ids_to_implied_by = {}
+            
             if len( some_removee_sibling_rows ) + len( some_removee_parent_rows ) > 0:
                 
-                smallest_sibling_weight = None
-                smallest_sibling_row = None
-                smallest_parent_weight = None
-                smallest_parent_row = None
+                smallest_sibling_weight: int | None = None
+                smallest_sibling_row: tuple[ int, int ] | None = None
+                smallest_parent_weight: int | None = None
+                smallest_parent_row: tuple[ int, int ] | None = None
                 
                 if len( some_removee_sibling_rows ) > 0:
                     
@@ -689,10 +691,10 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if len( some_addee_sibling_rows ) + len( some_addee_parent_rows ) > 0:
                     
-                    largest_sibling_weight = None
-                    largest_sibling_row = None
-                    largest_parent_weight = None
-                    largest_parent_row = None
+                    largest_sibling_weight: int | None = None
+                    largest_sibling_row: tuple[ int, int ] | None = None
+                    largest_parent_weight: int | None = None
+                    largest_parent_row: tuple[ int, int ] | None = None
                     
                     if len( some_addee_sibling_rows ) > 0:
                         
@@ -1911,21 +1913,22 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        # first grab all the alternate groups that actually have more than one media id in them
-        useful_alternates_group_ids = { alternates_group_id for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM duplicate_files CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 }
+        # first we fetch the unique duplicate media ids
         
-        boned_stats[ 'total_alternate_groups' ] = len( useful_alternates_group_ids )
+        total_duplicate_files = 0
+        duplicate_media_ids_to_counts = dict()
         
-        with self._MakeTemporaryIntegerTable( useful_alternates_group_ids, 'alternates_group_id' ) as temp_alternates_group_ids_table_name:
+        for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ):
             
-            total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) CROSS JOIN {temp_alternates_group_ids_table_name} USING ( alternates_group_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
+            # yes, register before the count check since we use this later for alternates business
+            duplicate_media_ids_to_counts[ media_id ] = count
             
-        
-        boned_stats[ 'total_alternate_files' ] = total_alternate_files
-        
-        if job_status.IsCancelled():
+            if count <= 1:
+                
+                continue
+                
             
-            return boned_stats
+            total_duplicate_files += 1
             
         
         total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ) if count > 1 ) )
@@ -1937,14 +1940,36 @@ class DB( HydrusDB.HydrusDB ):
             return boned_stats
             
         
-        return boned_stats
+        #
         
-        # TODO: fix this, it takes ages sometimes IRL
-        table_join = self.modules_files_duplicates_updates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
+        # now we feed the unique duplicate media ids into this so we can get a nice alternates number
+        # don't be tempted to do a big query starting from current_files_table_name--you'll probably get the same media_id multiple times and it'll mess up your count. KISS
+        # also, there's a tricky interplay between 'this alternate group has >1 members' and 'this alternate group has >1 files'. the counts here are counting and doing logic on slightly different things, so we count manually
         
-        ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
+        total_alternate_groups = 0
+        total_alternate_files = 0
         
-        boned_stats[ 'total_potential_pairs' ] = total_potential_pairs
+        with self._MakeTemporaryIntegerTable( set( duplicate_media_ids_to_counts.keys() ), 'media_id' ) as duplicate_media_ids_temp_table_name:
+            
+            alternates_group_ids_to_media_ids = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT alternates_group_id, media_id FROM {duplicate_media_ids_temp_table_name} CROSS JOIN duplicate_files USING ( media_id ) CROSS JOIN alternate_file_group_members USING ( media_id );' ) )
+            
+            for ( alternates_group_id, media_ids ) in alternates_group_ids_to_media_ids.items():
+                
+                if len( media_ids ) <= 1:
+                    
+                    continue
+                    
+                
+                total_alternate_groups += 1
+                
+                # ok this alternates group has more than one member, we are good. but how many files within our sample does it have?
+                
+                total_alternate_files += sum( ( duplicate_media_ids_to_counts[ media_id ] for media_id in media_ids ) )
+                
+            
+        
+        boned_stats[ 'total_alternate_groups' ] = total_alternate_groups
+        boned_stats[ 'total_alternate_files' ] = total_alternate_files
         
         if job_status.IsCancelled():
             
@@ -4693,7 +4718,7 @@ class DB( HydrusDB.HydrusDB ):
         location_context: ClientLocation.LocationContext,
         tag_service_key,
         tag_filter: HydrusTags.TagFilter,
-        hashes: collections.abc.Collection[ bytes ],
+        hashes: collections.abc.Collection[ bytes ] | None,
         content_statuses: collections.abc.Collection[ int ]
     ):
         

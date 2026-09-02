@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientData
+from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -309,7 +310,19 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return ( current_count, pending_count )
         
     
-    def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, domain_is_cross_referenced = True, zero_count_ok = False, job_status = None, tag_ids_table_name = None ):
+    def GetCounts(
+        self,
+        tag_display_type: int,
+        tag_service_id: int,
+        file_service_id: int,
+        tag_ids: collections.abc.Collection[ int ],
+        include_current: bool,
+        include_pending: bool,
+        domain_is_cross_referenced: bool = True,
+        zero_count_ok: bool = False,
+        job_status: ClientThreading.JobStatus | None = None,
+        tag_ids_table_name: str | None = None
+    ) -> dict[ int, tuple[ int, int, int, int ] ]:
         
         if len( tag_ids ) == 0:
             
@@ -452,7 +465,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return counts_cache_table_name
         
     
-    def GetCountsEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ):
+    def GetCountsEstimate( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ], include_current_tags: bool, include_pending_tags: bool ) -> collections.Counter[ int ]:
         
         ids_to_count = collections.Counter()
         
@@ -483,7 +496,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return ids_to_count
         
     
-    def GetCountsEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ] ):
+    def GetCountsEstimateStatuses( self, tag_display_type: int, tag_service_id: int, file_service_id: int, tag_ids: collections.abc.Collection[ int ] ) -> collections.defaultdict[ int, tuple[ int, int ] ]:
         
         include_current_tags = True
         include_pending_tags = True

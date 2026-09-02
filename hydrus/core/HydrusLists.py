@@ -3,6 +3,7 @@ import collections.abc
 import itertools
 import numpy
 import random
+import typing
 
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
@@ -481,7 +482,9 @@ def RandomPop( population ):
     return row
     
 
-def SampleSetByGettingFirst( s: set, n ):
+T = typing.TypeVar( 'T' )
+
+def SampleSetByGettingFirst( s: set[ T ], n ) -> set[ T ]:
     
     # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
     

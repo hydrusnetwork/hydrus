@@ -66,22 +66,27 @@ def MergeCounts( min_a: int, max_a: int, min_b: int, max_b: int ):
     
     return ( min_answer, max_answer )
     
+
 def OrdIsSensibleASCII( o ):
     
     return 32 <= o <= 127
     
+
 def OrdIsAlphaLower( o ):
     
     return 97 <= o <= 122
     
+
 def OrdIsAlphaUpper( o ):
     
     return 65 <= o <= 90
     
+
 def OrdIsAlpha( o ):
     
     return OrdIsAlphaLower( o ) or OrdIsAlphaUpper( o )
     
+
 def OrdIsNumber( o ):
     
     return 48 <= o <= 57

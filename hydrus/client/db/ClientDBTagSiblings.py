@@ -71,7 +71,8 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         self.modules_tags_local_cache = modules_tags_local_cache
         self.modules_tags = modules_tags
         
-        self._service_ids_to_display_application_status = {}
+        # TODO: This is obviously a mess; make an object m8
+        self._service_ids_to_display_application_status: dict[ int, tuple[ set[ tuple[ int, int ] ], set[ tuple[ int, int ] ], set[ tuple[ int, int ] ], set[ tuple[ int, int ] ] ] ] = {}
         
         self._service_ids_to_applicable_service_ids: collections.defaultdict[ int, list ] | None = None
         self._service_ids_to_interested_service_ids: collections.defaultdict[ int, set ] | None = None
