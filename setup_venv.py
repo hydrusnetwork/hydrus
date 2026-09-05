@@ -310,7 +310,7 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ], doing_
     if dev == 'y':
         
         requirements_dict[ 'httmock' ] = '<=1.4.0'
-        requirements_dict[ 'mkdocs-material' ] = '==9.7.1'
+        requirements_dict[ 'mkdocs-material' ] = '==9.7.7'
         
     
 

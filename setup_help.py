@@ -65,7 +65,7 @@ def build_help( venv_path ):
     
     print( 'Checking mkdocs-material...' )
     
-    run_pip([ 'install', 'mkdocs-material==9.7.1' ], venv_path )
+    run_pip([ 'install', 'mkdocs-material==9.7.7' ], venv_path )
     
     print( 'Building help...' )
     

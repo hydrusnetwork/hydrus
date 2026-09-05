@@ -34,7 +34,7 @@ PySide6==6.9.3
 
 pyinstaller==6.16.0
 
-mkdocs-material==9.7.1
+mkdocs-material==9.7.7
 
 PyWin32<=311
 pefile
