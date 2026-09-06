@@ -8,7 +8,7 @@ Click the links on the left to go through the getting started guide. Subheadings
 
 The section on installing, updating, and **backing up** is very important.
 
-This help is available locally in every release. Hit `help->help and getting started guide` in the client, or open `install_dir/help/index.html`.
+This help is available locally in every release. Hit `help->open help` in the client, or open `install_dir/help/index.html`.
 
 ## on having too many files { id="files" }
 

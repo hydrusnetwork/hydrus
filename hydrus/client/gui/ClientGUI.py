@@ -3501,7 +3501,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'help and getting started guide', 'Open hydrus\'s local help in your web browser.', self._OpenHelp )
+        ClientGUIMenus.AppendMenuItem( menu, 'open help', 'Open hydrus\'s local help and getting started guide in your web browser.', self._OpenHelp )
         
         links = ClientGUIMenus.GenerateMenu( menu )
         
@@ -3521,7 +3521,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository' + HC.UNICODE_ELLIPSIS, 'This will add the public tag repository to your client.', self._AutoRepoSetup )
+        ClientGUIMenus.AppendMenuItem( menu, 'add the PTR' + HC.UNICODE_ELLIPSIS, 'Want to add the public tag repository to your client in one click?', self._AutoRepoSetup )
         
         ClientGUIMenus.AppendSeparator( menu )
         
