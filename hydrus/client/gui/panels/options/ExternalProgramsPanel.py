@@ -1,3 +1,4 @@
+import os
 import shutil
 
 from qtpy import QtCore as QC
@@ -493,6 +494,9 @@ class EditProcessCallPanel( QW.QWidget ):
         self._executable_path = ''
         self._executable_parameter_templates = []
         
+        self._show_path = ClientGUICommon.BetterButton( self, 'show PATH', self._ShowPATH )
+        self._show_path.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show the PATH that your hydrus currently sees.' ) )
+        
         self._input_parameter_processing_rules_box = ClientGUICommon.StaticBox( self, 'input parameters' )
         
         self._parameter_types_to_input_parameter_processing_rule_panels: dict[ int, EditInputParameterProcessingRulePanel ] = {}
@@ -518,12 +522,13 @@ class EditProcessCallPanel( QW.QWidget ):
         
         label = 'This makes a general process call. Select which input parameter(s) you want to use and make sure you are happy with their replacement tokens (the \'%path%\' stuff, which you can rename if you need to), and then insert those parameters in your command template (e.g. \'my_program "%path%"\'). When this call fires, the given input parameters will be placed into your template and the process launched.'
         label += '\n\n'
-        label += 'The "availability" test for this call just does a "which" on the executable path, which may not always target what you need.'
+        label += 'The "availability" test for this call just does a "which" call. If you have a full path, it checks if that path exists; if you have just a name, it searches for it in your PATH.'
         
         st = ClientGUICommon.BetterStaticText( self, label = label )
         st.setWordWrap( True )
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._show_path, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._input_parameter_processing_rules_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         rows = []
@@ -585,6 +590,21 @@ class EditProcessCallPanel( QW.QWidget ):
             
         
         return input_parameter_processing_rules
+        
+    
+    def _ShowPATH( self ):
+        
+        env = os.environ.copy()
+        
+        PATH = env[ 'PATH' ]
+        print( PATH )
+        path_components = PATH.split( os.pathsep )
+        
+        message = 'As hydrus sees it, your PATH is as follows. Any executable you specify with just a name, rather than a full path, needs to exist in one of these locations. You should be very very careful in ever editing your PATH. Ask a chatbot if you need to learn more. Recall that if you ever do change it, you need to restart hydrus (in a new terminal if needed) to see the changes here.'
+        message += '\n\n'
+        message += '\n'.join( path_components )
+        
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _UpdateExampleCommandTemplate( self ):
