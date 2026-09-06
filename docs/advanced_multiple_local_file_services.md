@@ -16,7 +16,7 @@ Wouldn't it be nice if you could break your collection into separate areas?
 
 ## multiple file domains { id="file_domains" }
 
-_tl;dr: you can have more than one 'my files', add them in 'manage services'._
+_tl;dr: you can have more than one 'my files', add them in `services->edit`._
 
 ![](images/mlfs_simple_file_domain_selector.png)
 
@@ -32,7 +32,7 @@ This idea of dynamically intersecting domains is very important to hydrus. Each 
 
 With _multiple local file domains_, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.
 
-You can add and remove them under _services->manage services_:
+You can add and remove them under `services->edit`:
 
 ![](images/mlfs_manage_services.png)
 

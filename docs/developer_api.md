@@ -178,11 +178,11 @@ But I strongly encourage you to move away from them as soon as reasonably possib
 
 If you have a clever script/program that does many things, then hit up [/get\_services](#get_services) on session initialisation and cache an internal map of key_to_name for the labels to use when you present services to the user.
 
-Also, note that all users can now copy their service keys from _review services_.
+Also, note that all users can now copy their service keys from _services->review_.
 
 ## The Services Object { id="services_object" }
 
-Hydrus manages its different available domains and actions with what it calls _services_. If you are a regular user of the program, you will know about _review services_ and _manage services_. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.
+Hydrus manages its different available domains and actions with what it calls _services_. If you are a regular user of the program, you will know about _services->review_ and _services->edit_. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.
 
 When the client tells you about the available services, it gives you the following structure, typically under a `services_v2` key right off the root node.
 
@@ -360,11 +360,11 @@ You won't see all of these, but the service `type` enum is:
 * 22 - a 'inc/dec' rating service with positive integer rating
 * 99 - server administration
 
-`type_pretty` is something you can show users. Hydrus uses the same labels in _manage services_ and so on.
+`type_pretty` is something you can show users. Hydrus uses the same labels in `services->edit` and so on.
 
 Rating services have some extra data:
 
-- They all have some `colours` for differing rating states, the same as you'd see in `manage services`. Pen and brush are the line and the fill of the rating star shape, respectively. `like` generally means set/left-click, `dislike` means off/right-click, `null` means not set, and `mixed` is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.
+- They all have some `colours` for differing rating states, the same as you'd see in `services->edit`. Pen and brush are the line and the fill of the rating star shape, respectively. `like` generally means set/left-click, `dislike` means off/right-click, `null` means not set, and `mixed` is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.
 - They all have `show_in_thumbnail` and `show_in_thumbnail_even_when_null`, which you can obey in your display context if convenient.
 - Like/dislike and numerical services have `star_shape`, which is one of `circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon` -or- `svg`, which means a custom user svg that can be fetched with [/get\_service\_rating\_svg](#get_service_rating_svg).
 - Numerical services have `min_stars` (0 or 1) and `max_stars` (1 to 20). `allows_zero` lines up with `min_stars` and is for your convenience.
@@ -373,7 +373,7 @@ If you are displaying ratings, don't feel crazy obligated to obey the shape! Sho
 
 If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure appears in a few other calls for convenience, like [/get\_files/file\_metadata](#get_files_file_metadata), since that refers to many different services when it is talking about file locations and ratings and so on.
 
-Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _review services_.
+Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _services->review_.
 
 ## Current Deleted Pending Petitioned { id="CDPP" }
 
@@ -451,7 +451,7 @@ Response:
 
 ### **GET `/request_new_permissions`** { id="request_new_permissions" }
 
-_Register a new external program with the client. This requires the 'add from api request' mini-dialog under_ services->review services _to be open, otherwise it will 403._
+_Register a new external program with the client. This requires the 'add from api request' mini-dialog under_ services->review _to be open, otherwise it will 403._
 
 Restricted access:
 :   NO.

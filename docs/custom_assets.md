@@ -13,7 +13,7 @@ This is a bit hacky, so don't change the resolution or ratio of anything too muc
 
 # QSS and SVGs
 
-As well as replacing files, you can also complement a folder of defaults with your own custom files. `static/qss` and `static/rating_shapes` are the main examples here. You can create a `db_dir/static/rating_shapes`, and put some svgs in there, and hydrus will list them along with the defaults in `install_dir/static/rating_shapes` in the 'manage services' dialog for ratings. If there are filename conflicts, hydrus prefers the one in your (db) userdir.
+As well as replacing files, you can also complement a folder of defaults with your own custom files. `static/qss` and `static/rating_shapes` are the main examples here. You can create a `db_dir/static/rating_shapes`, and put some svgs in there, and hydrus will list them along with the defaults in `install_dir/static/rating_shapes` in the `services->edit` dialog for ratings. If there are filename conflicts, hydrus prefers the one in your (db) userdir.
 
 There's a couple extra notes for how these should work, so check the readme.txts in the install_dir folders.
 

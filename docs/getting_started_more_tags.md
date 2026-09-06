@@ -22,7 +22,7 @@ The sheer number of tags can also be overwhelming. Importing all the many tags f
 Ultimately, tags are a medium for _searching_, not describing. Anyone can see what is in an image just by looking at it, so--for the most part--the only use in writing any of it down is if you would ever use those particular words to find the thing again. Character, series and creator namespaces are a great simple place to start. After that, add whatever you are most interested in, be that 'blue sky' or 'midriff' or fanfic ship names, whatever you would actually use in a search, and then you can spend your valuable time actually using your media rather than drowning-by-categorisation.
 
 ## Tag services
-Hydrus lets you organise tags across multiple separate 'services'. By default there are two, but you can have however many you want (`services->manage services`). You might like to add more for different sets of siblings/parents, tags you don't want to see but still search by, parsing tags into different services based on reliability of the source or the source itself. You could for example parse all tags from Site A into one service, Site B into another, Hard drive sidecar parsing another, and so on as you chose. There is a complexity danger in creating too many though, so try and consolidate where it is sensible. You must always have at least one local tag domain.
+Hydrus lets you organise tags across multiple separate 'services'. By default there are two, but you can set however many you want under `services->edit`. You might like to add more for different sets of siblings/parents, tags you don't want to see but still search by, parsing tags into different services based on reliability of the source or the source itself. You could for example parse all tags from Site A into one service, Site B into another, Hard drive sidecar parsing another, and so on as you chose. There is a complexity danger in creating too many though, so try and consolidate where it is sensible. You must always have at least one local tag domain.
 
 Local tag domains are stored only on your hard drive--they are completely private. No tags, siblings, or parents will accidentally leak, so feel free to go wild with whatever odd scheme you want to try out.
 
@@ -46,7 +46,7 @@ To connect with it, please check [here](access_keys.md). **Please read that page
 
 If you add it, your client will download updates from the repository over time and, usually when it is idle or shutting down, 'process' them into its database until it is fully synchronised. The processing step is CPU and HDD heavy, and you can customise when it happens in _file->options->maintenance and processing_. As the repository synchronises, you should see some new tags appear, particularly on famous files that lots of people have.
 
-You can watch more detailed synchronisation progress in the _services->review services_ window.
+You can watch more detailed synchronisation progress in the _services->review_ window.
 
 ![](images/review_repos_public_tag_repo.png)
 

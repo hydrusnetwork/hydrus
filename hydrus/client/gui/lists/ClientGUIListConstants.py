@@ -925,7 +925,7 @@ class COLUMN_LIST_MANAGE_SERVICES( COLUMN_LIST_DEFINITION ):
     DELETABLE = 2
     
 
-column_list_type_name_lookup[ COLUMN_LIST_MANAGE_SERVICES.ID ] = 'manage services'
+column_list_type_name_lookup[ COLUMN_LIST_MANAGE_SERVICES.ID ] = 'edit services'
 
 register_column_type( COLUMN_LIST_MANAGE_SERVICES.ID, COLUMN_LIST_MANAGE_SERVICES.NAME, 'name', False, 20, True )
 register_column_type( COLUMN_LIST_MANAGE_SERVICES.ID, COLUMN_LIST_MANAGE_SERVICES.TYPE, 'type', False, 20, True )

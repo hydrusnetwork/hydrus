@@ -8,7 +8,7 @@ The hydrus client has API so you can access many of its functions with external 
 
 ## Enabling the API
 
-By default, the Client API is not turned on. Go to _services->manage services_ and give it a port to get it started. I recommend you not allow non-local connections (i.e. only requests from the same computer will work) to start with.
+By default, the Client API is not turned on. Go to `services->edit` and give it a port to get it started. I recommend you not allow non-local connections (i.e. only requests from the same computer will work) to start with.
 
 The Client API should start immediately. It will only be active while the client is open. To test it is running all correct (and assuming you used the default port of 45869), try loading this:
 
@@ -18,7 +18,7 @@ You should get a welcome page. By default, the Client API is HTTP, which means i
 
 The Client API is still experimental and sometimes not user friendly. If you want to talk to your home computer across the internet, you will need some networking experience. You'll need a static IP or reverse proxy service or dynamic domain solution like no-ip.org so your device can locate it, and potentially port-forwarding on your router to expose the port. If you have a way of hosting a domain and have a signed certificate (e.g. from [Let's Encrypt](https://letsencrypt.org/)), you can overwrite the client.crt and client.key files in your 'db' directory and HTTPS hydrus should host with those.
 
-Once the API is running, go to its entry in _services->review services_. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the review services panel and then copy/paste the key to your external program, or the program may have the ability to request its own access while a mini-dialog launched from the review services panel waits to catch the request.
+Once the API is running, go to its entry in _services->review_. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the `services->review` window and then copy/paste the key to your external program, or the program may have the ability to request its own access while a mini-dialog launched from the _services->review_ panel waits to catch the request.
 
 ## Tools created by hydrus users
 

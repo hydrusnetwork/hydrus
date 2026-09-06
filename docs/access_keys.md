@@ -18,7 +18,7 @@ There also used to be just one user account that everyone shared. Everyone was e
 
 That old shared account is now a 'read-only' account. This account can only download--it cannot upload new tags or siblings/parents. Users who want to upload now generate their own individual accounts, which are still Anon, but separate, which helps janitors approve and deny uploaded petitions more accurately and efficiently.
 
-I recommend using the shared read-only account, below, to start with, but if you decide you would like to upload, making your own account is easy--just click the 'check for automatic account creation' button in _services->manage services_, and you should be good. You can change your access key on an existing service--you don't need to delete and re-add or anything--and your client should quickly resync and recognise your new permissions.
+I recommend using the shared read-only account, below, to start with, but if you decide you would like to upload, making your own account is easy--just click the 'check for automatic account creation' button in _services->edit_, and you should be good. You can change your access key on an existing service--you don't need to delete and re-add or anything--and your client should quickly resync and recognise your new permissions.
 
 ## privacy
 
@@ -39,7 +39,7 @@ Hit _help->add the public tag repository_ and you will all be set up.
 
 ## manually
 
-Hit _services->manage services_ and click _add->hydrus tag repository_. You'll get a panel, fill it out like this:
+Hit _services->edit_ and click _add->hydrus tag repository_. You'll get a panel, fill it out like this:
 
 ![](images/edit_repos_public_tag_repo.png)
 
@@ -60,6 +60,6 @@ Note that because this is the public shared key, you can ignore the '<span class
 
 It is worth checking the 'test address' and 'test access key' buttons just to double-check your firewall and key are all correct. Notice the 'check for automatic account creation' button, for if and when you decide you want to contribute to the PTR.
 
-Then you can check your PTR at any time under _services->review services_, under the 'remote' tab:
+Then you can check your PTR at any time under _services->review_, under the 'remote' tab:
 
 ![](images/review_repos_public_tag_repo.png)

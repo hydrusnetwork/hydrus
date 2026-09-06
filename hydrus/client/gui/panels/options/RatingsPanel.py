@@ -33,7 +33,7 @@ class RatingsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
         
         self._draw_thumbnail_rating_background = QW.QCheckBox( thumbnail_ratings_panel )
-        tt = 'If you show any ratings on your thumbnails (you can set this under _services->manage services_), they can get lost in the noise of the underlying thumb. This draws a plain flat rectangle around them in the normal window panel colour. If you think it is ugly, turn it off here!'
+        tt = 'If you show any ratings on your thumbnails (you can set this under _services->edit_), they can get lost in the noise of the underlying thumb. This draws a plain flat rectangle around them in the normal window panel colour. If you think it is ugly, turn it off here!'
         self._draw_thumbnail_rating_background.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._draw_thumbnail_rating_icon_size_px = ClientGUICommon.BetterDoubleSpinBox( thumbnail_ratings_panel, min = 1.0, max = thumbnail_width )

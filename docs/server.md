@@ -35,7 +35,7 @@ Since the server and client have so much common code, I package them together. I
 
 ## set up the client { id="setting_up_the_client" }
 
-In the _services->manage services_ dialog, add a new 'hydrus server administration service' and set up the basic options as appropriate. If you are running the server on the same computer as the client, its hostname is 'localhost'.
+In the `services->edit` dialog, add a new 'hydrus server administration service' and set up the basic options as appropriate. If you are running the server on the same computer as the client, its hostname is 'localhost'.
 
 In order to set up the first admin account and an access key, use 'init' as a registration token. This special registration token will only work to initialise this first super-account.
 
@@ -46,9 +46,9 @@ If your client can't connect to the server, it is either not running or you have
 
 ## set up the server { id="setting_up_the_server" }
 
-You should have a new submenu, 'administrate services', under 'services', in the client gui. This is where you control most server and service-wide stuff.
+You should have a new submenu in the main client gui, `services->administrate`. This is where you control most server and service-wide stuff.
 
-_admin->your server->manage services_ lets you add, edit, and delete the services your server runs. Every time you add one, you will also be added as that service's first administrator, and the admin menu will gain a new entry for it.
+_administrate->your server->edit services_ lets you add, edit, and delete the services your server runs. Every time you add one, you will also be added as that service's first administrator, and the admin menu will gain a new entry for it.
 
 ## making accounts { id="making_accounts" }
 
@@ -72,9 +72,9 @@ I honestly hope you can get some benefit out of my code, whether just as a backu
 
 Remember that the repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.
 
-The client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until the server's next update occurs. By default, the update period is 100,000 seconds--a little over a day. You will be able to see when the next update it due in `services->review services`. I recommend you upload at least one piece of information fairly soon--in the first update period is great--so other clients can, within a day, be confident they are all syncing properly.
+The client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until the server's next update occurs. By default, the update period is 100,000 seconds--a little over a day. You will be able to see when the next update it due in `services->review`. I recommend you upload at least one piece of information fairly soon--in the first update period is great--so other clients can, within a day, be confident they are all syncing properly.
 
-As the admin, you can change the update period under 'administrate services'. Reducing it may be tempting for a server of just a small group of friends, since it means you'll see changes with lower latency, but don't go crazy. I would never dip below 10,000 seconds, and after some weeks the ratio between what is already on the server and what was added in the past day becomes far less important.
+As the admin, you can change the update period under `services->administrate`. Reducing it may be tempting for a server of just a small group of friends, since it means you'll see changes with lower latency, but don't go crazy. I would never dip below 10,000 seconds, and after some weeks the ratio between what is already on the server and what was added in the past day becomes far less important.
 
 ## btw, how to backup a repo's db { id="backing_up" }
 

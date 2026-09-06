@@ -760,7 +760,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         looking_good = False
                         
-                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
+                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _services->review_.'
                         
                         status_text = '{}\n\n{}'.format( s, status_text )
                         

@@ -352,7 +352,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     
                 except Exception as e:
                     
-                    message = 'Service has had a recent error or is otherwise not functional! You might like to try refreshing its account in \'review services\'. Specific error was: {}'.format( e )
+                    message = 'Service has had a recent error or is otherwise not functional! You might like to try refreshing its account in _services->review_. Specific error was: {}'.format( e )
                     
                     raise HydrusExceptions.ValidationException( message )
                     

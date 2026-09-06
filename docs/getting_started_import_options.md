@@ -58,7 +58,7 @@ Note that the panel here says your 'Location Import Options' and 'Presentation I
 
 Let's say you have found a nice place to download from, but it has some pretty terrible tags. You decide you want to put those tags in a special place and filter out the bad stuff. You need to do a test download to test a new import options setup.
 
-By default, hydrus grabs all available tags from normal gallery-like sites and puts them in the 'downloader tags' local tag domain. For this example, we will say that you have hit up `services->manage services` and created a new local tag domain, "unreliable tags".
+By default, hydrus grabs all available tags from normal gallery-like sites and puts them in the 'downloader tags' local tag domain. For this example, we will say that you have hit up `services->edit` and created a new local tag domain, "unreliable tags".
 
 Opening up a new gallery downloader page, here is our default state for 'tag import options':
 

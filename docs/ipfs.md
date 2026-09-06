@@ -30,7 +30,7 @@ Your daemon listens for other instances of ipfs using port 4001, so if you need 
 
 ## connecting your client { id="connecting" }
 
-IPFS daemons are treated as services inside hydrus, so go to _services->manage services->add->ipfs daemon_. You will probably want to use credentials of `127.0.0.1:5001`. Click 'test address' to make sure everything is working.
+IPFS daemons are treated as services inside hydrus, so go to _services->edit->add->ipfs daemon_. You will probably want to use credentials of `127.0.0.1:5001`. Click 'test address' to make sure everything is working.
 
 ![](images/ipfs_services.png)
 
@@ -65,7 +65,7 @@ If you want to share a pinned file with someone, you have to tell them that mult
 You can also paste one of these URLs into any normal hydrus downloader.
 
 !!! info "URL Prefix"
-    If you put in `http://127.0.0.1:8080/ipfs/` in the clipboard prefix field in _manage services_, then any time you copy a multihash, you'll actually copy the whole valid URL that fetches it. You could also use a public gateway prefix, or an externally visible host for your local IPFS instance.
+    If you put in `http://127.0.0.1:8080/ipfs/` in the clipboard prefix field in _services->edit_, then any time you copy a multihash, you'll actually copy the whole valid URL that fetches it. You could also use a public gateway prefix, or an externally visible host for your local IPFS instance.
 
 ## directories { id="directories" }
 
@@ -77,7 +77,7 @@ You may recognise those hash filenames--this example was created by hydrus, whic
 
 ![](images/ipfs_dir_upload.png)
 
-Hydrus will pin all the files and then wrap them in a directory, showing its progress in a popup. Your current directory shares are summarised on the respective _services->review services_ panel:
+Hydrus will pin all the files and then wrap them in a directory, showing its progress in a popup. Your current directory shares are summarised on the respective _services->review_ panel:
 
 ![](images/ipfs_review_services.png)
 

@@ -183,7 +183,7 @@ def THREADUploadPending( service_key ):
             
             if account.IsUnknown():
                 
-                HydrusData.ShowText( 'Your account is currently unsynced, so the upload was cancelled. Please refresh the account under _review services_.' )
+                HydrusData.ShowText( 'Your account is currently unsynced, so the upload was cancelled. Please refresh the account under _services->review_.' )
                 
                 return
                 
@@ -248,9 +248,9 @@ def THREADUploadPending( service_key ):
                 )
                 
                 message += '\n' * 2
-                message += 'If you are currently using a public, read-only account (such as with the PTR), you may be able to generate your own private account with more permissions. Please hit the button below to open this service in _manage services_ and see if you can generate a new account. If accounts cannot be automatically created, you may have to contact the server owner directly to get this permission.'
+                message += 'If you are currently using a public, read-only account (such as with the PTR), you may be able to generate your own private account with more permissions. Please hit the button below to open this service in _services->edit_ and see if you can generate a new account. If accounts cannot be automatically created, you may have to contact the server owner directly to get this permission.'
                 message += '\n' * 2
-                message += 'If you think your account does have this permission, try refreshing it under _review services_.'
+                message += 'If you think your account does have this permission, try refreshing it under _services->review_.'
                 
                 unauthorised_job_status = ClientThreading.JobStatus()
                 
@@ -265,7 +265,7 @@ def THREADUploadPending( service_key ):
                 
                 call = HydrusData.Call( CG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
                 
-                call.SetLabel( 'open manage services and check for auto-creatable accounts' )
+                call.SetLabel( 'open _services->edit_ and check for auto-creatable accounts' )
                 
                 unauthorised_job_status.SetUserCallable( call )
                 
@@ -274,7 +274,7 @@ def THREADUploadPending( service_key ):
             
             if len( paused_content_types ) > 0:
                 
-                message = 'You have some pending content of type ({}), but processing for that is currently paused! No worries, but I won\'t upload the paused stuff. If you want to upload it, please unpause in _review services_ and then catch up processing.'.format(
+                message = 'You have some pending content of type ({}), but processing for that is currently paused! No worries, but I won\'t upload the paused stuff. If you want to upload it, please unpause in _services->review_ and then catch up processing.'.format(
                     ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in paused_content_types ) )
                 )
                 
@@ -855,7 +855,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.SetServices( all_services )
             
-            message = 'PTR setup done! Check services->review services to see it.'
+            message = 'PTR setup done! Check _services->review_ to see it.'
             message += '\n' * 2
             message += 'The PTR has a lot of tags and will sync a little bit at a time when you are not using the client. Expect it to take a few weeks to sync fully.'
             
@@ -880,9 +880,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             
         
-        text = 'This will automatically set up your client with public shared \'read-only\' account for the Public Tag Repository, just as if you had added it manually under services->manage services.'
+        text = 'This will automatically set up your client with public shared \'read-only\' account for the Public Tag Repository, just as if you had added it manually under _services->edit_.'
         text += '\n' * 2
-        text += 'Over the coming weeks, your client will download updates and then process them into your database in idle time, and the PTR\'s tags will increasingly appear across your files. If you decide to upload tags, it is just a couple of clicks (under services->manage services again) to generate your own account that has permission to do so.'
+        text += 'Over the coming weeks, your client will download updates and then process them into your database in idle time, and the PTR\'s tags will increasingly appear across your files. If you decide to upload tags, it is just a couple of clicks (under _services->edit_ again) to generate your own account that has permission to do so.'
         text += '\n' * 2
         text += 'Be aware that the PTR has been growing since 2011 and now has more than two billion mappings. As of 2021-06, it requires about 6GB of bandwidth and file storage, and your database itself will grow by 50GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work if your hydrus database (the .db files, normally in install_dir/db) is on an SSD.'
         text += '\n' * 2
@@ -891,7 +891,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         if have_it_already:
             
             text += '\n' * 2
-            text += 'You seem to have the PTR already. If it is paused or desynchronised, this is best fixed under services->review services. Are you sure you want to add a duplicate?'
+            text += 'You seem to have the PTR already. If it is paused or desynchronised, this is best fixed under _services->review_. Are you sure you want to add a duplicate?'
             
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'not now' )
@@ -1466,7 +1466,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             call = HydrusData.Call( CG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
             
-            call.SetLabel( 'open manage services and check for auto-creatable accounts' )
+            call.SetLabel( 'open _services->edit_ and check for auto-creatable accounts' )
             
             job_status.SetUserCallable( call )
             
@@ -1719,7 +1719,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
             message += '\n' * 2
-            message += 'Some GUI elements (review services, mainly) may be slow the next time they launch. Especially if you clear for all services.'
+            message += 'Some GUI elements (_services->review_, mainly) may be slow the next time they launch. Especially if you clear for all services.'
             
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3061,7 +3061,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types', 'Add, edit and delete account types for this service.', self._STARTManageAccountTypes, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage account types' + HC.UNICODE_ELLIPSIS, 'Add, edit and delete account types for this service.', self._STARTManageAccountTypes, service_key )
                         
                     
                     if can_overrule_options and service_type in HC.REPOSITORIES:
@@ -3090,7 +3090,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage services' + HC.UNICODE_ELLIPSIS, 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'edit services' + HC.UNICODE_ELLIPSIS, 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
                         ClientGUIMenus.AppendMenuItem( submenu, 'restart server services', 'Command the server to disconnect and restart its services.', self._RestartServerServices, service_key )
                         ClientGUIMenus.AppendSeparator( submenu )
                         ClientGUIMenus.AppendMenuItem( submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
@@ -3970,16 +3970,20 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
-        ClientGUIMenus.AppendMenuItem( menu, 'manage services' + HC.UNICODE_ELLIPSIS, 'Edit the services your client connects to.', self._ManageServices )
+        ClientGUIMenus.AppendMenuItem( menu, 'review', 'Look at the services your client connects to.', self._ReviewServices )
+        ClientGUIMenus.AppendMenuItem( menu, 'edit' + HC.UNICODE_ELLIPSIS, 'Edit the services your client connects to.', self._ManageServices )
         
         self._menubar_services_admin_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenu( menu, self._menubar_services_admin_submenu, 'administrate services' )
+        ClientGUIMenus.AppendMenu( menu, self._menubar_services_admin_submenu, 'administrate' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'import repository update files' + HC.UNICODE_ELLIPSIS, 'Add repository update files to the database.', self._ImportUpdateFiles )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 'import repository update files' + HC.UNICODE_ELLIPSIS, 'Add repository update files to the database.', self._ImportUpdateFiles )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'advanced' )
         
         return ( menu, '&services' )
         
@@ -4678,7 +4682,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         try:
             
-            title = 'manage services'
+            title = 'edit services'
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
@@ -6524,7 +6528,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 self._controller.RefreshServices()
                 
             
-            HydrusData.ShowText( 'Done! Check services->review services to see your new server and its services.' )
+            HydrusData.ShowText( 'Done! Check _services->review_ to see your new server and its services.' )
             
         
         text = 'Woe unto you unless you click "no" NOW.'

@@ -96,11 +96,11 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self._repository_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._repository_processing_work_time_normal = ClientGUITime.TimeDeltaWidget( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from _services->review_.'
         self._repository_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._repository_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from _services->review_.'
         self._repository_processing_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
@@ -121,11 +121,11 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self._tag_display_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._tag_display_processing_work_time_normal = ClientGUITime.TimeDeltaWidget( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from _services->review_.'
         self._tag_display_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._tag_display_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from _services->review_.'
         self._tag_display_processing_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._tag_display_processing_work_time_work_hard = ClientGUITime.TimeDeltaWidget( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
@@ -197,11 +197,11 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self._deferred_table_delete_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._deferred_table_delete_work_time_normal = ClientGUITime.TimeDeltaWidget( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from _services->review_.'
         self._deferred_table_delete_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._deferred_table_delete_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
-        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+        tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from _services->review_.'
         self._deferred_table_delete_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._deferred_table_delete_work_time_work_hard = ClientGUITime.TimeDeltaWidget( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )

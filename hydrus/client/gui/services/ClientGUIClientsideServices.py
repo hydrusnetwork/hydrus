@@ -3167,7 +3167,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 service_info_types = HC.FILE_REPOSITORY_SERVICE_INFO_TYPES
                 
             
-            message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your review services value, which is only for current content.'
+            message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your _services->review_ value, which is only for current content.'
             message += '\n' * 2
             
             tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusNumbers.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in service_info_types if info_type in service_info_dict ]

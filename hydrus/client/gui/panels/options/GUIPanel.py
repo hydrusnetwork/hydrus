@@ -45,7 +45,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._use_qt_locale_for_human_int.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._not_make_child_frames_qt_tool = QW.QCheckBox( self._misc_panel )
-        tt = 'By default, small non-dialog windows like "review services" are supposed to have no taskbar entry, stay on top of their parent window nicely, and still look good. If you have issues, try checking this to set them back to the old non-tool mode.'
+        tt = 'By default, small non-dialog windows like "services->review" are supposed to have no taskbar entry, stay on top of their parent window nicely, and still look good. If you have issues, try checking this to set them back to the old non-tool mode.'
         self._not_make_child_frames_qt_tool.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._force_enter_on_radio_buttons_to_do_dialog_ok = QW.QCheckBox( self._misc_panel )

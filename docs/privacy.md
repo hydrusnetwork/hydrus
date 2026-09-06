@@ -40,11 +40,11 @@ An account has two hex strings, like this:
 
 *   **Access key: `4a285629721ca442541ef2c15ea17d1f7f7578b0c3f4f5f2a05f8f0ab297786f`**
     
-    This is in your _services->manage services_ panel, and acts like a password. Keep this absolutely secret--only you know it, and no one else ever needs to. If the server has not had its code changed, it does not actually know this string, but it is stores special data that lets it _verify_ it when you 'log in'.
+    This is in your `services->edit` panel, and acts like a password. Keep this absolutely secret--only you know it, and no one else ever needs to. If the server has not had its code changed, it does not actually know this string, but it is stores special data that lets it _verify_ it when you 'log in'.
     
 *   **Account ID: `207d592682a7962564d52d2480f05e72a272443017553cedbd8af0fecc7b6e0a`**
     
-    This can be copied from a button in your _services->review services_ panel, and acts a bit like a semi-private username. Only janitors should ever have access to this. If you ever want to contact the server admin about an account upgrade or similar, they will need to know this so they can load up your account and alter it.
+    This can be copied from a button in your _services->review_ panel, and acts a bit like a semi-private username. Only janitors should ever have access to this. If you ever want to contact the server admin about an account upgrade or similar, they will need to know this so they can load up your account and alter it.
     
 
 When you generate a new account, the client first asks the server for a list of available auto-creatable account types, then asks for a registration token for one of them, then uses the token to generate an access key. The server is never told anything about you, and it forgets your IP address as soon as it finishes talking to you.
@@ -135,6 +135,6 @@ When you upload, your account is temporarily linked to the rows of content you a
 
 As the PTR moved to multiple accounts, we talked more about the potential account cross-referencing worries. The threats are marginal today, but it may be a real problem in future. If the server database files were to ever fall into bad hands, having a years-old record of who uploaded what is not excellent. Like the AOL search leak, that data may have unpleasant rammifications, especially to an intelligent scraper in the future. This historical record is also not needed for most janitorial work.
 
-Therefore, hydrus repositories now completely anonymise all uploads after a certain delay. It works by assigning ownership of every file, mapping, or tag sibling/parent to a special 'null' account, so all trace that your account uploaded any of it is deleted. It happens by default 90 days after the content is uploaded, but it can be more or less depending on the local admin and janitors. You can see the current 'anonymisation' period under _review services_.
+Therefore, hydrus repositories now completely anonymise all uploads after a certain delay. It works by assigning ownership of every file, mapping, or tag sibling/parent to a special 'null' account, so all trace that your account uploaded any of it is deleted. It happens by default 90 days after the content is uploaded, but it can be more or less depending on the local admin and janitors. You can see the current 'anonymisation' period under _services->review_.
 
 If you are a janitor with the ability to modify accounts based on uploaded content, you will see anything old will bring up the null account. It is specially labelled, so you can't miss it. You cannot ban or otherwise alter this account. No one can actually use it.

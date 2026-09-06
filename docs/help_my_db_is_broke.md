@@ -309,7 +309,7 @@ Since client.mappings.db is the file most often hit by disk problems, and since 
 
 In client.caches.db, there is a cache of your tags for the files currently in the client. We can use this cache to repopulate your mappings tables with _database->check and repair->repopulate truncated mappings tables_. It won't always get everything, but if client.caches.db was undamaged, it should work for most of your files.
 
-If you sync with the PTR or a private repository, tell your client to reprocess them. Turn on _help->advanced mode_, then go to _services->review services_ and under 'reset processing', tell it to fill in definition and content gaps. It'll take time, but it will fill in the holes again.
+If you sync with the PTR or a private repository, tell your client to reprocess them. Turn on _help->advanced mode_, then go to _services->review_ and under 'reset processing', tell it to fill in definition and content gaps. It'll take time, but it will fill in the holes again.
 
 When your recovery is done, your tag counts or siblings may be incorrect. If so you probably want to run one or more of the tasks under _database->regenerate_. Be careful though, as these operations can take a very very long time to finish.
 
