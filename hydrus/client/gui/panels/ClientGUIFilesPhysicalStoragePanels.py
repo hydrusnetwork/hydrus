@@ -144,11 +144,11 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             message = 'We are going to be rearranging your file storage completely, restoring it to how a client starts, granularity 2. The process can be cancelled if it is taking too long, but it has to do the same amount of work to undo. If it fails half way through, I will attempt to undo it.'
             message += '\n\n'
-            message += 'If your client has done a lot of "move media files" since you moved to granularity 3, this job will require additional time to shuffle things around!'
+            message += 'If your client has done a bunch of multi-folder file migration since you moved to granularity 3, this job will require additional time to shuffle things around!'
             
         else:
             
-            ClientGUIDialogsMessage.ShowCritical( 'error!', 'Granularity init error!', 'This process was started with a granularity other than 2 or 3! Something went wrong, please tell hydev!' )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Granularity init error!', 'This process was started with a granularity other than 2 or 3! Something went wrong, please tell hydev!' )
             
             return
             

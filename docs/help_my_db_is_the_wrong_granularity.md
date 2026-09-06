@@ -17,7 +17,7 @@ The database remembers what granularity it is expecting. When you migrate from 2
 If you get the 'repair missing locations' dialog on startup, the solution is:
 
 - Boot up a different client. Either set up a fresh client in a different location or use the -d launch parameter to boot up a fresh database on something like Desktop/temp_hydrus.
-- Go into 'move media files' and then the granularisation sub-panel.
+- Go into `database->locations` and then the granularisation sub-panel.
 - Use the 'granularise offline folder 2 to 3' button to convert your original database's file storage from 2 to 3. If you use multiple locations or store your thumbnails elsewhere, repeat it for all.
 - You are now good.
 
@@ -26,9 +26,9 @@ If you get the 'repair missing locations' dialog on startup, the solution is:
 If you can boot the client but none of your files load because they are in 0-f subdirs, the solution is:
 
 - Boot up a different client. Either set up a fresh client in a different location or use the -d launch parameter to boot up a fresh database on something like Desktop/temp_hydrus.
-- Go into 'move media files' and then the granularisation sub-panel.
+- Go into `database->locations` and then the granularisation sub-panel.
 - Use the 'granularise offline folder 3 to 2' button to convert your original database's file storage from 3 to 2. If you use multiple locations or store your thumbnails elsewhere, repeat it for all.
 - Boot up the original client.
-- Go into 'move media files' and then convert its database from 2 to 3.
+- Go into `database->locations` and then convert its database from 2 to 3.
 - Restart the original client. It may say something like 'some stuff was missing, but I found it elsewhere'.
 - You are now good. You may have some orphan/stub 0-f sub folders in your client_files, but they are harmless and you can ignore them.

@@ -18,7 +18,7 @@ If you are not sure where the subfolders are, search your entire filesystem for 
 
 Tell the dialog where the folders are now, and it will stitch everything back together. If the folders are in a crazy place, it is fine to manually move them to a nice place before you boot and do the repair.
 
-If you find everything, this is excellent. You have not lost any files. You will probably want to double-check 'database->move media files' once you boot to make sure things look correct.
+If you find everything, this is excellent. You have not lost any files. You will probably want to double-check `database->locations` once you boot to make sure things look correct.
 
 ## I Lost Some Of My Folders
 
@@ -32,6 +32,6 @@ Go to the 'install_dir/static' directory and find the 'empty_client_files' files
 
 Tell the 'repair locations' dialog that that location is where everything missing is located. The client should now boot. If the starting page in your session has file results, you may get some error spam--wait it out.
 
-Open up 'database->move media files' and 'remove/de-weight' your extract location. Tell it to 'move files', and it will migrate the empty folders out of your extract location and into your normal file storage.
+Open up `database->locations` and 'remove/de-weight' your extract location. Tell it to 'move files', and it will migrate the empty folders out of your extract location and into your normal file storage.
 
 Open up 'help my media files are broke.txt' in this same directory to learn about how you can get the client to scan for and try to recover your missing files.

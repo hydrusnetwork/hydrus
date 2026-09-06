@@ -35,7 +35,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         text += '\n\n'
         text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' are for your thumbnails, which can be regenerated with some work.'
         text += '\n\n'
-        text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under \'database->move media files\' immediately.'
+        text += 'Then hit \'apply\', and the client will launch. You should double-check all your media storage folders under \'database->locations\' immediately.'
         text += '\n\n'
         text += '2) If the locations are simply not available, or you do not know what they should be, or you wish to otherwise fix this outside of the program, hit \'cancel\' to gracefully cancel client boot.'
         text += '\n\n'

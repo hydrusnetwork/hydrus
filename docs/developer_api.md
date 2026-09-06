@@ -2719,7 +2719,7 @@ Response:
 }
 ```
 
-Note that `ideal_weight` and `max_num_bytes` are provided for courtesy and mean nothing fixed. Each storage location might store anything, thumbnails or files or nothing, regardless of the ideal situation. Whenever a folder is non-ideal, the 'move media files' dialog shows "files need to be moved now", but it will still keep doing its thing.
+Note that `ideal_weight` and `max_num_bytes` are provided for courtesy and mean nothing fixed. Each storage location might store anything, thumbnails or files or nothing, regardless of the ideal situation. Whenever a folder is non-ideal, the `database->locations` dialog shows "files need to be moved now", but it will still keep doing its thing.
 
 For now, a prefix only occurs in one location, so there will always be 512 total prefixes in this response, all unique. **However, please note that this will not always be true!** In a future expansion, the client will be, on user command, slowly migrating files from one place to another in the background, and during that time there will be multiple valid locations for a file to actually be. When this happens, you will have to hit all the possible locations and test.
 

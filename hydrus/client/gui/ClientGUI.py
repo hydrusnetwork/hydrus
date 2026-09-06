@@ -3263,27 +3263,27 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'set a password' + HC.UNICODE_ELLIPSIS, 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
+        backup_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendSeparator( menu )
+        self._menubar_database_set_up_backup_path = ClientGUIMenus.AppendMenuItem( backup_submenu, 'set up a database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
+        self._menubar_database_update_backup = ClientGUIMenus.AppendMenuItem( backup_submenu, 'update database backup' + HC.UNICODE_ELLIPSIS, 'Back the database up to an external location.', self._BackupDatabase )
+        self._menubar_database_change_backup_path = ClientGUIMenus.AppendMenuItem( backup_submenu, 'change database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
         
-        self._menubar_database_set_up_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'set up a database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
-        self._menubar_database_update_backup = ClientGUIMenus.AppendMenuItem( menu, 'update database backup' + HC.UNICODE_ELLIPSIS, 'Back the database up to an external location.', self._BackupDatabase )
-        self._menubar_database_change_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'change database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
+        ClientGUIMenus.AppendSeparator( backup_submenu )
         
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup' + HC.UNICODE_ELLIPSIS, 'Restore the database from an external location.', self._controller.RestoreDatabase )
+        self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( backup_submenu, 'restore from a database backup' + HC.UNICODE_ELLIPSIS, 'Restore the database from an external location.', self._controller.RestoreDatabase )
         
         message = 'Your database is stored across multiple locations. The in-client backup routine can only handle simple databases (in one location), so the menu commands to backup have been hidden. To back up, please use a third-party program that will work better than anything I can write.'
         message += '\n' * 2
         message += 'Check the help for more info on how best to backup manually.'
         
-        self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated, and internal backups are not possible--click for more info.', HydrusData.ShowText, message )
+        self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( backup_submenu, 'database is stored in multiple locations', 'The database is migrated, and internal backups are not possible--click for more info.', HydrusData.ShowText, message )
+        
+        ClientGUIMenus.AppendMenu( menu, backup_submenu, 'backup' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'move media files' + HC.UNICODE_ELLIPSIS, 'Review and manage the locations your database is stored.', self._MoveMediaFiles )
+        ClientGUIMenus.AppendMenuItem( menu, 'locations' + HC.UNICODE_ELLIPSIS, 'Review and manage the locations your database and media files are stored.', self._MoveMediaFiles )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3406,14 +3406,16 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenu( menu, regen_submenu, 'regenerate' )
         
+        clear_submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( clear_submenu, 'clear all file viewing statistics' + HC.UNICODE_ELLIPSIS, 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+        ClientGUIMenus.AppendMenuItem( clear_submenu, 'cull file viewing statistics based on current min/max values' + HC.UNICODE_ELLIPSIS, 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
+        
+        ClientGUIMenus.AppendMenu( menu, clear_submenu, 'clear' )
+        
         ClientGUIMenus.AppendSeparator( menu )
         
-        file_viewing_submenu = ClientGUIMenus.GenerateMenu( menu )
-        
-        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'clear all file viewing statistics' + HC.UNICODE_ELLIPSIS, 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
-        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'cull file viewing statistics based on current min/max values' + HC.UNICODE_ELLIPSIS, 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
-        
-        ClientGUIMenus.AppendMenu( menu, file_viewing_submenu, 'file viewing statistics' )
+        ClientGUIMenus.AppendMenuItem( menu, 'set a password' + HC.UNICODE_ELLIPSIS, 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
         
         return ( menu, '&database' )
         
@@ -5208,7 +5210,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _MoveMediaFiles( self ):
         
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'move media files' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'database locations' ) as dlg:
             
             panel = ClientGUIFilesPhysicalStoragePanels.MoveMediaFilesPanel( dlg, self._controller )
             
