@@ -2760,7 +2760,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         ClientGUIMenus.AppendMenu( append_backup, submenu, name )
                         
                     
-                    ClientGUIMenus.AppendMenu( self._menubar_pages_sessions_submenu, append_backup, 'append session backup' )
+                    ClientGUIMenus.AppendMenu( self._menubar_pages_sessions_submenu, append_backup, 'append backup' )
                     
                 
             
@@ -2811,12 +2811,12 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
                 
-                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
+                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, f'new "{service.GetName()}" search page', f'Open a new search tab for {service.GetName()}.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
                 
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.TRASH_SERVICE_KEY )
             
-            ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, 'trash', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
+            ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, 'new "trash" page', 'Open a new search tab for your recently deleted files.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
             
             repositories: list[ ClientServices.ServiceRepository ] = [ service for service in services if service.GetServiceType() in HC.REPOSITORIES ]
             
@@ -2826,7 +2826,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( service.GetServiceKey() )
                 
-                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, service.GetName(), 'Open a new search tab for ' + service.GetName() + '.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
+                ClientGUIMenus.AppendMenuItem( self._menubar_pages_search_submenu, f'new "{service.GetName()}" search page', f'Open a new search tab for {service.GetName()}.', self._notebook.NewPageQuery, location_context, on_deepest_notebook = True )
                 
             
             petition_permissions = [ ( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES ]
@@ -2841,7 +2841,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             for service in petition_resolvable_repositories:
                 
-                ClientGUIMenus.AppendMenuItem( self._menubar_pages_petition_submenu, service.GetName(), 'Open a new petition page for ' + service.GetName() + '.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook = True )
+                ClientGUIMenus.AppendMenuItem( self._menubar_pages_petition_submenu, f'new "{service.GetName()}" petition page', f'Open a new petition page for {service.GetName()}.', self._notebook.NewPagePetitions, service.GetServiceKey(), on_deepest_notebook = True )
                 
             
         
@@ -3862,9 +3862,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        self._menubar_pages_page_count = ClientGUIMenus.AppendMenuLabel( menu, 'initialising', 'You have this many pages open.' )
+        session_info_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        self._menubar_pages_session_weight = ClientGUIMenus.AppendMenuItem( menu, 'initialising', 'Your session is this heavy.', self._ShowPageWeightInfo )
+        self._menubar_pages_page_count = ClientGUIMenus.AppendMenuLabel( session_info_menu, 'initialising', 'You have this many pages open.' )
+        
+        self._menubar_pages_session_weight = ClientGUIMenus.AppendMenuItem( session_info_menu, 'initialising', 'Your session is this heavy.', self._ShowPageWeightInfo )
+        
+        ClientGUIMenus.AppendMenu( menu, session_info_menu, 'weight' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3877,6 +3881,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'refresh', 'If the current page has a search, refresh it.', self._RefreshCurrentPage )
+        
+        ClientGUIMenus.AppendSeparator( menu )
         
         splitter_menu = ClientGUIMenus.GenerateMenu( menu )
         
@@ -3894,7 +3900,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( splitter_menu, 'restore all pages\' sidebar/preview sizes to saved value', 'Restore all pages\' sizes to the saved value.', self._RestoreSplitterPositions )
         
-        ClientGUIMenus.AppendMenu( menu, splitter_menu, 'sidebar and preview panels' )
+        ClientGUIMenus.AppendMenu( menu, splitter_menu, 'sidebar' )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3904,39 +3910,39 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page' + HC.UNICODE_ELLIPSIS, 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'pick new page' + HC.UNICODE_ELLIPSIS, 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE ) )
         
         #
         
         self._menubar_pages_search_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_search_submenu, 'new file search page' )
+        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_search_submenu, 'file search' )
         
         #
         
         self._menubar_pages_petition_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_petition_submenu, 'new petition page' )
+        ClientGUIMenus.AppendMenu( menu, self._menubar_pages_petition_submenu, 'petition' )
         
         #
         
         download_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( download_menu, 'url download', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'watcher', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'gallery', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
-        ClientGUIMenus.AppendMenuItem( download_menu, 'simple downloader', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'new url download page', 'Open a new tab to download some separate urls.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_URL_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'new watcher page', 'Open a new tab to watch threads or other updating locations.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'new gallery page', 'Open a new tab to download from gallery sites.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_GALLERY_DOWNLOADER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( download_menu, 'new simple downloader page', 'Open a new tab to download files from generic galleries or threads.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_SIMPLE_DOWNLOADER_PAGE ) )
         
-        ClientGUIMenus.AppendMenu( menu, download_menu, 'new download page' )
+        ClientGUIMenus.AppendMenu( menu, download_menu, 'download' )
         
         #
         
         special_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( special_menu, 'page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
-        ClientGUIMenus.AppendMenuItem( special_menu, 'duplicates processing', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'new page of pages', 'Open a new tab that can hold more tabs.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE_OF_PAGES ) )
+        ClientGUIMenus.AppendMenuItem( special_menu, 'new duplicates processing page', 'Open a new tab to discover and filter duplicate files.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_DUPLICATE_FILTER_PAGE ) )
         
-        ClientGUIMenus.AppendMenu( menu, special_menu, 'new special page' )
+        ClientGUIMenus.AppendMenu( menu, special_menu, 'special' )
         
         #
         
@@ -3944,9 +3950,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         special_command_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( special_command_menu, 'clear all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', CG.client_controller.pub, 'clear_multiwatcher_highlights' )
+        ClientGUIMenus.AppendMenuItem( special_command_menu, 'all multiwatcher highlights', 'Command all multiwatcher pages to clear their highlighted watchers.', CG.client_controller.pub, 'clear_multiwatcher_highlights' )
         
-        ClientGUIMenus.AppendMenu( menu, special_command_menu, 'special commands' )
+        ClientGUIMenus.AppendMenu( menu, special_command_menu, 'clear' )
         
         #
         
