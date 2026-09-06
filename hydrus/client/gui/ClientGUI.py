@@ -3992,24 +3992,28 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'migrate tags' + HC.UNICODE_ELLIPSIS, 'Migrate tags from one place to another.', self._MigrateTags )
+        ClientGUIMenus.AppendMenuItem( menu, 'migrate' + HC.UNICODE_ELLIPSIS, 'Migrate tags from one place to another.', self._MigrateTags )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search' + HC.UNICODE_ELLIPSIS, 'Set which tags you want to see from which services.', self._ManageTagDisplay )
+        ClientGUIMenus.AppendMenuItem( menu, 'display/search' + HC.UNICODE_ELLIPSIS, 'Set which tags you want to see from which services.', self._ManageTagDisplay )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
+        ClientGUIMenus.AppendMenuItem( menu, 'siblings' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
+        ClientGUIMenus.AppendMenuItem( menu, 'parents' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings and parents apply' + HC.UNICODE_ELLIPSIS, 'Set which services\' siblings and parents apply where.', self._ManageTagDisplayApplication )
+        submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage where tag siblings and parents apply' + HC.UNICODE_ELLIPSIS, 'Set which services\' siblings and parents apply where.', self._ManageTagDisplayApplication )
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'advanced' )
         
         #
         
         tag_display_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review current sync', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
+        ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review current sibling/parent sync', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
         
         ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
         
@@ -4031,7 +4035,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         self._menubar_tags_tag_display_maintenance_during_active = ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display processing can work during normal time.', current_value, func )
         
-        ClientGUIMenus.AppendMenu( menu, tag_display_maintenance_menu, 'sibling/parent sync' )
+        ClientGUIMenus.AppendMenu( menu, tag_display_maintenance_menu, 'sync' )
         
         #
         

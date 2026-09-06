@@ -118,8 +118,8 @@ When you feel like playing with some more advanced concepts, turn on _help->adva
 If you really want to delete the tags or other data for some files you deleted, then:
 
 - If the job is small, do a search for the files inside 'deleted from my local files' (or 'all known files' if you did not leave a deletion record) and then hit `Ctrl+A->manage tags` and manually delete the tags there.
-- If the job is very large, then make a backup and hit up _tags->migrate tags_. You can select the tag service _x_ tag mappings for all files in 'deleted from my local files' and then make the action to delete from _x_ again. 
-- If the job is complicated, then note that you can open the _tags->migrate tags_ dialog from _manage tags_, and it will only apply to the files that booted _manage tags_.
+- If the job is very large, then make a backup and hit up `tags->migrate`. You can select the tag service _x_ tag mappings for all files in 'deleted from my local files' and then make the action to delete from _x_ again. 
+- If the job is complicated, then note that you can open the `migrate tags` dialog from `manage tags`, and it will only apply to the files that booted `manage tags`.
 
 ### Does this deleted-file metadata take up a lot of database space? Should I clear it to get rid of bloat?
 

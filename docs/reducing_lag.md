@@ -26,7 +26,7 @@ If you have an old, slower computer though, or if your hard drive is high latenc
 
 Searching for tags via the autocomplete dropdown and searching for files in general can sometimes take a very long time. It depends on many things. In general, the more predicates (tags and system:something) you have active for a search, and the more specific they are, the faster it will be.
 
-You can also look at _file->options->speed and memory_. Increasing the autocomplete thresholds under _tags->manage tag display and search_ is also often helpful. You can even force autocompletes to only fetch results when you manually ask for them.
+You can also look at `file->options->speed and memory`. Increasing the autocomplete thresholds under `tags->display/search` is also often helpful. You can even force autocompletes to only fetch results when you manually ask for them.
 
 Having lots of thumbnails open or downloads running can slow many things down. Check the 'pages' menu to see your current session weight. If it is about 50,000, or you have individual pages with more than 10,000 files or download URLs, try cutting down a bit.
 

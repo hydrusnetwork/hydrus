@@ -66,6 +66,6 @@ Like with manual export, you can set the filenames using a tag pattern, and you 
 ## Importing and exporting tags
 While you can import and export tags together with images sometimes you just don't want to deal with the files.
 
-Going to `tags -> migrate tags` you get a window that lets you deal with just tags. One of the options here is what's called a Hydrus Tag Archive, a file containing the hash <-> tag mappings for the files and tags matching the query.
+Going to `tags -> migrate` you get a window that lets you deal with just tags. One of the options here is what's called a Hydrus Tag Archive, a file containing the hash <-> tag mappings for the files and tags matching the query.
 
 ![](images/hydrus_tag_archive.png)

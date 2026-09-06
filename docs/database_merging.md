@@ -44,7 +44,7 @@ Like with the export, if you have a simple job, run it through the manual import
 
 ## migrating many tags
 
-If you only want to migrate tags, or you have millions of tags and would rather something faster or more powerful than sidecars, look at `tags->migrate tags`. You can choose to export your tags from the source to a Hydrus Tag Archive (HTA), which is an external file that holds all the info hydrus needs to apply a tag to a file, and then on the destination, the same dialog allows you to pull tags from an HTA.
+If you only want to migrate tags, or you have millions of tags and would rather something faster or more powerful than sidecars, look at `tags->migrate`. You can choose to export your tags from the source to a Hydrus Tag Archive (HTA), which is an external file that holds all the info hydrus needs to apply a tag to a file, and then on the destination, the same dialog allows you to pull tags from an HTA.
 
 The source will look something like this:
 
@@ -58,6 +58,6 @@ Note that I have set 'all known files with tags' as the domain in both source an
 
 ## perfect preservation
 
-I would like to add a 'eat this client' wizard to the program one day that will have sophisticated service interrogation and UI for defining content sources and destinations. Something like 'migrate tags' but for all content types. I'd also like 'universal' sidecar templates that you can setup with one click. Unfortunately we aren't there yet.
+I would like to add a 'eat this client' wizard to the program one day that will have sophisticated service interrogation and UI for defining content sources and destinations. Something like `tags->migrate` but for all content types. I'd also like 'universal' sidecar templates that you can setup with one click. Unfortunately we aren't there yet.
 
 If you want to preserve as much as possible in a clever way, or just something that isn't covered by sidecars, like duplicate file relations, your best bet is writing your own script that uses the [Client API](client_api.md).

@@ -70,7 +70,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         message += '\n' * 2
         message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
         message += '\n' * 2
-        message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Sibling and parent chains will be broken apart and rearranged live, and for a brief period, some sibling or parent suggestions or presentation may be unusual. Check the sync progress panel under _tags->sibling/parent sync_ to see how it is going. If your client gets too laggy doing the recalc, turn it off during "normal time".'
+        message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Sibling and parent chains will be broken apart and rearranged live, and for a brief period, some sibling or parent suggestions or presentation may be unusual. Check the sync progress panel under _tags->sync->review current sibling/parent sync_ to see how it is going. If your client gets too laggy doing the recalc, turn it off during "normal time".'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
         self._message.setWordWrap( True )
@@ -93,7 +93,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                self._sync_status.setText( 'Siblings and parents are not set to sync in the background at any time. If there is sync work to do, you will have to force it to run using the \'review\' window under _tags->siblings and parents sync_.' )
+                self._sync_status.setText( 'Siblings and parents are not set to sync in the background at any time. If there is sync work to do, you will have to force it to run using the \'review\' window under _tags->sync_.' )
                 
             
             self._sync_status.setObjectName( 'HydrusWarning' )

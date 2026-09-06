@@ -1310,8 +1310,8 @@ Response:
     !!! warning "Tag Relationships Apply In A Complicated Way"
         There are two caveats to this data:  
         
-        1. The siblings and parents here are not just what is in _tags->manage tag siblings/parents_, they are the final computed combination of rules as set in _tags->manage where tag siblings and parents apply_. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.
-        2. This is what is _actually processed, right now,_ for those user preferences, as per _tags->sibling/parent sync->review current sync_. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.
+        1. The siblings and parents here are not just what is in `tags->siblings/parents`, they are the final computed combination of rules as set in `tags->advanced->manage where tag siblings and parents apply`. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.
+        2. This is what is _actually processed, right now,_ for those user preferences, as per `tags->sync->review current sibling/parent sync`. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.
     
     - `ideal_tag` is how the tag appears in normal display to the user.
     - `siblings` is every tag that will show as the `ideal_tag`, including the `ideal_tag` itself.
@@ -1379,7 +1379,7 @@ Response:
 }
 ```
 
-The `tags` list will be sorted by descending count. The various rules in _tags->manage tag display and search_ (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
+The `tags` list will be sorted by descending count. The various rules in `tags->display/search` (e.g. no pure `*` searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.
 
 The `autocomplete_text` structure lets you know how hydrus sees the search. `search_text` is a basic cleaned-up version of what text the user entered, and `inclusive` is whether they prepended their search text with a hyphen '-' character. If the user has entered an exclusive search, you may with to prepend all the results' display, similarly, with a hypen.
 
