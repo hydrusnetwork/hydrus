@@ -3452,7 +3452,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage import folders' + HC.UNICODE_ELLIPSIS, 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
         ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage export folders' + HC.UNICODE_ELLIPSIS, 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
         
-        ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import and export folders' )
+        ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import/export folders' )
         
         #
         
@@ -3474,11 +3474,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         label = 'minimise to system tray'
         
-        if not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS):
-            
-            label += ' (may be buggy/crashy!)'
-            
-        
         self._menubar_file_minimise_to_system_tray = ClientGUIMenus.AppendMenuItem( menu, label, 'Hide the client to an icon on your system tray.', self._SystemTrayHide, role = QW.QAction.MenuRole.ApplicationSpecificRole )
         
         ClientGUIMenus.AppendSeparator( menu )
@@ -3490,7 +3485,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, restart = True )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit and force shutdown maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, force_shutdown_maintenance = True )
+        ClientGUIMenus.AppendMenuItem( menu, 'exit/force maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, force_shutdown_maintenance = True )
         
         ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToExit, role = QW.QAction.MenuRole.QuitRole )
         

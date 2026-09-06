@@ -51,7 +51,7 @@ Clicking the `pattern shortcuts` button gives you an overview of available patte
 The EXPERIMENTAL option is only available under advanced mode, use at your own risk.
 
 ## Automation
-Under `file -> import and export folders` you'll find options for setting up automated import and export folders that can run on a schedule. Both have a fair deal of options and rules you can set so look them over carefully.
+Under `file -> import/export folders` you'll find options for setting up automated import and export folders that can run on a schedule. Both have a fair deal of options and rules you can set so look them over carefully.
 
 ### Import folders
 ![](images/import_folder.png)
