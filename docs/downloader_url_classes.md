@@ -4,7 +4,7 @@ title: URL Classes
 
 # URL Classes
 
-This tutorial is very general. If you have imported some downloaders made by other users, you might like to check out `network->downloader components->manage url classes` and poke around. See how different things implement their specific solutions.
+This tutorial is very general. If you have imported some downloaders made by other users, you might like to check out `network->downloaders->url classes` and poke around. See how different things implement their specific solutions.
 
 The fundamental connective tissue of the downloader system is the 'URL Class'. This object identifies and normalises URLs and links them to other components. Whenever the client handles a URL, it tries to match it to a URL Class to figure out what to do.
 
@@ -44,7 +44,7 @@ As far as we are concerned, a URL string has four parts:
 *   **Path Components:** `index.php` or `diy/res/7518.json` or `pictures/user/creatorname/page/2` or `art/Animation-Cool-Stuff-123456`
 *   **Parameters:** `page=post&s=list&tags=gothic+mouse+trap&pid=40` or `page=post&s=view&id=2429668`
 
-Load up something you have under _network->downloader components->manage url classes_. Let's look at the metadata first:
+Load up something you have under _network->downloaders->url classes_. Let's look at the metadata first:
 
 Name and type
 :    

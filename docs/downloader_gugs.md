@@ -24,7 +24,7 @@ These would all be the 'first page' of the results if you type or click-through 
 
 ## actually doing it { id="doing_it" }
 
-Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Check out _network->downloader components->manage gallery url generators_:
+Although it is usually a fairly simple process of just substituting the inputted tags into a string template, there are a couple of extra things to think about. Check out _network->downloaders->gallery url generators_:
 
 ![](images/downloader_edit_gug_panel.png)
 

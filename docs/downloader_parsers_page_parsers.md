@@ -6,7 +6,7 @@ title: Page Parsers
 
 We can now produce individual rows of rich metadata. To arrange them all into a useful structure, we will use Page Parsers.
 
-The Page Parser is the top level parsing object. It takes a single document and produces a list--or a list of lists--of metadata. Each Post/Gallery/Watchable URL Class should have a corresponding Page Parser linked to it under `network->downloader components->manage url class links`. 
+The Page Parser is the top level parsing object. It takes a single document and produces a list--or a list of lists--of metadata. Each Post/Gallery/Watchable URL Class should have a corresponding Page Parser linked to it under `network->downloaders->url class links`. 
 
 Load up a parser you have imported into the system and look at the UI. Notice that the edit panel has three sub-pages--main, content parsers, and subsidiary page parsers.
 

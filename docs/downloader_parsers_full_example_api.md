@@ -14,7 +14,7 @@ Let's say you have a human-facing URL like `https://www.example.com/post/123456`
 
 Using a String Converter, we tell hydrus to convert all incoming URLs of this type to the same 'plus ".json"'.  Some situations are more complicated and might need regex. Notice that the 'request url' down the bottom has changed to the API URL.
 
-You need a second, separate URL Class for the API URL. Once you have them both set up, check out _network->downloader components->manage url class links_ and check the 'api/redirect link review' tab:
+You need a second, separate URL Class for the API URL. Once you have them both set up, check out _network->downloaders->url class links_ and check the 'api/redirect link review' tab:
 
 ![](images/downloader_api_example_url_class_link.png)
 

@@ -3780,7 +3780,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage subscriptions' + HC.UNICODE_ELLIPSIS, 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+        ClientGUIMenus.AppendMenuItem( menu, 'subscriptions' + HC.UNICODE_ELLIPSIS, 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3795,7 +3795,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         #
         
-        submenu = ClientGUIMenus.GenerateMenu( menu )
+        downloaders_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         if not ClientParsing.HTML5LIB_IS_OK:
             
@@ -3803,63 +3803,60 @@ ATTACH "client.mappings.db" as external_mappings;'''
             message += '\n' * 2
             message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
             
-            ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', ClientGUIDialogsMessage.ShowWarning, self, message )
+            ClientGUIMenus.AppendMenuItem( downloaders_submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', ClientGUIDialogsMessage.ShowWarning, self, message )
             
-            ClientGUIMenus.AppendSeparator( submenu )
+            ClientGUIMenus.AppendSeparator( downloaders_submenu )
             
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-        ClientGUIMenus.AppendMenuIconItem( submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
-        ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
+        ClientGUIMenus.AppendMenuIconItem( downloaders_submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
         
-        ClientGUIMenus.AppendSeparator( submenu )
+        ClientGUIMenus.AppendSeparator( downloaders_submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display' + HC.UNICODE_ELLIPSIS, 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'downloader and url display' + HC.UNICODE_ELLIPSIS, 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
         
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        clipboard_menu = ClientGUIMenus.GenerateMenu( submenu )
+        clipboard_menu = ClientGUIMenus.GenerateMenu( downloaders_submenu )
         
         ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'watcher urls', 'Automatically import watcher URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_watcher_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_watcher_urls' )
         ClientGUIMenus.AppendMenuCheckItem( clipboard_menu, 'other recognised urls', 'Automatically import recognised URLs that enter the clipboard just as if you drag-and-dropped them onto the ui.', self._controller.new_options.GetBoolean( 'watch_clipboard_for_other_recognised_urls' ), self._FlipClipboardWatcher, 'watch_clipboard_for_other_recognised_urls' )
         
-        ClientGUIMenus.AppendMenu( submenu, clipboard_menu, 'watch clipboard for urls' )
+        ClientGUIMenus.AppendMenu( downloaders_submenu, clipboard_menu, 'watch clipboard for urls' )
         
-        ClientGUIMenus.AppendMenu( menu, submenu, 'downloaders' )
+        ClientGUIMenus.AppendMenu( menu, downloaders_submenu, 'downloaders' )
         
-        #
+        ClientGUIMenus.AppendSeparator( downloaders_submenu )
         
-        submenu = ClientGUIMenus.GenerateMenu( menu )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'gallery url generators' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'url classes' + HC.UNICODE_ELLIPSIS, 'Configure which URLs the client can recognise.', self._ManageURLClasses )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'parsers' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links' + HC.UNICODE_ELLIPSIS, 'Configure how URLs present across the client.', self._ManageURLClassLinks )
+        ClientGUIMenus.AppendSeparator( downloaders_submenu )
         
-        ClientGUIMenus.AppendSeparator( submenu )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'url class links' + HC.UNICODE_ELLIPSIS, 'Configure how URLs present across the client.', self._ManageURLClassLinks )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes' + HC.UNICODE_ELLIPSIS, 'Configure which URLs the client can recognise.', self._ManageURLClasses )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
+        ClientGUIMenus.AppendSeparator( downloaders_submenu )
         
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts' + HC.UNICODE_ELLIPSIS, 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'downloader components' )
+        ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'LEGACY: lookup scripts' + HC.UNICODE_ELLIPSIS, 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
         
         #
         
-        submenu = ClientGUIMenus.GenerateMenu( menu )
+        logins_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage logins' + HC.UNICODE_ELLIPSIS, 'Edit which domains you wish to log in to.', self._ManageLogins )
+        ClientGUIMenus.AppendMenuLabel( logins_submenu, 'THIS SYSTEM IS LEGACY' )
+        ClientGUIMenus.AppendMenuLabel( logins_submenu, 'TRY TO MIGRATE AWAY FROM IT' )
         
-        ClientGUIMenus.AppendSeparator( submenu )
+        ClientGUIMenus.AppendSeparator( logins_submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+        ClientGUIMenus.AppendMenuItem( logins_submenu, 'logins' + HC.UNICODE_ELLIPSIS, 'Edit which domains you wish to log in to.', self._ManageLogins )
         
-        ClientGUIMenus.AppendSeparator( submenu )
+        ClientGUIMenus.AppendSeparator( logins_submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'DEBUG: do tumblr GDPR click-through', 'Do a manual click-through for the tumblr GDPR page.', self._controller.CallLater, 0.0, self._controller.network_engine.login_manager.LoginTumblrGDPR )
+        ClientGUIMenus.AppendMenuItem( logins_submenu, 'login scripts' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
         
-        ClientGUIMenus.AppendMenu( menu, submenu, 'logins (legacy; simple sites only)' )
+        ClientGUIMenus.AppendSeparator( logins_submenu )
+        
+        ClientGUIMenus.AppendMenu( menu, logins_submenu, 'logins' )
         
         #
         

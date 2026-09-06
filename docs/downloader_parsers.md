@@ -6,7 +6,7 @@ title: Parsers
 
 In hydrus, a parser is an object that takes a single block of HTML or JSON data and returns many kinds of hydrus-level metadata.
 
-Parsers are flexible and potentially quite complicated. I assume you have imported some downloaders already, for reference. You might like to open _network->downloader components->manage parsers_ and explore the UI as you read these pages. If you want to write a new one, see if another like it already exists--it is usually easier to duplicate and edit an existing parser than create a new one from scratch every time.
+Parsers are flexible and potentially quite complicated. I assume you have imported some downloaders already, for reference. You might like to open _network->downloaders->parsers_ and explore the UI as you read these pages. If you want to write a new one, see if another like it already exists--it is usually easier to duplicate and edit an existing parser than create a new one from scratch every time.
 
 There are three main components in the parsing system (click to open each component's help page):
 
