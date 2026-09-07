@@ -1369,7 +1369,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         tt += '\n\n'
         tt += 'If the call is something clear and simple like "video_converter -some_param %in_path% %out_path%", that is fine.'
         tt += '\n\n'
-        tt += 'If the call is something obscure or network-related like "video_converter -some_param %path% -after_the_job_is_complete_do_this_skeezy_terminal_call {[[{ -c \'[Four Kilobytes of bash code that rips your credentials and uploads them to a server]\' }]]} ", then you do not want to run that program, bro.'
+        tt += 'If the call is something obscure or network-related like "video_converter -some_param %path% -after_the_job_is_complete_do_this_skeezy_terminal_call {[[{ -c \'[Four Kilobytes of bash code that rips your credentials and uploads them to a server]\' }]]}", then you do not want to run that program, bro.'
         tt += '\n\n'
         tt += 'Be careful around any curl, wget, etc.. too. Just look it over.'
         
