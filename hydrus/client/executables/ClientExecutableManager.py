@@ -29,6 +29,8 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         
         super().__init__()
         
+        self._dirty = False
+        
         self._lock = threading.Lock()
         
         self._callables = HydrusSerialisable.SerialisableList()
@@ -57,6 +59,11 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         self._callable_ids_and_names_to_callables = { c.GetIdAndName() : c for c in self._callables }
         
     
+    def _SetDirty( self ):
+        
+        self._dirty = True
+        
+    
     def GetCallable( self, id_and_name: HydrusSerialisable.IdAndName ) -> ClientExecutableCallables.ClientExecutableCallable:
         
         with self._lock:
@@ -78,6 +85,14 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def IsDirty( self ):
+        
+        with self._lock:
+            
+            return self._dirty
+            
+        
+    
     def SetCallables( self, callables: list[ ClientExecutableCallables.ClientExecutableCallable ] ):
         
         with self._lock:
@@ -85,6 +100,16 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             self._callables = HydrusSerialisable.SerialisableList( callables )
             
             self._RegenCache()
+            
+            self._SetDirty()
+            
+        
+    
+    def SetClean( self ):
+        
+        with self._lock:
+            
+            self._dirty = False
             
         
     

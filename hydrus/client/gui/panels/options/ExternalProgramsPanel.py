@@ -334,13 +334,15 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
     
     def _EditParameter( self, parameter: str ) -> str:
         
-        message = 'Edit the parameter. This should just be one thing, typically separated by whitespace in a command. In a command like this:'
+        message = 'Edit the parameter. This should just be one thing, which you typically see separated by whitespace in a command. In a command like this:'
         message += '\n\n'
-        message += 'my_program -o d a=virt profile="My Profile" path'
+        message += 'my_program -o d a=virt profile="My Profile" input_path'
         message += '\n\n'
-        message += 'The parameters would be "-o", "d", "a=virt", "profile="My Profile"", and "path" (or, likely for our purposes here, "%path%"). While you may need quotes within a parameter, you should not, generally speaking, wrap a whole parameter in quotes to avoid whitespace issues--that is handled for you, so do not worry about it; trying to add extra quotes may just break things.'
+        message += 'The parameters would be "-o", "d", "a=virt", "profile="My Profile"", and "input_path" (or, likely for our purposes here, "%path%"). While you may need quotes _within_ a parameter, you should not, generally speaking, wrap a whole parameter in quotes here to avoid whitespace issues--that is handled for you, so do not worry about it; trying to add extra quotes may just break things.'
         message += '\n\n'
-        message += 'You can mix a replacement token in amongst other text, or even have multiple tokens in the same parameter. "%parameter1%-%parameter2%" is fine. You cannot use the same token more than once per parameter, but you can use it in multiple parameters!'
+        message += 'No newlines or leading/trailing whitespace allowed in these parameter templates, and multiple whitespace is collapsed to single.'
+        message += '\n\n'
+        message += 'You can mix an input parameter\'s replacement token in amongst other text, or even have multiple tokens in the same parameter. "%parameter1%-%parameter2%" is fine. You cannot use the same token more than once per parameter, but you can use it in multiple parameters!'
         
         try:
             
@@ -353,6 +355,15 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
                 allow_whitespace = True,
                 title = 'Enter parameter'
             )
+            
+            clean_results = ClientExecutableActualCall.CleanExecutableParameterTemplates( [ result ] )
+            
+            if len( clean_results ) == 0:
+                
+                raise HydrusExceptions.VetoException()
+                
+            
+            result = clean_results[0]
             
             return result
             
@@ -474,7 +485,7 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
     def GetValue( self ):
         
         executable_path = self._executable_path.text()
-        executable_parameter_templates = self._executable_parameter_templates.GetData()
+        executable_parameter_templates = ClientExecutableActualCall.CleanExecutableParameterTemplates( self._executable_parameter_templates.GetData() )
         
         return ( executable_path, executable_parameter_templates )
         
@@ -1336,13 +1347,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options = new_options
         
-        self._executable_manager: ClientExecutableManager.ExecutableManager = ClientExecutableManager.ExecutableManager()
-        
-        message = 'THIS SYSTEM IS STILL IN TESTING! ONLY ADVANCED USERS SEE THIS, AND IT IS NOT PLUGGED INTO ANYTHING YET.'
-        message += '\n\n'
-        message += 'Please test this and let me know how it goes. It will load up the defaults for your system. Pick a call that you should have, and then double-click into it and put in a sensible file path or URL in the test panel and try it! If you like, set up a call for another exe you have and give it a go. Let me know if you have any errors or if any of the help text is confusing!'
-        message += '\n\n----------\n\n'
-        message += 'This system is incomplete and under active development.'
+        message = 'This system is under active development.'
         message += '\n\n'
         message += 'Here we can teach your client about other programs it can call to complete jobs. Each job has a certain type, starting with simple things like "open file in external program", and, as I write the pipelines for them, we will have "download URL" and "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. an AI model for tagging). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
         
@@ -1351,7 +1356,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
         
-        warning_message = 'IF YOU IMPORT A CALL HERE THAT SOMEONE ELSE MADE, MAKE SURE YOU INSPECT IT BEFORE HOOKING IT UP TO ANYTHING.'
+        warning_message = 'IF YOU IMPORT A CALL HERE THAT SOMEONE ELSE MADE, MAKE SURE YOU INSPECT IT BEFORE HOOKING IT UP TO ANYTHING. LOOK AT THE PARAMETERS.'
         warning_message += '\n\n'
         warning_message += 'USE YOUR BRAIN. DO NOT CALL THINGS BLINDLY.'
         
@@ -1359,6 +1364,16 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         warning.setWordWrap( True )
         warning.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
         warning.setObjectName( 'HydrusWarning' )
+        
+        tt = 'The worry here is that they give you a call that secretly runs bad stuff without you realising.'
+        tt += '\n\n'
+        tt += 'If the call is something clear and simple like "video_converter -some_param %in_path% %out_path%", that is fine.'
+        tt += '\n\n'
+        tt += 'If the call is something obscure or network-related like "video_converter -some_param %path% -after_the_job_is_complete_do_this_skeezy_terminal_call {[[{ -c \'[Four Kilobytes of bash code that rips your credentials and uploads them to a server]\' }]]} ", then you do not want to run that program, bro.'
+        tt += '\n\n'
+        tt += 'Be careful around any curl, wget, etc.. too. Just look it over.'
+        
+        warning.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         external_calls_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( external_calls_panel )
         
@@ -1380,6 +1395,12 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         external_calls_panel.Add( warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         external_calls_panel.Add( external_calls_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        callables = CG.client_controller.executable_manager.GetCallables()
+        
+        self._external_calls.SetData( callables )
+        
+        self._external_calls.Sort()
+        
         #
         
         vbox = QP.VBoxLayout()
@@ -1390,23 +1411,6 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         #
         
         self.setLayout( vbox )
-        
-        def add_defaults():
-            
-            external_platforms_and_callables = list( ClientExecutableDefaults.GetDefaultOpenExternally() )
-            external_platforms_and_callables.extend( ClientExecutableDefaults.GetDefaultOpenURL() )
-            
-            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
-            
-            for external_call in external_callables:
-                
-                self._AddCallableFullyFormed( external_call )
-                
-            
-            self._external_calls.Sort()
-            
-        
-        CG.client_controller.CallAfterQtSafe( self, add_defaults )
         
     
     def _AddCallableBrandNew( self ):
@@ -1491,17 +1495,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         filter_by_platform = result == QW.QDialog.DialogCode.Accepted
         
-        external_platforms_and_callables = list( ClientExecutableDefaults.GetDefaultOpenExternally() )
-        external_platforms_and_callables.extend( ClientExecutableDefaults.GetDefaultOpenURL() )
-        
-        if filter_by_platform:
-            
-            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
-            
-        else:
-            
-            external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables ]
-            
+        external_callables = ClientExecutableDefaults.GetAllDefaults( filter_by_platform )
         
         return external_callables
         
@@ -1515,10 +1509,22 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return names
         
     
+    def GetExecutableManager( self ):
+        
+        callables = self._external_calls.GetData()
+        
+        executable_manager = ClientExecutableManager.ExecutableManager()
+        
+        executable_manager.SetCallables( callables )
+        
+        return executable_manager
+        
+    
     def UpdateOptions( self ):
         
-        # TODO: save this guy on an ok. should it be a manager as held by the controller, or just an options entry? think about it
-        # leaning towards its own thing, but w/e
-        pass
+        # it comes dirty from here btw
+        executable_manager = self.GetExecutableManager()
+        
+        CG.client_controller.executable_manager = executable_manager
         
     

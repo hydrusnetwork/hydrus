@@ -12,6 +12,28 @@ from hydrus.core.processes import HydrusSubprocess
 from hydrus.client import ClientStrings
 from hydrus.client.executables import ClientExecutablePipelines
 
+def CleanExecutableParameterTemplates( executable_parameter_templates: list[ str ] ):
+    
+    clean_executable_parameter_templates = []
+    
+    for executable_parameter_template in executable_parameter_templates:
+        
+        # no newlines allowed here
+        result = executable_parameter_template.splitlines()
+        
+        for sub_result in result:
+            
+            sub_result = sub_result.strip()
+            
+            sub_result = HydrusText.re_one_or_more_whitespace.sub( ' ', sub_result )
+            
+            clean_executable_parameter_templates.append( sub_result )
+            
+        
+    
+    return clean_executable_parameter_templates
+    
+
 class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_NAME = 'Actual Call Superclass'
@@ -178,7 +200,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             
         
         self._executable_path: str = executable_path
-        self._executable_parameter_templates: list[ str ] = executable_parameter_templates
+        self._executable_parameter_templates: list[ str ] = CleanExecutableParameterTemplates( executable_parameter_templates )
         self._input_parameter_processing_rules: HydrusSerialisable.SerialisableList[ LocalProcessCallInputParameterProcessingRule ] = HydrusSerialisable.SerialisableList( input_parameter_processing_rules )
         self._timeout: int = 15
         self._this_is_a_potentially_long_lived_external_guy = False
@@ -321,13 +343,15 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         
         (
             self._executable_path,
-            self._executable_parameter_templates,
+            serialisable_executable_parameter_templates,
             serialisable_input_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
             self._hide_terminal,
             self._text,
         ) = serialisable_info
+        
+        self._executable_parameter_templates = CleanExecutableParameterTemplates( serialisable_executable_parameter_templates )
         
         self._input_parameter_processing_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_input_parameter_processing_rules )
         

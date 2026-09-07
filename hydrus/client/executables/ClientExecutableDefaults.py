@@ -293,3 +293,20 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     return callables
     
+
+def GetAllDefaults( filter_by_platform: bool ):
+    
+    external_platforms_and_callables = list( GetDefaultOpenExternally() )
+    external_platforms_and_callables.extend( GetDefaultOpenURL() )
+    
+    if filter_by_platform:
+        
+        external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
+        
+    else:
+        
+        external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables ]
+        
+    
+    return external_callables
+    

@@ -1227,6 +1227,15 @@ class DB( HydrusDB.HydrusDB ):
             self._AddService( service_key, service_type, name, dictionary )
             
         
+        from hydrus.client.executables import ClientExecutableManager
+        from hydrus.client.executables import ClientExecutableDefaults
+        
+        executable_manager = ClientExecutableManager.ExecutableManager()
+        
+        executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+        
+        self.modules_serialisable.SetJSONDump( executable_manager )
+        
         from hydrus.client import ClientOptions
         
         new_options = ClientOptions.ClientOptions()
@@ -8362,6 +8371,29 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 686:
+            
+            try:
+                
+                from hydrus.client.executables import ClientExecutableManager
+                from hydrus.client.executables import ClientExecutableDefaults
+                
+                executable_manager = ClientExecutableManager.ExecutableManager()
+                
+                executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+                
+                self.modules_serialisable.SetJSONDump( executable_manager )
+                
+            except Exception as e:
+                
+                raise Exception( 'Hey, unfortunately I could not initialise the new executable manager for you. Something is very wrong; roll back to v686 and tell hydev about this. There should be more info in the log.' ) from e
+                
+            
+            #
+            
+            # migrate open url/file options here
             
         
         #

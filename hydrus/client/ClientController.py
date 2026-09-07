@@ -1384,6 +1384,23 @@ class Controller( HydrusController.HydrusController ):
         
         self.client_api_manager = client_api_manager
         
+        from hydrus.client.executables import ClientExecutableManager
+        from hydrus.client.executables import ClientExecutableDefaults
+        
+        executable_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_MANAGER )
+        
+        if executable_manager is None:
+            
+            executable_manager = ClientExecutableManager.ExecutableManager()
+            
+            # this sets him dirty
+            executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+            
+            self.BlockingSafeShowCriticalMessage( 'Problem loading object', 'Your executable manager was missing on boot! I have recreated a new empty one. You will have to recreate/remap any executable calls you had set up, sorry! Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
+            
+        
+        self.executable_manager = executable_manager
+        
         from hydrus.client.networking import ClientNetworkingBandwidth
         
         bandwidth_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_BANDWIDTH_MANAGER )
@@ -2055,6 +2072,15 @@ class Controller( HydrusController.HydrusController ):
                 self.WriteSynchronous( 'serialisable', self.client_api_manager )
                 
                 self.client_api_manager.SetClean()
+                
+            
+            if self.executable_manager.IsDirty():
+                
+                self.frame_splash_status.SetSubtext( 'executables' )
+                
+                self.WriteSynchronous( 'serialisable', self.executable_manager )
+                
+                self.executable_manager.SetClean()
                 
             
             if self.network_engine.domain_manager.IsDirty():
