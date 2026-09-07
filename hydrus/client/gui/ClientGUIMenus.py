@@ -208,6 +208,7 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = Fa
     
     return menu_item
     
+
 def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
     
     if sort_tuples:

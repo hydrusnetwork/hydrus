@@ -2441,7 +2441,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
             elif name == 'pending':
                 
-                self._pending_service_keys_to_submenus = {}
+                self._pending_service_keys_to_submenus_and_count_labels: dict[ bytes, tuple[ QW.QMenu, QW.QAction ] ] = {}
                 
                 self._menubar_pending_submenu = ClientGUIMenus.GenerateMenu( self )
                 
@@ -2870,13 +2870,17 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             for service_key in nums_pending.keys():
                 
-                if service_key not in self._pending_service_keys_to_submenus:
+                if service_key not in self._pending_service_keys_to_submenus_and_count_labels:
                     
                     service = self._controller.services_manager.GetService( service_key )
                     
                     name = service.GetName()
                     
                     submenu = ClientGUIMenus.GenerateMenu( self._menubar_pending_submenu )
+                    
+                    num_stuff_to_go_menu_item = ClientGUIMenus.AppendMenuLabel( submenu, 'num to commit', no_copy = True )
+                    
+                    ClientGUIMenus.AppendSeparator( submenu )
                     
                     ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload {}\'s pending content.'.format( name ), self.UploadPending, service_key )
                     ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear {}\'s pending content.'.format( name ), self.ForgetPending, service_key )
@@ -2904,11 +2908,11 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         self._menubar_pending_submenu.insertMenu( insert_before_action, submenu )
                         
                     
-                    self._pending_service_keys_to_submenus[ service_key ] = submenu
+                    self._pending_service_keys_to_submenus_and_count_labels[ service_key ] = ( submenu, num_stuff_to_go_menu_item )
                     
                 
             
-            for ( service_key, submenu ) in self._pending_service_keys_to_submenus.items():
+            for ( service_key, ( submenu, num_stuff_to_go_menu_item ) ) in self._pending_service_keys_to_submenus_and_count_labels.items():
                 
                 num_pending = 0
                 num_petitioned = 0
@@ -2921,6 +2925,9 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                     service_type = service.GetServiceType()
                     name = service.GetName()
+                    
+                    pending_phrase = ''
+                    petitioned_phrase = ''
                     
                     if service_type == HC.TAG_REPOSITORY:
                         
@@ -2951,25 +2958,30 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                     if num_pending + num_petitioned > 0:
                         
+                        submessages = []
+                        
+                        if num_pending > 0:
+                            
+                            submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_pending ), pending_phrase ) )
+                            
+                        
+                        if num_petitioned > 0:
+                            
+                            submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_petitioned ), petitioned_phrase ) )
+                            
+                        
+                        stuff_to_go_label = ', '.join( submessages )
+                        
+                        ClientGUIMenus.SetMenuTexts( num_stuff_to_go_menu_item, stuff_to_go_label, stuff_to_go_label )
+                        
+                    
+                    if num_pending + num_petitioned > 0:
+                        
+                        title = name
+                        
                         if service_key in self._currently_uploading_pending:
                             
-                            title = '{}: currently uploading {}'.format( name, HydrusNumbers.ToHumanInt( num_pending + num_petitioned ) )
-                            
-                        else:
-                            
-                            submessages = []
-                            
-                            if num_pending > 0:
-                                
-                                submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_pending ), pending_phrase ) )
-                                
-                            
-                            if num_petitioned > 0:
-                                
-                                submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_petitioned ), petitioned_phrase ) )
-                                
-                            
-                            title = '{}: {}'.format( name, ', '.join( submessages ) )
+                            title += ': currently uploading'
                             
                         
                         submenu.setEnabled( service_key not in self._currently_uploading_pending )
