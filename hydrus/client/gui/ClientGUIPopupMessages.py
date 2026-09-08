@@ -133,9 +133,11 @@ class PopupMessage( PopupWindow ):
         
         self._yes = ClientGUICommon.BetterButton( self, 'yes', self._YesButton )
         self._yes.hide()
+        self._yes.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._no = ClientGUICommon.BetterButton( self, 'no', self._NoButton )
         self._no.hide()
+        self._no.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._network_job_ctrl = ClientGUINetworkJobControl.NetworkJobControl( self )
         self._network_job_ctrl.SetShouldUpdateFreely( True )
@@ -156,16 +158,19 @@ class PopupMessage( PopupWindow ):
         self._show_files_button_ev = QP.WidgetEventFilter( self._show_files_button )
         self._show_files_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._show_files_button.hide()
+        self._show_files_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._user_callable_button = ClientGUICommon.BetterButton( self, 'run command', self.CallUserCallable )
         self._user_callable_button_ev = QP.WidgetEventFilter( self._user_callable_button )
         self._user_callable_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._user_callable_button.hide()
+        self._user_callable_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._show_tb_button = ClientGUICommon.BetterButton( self, 'show traceback', self.ShowTB )
         self._show_tb_button_ev = QP.WidgetEventFilter( self._show_tb_button )
         self._show_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._show_tb_button.hide()
+        self._show_tb_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._tb_text = ClientGUICommon.BetterStaticText( self )
         self._tb_text.setWordWrap( True )
@@ -173,21 +178,25 @@ class PopupMessage( PopupWindow ):
         self._tb_text_ev = QP.WidgetEventFilter( self._tb_text )
         self._tb_text_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._tb_text.hide()
+        self._tb_text.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._copy_tb_button = ClientGUICommon.BetterButton( self, 'copy traceback information', self.CopyTB )
         self._copy_tb_button_ev = QP.WidgetEventFilter( self._copy_tb_button )
         self._copy_tb_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._copy_tb_button.hide()
+        self._copy_tb_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._pause_button = ClientGUICommon.IconButton( self, CC.global_icons().pause, self.PausePlay )
         self._pause_button_ev = QP.WidgetEventFilter( self._pause_button )
         self._pause_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._pause_button.hide()
+        self._pause_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._cancel_button = ClientGUICommon.IconButton( self, CC.global_icons().stop, self.Cancel )
         self._cancel_button_ev = QP.WidgetEventFilter( self._cancel_button )
         self._cancel_button_ev.EVT_RIGHT_DOWN( self.EventDismiss )
         self._cancel_button.hide()
+        self._cancel_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         hbox = QP.HBoxLayout()
         
@@ -818,6 +827,8 @@ class PopupMessageManager( QW.QFrame ):
         
         self.setFrameStyle( QW.QFrame.Shape.Panel | QW.QFrame.Shadow.Raised )
         self.setLineWidth( 1 )
+        
+        self.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         # We need this, or else if the QSS does not define a Widget background color (the default), these 'raised' windows are transparent lmao
         self.setAutoFillBackground( True )
@@ -1480,6 +1491,7 @@ class PopupMessageSummaryBar( QW.QFrame ):
         super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Plain )
+        self.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         hbox = QP.HBoxLayout()
         
@@ -1489,8 +1501,10 @@ class PopupMessageSummaryBar( QW.QFrame ):
         self._expand_collapse = ClientGUICommon.ExpandCollapseArrowButton( self, False )
         self._expand_collapse.Expand()
         self._expand_collapse.expandCollapseFlipped.connect( self.expandCollapse )
+        self._expand_collapse.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         dismiss_all = ClientGUICommon.BetterButton( self, 'dismiss all', self.dismissAll.emit )
+        dismiss_all.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         QP.AddToLayout( hbox, self._text, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, dismiss_all, CC.FLAGS_CENTER_PERPENDICULAR )

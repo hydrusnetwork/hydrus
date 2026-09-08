@@ -27,6 +27,8 @@ class NetworkJobControl( QW.QFrame ):
         
         self.setFrameStyle( QW.QFrame.Shape.Box | QW.QFrame.Shadow.Raised )
         
+        self.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
+        
         self._should_update_freely = False
         
         self._network_job = None
@@ -44,9 +46,13 @@ class NetworkJobControl( QW.QFrame ):
         # the menu here is complicated and dynamic, so we have a 'show menu' call rather than menu_template_items
         self._cog_button = ClientGUICommon.IconButton( self, CC.global_icons().cog, self._ShowCogMenu )
         self._cog_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Advanced settings/commands.' ) )
+        self._cog_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._cancel_button = ClientGUICommon.IconButton( self, CC.global_icons().stop, self.Cancel )
+        self._cancel_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
+        
         self._error_button = ClientGUICommon.IconButton( self, CC.global_icons().dump_fail, self._ShowErrorMenu )
+        self._error_button.setFocusPolicy( QC.Qt.FocusPolicy.NoFocus )
         
         self._error_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Click here to see the last job\'s error.' ) )
         
