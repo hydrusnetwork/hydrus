@@ -8377,12 +8377,145 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                from hydrus.client.executables import ClientExecutableManager
                 from hydrus.client.executables import ClientExecutableDefaults
+                from hydrus.client.executables import ClientExecutableManager
+                from hydrus.client.executables import ClientExecutableLegacy
+                from hydrus.client.executables import ClientExecutablePipelines
                 
                 executable_manager = ClientExecutableManager.ExecutableManager()
                 
                 executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                new_options_dict = new_options._dictionary
+                
+                #
+                
+                calls_to_add = set()
+                
+                # update open url calls
+                
+                if 'web_browser_launch_paths' in new_options_dict:
+                    
+                    web_browser_launch_paths = list( new_options_dict[ 'web_browser_launch_paths' ] )
+                    
+                    if len( web_browser_launch_paths ) == 0:
+                        
+                        web_browser_launch_paths = [ None ]
+                        
+                    
+                else:
+                    
+                    web_browser_launch_paths = [ None ]
+                    
+                
+                web_browser_executable_ids_and_names = HydrusSerialisable.SerialisableList()
+                
+                for path in web_browser_launch_paths:
+                    
+                    if path is None:
+                        
+                        call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL )
+                        
+                    else:
+                        
+                        try:
+                            
+                            call = ClientExecutableLegacy.ConvertOldURLCallToExecutableActualCall( path )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.Print( f'Could not convert the web browser launch path "{path}"' )
+                            HydrusData.PrintException( e )
+                            
+                            continue
+                            
+                        
+                        calls_to_add.add( call )
+                        
+                    
+                    web_browser_executable_ids_and_names.append( call.GetIdAndName() )
+                    
+                
+                new_options_dict[ 'launch_url_executable_ids_and_names' ] = web_browser_executable_ids_and_names
+                
+                #
+                
+                if 'open_externally_launch_paths' in new_options_dict:
+                    
+                    open_externally_launch_paths = dict( new_options_dict[ 'open_externally_launch_paths' ] )
+                    
+                    if len( open_externally_launch_paths ) == 0:
+                        
+                        open_externally_launch_paths = { HC.GENERAL_FILE : [ None ] }
+                        
+                    
+                else:
+                    
+                    open_externally_launch_paths = { HC.GENERAL_FILE : [ None ] }
+                    
+                
+                open_externally_mimes_to_executable_ids_and_names = HydrusSerialisable.SerialisableDictionary()
+                
+                for ( mime, launch_paths ) in open_externally_launch_paths.items():
+                    
+                    open_externally_executable_ids_and_names = HydrusSerialisable.SerialisableList()
+                    
+                    for path in launch_paths:
+                        
+                        if path is None:
+                            
+                            call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+                            
+                        else:
+                            
+                            try:
+                                
+                                call = ClientExecutableLegacy.ConvertOldFileCallToExecutableActualCall( path )
+                                
+                            except Exception as e:
+                                
+                                HydrusData.Print( f'Could not convert the open-externally file launch path "{path}"' )
+                                HydrusData.PrintException( e )
+                                
+                                continue
+                                
+                            
+                            calls_to_add.add( call )
+                            
+                        
+                        open_externally_executable_ids_and_names.append( call.GetIdAndName() )
+                        
+                    
+                    open_externally_mimes_to_executable_ids_and_names[ mime ] = open_externally_executable_ids_and_names
+                    
+                
+                new_options_dict[ 'mimes_to_launch_file_executable_ids_and_names' ] = open_externally_mimes_to_executable_ids_and_names
+                
+                #
+                
+                new_callables = list( executable_manager.GetCallables() )
+                
+                existing_names = { c.GetName() for c in new_callables }
+                
+                for call in calls_to_add:
+                    
+                    HydrusSerialisable.SetNonDupeName( call, existing_names )
+                    
+                    existing_names.add( call.GetName() )
+                    
+                    new_callables.append( call )
+                    
+                
+                executable_manager.SetCallables( new_callables )
+                
+                executable_manager.SetClean()
+                
+                del new_options_dict[ 'web_browser_launch_paths' ]
+                del new_options_dict[ 'open_externally_launch_paths' ]
+                
+                self.modules_serialisable.SetJSONDump( new_options )
                 
                 self.modules_serialisable.SetJSONDump( executable_manager )
                 
@@ -8390,10 +8523,6 @@ class DB( HydrusDB.HydrusDB ):
                 
                 raise Exception( 'Hey, unfortunately I could not initialise the new executable manager for you. Something is very wrong; roll back to v686 and tell hydev about this. There should be more info in the log.' ) from e
                 
-            
-            #
-            
-            # migrate open url/file options here
             
         
         #

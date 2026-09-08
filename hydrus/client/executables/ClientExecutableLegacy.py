@@ -63,7 +63,7 @@ def ConvertOldFileCallToExecutableActualCall( call_template: str ):
     
     executable_callable = ClientExecutableCallables.ClientExecutableCallable(
         name = call_template,
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
         actual_call = process_call
     )
     
@@ -91,7 +91,7 @@ def ConvertOldURLCallToExecutableActualCall( call_template: str ):
     
     executable_callable = ClientExecutableCallables.ClientExecutableCallable(
         name = call_template,
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
         actual_call = process_call
     )
     

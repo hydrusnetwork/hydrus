@@ -10,7 +10,6 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsButtonQuestions
@@ -235,55 +234,6 @@ def GetYesYesNo( win: QW.QWidget, message: str, title = 'Are you sure?', yes_tup
         
     
 
-def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
-    
-    local_path = os.path.join( HC.HELP_DIR, documentation_path )
-    remote_url = "/".join( ( HC.REMOTE_HELP.rstrip( '/' ), documentation_path.lstrip( '/' ) ) ) 
-    
-    local_launch_path = local_path
-    
-    if "#" in local_path:
-        
-        local_path = local_path[ : local_path.find( '#' ) ]
-        
-    
-    if os.path.isfile( local_path ):
-        
-        ClientPaths.LaunchPathInWebBrowser( local_launch_path )
-        
-    else:
-        
-        HydrusData.Print( f'Was asked to open "{documentation_path}", which appeared to be "{local_path}" locally, but it did not seem to exist!' )
-        
-        message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
-        
-        yes_tuples = []
-        
-        yes_tuples.append( ( 'open online help', 0 ) )
-        yes_tuples.append( ( 'open how to build guide', 1 ) )
-        
-        try:
-            
-            result = GetYesYesNo( win, message, yes_tuples = yes_tuples, no_label = 'forget it' )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        if result == 0:
-            
-            url = remote_url
-            
-        else:
-            
-            url = '/'.join( ( HC.REMOTE_HELP.rstrip( '/' ), HC.DOCUMENTATION_ABOUT_DOCS.lstrip( '/' ) ) )
-            
-        
-        ClientPaths.LaunchURLInDefaultWebBrowser( url )
-        
-    
-
 def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_description: str, e: Exception ):
     
     MAX_CONTENT_SIZE = 1024
@@ -336,9 +286,9 @@ def SelectFromList( win: QW.QWidget, title: str, choice_tuples, value_to_select 
         
     
 
-def SelectFromListButtons( win: QW.QWidget, title: str, choice_tuples, message = '' ):
+def SelectFromListButtons( win: QW.QWidget, title: str, choice_tuples, message = '', allow_insta_one_item_select = True ):
     
-    if len( choice_tuples ) == 1:
+    if len( choice_tuples ) == 1 and allow_insta_one_item_select:
         
         ( ( text, data, tooltip ), ) = choice_tuples
         

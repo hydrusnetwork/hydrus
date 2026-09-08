@@ -74,7 +74,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listbook.AddPage( 'external programs', external_programs_panel )
         
-        self._listbook.AddPage( 'default programs', OpenExternallyPanel.OpenExternallyPanel( self._listbook ) )
+        self._listbook.AddPage( 'default programs', OpenExternallyPanel.OpenExternallyPanel( self._listbook, external_programs_panel.GetExecutableManager ) )
         
         self._listbook.AddPage( 'audio', AudioPanel.AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'command palette', CommandPalettePanel.CommandPalettePanel( self._listbook, self._new_options ) )

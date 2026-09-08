@@ -305,42 +305,6 @@ def GetLocalFileActionServiceKeys( media: collections.abc.Collection[ ClientMedi
     return ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, local_mergable_from_and_to_file_service_keys )
     
 
-def OpenExternally( media: ClientMediaSingle.MediaSingle | None, open_externally_launch_path: str | None ) -> bool:
-    
-    if media is None:
-        
-        return False
-        
-    
-    if not media.GetLocationsManager().IsLocal():
-        
-        return False
-        
-    
-    hash = media.GetHash()
-    mime = media.GetMime()
-    
-    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
-    
-    ClientPaths.LaunchFile( path, open_externally_launch_path )
-    
-    return True
-    
-
-def OpenExternallyDefault( media: ClientMediaSingle.MediaSingle | None ) -> bool:
-    
-    if media is None:
-        
-        return False
-        
-    
-    mime = media.GetMime()
-    
-    launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( mime )
-    
-    return OpenExternally( media, launch_paths[0] )
-    
-
 def OpenFileLocation( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:
@@ -363,27 +327,6 @@ def OpenFileLocation( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     return True
     
 
-def OpenInWebBrowser( media: ClientMediaSingle.MediaSingle | None ) -> bool:
-    
-    if media is None:
-        
-        return False
-        
-    
-    if not media.GetLocationsManager().IsLocal():
-        
-        return False
-        
-    
-    hash = media.GetHash()
-    mime = media.GetMime()
-    
-    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
-    
-    ClientPaths.LaunchPathInWebBrowser( path )
-    
-    return True
-    
 def OpenNativeFileProperties( media: ClientMediaSingle.MediaSingle | None ) -> bool:
     
     if media is None:

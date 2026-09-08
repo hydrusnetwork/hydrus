@@ -12,7 +12,6 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -22,6 +21,7 @@ from hydrus.client.gui import ClientGUILayout as CGL
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
@@ -1944,7 +1944,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
             
             for watcher in watchers:
                 
-                ClientPaths.LaunchURLInDefaultWebBrowser( watcher.GetURL() )
+                ClientGUIExecutableActions.OpenExternallyURLDefault( self, watcher.GetURL() )
                 
             
         

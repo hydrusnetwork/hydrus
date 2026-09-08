@@ -9,6 +9,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -197,6 +198,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
         return credentials
         
     
+
 class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, credential_definition ):
@@ -252,6 +254,7 @@ class EditLoginCredentialDefinitionPanel( ClientGUIScrolledPanels.EditPanel ):
         return credential_definition
         
     
+
 class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, engine, login_scripts, domains_to_login_info ):
@@ -1205,6 +1208,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         return domains_to_login_info
         
     
+
 def GenerateTestNetworkJobPresentationContextFactory( window: QW.QWidget, network_job_control: ClientGUINetworkJobControl.NetworkJobControl ):
     
     def network_job_presentation_context_factory( network_job ):
@@ -1334,6 +1338,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._data_copy_button.ShowMicroNotification( f'Copied!' )
         
     
+
 class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_script ):
@@ -1351,7 +1356,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_LOGIN )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_LOGIN )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the login scripts help', 'Open the help page for login scripts in your web browser.', page_func ) )
         
@@ -1965,6 +1970,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return login_script
         
     
+
 class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_scripts ):

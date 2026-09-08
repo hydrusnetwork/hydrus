@@ -16,18 +16,19 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client import ClientRendering
 from hydrus.client import ClientUgoiraHandling
 from hydrus.client.gui import ClientGUIExceptionHandling
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
 from hydrus.client.gui.canvas import ClientGUITransparency
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
@@ -3485,14 +3486,14 @@ class OpenExternallyPanel( QW.QWidget ):
     
     def LaunchFile( self ):
         
-        hash = self._media.GetHash()
-        mime = self._media.GetMime()
-        
-        client_files_manager = CG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( hash, mime )
-        
-        ClientPaths.LaunchFileDefault( path, mime )
+        try:
+            
+            ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, self._media.GetMediaResult() )
+            
+        except Exception as e:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, f'Sorry, could not open that file: {e}' )
+            
         
     
 

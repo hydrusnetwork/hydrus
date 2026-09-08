@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -22,6 +21,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -582,7 +582,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for gallery_seed in gallery_seeds:
                 
-                ClientPaths.LaunchURLInDefaultWebBrowser( gallery_seed.url )
+                ClientGUIExecutableActions.OpenExternallyURLDefault( self, gallery_seed.url )
                 
             
         

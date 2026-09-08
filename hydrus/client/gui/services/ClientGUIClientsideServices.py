@@ -21,11 +21,11 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAPI
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -33,6 +33,7 @@ from hydrus.client.gui import ClientGUIPanels
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
@@ -1448,7 +1449,7 @@ class EditServiceStarRatingsSubPanel( ClientGUICommon.StaticBox ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_RATINGS )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_RATINGS )
         
         self._preview_widget = preview_widget
         
@@ -2271,7 +2272,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
             
             url = '{}://127.0.0.1:{}/'.format( scheme, self._service.GetPort() )
             
-            ClientPaths.LaunchURLInDefaultWebBrowser( url )
+            ClientGUIExecutableActions.OpenExternallyURLDefault( self, url )
             
         
     

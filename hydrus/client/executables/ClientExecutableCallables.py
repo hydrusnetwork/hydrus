@@ -83,5 +83,10 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         return self._pipeline_type
         
     
+    def SetCallableKey( self, value: bytes ):
+        
+        self._callable_key = value
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE ] = ClientExecutableCallable

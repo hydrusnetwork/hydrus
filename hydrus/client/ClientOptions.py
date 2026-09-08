@@ -747,8 +747,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'web_browser_launch_paths' ] = HydrusSerialisable.SerialisableList( [ None ] )
-        self._dictionary[ 'open_externally_launch_paths' ] = HydrusSerialisable.SerialisableDictionary( { HC.GENERAL_FILE : HydrusSerialisable.SerialisableList( [ None ] ) } )
+        self._dictionary[ 'launch_url_executable_ids_and_names' ] = HydrusSerialisable.SerialisableList()
+        self._dictionary[ 'mimes_to_launch_file_executable_ids_and_names' ] = HydrusSerialisable.SerialisableDictionary( { HC.GENERAL_FILE : HydrusSerialisable.SerialisableList() } )
         
         #
         
@@ -1940,32 +1940,32 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetOpenExternallyLaunchPaths( self, mime ):
+    def GetLaunchFileExecutableIdsAndNames( self, mime ) -> list[ HydrusSerialisable.IdAndName ]:
         
         if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
             
-            return [ None ]
+            return []
             
         
         with self._lock:
             
-            open_externally_launch_paths = self._dictionary[ 'open_externally_launch_paths' ]
+            mimes_to_launch_file_executable_ids_and_names = self._dictionary[ 'mimes_to_launch_file_executable_ids_and_names' ]
             
-            if mime in open_externally_launch_paths:
+            if mime in mimes_to_launch_file_executable_ids_and_names:
                 
-                result = list( open_externally_launch_paths[ mime ] )
+                result = list( mimes_to_launch_file_executable_ids_and_names[ mime ] )
                 
             else:
                 
                 general_mimetype = HC.mimes_to_general_mimetypes[ mime ]
                 
-                if general_mimetype in open_externally_launch_paths:
+                if general_mimetype in mimes_to_launch_file_executable_ids_and_names:
                     
-                    result = list( open_externally_launch_paths[ general_mimetype ] )
+                    result = list( mimes_to_launch_file_executable_ids_and_names[ general_mimetype ] )
                     
-                elif HC.GENERAL_FILE in open_externally_launch_paths:
+                elif HC.GENERAL_FILE in mimes_to_launch_file_executable_ids_and_names:
                     
-                    result = list( open_externally_launch_paths[ HC.GENERAL_FILE ] )
+                    result = list( mimes_to_launch_file_executable_ids_and_names[ HC.GENERAL_FILE ] )
                     
                 else:
                     
@@ -1973,22 +1973,71 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                 
             
+            try:
+                
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+                
+            except Exception as e:
+                
+                fallback = []
+                
+            
             if len( result ) == 0:
                 
-                result = [ None ]
+                result = fallback
                 
             
             return result
             
         
     
-    def GetAllOpenExternallyLaunchPaths( self ):
+    def GetLaunchURLExecutableIdsAndNames( self ) -> list[ HydrusSerialisable.IdAndName ]:
         
         with self._lock:
             
-            open_externally_launch_paths = self._dictionary[ 'open_externally_launch_paths' ]
+            if 'launch_url_executable_ids_and_names' in self._dictionary:
+                
+                result = list( self._dictionary[ 'launch_url_executable_ids_and_names' ] )
+                
+            else:
+                
+                result = []
+                
             
-            return { mime : list( launch_paths ) for ( mime, launch_paths ) in open_externally_launch_paths.items() }
+            try:
+                
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
+                
+            except Exception as e:
+                
+                fallback = []
+                
+            
+            if len( result ) == 0:
+                
+                result = fallback
+                
+            
+            return result
+            
+        
+    
+    def GetMimesToLaunchFileExecutableIdsAndNames( self ):
+        
+        with self._lock:
+            
+            try:
+                
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+                
+            except Exception as e:
+                
+                fallback = []
+                
+            
+            mimes_to_launch_file_executable_ids_and_names = self._dictionary[ 'mimes_to_launch_file_executable_ids_and_names' ]
+            
+            return { mime : list( ids_and_names ) if len( ids_and_names ) > 0 else fallback for ( mime, ids_and_names ) in mimes_to_launch_file_executable_ids_and_names.items() }
             
         
     
@@ -1997,28 +2046,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             return self._dictionary[ 'tag_summary_generators' ][ name ]
-            
-        
-    
-    def GetWebBrowserLaunchPaths( self ) -> list[ str | None ]:
-        
-        with self._lock:
-            
-            if 'web_browser_launch_paths' in self._dictionary:
-                
-                result = list( self._dictionary[ 'web_browser_launch_paths' ] )
-                
-                if len( result ) == 0:
-                    
-                    result = [ None ]
-                    
-                
-            else:
-                
-                result = [ None ]
-                
-            
-            return result
             
         
     
@@ -2329,6 +2356,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetLaunchURLExecutableIdsAndNames( self, launch_url_executable_ids_and_names: list[ str | None ] ):
+        
+        with self._lock:
+            
+            self._dictionary[ 'launch_url_executable_ids_and_names' ] = HydrusSerialisable.SerialisableList( launch_url_executable_ids_and_names )
+            
+        
+    
     def SetMediaViewOptions( self, mimes_to_media_view_options ):
         
         with self._lock:
@@ -2361,23 +2396,23 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetOpenExternallyLaunchPaths( self, open_externally_launch_paths: dict[ int, list[ str | None ] ] ):
+    def SetMimesToLaunchFileExecutableIdsAndNames( self, mimes_to_launch_file_executable_ids_and_names: dict[ int, list[ HydrusSerialisable.IdAndName ] ] ):
         
         with self._lock:
             
-            open_externally_launch_paths_proper_objects = HydrusSerialisable.SerialisableDictionary()
+            mimes_to_launch_file_executable_ids_and_names_proper_objects = HydrusSerialisable.SerialisableDictionary()
             
-            for ( mime, launch_paths ) in open_externally_launch_paths.items():
+            for ( mime, ids_and_names ) in mimes_to_launch_file_executable_ids_and_names.items():
                 
-                open_externally_launch_paths_proper_objects[ mime ] = HydrusSerialisable.SerialisableList( launch_paths )
-                
-            
-            if HC.GENERAL_FILE not in open_externally_launch_paths_proper_objects or len( open_externally_launch_paths_proper_objects[ HC.GENERAL_FILE ] ) == 0:
-                
-                open_externally_launch_paths_proper_objects[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList( [ None ] )
+                mimes_to_launch_file_executable_ids_and_names_proper_objects[ mime ] = HydrusSerialisable.SerialisableList( ids_and_names )
                 
             
-            self._dictionary[ 'open_externally_launch_paths' ] = open_externally_launch_paths_proper_objects
+            if HC.GENERAL_FILE not in mimes_to_launch_file_executable_ids_and_names_proper_objects or len( mimes_to_launch_file_executable_ids_and_names_proper_objects[ HC.GENERAL_FILE ] ) == 0:
+                
+                mimes_to_launch_file_executable_ids_and_names_proper_objects[ HC.GENERAL_FILE ] = HydrusSerialisable.SerialisableList()
+                
+            
+            self._dictionary[ 'mimes_to_launch_file_executable_ids_and_names' ] = mimes_to_launch_file_executable_ids_and_names_proper_objects
             
         
     
@@ -2453,19 +2488,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         with self._lock:
             
             self._dictionary[ 'tag_summary_generators' ][ name ] = tag_summary_generator
-            
-        
-    
-    def SetWebBrowserLaunchPaths( self, web_browser_launch_paths: list[ str | None ] ):
-        
-        with self._lock:
-            
-            if len( web_browser_launch_paths ) == 0:
-                
-                web_browser_launch_paths = [ None ]
-                
-            
-            self._dictionary[ 'web_browser_launch_paths' ] = HydrusSerialisable.SerialisableList( web_browser_launch_paths )
             
         
     

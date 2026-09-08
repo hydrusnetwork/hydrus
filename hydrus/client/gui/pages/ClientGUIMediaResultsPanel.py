@@ -18,7 +18,6 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.files import ClientFilesMaintenance
@@ -33,6 +32,7 @@ from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
 from hydrus.client.gui.duplicates import ClientGUIDuplicatesContentMergeOptions
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.metadata import ClientGUIManageTags
@@ -878,14 +878,14 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                hash = media.GetHash()
-                mime = media.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                ClientPaths.LaunchFileDefault( path, mime )
+                try:
+                    
+                    ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, media.GetMediaResult() )
+                    
+                except Exception as e:
+                    
+                    ClientGUIDialogsMessage.ShowInformation( self, f'Sorry, could not open that file: {e}' )
+                    
                 
                 return
                 
@@ -1099,28 +1099,6 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                 
                 ClientMacIntegration.show_quicklook_for_path( path )
-                
-            
-        
-    
-    def _OpenFileInWebBrowser( self ):
-        
-        if self._HasFocusSingleton():
-            
-            focused_singleton = self._GetFocusSingleton()
-            
-            if focused_singleton.GetLocationsManager().IsLocal():
-                
-                hash = focused_singleton.GetHash()
-                mime = focused_singleton.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                self.focusMediaPaused.emit()
-                
-                ClientPaths.LaunchPathInWebBrowser( path )
                 
             
         
@@ -2469,19 +2447,19 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                     focused_singleton = self._GetFocusSingleton()
                     
+                    media_result = focused_singleton.GetMediaResult()
+                    
                     data = command.GetSimpleData()
                     
                     if data is not None:
                         
-                        # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
-                        # ditch the _ gumpf when I am using id_and_name
-                        ( _, open_externally_launch_path ) = data
+                        executable_id_and_name = data
                         
-                        it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton, open_externally_launch_path )
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFile( self, executable_id_and_name, media_result )
                         
                     else:
                         
-                        it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( focused_singleton )
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, media_result )
                         
                     
                     if it_worked:
@@ -2538,7 +2516,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
                     
                     focused_singleton = self._GetFocusSingleton()
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenInWebBrowser( focused_singleton )
+                    it_worked = ClientGUIExecutableActions.OpenExternallyMediaAsURL( self, focused_singleton.GetMediaResult() )
                     
                     if it_worked:
                         
@@ -3680,14 +3658,7 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             
             if media_show_action == CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY:
                 
-                hash = media.GetHash()
-                mime = media.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                ClientPaths.LaunchFileDefault( path, mime )
+                ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, media.GetMediaResult() )
                 
                 return
                 
@@ -3910,28 +3881,6 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                     
                 
                 ClientMacIntegration.show_quicklook_for_path( path )
-                
-            
-        
-    
-    def _OpenFileInWebBrowser( self ):
-        
-        if self._HasFocusSingleton():
-            
-            focused_singleton = self._GetFocusSingleton()
-            
-            if focused_singleton.GetLocationsManager().IsLocal():
-                
-                hash = focused_singleton.GetHash()
-                mime = focused_singleton.GetMime()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                self.focusMediaPaused.emit()
-                
-                ClientPaths.LaunchPathInWebBrowser( path )
                 
             
         
@@ -5388,19 +5337,19 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                     
                     focused_singleton = self._GetFocusSingleton()
                     
+                    media_result = focused_singleton.GetMediaResult()
+                    
                     data = command.GetSimpleData()
                     
                     if data is not None:
                         
-                        # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
-                        # ditch the _ gumpf when I am using id_and_name
-                        ( _, open_externally_launch_path ) = data
+                        executable_id_and_name = data
                         
-                        it_worked = ClientGUIMediaSimpleActions.OpenExternally( focused_singleton, open_externally_launch_path )
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFile( self, executable_id_and_name, media_result )
                         
                     else:
                         
-                        it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( focused_singleton )
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, media_result )
                         
                     
                     if it_worked:
@@ -5457,7 +5406,7 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
                     
                     focused_singleton = self._GetFocusSingleton()
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenInWebBrowser( focused_singleton )
+                    it_worked = ClientGUIExecutableActions.OpenExternallyMediaAsURL( self, focused_singleton.GetMediaResult() )
                     
                     if it_worked:
                         

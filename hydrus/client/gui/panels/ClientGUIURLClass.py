@@ -13,6 +13,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -1391,7 +1392,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
+        call = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the url classes help', 'Open the help page for url classes in your web browser.', call ) )
         

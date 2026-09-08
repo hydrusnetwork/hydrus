@@ -1,11 +1,15 @@
+import collections.abc
+
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
+from hydrus.client.executables import ClientExecutableManager, ClientExecutablePipelines
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import QtPorting as QP
@@ -17,43 +21,29 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
 
-class EditMimeLaunchPathsPanel( ClientGUIScrolledPanels.EditPanel ):
+class EditOpenFileIdsAndNamesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, mime: int, launch_paths: list[ str | None ] ):
+    def __init__( self, parent: QW.QWidget, mime: int, ids_and_names: list[ HydrusSerialisable.IdAndName ], executable_manager: ClientExecutableManager.ExecutableManager ):
         
         super().__init__( parent )
         
-        self._launch_paths = ClientGUIListBoxes.QueueListBox(
+        self._executable_manager = executable_manager
+        
+        self._ids_and_names = ClientGUIListBoxes.QueueListBox(
             self,
             4,
-            lambda s: s if isinstance( s, str ) else 'default OS call',
-            self._AddLaunchPath,
-            self._EditLaunchPath
+            lambda id_and_name: id_and_name.name,
+            self._AddIdAndName,
+            self._EditIdAndName
         )
         
         #
         
-        self._launch_paths.SetData( launch_paths )
+        self._ids_and_names.SetData( ids_and_names )
         
         #
         
-        text = f'Editing launch paths for {HC.mime_mimetype_string_lookup[ mime ]}. You can set several different commands for multiple programs, and these choices will be exposed in the media "url" menus; for quicker actions like button clicks or shortcuts, the top-most is the default.'
-        text += '\n' * 2
-        text += 'The command here must include a "%path%" component, normally ideally within those quote marks, which is where hydrus will place the URL when it executes the command. A good example would be:'
-        text += '\n' * 2
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            text += 'C:\\program files\\my_program\\my_program.exe "%path%"'
-            
-        elif HC.PLATFORM_MACOS:
-            
-            text += 'open -a "My App" "%path%"'
-            
-        else:
-            
-            text += 'my_program "%path%"'
-            
+        text = f'You can select multiple programs, and these choices will be exposed in the media "open externally" menus; for quicker actions like button clicks or shortcuts, the top-most is the default.'
         
         st = ClientGUICommon.BetterStaticText( self, label = text )
         st.setWordWrap( True )
@@ -61,104 +51,85 @@ class EditMimeLaunchPathsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._launch_paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._ids_and_names, CC.FLAGS_EXPAND_BOTH_WAYS )
         vbox.addStretch( 0 )
         
         self.widget().setLayout( vbox )
         
     
-    def _AddLaunchPath( self ):
+    def _GetRemainingAvailableChoicesTuples( self ):
         
-        return self._EditLaunchPath( '' )
+        possible_executable_ids_and_names = self._executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        
+        existing_executable_ids_and_names = set( self.GetValue() )
+        
+        choice_tuples = [ ( id_and_name.name, id_and_name, 'Select this call.' ) for id_and_name in possible_executable_ids_and_names if id_and_name not in existing_executable_ids_and_names ]
+        
+        if len( choice_tuples ) == 0:
+            
+            message = 'You have added all the "open single file" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            
+            ClientGUIDialogsMessage.ShowInformation( self, message )
+            raise HydrusExceptions.CancelledException( message )
+            
+        
+        return choice_tuples
         
     
-    def _EditLaunchPath( self, launch_path: str | None ) -> str | None:
+    def _AddIdAndName( self ):
         
-        if launch_path is None:
-            
-            launch_path_for_editing = ''
-            
-        else:
-            
-            launch_path_for_editing = launch_path
-            
+        choice_tuples = self._GetRemainingAvailableChoicesTuples()
         
-        message = 'Edit the launch path. Do not forget the "%path%". Leave blank to select the default OS call.'
+        return ClientGUIDialogsQuick.SelectFromListButtons( self, 'select call to add', choice_tuples, allow_insta_one_item_select = False )
         
-        try:
-            
-            edited_launch_path = ClientGUIDialogsQuick.EnterText(
-                self,
-                message,
-                default = launch_path_for_editing,
-                allow_blank = True,
-                title = 'Enter launch path',
-            )
-            
-            if edited_launch_path == '':
-                
-                edited_launch_path = None
-                
-            
-            if edited_launch_path is not None and '%path%' not in edited_launch_path:
-                
-                message = f'Hey, your command "{edited_launch_path}" did not include %path%--it probably is not going to work! Are you sure this is ok?'
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                
-                if result != QW.QDialog.DialogCode.Accepted:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
-                
-            
-            return edited_launch_path
-            
-        except HydrusExceptions.CancelledException:
-            
-            raise HydrusExceptions.VetoException()
-            
+    
+    def _EditIdAndName( self, id_and_name: HydrusSerialisable.IdAndName ) -> HydrusSerialisable.IdAndName:
+        
+        choice_tuples = self._GetRemainingAvailableChoicesTuples()
+        
+        return ClientGUIDialogsQuick.SelectFromListButtons( self, 'select call to add', choice_tuples, allow_insta_one_item_select = False )
         
     
     def GetValue( self ):
         
-        launch_paths = self._launch_paths.GetData()
+        ids_and_names = self._ids_and_names.GetData()
         
-        return launch_paths
+        return ids_and_names
         
     
 
 class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, executable_manager_callable: collections.abc.Callable[ [], ClientExecutableManager.ExecutableManager ] ):
         
         super().__init__( parent )
         
         self._new_options = CG.client_controller.new_options
+        self._executable_manager_callable = executable_manager_callable
         
-        browser_panel = ClientGUICommon.StaticBox( self, 'web browser launch path' )
+        browser_panel = ClientGUICommon.StaticBox( self, 'URL calls' )
         
-        self._web_browser_launch_paths = ClientGUIListBoxes.QueueListBox(
+        self._launch_url_executable_ids_and_names = ClientGUIListBoxes.QueueListBox(
             self,
             4,
-            lambda s: s if isinstance( s, str ) else 'default OS call',
-            self._AddWebBrowserPath,
-            self._EditWebBrowserPath
+            lambda id_and_name: id_and_name.name,
+            self._AddLaunchURLIdAndName,
+            self._EditLaunchURLIdAndName
         )
         
-        web_browser_launch_paths = self._new_options.GetWebBrowserLaunchPaths()
+        launch_url_executable_ids_and_names = self._new_options.GetLaunchURLExecutableIdsAndNames()
         
-        self._web_browser_launch_paths.SetData( web_browser_launch_paths )
+        self._launch_url_executable_ids_and_names.SetData( launch_url_executable_ids_and_names )
         
         #
         
-        mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
+        mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' calls' )
         
         self._mime_launch_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( mime_panel )
         
         model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_OPEN_EXTERNALLY.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
         
-        self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._mime_launch_listctrl_panel, 12, model, activation_callback = self._EditMimeLaunch )
+        self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._mime_launch_listctrl_panel, 12, model, activation_callback = self._EditMimeLaunch, use_simple_delete = True, can_delete_callback = self._GeneralFileIsNotSelected )
         
         self._mime_launch_listctrl_panel.SetListCtrl( self._mime_launch_listctrl )
         
@@ -166,45 +137,27 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._mime_launch_listctrl_panel.AddButton( 'edit', self._EditMimeLaunch, enabled_only_on_single_selection = True )
         self._mime_launch_listctrl_panel.AddDeleteButton( enabled_check_func = self._GeneralFileIsNotSelected )
         
-        open_externally_launch_paths = self._new_options.GetAllOpenExternallyLaunchPaths()
+        mimes_to_launch_file_executable_ids_and_names = self._new_options.GetMimesToLaunchFileExecutableIdsAndNames()
         
-        self._mime_launch_listctrl.AddDatas( list( open_externally_launch_paths.items() ) )
+        self._mime_launch_listctrl.AddDatas( list( mimes_to_launch_file_executable_ids_and_names.items() ) )
         
         self._mime_launch_listctrl.Sort()
         
         #
         
         text = 'By default, when you ask to open a URL, hydrus will send it to your OS, and that figures out what your "default" web browser is. These OS launch commands can be buggy, though, and sometimes lose #anchor components. If this happens to you, set the specific launch command for your web browser here. You can set several different commands for multiple browsers or profiles, and these choices will be exposed in the deeper url menus; the top-most is the default for quicker actions like shortcuts or left-clicks on hyperlinks.'
-        text += '\n' * 2
-        text += 'The command here must include a "%url%" component, normally ideally within those quote marks, which is where hydrus will place the URL when it executes the command. A good example would be:'
-        text += '\n' * 2
-        
-        if HC.PLATFORM_WINDOWS:
-            
-            text += 'C:\\program files\\firefox\\firefox.exe "%url%"'
-            
-        elif HC.PLATFORM_MACOS:
-            
-            text += 'open -a /Applications/Firefox.app -g "%url%"'
-            
-        else:
-            
-            text += 'firefox "%url%"'
-            
         
         st = ClientGUICommon.BetterStaticText( browser_panel, text )
         st.setWordWrap( True )
         
         browser_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        browser_panel.Add( self._web_browser_launch_paths, CC.FLAGS_EXPAND_BOTH_WAYS )
+        browser_panel.Add( self._launch_url_executable_ids_and_names, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
         
         text = 'Similarly, when you ask to open a file "externally", by default hydrus will send it to your OS to figure out your "default" program. This OS call may fail or direct to a program you do not want for several reasons, so you may set a specific and more reliable call here instead. You can even set multiple.'
         text += '\n' * 2
-        text += 'The "file" entry is a backstop for all files. You can set an entry for "image", to mean all images, or specifically down to each filetype. A specific entry _completely overwrites_ a more general entry.'
-        text += '\n' * 2
-        text += 'Again, make sure you include the "%path%" component. Most programs are going to be like \'program_exe "%path%"\', but some may need a profile-selection switch or "-o" open command or similar.'
+        text += 'The "all files" entry is a backstop for all files. You can set an entry for "image", to mean all images, or specifically down to each filetype. A specific entry _completely overwrites_ a more general entry.'
         
         st = ClientGUICommon.BetterStaticText( mime_panel, text )
         st.setWordWrap( True )
@@ -217,104 +170,81 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         vbox = QP.VBoxLayout()
         
+        label = 'This page uses the executable calls as set under the "external programs" panel. Go there first if you need to define a new url/file call.'
+        label += '\n\n'
+        label += 'If you rename calls there, the new labels will not update here until dialog ok. If you delete calls there, they will be removed from here on dialog ok. If you make big edits to your callables, it is best to ok the options dialog to lock them in and come back in here.' 
+        
+        top_st = ClientGUICommon.BetterStaticText( self, label = label )
+        top_st.setWordWrap( True )
+        top_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        QP.AddToLayout( vbox, top_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, browser_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, mime_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
         
     
-    def _AddWebBrowserPath( self ):
+    def _GetRemainingAvailableLaunchURLChoicesTuples( self ):
         
-        return self._EditWebBrowserPath( '' )
+        executable_manager = self._executable_manager_callable()
+        
+        possible_executable_ids_and_names = executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL )
+        
+        existing_ids_and_names = set( self._launch_url_executable_ids_and_names.GetData() )
+        
+        choice_tuples = [ ( id_and_name.name, id_and_name, 'Select this call.' ) for id_and_name in possible_executable_ids_and_names if id_and_name not in existing_ids_and_names ]
+        
+        if len( choice_tuples ) == 0:
+            
+            message = 'You have added all the "open single file" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            
+            ClientGUIDialogsMessage.ShowInformation( self, message )
+            raise HydrusExceptions.CancelledException( message )
+            
+        
+        return choice_tuples
         
     
-    def _EditWebBrowserPath( self, launch_path: str | None ) -> str | None:
+    def _AddLaunchURLIdAndName( self ):
         
-        if launch_path is None:
-            
-            launch_path_for_editing = ''
-            
-        else:
-            
-            launch_path_for_editing = launch_path
-            
+        choice_tuples = self._GetRemainingAvailableLaunchURLChoicesTuples()
         
-        message = 'Edit the launch path. Do not forget the "%url%". Leave blank to select the default OS call.'
+        return ClientGUIDialogsQuick.SelectFromListButtons( self, 'select call to add', choice_tuples, allow_insta_one_item_select = False )
         
-        try:
-            
-            edited_launch_path = ClientGUIDialogsQuick.EnterText(
-                self,
-                message,
-                default = launch_path_for_editing,
-                allow_blank = True,
-                title = 'Enter launch path',
-            )
-            
-            if edited_launch_path == '':
-                
-                edited_launch_path = None
-                
-            
-            if edited_launch_path is not None and '%url%' not in edited_launch_path:
-                
-                message = f'Hey, your command "{edited_launch_path}" did not include %url%--it probably is not going to work! Are you sure this is ok?'
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                
-                if result != QW.QDialog.DialogCode.Accepted:
-                    
-                    raise HydrusExceptions.VetoException()
-                    
-                
-            
-            return edited_launch_path
-            
-        except HydrusExceptions.CancelledException:
-            
-            raise HydrusExceptions.VetoException()
-            
+    
+    def _EditLaunchURLIdAndName( self, id_and_name: HydrusSerialisable.IdAndName ) -> HydrusSerialisable.IdAndName:
+        
+        choice_tuples = self._GetRemainingAvailableLaunchURLChoicesTuples()
+        
+        return ClientGUIDialogsQuick.SelectFromListButtons( self, 'select call to add', choice_tuples, allow_insta_one_item_select = False )
         
     
     def _ConvertMimeToDisplayTuple( self, data ):
         
-        ( mime, launch_paths ) = data
+        ( mime, executable_ids_and_names ) = data
         
         pretty_mime = HC.mime_string_lookup[ mime ]
         
-        if len( launch_paths ) == 0:
+        if len( executable_ids_and_names ) == 0:
             
-            pretty_launch_paths = 'empty -- will be replaced with default launch on dialog ok'
+            pretty_executable_ids_and_names = 'empty -- will fall back to default OS launch'
             
         else:
             
-            def prettify_launch_path( l_p: str | None ):
-                
-                if l_p is None:
-                    
-                    pretty_l_p = 'default: {}'.format( ClientPaths.GetDefaultLaunchPath() )
-                    
-                else:
-                    
-                    pretty_l_p = l_p
-                    
-                
-                return pretty_l_p
-                
-            
-            pretty_launch_paths = ', '.join( [ prettify_launch_path( launch_path ) for launch_path in launch_paths ] )
+            pretty_executable_ids_and_names = ', '.join( [ id_and_name.name for id_and_name in executable_ids_and_names ] )
             
         
-        display_tuple = ( pretty_mime, pretty_launch_paths )
+        display_tuple = ( pretty_mime, pretty_executable_ids_and_names )
         
         return display_tuple
         
     
     def _ConvertMimeToSortTuple( self, data ):
         
-        ( mime, launch_paths ) = data
+        ( mime, ids_and_names ) = data
 
-        ( pretty_mime, pretty_launch_paths ) = self._ConvertMimeToDisplayTuple( data )
+        ( pretty_mime, pretty_executable_ids_and_names ) = self._ConvertMimeToDisplayTuple( data )
         
         if mime == HC.GENERAL_FILE:
             
@@ -329,7 +259,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             mime_sort_num = 0
             
         
-        sort_tuple = ( ( mime_sort_num, pretty_mime ), pretty_launch_paths )
+        sort_tuple = ( ( mime_sort_num, pretty_mime ), pretty_executable_ids_and_names )
         
         return sort_tuple
         
@@ -362,19 +292,21 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 return
                 
             
-            launch_paths = []
+            ids_and_names = []
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit launch path' ) as dlg:
+            executable_manager = self._executable_manager_callable()
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit calls' ) as dlg:
                 
-                panel = EditMimeLaunchPathsPanel( dlg, mime_to_use, launch_paths )
+                panel = EditOpenFileIdsAndNamesPanel( dlg, mime_to_use, ids_and_names, executable_manager )
                 
                 dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                     
-                    edited_launch_paths = panel.GetValue()
+                    edited_ids_and_names = panel.GetValue()
                     
-                    row = ( mime_to_use, edited_launch_paths )
+                    row = ( mime_to_use, edited_ids_and_names )
                     
                     self._mime_launch_listctrl.AddData( row, select_sort_and_scroll = True )
                     
@@ -391,19 +323,21 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             return
             
         
-        ( mime, launch_paths ) = row
+        ( mime, ids_and_names ) = row
+        
+        executable_manager = self._executable_manager_callable()
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit launch path' ) as dlg:
             
-            panel = EditMimeLaunchPathsPanel( dlg, mime, launch_paths )
+            panel = EditOpenFileIdsAndNamesPanel( dlg, mime, ids_and_names, executable_manager )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                edited_launch_paths = panel.GetValue()
+                edited_ids_and_names = panel.GetValue()
                 
-                edited_row = ( mime, edited_launch_paths )
+                edited_row = ( mime, edited_ids_and_names )
                 
                 self._mime_launch_listctrl.ReplaceData( row, edited_row, sort_and_scroll = True )
                 
@@ -427,32 +361,38 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def UpdateOptions( self ):
         
-        web_browser_launch_paths = self._web_browser_launch_paths.GetData()
+        executable_manager = self._executable_manager_callable()
         
-        if len( web_browser_launch_paths ) == 0:
+        launch_url_executable_ids_and_names = self._launch_url_executable_ids_and_names.GetData()
+        
+        if len( launch_url_executable_ids_and_names ) == 0:
             
-            web_browser_launch_paths = [ None ]
+            launch_url_executable_ids_and_names = [ executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
             
         
-        self._new_options.SetWebBrowserLaunchPaths( web_browser_launch_paths )
+        launch_url_executable_ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL, launch_url_executable_ids_and_names )
         
-        open_externally_launch_paths = dict()
+        self._new_options.SetLaunchURLExecutableIdsAndNames( launch_url_executable_ids_and_names )
         
-        for ( mime, launch_paths ) in self._mime_launch_listctrl.GetData():
+        mimes_to_launch_file_executable_ids_and_names = dict()
+        
+        for ( mime, ids_and_names ) in self._mime_launch_listctrl.GetData():
             
-            if len( launch_paths ) == 0:
+            if len( ids_and_names ) == 0:
                 
-                launch_paths = [ None ]
+                ids_and_names = [ executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
                 
             
-            open_externally_launch_paths[ mime ] = launch_paths
+            ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE, ids_and_names )
+            
+            mimes_to_launch_file_executable_ids_and_names[ mime ] = ids_and_names
             
         
-        if HC.GENERAL_FILE not in open_externally_launch_paths:
+        if HC.GENERAL_FILE not in mimes_to_launch_file_executable_ids_and_names:
             
-            open_externally_launch_paths[ HC.GENERAL_FILE ] = [ None ]
+            mimes_to_launch_file_executable_ids_and_names[ HC.GENERAL_FILE ] = [ executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
             
         
-        self._new_options.SetOpenExternallyLaunchPaths( open_externally_launch_paths )
+        self._new_options.SetMimesToLaunchFileExecutableIdsAndNames( mimes_to_launch_file_executable_ids_and_names )
         
     

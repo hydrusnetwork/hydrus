@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
@@ -26,6 +25,7 @@ from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -1361,7 +1361,7 @@ class ScriptManagementControl( QW.QWidget ):
         
         for url in urls:
             
-            ClientGUIMenus.AppendMenuItem( open_submenu, url, 'launch this url in your browser', ClientPaths.LaunchURLInWebBrowser, url )
+            ClientGUIMenus.AppendMenuItem( open_submenu, url, 'launch this url in your browser', ClientGUIExecutableActions.OpenExternallyURLDefault, self, url )
             ClientGUIMenus.AppendMenuItem( copy_submenu, url, 'copy this url to your clipboard', CG.client_controller.pub, 'clipboard', 'text', url )
             
         

@@ -14,6 +14,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -50,7 +51,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_SHARING )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_SHARING )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the downloader sharing help', 'Open the help page for sharing downloaders in your web browser.', page_func ) )
         
@@ -491,7 +492,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS_CONTENT_PARSERS )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS_CONTENT_PARSERS )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the content parsers help', 'Open the help page for content parsers in your web browser.', page_func ) )
         
@@ -1166,7 +1167,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
         

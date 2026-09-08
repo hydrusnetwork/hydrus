@@ -30,7 +30,6 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
@@ -38,6 +37,7 @@ from hydrus.client.gui import ClientGUIAboutWindow
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -60,6 +60,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.canvas import ClientGUIQtMediaPlayer
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.media import ClientGUIMediaControls
@@ -3514,19 +3515,19 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         links = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuIconItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_icons().hydrus_black_square, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://hydrusnetwork.github.io/hydrus/' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/hydrusnetwork/hydrus/issues' )
-        ClientGUIMenus.AppendMenuIconItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_icons().eight_chan, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://8chan.moe/t/catalog.html' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'x', 'Open hydrus dev\'s X account, where he makes general progress updates and emergency notifications.', CC.global_icons().x, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://x.com/hydrusnetwork' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_icons().tumblr, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://hydrus.tumblr.com/' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_icons().discord, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://discord.gg/wPHPCUZ' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_icons().patreon, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://www.patreon.com/hydrus_dev' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'site', 'Open hydrus\'s website, which is a mirror of the local help.', CC.global_icons().hydrus_black_square, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://hydrusnetwork.github.io/hydrus/' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'github repository', 'Open the hydrus github repository.', CC.global_icons().github, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://github.com/hydrusnetwork/hydrus' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'latest build', 'Open the latest build on the hydrus github repository.', CC.global_icons().github, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://github.com/hydrusnetwork/hydrus/releases/latest' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'issue tracker', 'Open the github issue tracker, which is run by users.', CC.global_icons().github, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://github.com/hydrusnetwork/hydrus/issues' )
+        ClientGUIMenus.AppendMenuIconItem( links, '8chan.moe /t/ (Hydrus Network General)', 'Open the 8chan.moe /t/ board, where a Hydrus Network General should exist with release posts and other status updates.', CC.global_icons().eight_chan, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://8chan.moe/t/catalog.html' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'x', 'Open hydrus dev\'s X account, where he makes general progress updates and emergency notifications.', CC.global_icons().x, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://x.com/hydrusnetwork' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_icons().tumblr, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://hydrus.tumblr.com/' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_icons().discord, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://discord.gg/wPHPCUZ' )
+        ClientGUIMenus.AppendMenuIconItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_icons().patreon, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://www.patreon.com/hydrus_dev' )
         
         ClientGUIMenus.AppendMenu( menu, links, 'links' )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_CHANGELOG )
+        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_CHANGELOG )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3818,7 +3819,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
         
         ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-        ClientGUIMenus.AppendMenuIconItem( downloaders_submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientPaths.LaunchURLInDefaultWebBrowser, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
+        ClientGUIMenus.AppendMenuIconItem( downloaders_submenu, 'user-run downloader repository', 'Open the user-run github repository that has many additional downloaders.', CC.global_icons().github, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts' )
         ClientGUIMenus.AppendMenuItem( downloaders_submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
         
         ClientGUIMenus.AppendSeparator( downloaders_submenu )
@@ -5299,7 +5300,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _OpenHelp( self ):
         
-        ClientGUIDialogsQuick.OpenDocumentation( self, HC.DOCUMENTATION_INDEX )
+        ClientGUIDialogsDocumentation.OpenDocumentation( self, HC.DOCUMENTATION_INDEX )
         
     
     def _OpenInstallFolder( self ):

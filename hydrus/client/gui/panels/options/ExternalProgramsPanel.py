@@ -1149,6 +1149,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._pipeline_panel = ClientGUICommon.StaticBox( self, 'pipeline' )
         
+        self._original_callable_key = call.GetCallableKey()
         self._name = QW.QLineEdit( self._pipeline_panel )
         self._pipeline_type = ClientGUICommon.BetterChoice( self._pipeline_panel )
         
@@ -1322,6 +1323,8 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
             actual_call = actual_call
         )
         
+        call.SetCallableKey( self._original_callable_key )
+        
         return call
         
     
@@ -1349,7 +1352,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         message = 'This system is under active development.'
         message += '\n\n'
-        message += 'Here we can teach your client about other programs it can call to complete jobs. Each job has a certain type, starting with simple things like "open file in external program", and, as I write the pipelines for them, we will have "download URL" and "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. an AI model for tagging). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
+        message += 'Here we can teach your client about other programs it can call to complete jobs. You set them up here, and they will appear as options in appropriate places around the client. Each job has a certain type, starting with simple things like "open file in external program", and, as I write the pipelines for them, we will eventually get tasks like "download URL" and "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. an AI model for tagging). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
         
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
@@ -1394,6 +1397,12 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         external_calls_panel.Add( warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         external_calls_panel.Add( external_calls_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        executable_manager = CG.client_controller.executable_manager
+        
+        # these initialise them if they are currently missing
+        executable_manager.GetOSLaunchURLCallable()
+        executable_manager.GetOSLaunchFileCallable()
         
         callables = CG.client_controller.executable_manager.GetCallables()
         

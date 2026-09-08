@@ -4,7 +4,7 @@ import random
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC, HydrusText
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
@@ -19,6 +19,7 @@ from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
@@ -510,32 +511,28 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
         urls_copy_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         urls_force_refetch_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         
-        web_browser_launch_paths = CG.client_controller.new_options.GetWebBrowserLaunchPaths()
+        open_url_executable_ids_and_names = CG.client_controller.new_options.GetLaunchURLExecutableIdsAndNames()
         
-        url_launch_paths_and_url_visit_submenus = []
-        
-        if len( web_browser_launch_paths ) == 1:
+        if len( open_url_executable_ids_and_names ) == 0:
             
-            url_launch_paths_and_url_visit_submenus.append( ( web_browser_launch_paths[0], urls_visit_menu ) )
+            open_url_executable_ids_and_names = [ CG.client_controller.executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
+            
+        
+        open_url_executable_ids_and_names_and_url_visit_submenus = []
+        
+        if len( open_url_executable_ids_and_names ) == 1:
+            
+            open_url_executable_ids_and_names_and_url_visit_submenus.append( ( open_url_executable_ids_and_names[0], urls_visit_menu ) )
             
         else:
             
-            for web_browser_launch_path in web_browser_launch_paths:
+            for executable_id_and_name in open_url_executable_ids_and_names:
                 
                 urls_visit_submenu = ClientGUIMenus.GenerateMenu( urls_visit_menu )
                 
-                if web_browser_launch_path is None:
-                    
-                    label = 'default OS call'
-                    
-                else:
-                    
-                    label = HydrusText.ElideText( web_browser_launch_path, 24 )
-                    
+                ClientGUIMenus.AppendMenu( urls_visit_menu, urls_visit_submenu, executable_id_and_name.name )
                 
-                ClientGUIMenus.AppendMenu( urls_visit_menu, urls_visit_submenu, label )
-                
-                url_launch_paths_and_url_visit_submenus.append( ( web_browser_launch_path, urls_visit_submenu ) )
+                open_url_executable_ids_and_names_and_url_visit_submenus.append( ( executable_id_and_name, urls_visit_submenu ) )
                 
             
         
@@ -549,9 +546,9 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
             
             description = 'Open this url in your web browser.'
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
-                ClientGUIMenus.SpamItems( urls_visit_submenu, [ ( label, description, HydrusData.Call( ClientPaths.LaunchURLInWebBrowser, url, web_browser_launch_path ) ) for ( label, url ) in focus_labels_and_urls ], MAX_TO_SHOW )
+                ClientGUIMenus.SpamItems( urls_visit_submenu, [ ( label, description, HydrusData.Call( ClientGUIExecutableActions.OpenExternallyURL, win, executable_id_and_name, url ) ) for ( label, url ) in focus_labels_and_urls ], MAX_TO_SHOW )
                 
             
             ClientGUIMenus.SpamLabels( urls_copy_menu, focus_labels_and_urls, MAX_TO_SHOW )
@@ -613,7 +610,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
         
         if there_are_focus_url_classes_to_action or multiple_or_unmatching_focus_url_classes:
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
                 ClientGUIMenus.AppendSeparator( urls_visit_submenu )
                 
@@ -627,9 +624,9 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
             
             label = 'this file\'s ' + HydrusNumbers.ToHumanInt( len( urls ) ) + ' recognised urls'
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
-                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls, web_browser_launch_path )
+                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls, executable_id_and_name )
                 
             
             urls_string = '\n'.join( urls )
@@ -643,9 +640,9 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
             
             label = 'this file\'s ' + HydrusNumbers.ToHumanInt( len( urls ) ) + ' urls'
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
-                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls, web_browser_launch_path )
+                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls, executable_id_and_name )
                 
             
             urls_string = '\n'.join( urls )
@@ -659,7 +656,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
         
         if there_are_selection_url_classes_to_action or multiple_or_unmatching_selection_url_classes:
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
                 ClientGUIMenus.AppendSeparator( urls_visit_submenu )
                 
@@ -678,9 +675,9 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
                 
                 label = 'these files\' ' + url_class.GetName() + ' urls'
                 
-                for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+                for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                     
-                    ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open this url class in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLClassURLs, win, selected_media, url_class, web_browser_launch_path )
+                    ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open this url class in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLClassURLs, win, selected_media, url_class, executable_id_and_name )
                     
                 
                 ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMediaSimpleActions.CopyMediaURLClassURLs, selected_media, url_class )
@@ -698,9 +695,9 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
             
             label = 'all these files\' urls'
             
-            for ( web_browser_launch_path, urls_visit_submenu ) in url_launch_paths_and_url_visit_submenus:
+            for ( executable_id_and_name, urls_visit_submenu ) in open_url_executable_ids_and_names_and_url_visit_submenus:
                 
-                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open all files\' urls in your web browser.', ClientGUIMediaModalActions.OpenMediaURLs, win, selected_media, web_browser_launch_path )
+                ClientGUIMenus.AppendMenuItem( urls_visit_submenu, label, 'Open all files\' urls in your web browser.', ClientGUIMediaModalActions.OpenMediaURLs, win, selected_media, executable_id_and_name )
                 
             
             label = 'all these files\' urls'
@@ -873,26 +870,13 @@ def AddOpenMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProce
         
         focused_media_single = focused_media.GetDisplayMedia()
         
-        open_externally_launch_paths = CG.client_controller.new_options.GetOpenExternallyLaunchPaths( focused_media_single.GetMime() )
+        executable_ids_and_names = CG.client_controller.new_options.GetLaunchFileExecutableIdsAndNames( focused_media_single.GetMime() )
         
-        for open_externally_launch_path in open_externally_launch_paths:
+        for executable_ids_and_name in executable_ids_and_names:
             
-            if open_externally_launch_path is None:
-                
-                label = 'default OS call'
-                
-            else:
-                
-                label = HydrusText.ElideText( open_externally_launch_path, 24 )
-                
+            application_command = CAC.ApplicationCommand( command_type = CAC.APPLICATION_COMMAND_TYPE_SIMPLE, data = ( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, executable_ids_and_name ) )
             
-            # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
-            # ditch the True gumpf when I am using id_and_name
-            simple_data = ( True, open_externally_launch_path )
-            
-            application_command = CAC.ApplicationCommand( command_type = CAC.APPLICATION_COMMAND_TYPE_SIMPLE, data = ( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM, simple_data ) )
-            
-            ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}using {label}', 'Launch this file in an external program.', command_processor.ProcessApplicationCommand, application_command )
+            ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}using {executable_ids_and_name.name}', 'Launch this file in an external program.', command_processor.ProcessApplicationCommand, application_command )
             
         
         ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in web browser', 'Show this file in your OS\'s web browser.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER ) )

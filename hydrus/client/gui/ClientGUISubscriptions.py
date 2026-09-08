@@ -19,6 +19,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -267,7 +268,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         
@@ -1828,7 +1829,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html subscriptions help', 'Open the help page for subscriptions in your web browser.', page_func ) )
         

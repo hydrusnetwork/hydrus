@@ -16,6 +16,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.files import ClientFilesPhysical
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -58,7 +59,7 @@ class ReviewGranularityPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION_GRANULARITY )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION_GRANULARITY )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html migration/granularity help', 'Open the help page for database migration/granularity in your web browser.', page_func ) )
         
@@ -488,7 +489,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         

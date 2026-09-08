@@ -34,6 +34,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.gui.canvas import ClientGUICanvasMenus
 from hydrus.client.gui.duplicates import ClientGUIDuplicateActions
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
@@ -1038,60 +1039,75 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
-                data = command.GetSimpleData()
-                
-                if data is not None:
+                if self._current_media is not None:
                     
-                    # TODO: aiiiieeee, I am doing this because I need to differentiate between None launch path while it is in strings
-                    # ditch the _ gumpf when I am using id_and_name
-                    ( _, open_externally_launch_path ) = data
+                    media_result = self._current_media.GetMediaResult()
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenExternally( self._current_media, open_externally_launch_path )
+                    data = command.GetSimpleData()
                     
-                else:
+                    if data is not None:
+                        
+                        executable_id_and_name = data
+                        
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFile( self, executable_id_and_name, media_result )
+                        
+                    else:
+                        
+                        it_worked = ClientGUIExecutableActions.OpenExternallySingleFileDefault( self, media_result )
+                        
                     
-                    it_worked = ClientGUIMediaSimpleActions.OpenExternallyDefault( self._current_media )
-                    
-                
-                if it_worked:
-                    
-                    self._MediaFocusWentToExternalProgram()
+                    if it_worked:
+                        
+                        self._MediaFocusWentToExternalProgram()
+                        
                     
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
                 
-                it_worked = ClientGUIMediaSimpleActions.OpenFileLocation( self._current_media )
-                
-                if it_worked:
+                if self._current_media is not None:
                     
-                    self._MediaFocusWentToExternalProgram()
+                    it_worked = ClientGUIMediaSimpleActions.OpenFileLocation( self._current_media )
+                    
+                    if it_worked:
+                        
+                        self._MediaFocusWentToExternalProgram()
+                        
                     
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER:
                 
-                it_worked = ClientGUIMediaSimpleActions.OpenInWebBrowser( self._current_media )
-                
-                if it_worked:
+                if self._current_media is not None:
                     
-                    self._MediaFocusWentToExternalProgram()
+                    it_worked = ClientGUIExecutableActions.OpenExternallyMediaAsURL( self, self._current_media.GetMediaResult() )
+                    
+                    if it_worked:
+                        
+                        self._MediaFocusWentToExternalProgram()
+                        
                     
                 
             elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES:
                 
-                it_worked = ClientGUIMediaSimpleActions.OpenNativeFileProperties( self._current_media )
-                
-                if it_worked:
+                if self._current_media is not None:
                     
-                    self._MediaFocusWentToExternalProgram()
+                    it_worked = ClientGUIMediaSimpleActions.OpenNativeFileProperties( self._current_media )
+                    
+                    if it_worked:
+                        
+                        self._MediaFocusWentToExternalProgram()
+                        
                     
                 
             elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG:
                 
-                it_worked = ClientGUIMediaSimpleActions.OpenFileWithDialog( self._current_media )
-                
-                if it_worked:
+                if self._current_media is not None:
                     
-                    self._MediaFocusWentToExternalProgram()
+                    it_worked = ClientGUIMediaSimpleActions.OpenFileWithDialog( self._current_media )
+                    
+                    if it_worked:
+                        
+                        self._MediaFocusWentToExternalProgram()
+                        
                     
                 
             elif action == CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE:

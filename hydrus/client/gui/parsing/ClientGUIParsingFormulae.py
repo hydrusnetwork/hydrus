@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsFiles
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -52,7 +53,7 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_CONTEXT_VARIABLE_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_CONTEXT_VARIABLE_FORMULA )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the context variable formula help', 'Open the help page for context variable formulae in your web browser.', page_func ) )
         
@@ -670,7 +671,7 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_HTML_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_HTML_FORMULA )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the html formula help', 'Open the help page for html formulae in your web browser.', page_func ) )
         
@@ -1017,7 +1018,7 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_JSON_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_JSON_FORMULA )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the json formula help', 'Open the help page for json formulae in your web browser.', page_func ) )
         
@@ -1177,7 +1178,7 @@ class EditNestedFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_NESTED_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_NESTED_FORMULA )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the nested formula help', 'Open the help page for nested formulae in your web browser.', page_func ) )
         
@@ -1325,7 +1326,7 @@ class EditStaticFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_STATIC )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_STATIC )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the static formula help', 'Open the help page for static formulae in your web browser.', page_func ) )
         
@@ -1433,7 +1434,7 @@ class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
         
         menu_template_items = []
         
-        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA )
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_ZIPPER_FORMULA )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the zipper formula help', 'Open the help page for zipper formulae in your web browser.', page_func ) )
         

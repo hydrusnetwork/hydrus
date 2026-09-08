@@ -12,12 +12,12 @@ from hydrus.core import HydrusLists
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.networking import ClientNetworkingFunctions
 
 def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
@@ -1095,7 +1095,7 @@ class BetterHyperLink( BetterStaticText ):
     
     def Activated( self ):
         
-        ClientPaths.LaunchURLInDefaultWebBrowser( self._url )
+        ClientGUIExecutableActions.OpenExternallyURLDefault( self, self._url )
         
     
     def get_link_color( self ):

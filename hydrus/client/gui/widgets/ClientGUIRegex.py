@@ -8,11 +8,11 @@ from hydrus.core import HydrusConstants as HC
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.widgets import ClientGUICommon
 
 class RegexButton( ClientGUICommon.BetterButton ):
@@ -35,9 +35,9 @@ class RegexButton( ClientGUICommon.BetterButton ):
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'a good regex introduction', 'If you have never heard of regex before, hit this!', ClientPaths.LaunchURLInWebBrowser, 'https://www.regular-expressions.info/index.html' )
-        ClientGUIMenus.AppendMenuItem( submenu, 'a full interactive tutorial', 'If you want to work through a full lesson with problem solving on your end, hit this!', ClientPaths.LaunchURLInWebBrowser, 'https://www.regexone.com/' )
-        ClientGUIMenus.AppendMenuItem( submenu, 'regex sandbox', 'You can play around here before you do something for real.', ClientPaths.LaunchURLInWebBrowser, 'https://regexr.com/3cvmf' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'a good regex introduction', 'If you have never heard of regex before, hit this!', ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://www.regular-expressions.info/index.html' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'a full interactive tutorial', 'If you want to work through a full lesson with problem solving on your end, hit this!', ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://www.regexone.com/' )
+        ClientGUIMenus.AppendMenuItem( submenu, 'regex sandbox', 'You can play around here before you do something for real.', ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://regexr.com/3cvmf' )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'regex help' )
         

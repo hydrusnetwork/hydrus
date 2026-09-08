@@ -10,6 +10,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -599,7 +600,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_template_items = []
         
-        call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_GUGS )
+        call = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_GUGS )
         
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the gugs help', 'Open the help page for gugs in your web browser.', call ) )
         

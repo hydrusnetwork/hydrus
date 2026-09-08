@@ -23,6 +23,7 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.executables import ClientGUIExecutableActions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
@@ -826,7 +827,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 for file_seed in file_seeds:
                     
-                    ClientPaths.LaunchURLInDefaultWebBrowser( file_seed.file_seed_data )
+                    ClientGUIExecutableActions.OpenExternallyURLDefault( self, file_seed.file_seed_data )
                     
                 
             else:
