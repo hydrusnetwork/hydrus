@@ -35,6 +35,50 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_687"><a href="#version_687">version 687</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the popup toaster is now very anti-taking-focus. if you navigating the thumbs via keyboard while popups bounce around doing their thing, particularly subs, they should now be less likely to steal focus from what you were doing. even clicking buttons shouldn't do it. this is mostly an experiment, so let me know how it works out</li>
+                        <li>updated `mkdocs-material` from `6.7.1` to `6.7.7` due to a dependbot alert about an XSS issue with the search box</li>
+                        <li><h3>simpler menubar</h3></li>
+                        <li>in an effort to make the main gui's top-level menubar menus thinner and easier to mouse through, a machete has been applied. long labels are reworked or banished, 'manage x...' is now generally just 'x...', and some 'x and y' are now 'x/y', and some big weird things are pushed down to a submenu. Some tooltips are altered to help. I apologise for the jolt to muscle memory here, but I've been meaning to do this for ages and I'm trying to pack a bunch into one bigger frustration than continually reworking it in dribs and drabs</li>
+                        <li>one thing I'm not totally happy with is the 'pending' menu. putting the count of pending stuff at the top of the submenu keeps it tucked out of the way, but if you find you are clicking that and not 'commit' two weeks from now, I'll need to re-do it</li>
+                        <li><h3>menubar boring details</h3></li>
+                        <li>under the 'file' menu, I clipped the labels a bit</li>
+                        <li>the 'undo' menu is fine</li>
+                        <li>under the 'pages' menu, I pushed the page count and weight measure to a 'weight' flyout submenu, the 'sidebar and preview panels' submenu is now just 'sidebar', and the 'new x page' labels are clipped</li>
+                        <li>under the 'database' menu, all the long backup gubbins is put into a 'backup' submenu, 'move media files' is renamed to 'locations', and 'file viewing statistics' is renamed to 'clear'</li>
+                        <li>under the 'network' menu, 'downloader components' are folded into 'downloaders' and the 'logins' legacy label is pushed to the submenu. also, an ancient ancient and hacky tumblr GDPR click-through patch is removed</li>
+                        <li>under the 'services' menu, we just have 'review', 'edit', and 'administrate'. this is another "manage" to "edit" change, which is nomenclature borne from a stupid old technical difference that doesn't matter to the end user and which I am slowly changing. also this weird 'import update files' job is pushed to an 'advanced' submenu</li>
+                        <li>under the 'tags' menu, everything is cut to the bone and 'manage where siblings and parents apply' is pushed down to an 'advanced' submenu</li>
+                        <li>under the 'pending' menu, the count is now pushed to the flyout submenu, making the top menu just your service names. should make it both thinner and less bouncy as things are pending/uploading in the background</li>
+                        <li>under the 'help' menu, I clipped a couple things</li>
+                        <li>I think I updated all the help docs to point to the new labels, but let me know if you see something I missed</li>
+                        <li><h3>executable manager</h3></li>
+                        <li>the executable manager is now real. check it out under the 'external programs' options page. it supports 'open single file' and 'open url' pipelines to start, and like other hydrus things the objects can be exported and shared between users in a bunch of ways</li>
+                        <li>the 'default programs' options page uses the new executable manager. your existing launch paths will be converted to the new system. feel free to rename them. if you are feeling brave, poke around and make your own callable</li>
+                        <li>when you do 'open externally' on a file or URL, it all works on the new system. this includes stuff like hyperlinks. the call is cleaner, more secure, and has nicer failure reporting</li>
+                        <li>added a 'show PATH' button to the exe manager's process call edit panel. it throws up the PATH as hydrus sees it with a bit of blurb</li>
+                        <li><h3>exe manager boring stuff</h3></li>
+                        <li>on init or update, an exe manager is created and populated with defaults or a migration of your existing string launch paths</li>
+                        <li>the exe manager now tracks dirty/clean status and is plugged into the normal manager save checker</li>
+                        <li>the existing 'open url/file' options are converted to the new calls, and the new exe manager is populated with executables for the old launch paths</li>
+                        <li>all the 'default programs' UI is converted to the new 'select which exe' system. it provides live choices from the current the 'external programs' page</li>
+                        <li>hooked up some extra safety code to make sure the exe manager provides the fallback default OS call when there is nothing else set, and to remove defunct items on dialog ok and such</li>
+                        <li>process calls in the executable manager system now clean their parameters on init, deserialisation, or simple dialog editing. newlines are removed, leading or trailing whitespace is stripped, and multiple whitespace is collapsed to single</li>
+                        <li>wrote some migration code for the legacy string templates to the new executable callable objects</li>
+                        <li>cleaned up the whole 'open url/file' pipeline of all sorts of old cruft, and updated it to work on media results rather than media singles (part of a long-time cleanup job). similarly deleted a bunch of old code</li>
+                        <li>wrote more safety code to inject and fall back to the 'open with default OS call' for 'open file/url' calls that have no options set up for whatever reason</li>
+                        <li>fixed some edge case harmless errors when hitting 'open file/url' in the media viewer in the moment it is closing</li>
+                        <li>all the open file/url calls now catch the new exceptions and report in nice info popup dialogs when things go wrong</li>
+                        <li>fixed some tucked away 'open this url' menu entries (stuff like the regex help link) that were using the wrong 'launch url' call in last week's multi-browser-launch-options refactor</li>
+                        <li>refactored some 'populate exe manager with defaults' code to share the same call</li>
+                        <li>refactored the executable manager action calls out of the manager to their own file and moved some 'open url with default browser' calls in there too</li>
+                        <li>refactored the 'open help docs here' to better tapdance around the new 'open url' pipeline</li>
+                        <li>wrote up a slender gui-executable-actions wrapper module for all 'open url/file' commands so if there is error, there is always an UI context upon which to throw up an information error message dialog. there is better testing and error reporting when trying to open a non-local file externally</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_686"><a href="#version_686">version 686</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

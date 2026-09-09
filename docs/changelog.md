@@ -7,6 +7,57 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 687](https://github.com/hydrusnetwork/hydrus/releases/tag/v687)
+
+### misc
+
+* the popup toaster is now very anti-taking-focus. if you navigating the thumbs via keyboard while popups bounce around doing their thing, particularly subs, they should now be less likely to steal focus from what you were doing. even clicking buttons shouldn't do it. this is mostly an experiment, so let me know how it works out
+* updated `mkdocs-material` from `6.7.1` to `6.7.7` due to a dependbot alert about an XSS issue with the search box
+
+### simpler menubar
+
+* in an effort to make the main gui's top-level menubar menus thinner and easier to mouse through, a machete has been applied. long labels are reworked or banished, 'manage x...' is now generally just 'x...', and some 'x and y' are now 'x/y', and some big weird things are pushed down to a submenu. Some tooltips are altered to help. I apologise for the jolt to muscle memory here, but I've been meaning to do this for ages and I'm trying to pack a bunch into one bigger frustration than continually reworking it in dribs and drabs
+* one thing I'm not totally happy with is the 'pending' menu. putting the count of pending stuff at the top of the submenu keeps it tucked out of the way, but if you find you are clicking that and not 'commit' two weeks from now, I'll need to re-do it
+
+### menubar boring details
+
+* under the 'file' menu, I clipped the labels a bit
+* the 'undo' menu is fine
+* under the 'pages' menu, I pushed the page count and weight measure to a 'weight' flyout submenu, the 'sidebar and preview panels' submenu is now just 'sidebar', and the 'new x page' labels are clipped
+* under the 'database' menu, all the long backup gubbins is put into a 'backup' submenu, 'move media files' is renamed to 'locations', and 'file viewing statistics' is renamed to 'clear'
+* under the 'network' menu, 'downloader components' are folded into 'downloaders' and the 'logins' legacy label is pushed to the submenu. also, an ancient ancient and hacky tumblr GDPR click-through patch is removed
+* under the 'services' menu, we just have 'review', 'edit', and 'administrate'. this is another "manage" to "edit" change, which is nomenclature borne from a stupid old technical difference that doesn't matter to the end user and which I am slowly changing. also this weird 'import update files' job is pushed to an 'advanced' submenu
+* under the 'tags' menu, everything is cut to the bone and 'manage where siblings and parents apply' is pushed down to an 'advanced' submenu
+* under the 'pending' menu, the count is now pushed to the flyout submenu, making the top menu just your service names. should make it both thinner and less bouncy as things are pending/uploading in the background
+* under the 'help' menu, I clipped a couple things
+* I think I updated all the help docs to point to the new labels, but let me know if you see something I missed
+
+### executable manager
+
+* the executable manager is now real. check it out under the 'external programs' options page. it supports 'open single file' and 'open url' pipelines to start, and like other hydrus things the objects can be exported and shared between users in a bunch of ways
+* the 'default programs' options page uses the new executable manager. your existing launch paths will be converted to the new system. feel free to rename them. if you are feeling brave, poke around and make your own callable
+* when you do 'open externally' on a file or URL, it all works on the new system. this includes stuff like hyperlinks. the call is cleaner, more secure, and has nicer failure reporting
+* added a 'show PATH' button to the exe manager's process call edit panel. it throws up the PATH as hydrus sees it with a bit of blurb
+
+### exe manager boring stuff
+
+* on init or update, an exe manager is created and populated with defaults or a migration of your existing string launch paths
+* the exe manager now tracks dirty/clean status and is plugged into the normal manager save checker
+* the existing 'open url/file' options are converted to the new calls, and the new exe manager is populated with executables for the old launch paths
+* all the 'default programs' UI is converted to the new 'select which exe' system. it provides live choices from the current the 'external programs' page
+* hooked up some extra safety code to make sure the exe manager provides the fallback default OS call when there is nothing else set, and to remove defunct items on dialog ok and such
+* process calls in the executable manager system now clean their parameters on init, deserialisation, or simple dialog editing. newlines are removed, leading or trailing whitespace is stripped, and multiple whitespace is collapsed to single
+* wrote some migration code for the legacy string templates to the new executable callable objects
+* cleaned up the whole 'open url/file' pipeline of all sorts of old cruft, and updated it to work on media results rather than media singles (part of a long-time cleanup job). similarly deleted a bunch of old code
+* wrote more safety code to inject and fall back to the 'open with default OS call' for 'open file/url' calls that have no options set up for whatever reason
+* fixed some edge case harmless errors when hitting 'open file/url' in the media viewer in the moment it is closing
+* all the open file/url calls now catch the new exceptions and report in nice info popup dialogs when things go wrong
+* fixed some tucked away 'open this url' menu entries (stuff like the regex help link) that were using the wrong 'launch url' call in last week's multi-browser-launch-options refactor
+* refactored some 'populate exe manager with defaults' code to share the same call
+* refactored the executable manager action calls out of the manager to their own file and moved some 'open url with default browser' calls in there too
+* refactored the 'open help docs here' to better tapdance around the new 'open url' pipeline
+* wrote up a slender gui-executable-actions wrapper module for all 'open url/file' commands so if there is error, there is always an UI context upon which to throw up an information error message dialog. there is better testing and error reporting when trying to open a non-local file externally
+
 ## [Version 686](https://github.com/hydrusnetwork/hydrus/releases/tag/v686)
 
 ### misc
@@ -475,50 +526,3 @@ title: Changelog
 ### other boring code cleanup
 
 * fixed and cleaned up the layout code and some options juggling in the new treeview experiment, cleaned up some misc splitter/sizes stuff along the way
-
-## [Version 677](https://github.com/hydrusnetwork/hydrus/releases/tag/v677)
-
-### misc
-
-* fixed an issue with last week's downloader metadata overhaul that broke some downloaders. specifically, when downloaders had a post with one file url and that file url was changed through normalisation (typically through a URL Class), metadata application was not working. if you had a twitter-type downloader that seemed not to add tags in v676 when there was only one file in the post, please queue up those downloads again in a new urls downloader page and they will get their tags and so on
-* the 'min time to view a file in x' settings in `options->file viewing statistics` are now minimum 50ms (previously 1s)
-* when doing 'special duplicate' on a shortcut with F12 as the key, it now jumps to F13 (issue #2042)
-* reduced the overhead on two important 'wait a moment' checks that many of the thread workers consult. previously, when checking if the pubsub or db were busy, threads would wake too frequently in busy periods and thrash as they competed for 'is busy' locks. now the pubsub and db themselves maintain a single 'I am idle' signal the waiters can wait nicely on without needing extra checks
-* the code that terminates and then kills a timed out subprocess (ffmpeg, typically) now catches permission errors better (issue #2046)
-* fixed a stupid typo from the non-interactive `setup_venv.py` mode that broke the 'advanced' manual, interactive install. I was so focused on the new thing, I didn't test the old thing to see it still worked
-
-### client api
-
-* fixed the new `/manage_pages/new_page` command for a 'page of pages' type and updated the unit test to catch this (issue #2044)
-* client api version is now 94
-
-### human-readable metadata fix and improvements
-
-* a user noticed my recent 'chara' file metadata parsing was causing issues for files with metadata that included non-text datatypes and spotted where it was happening. just a stupid logical typo that was causing a bunch of filres with human-readable metadata to parse as not having any at all. I have fixed this issue so these files will show up with metadata again, and it will render correctly
-* any image imported after june 2nd (v674) will get a 'has human-readable metadata?' rescan
-* I have hidden the 'progression/progressive' keys from human-readable metadata presentation; we scan this elsewhere and show it as 'progressive? yes/no' on the same panel. I think I'd like to do the same for some other stuff like the 'jfif' and 'dpi' gubbins you often see
-
-### modern animations and ffmpeg
-
-* tl;dr: fixed some video parsing bugs with the new ffmpeg 8.x.x. avifs and heifs with num_frames=1 should be fixed, you do not have to do anything
-* many users, including all windows built users, have been on ffmpeg 8.x.x for a while now, and my video metadata parser recently broke for the animated 'sequence' variants of AVIF, HEIC, and HEIF. these files were being parsed with a num_frames of 1 and rendering as just a still image or throwing an error depending on the renderer
-* hydrus now recognises when any video file has multiple tracks, and if one track seems to be just a still image file, it selects the true animation stream for fps calculations and so on
-* also, the native renderer will now recognise this situation; if there seems to be no second frame during a render run, it will inspect the file closer to see if there is a different video track to select
-* also, I updated the deprecated `vsync` ffmpeg call to be `fps_mode`. this was another source of errors for various native rendering with modern ffmpeg
-* also updatedk the old `-s` to a combined `-vf` line with optional crop
-* also updated the overcomplicated `-f image2pipe` to `-f rawvideo`. works the same, but it is semantically better and may fix some frame timings
-* also updated the core metadata parse routine to no longer render the first second of the vid at small scale since this is an old hack that burns CPU but isn't used for anything any more and crops resolution parsing to 120 height for certain formats in ffmpeg 8.x.x (old mpegs at least, by my test)
-* all animated AVIF, HEIF, and HEIC files are scheduled for a metadata reparse (issue #2041, #1891)
-
-### new thumbgrid drawing tech
-
-* I found some time to work on the new thumbgrid test. it is better integrated and I fixed some bugs, but there's still some stuff not working so I'll hold off on the wider test
-* so, just as a record, I did--
-   - fixing up some type hints
-   - misc refactoring
-   - undoing thumbnail movable/selectable flags to stop some inherent Qt behaviour stepping in on mouse events (this fixes ctrl+click selection, which was being pseudo-randomly undone I think in the QGraphicsScene event handling)
-   - thumbs now have their own selection bool
-   - moving click-event/selection responsibility to the GraphicsView since thumbs don't do anything but call the parent atm anyway
-   - fixed thumb resolution stuff for non-resolution-having media when cache entry is invalidated
-   - made thumbnail 'media' (and the new 'is_selected') bools public
-   - tiny bit of thumb gen optimisation
