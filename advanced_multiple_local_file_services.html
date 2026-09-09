@@ -3171,7 +3171,7 @@
 <p>The problem is aggravated the larger your client grows. When you are trying to sift the 500 art reference images out 850,000 random internet files from the last ten years, it can be difficult getting good tag counts or just generally browsing around without stumbling across other content. This particularly matters when you are typing in search tags, since the tag you want, 'anatomy drawing guide', is going to come with thousands of others, starting 'a...', 'an...', and 'ana...' as you type. If someone is looking over your shoulder as you load up the images, you want to preserve your privacy.</p>
 <p>Wouldn't it be nice if you could break your collection into separate areas?</p>
 <h2 id="file_domains">multiple file domains<a class="headerlink" href="#file_domains" title="Permanent link">&para;</a></h2>
-<p><em>tl;dr: you can have more than one 'my files', add them in 'manage services'.</em></p>
+<p><em>tl;dr: you can have more than one 'my files', add them in <code>services-&gt;edit</code>.</em></p>
 <p><img alt="" src="images/mlfs_simple_file_domain_selector.png" /></p>
 <p>A <em>file domain</em> (or <em>file service</em>) in the hydrus context, is, very simply, a list of files. There is a bit of extra metadata like the time each file was imported to the domain, and a ton of behind the scenes calculation to accelerate searching and aggregate autocomplete tag counts and so on, but overall, when you search in 'my files', you are telling the client "find all the files <em>in this list</em> that have tag x, y, z on any tag domain". If you switch to searching 'trash', you are then searching that list of trashed files.</p>
 <p>A search page's <em>tag domain</em> is similar. Normally, you will be set to 'all known tags', which is basically the union of all your tag services, but if you need to, you can search just 'my tags' or 'PTR', which will make your search "find all the files in <em>my files</em> that have tag x, y, z on <em>my tags</em>". You are setting up an intersection of a file and a tag domain.</p>
@@ -3179,7 +3179,7 @@
 <p>Changing the tag domain to 'PTR' or 'all known tags' would make for a different blue circle with a different intersection of search results ('PTR' probably has a lot more 'pretty dress', although maybe not for your files, and 'all known tags', being the union of all the blue circles, will make the same or larger intersection).</p>
 <p>This idea of dynamically intersecting domains is very important to hydrus. Each service stands on its own, and the 'my tags' domain is not linked to 'my files'. It does not care where its tagged files are. When you delete a file, no tags are changed. But when you delete a file, the 'file domain' circle will shrink, and that may change the search results in the intersection.</p>
 <p>With <em>multiple local file domains</em>, you can create new file lists beyond 'my files', letting you make different red circles. You can move and copy files between your local file domains to make new sub-collections and search them separately for a very effective filter.</p>
-<p>You can add and remove them under <em>services-&gt;manage services</em>:</p>
+<p>You can add and remove them under <code>services-&gt;edit</code>:</p>
 <p><img alt="" src="images/mlfs_manage_services.png" /></p>
 <h2 id="sfw">what does this actually mean?<a class="headerlink" href="#sfw" title="Permanent link">&para;</a></h2>
 <p>I think the best simple idea for most regular users is to try a sfw/nsfw split. Make a new 'sfw' local file domain and start adding some images to it. You might eventualy plan to send all your sfw images there, or just your 'IRL' stuff like family photos, but it will be a separate area for whitelisted safe content you are definitely happy for others to glance at.</p>
@@ -3265,7 +3265,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 26, 2025 21:51:35 UTC">November 26, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 6, 2026 21:15:27 UTC">September 6, 2026</span>
   </span>
 
     

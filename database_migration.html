@@ -3342,12 +3342,12 @@
 <p class="admonition-title">Danger</p>
 <p><strong>As always, I recommend creating a backup before you try any of this, just in case it goes wrong.</strong></p>
 </div>
-<p>If you would like to move your files and thumbnails to new locations, hit <em>database-&gt;move media files</em>, giving you this dialog:</p>
+<p>If you would like to move your files and thumbnails to new locations, hit <code>database-&gt;locations</code>, giving you this dialog:</p>
 <p><img alt="" src="images/db_migration.png" /></p>
 <p>The buttons let you add more locations and remove old ones. The operations on this dialog are simple and atomic--at no point is your db ever invalid.</p>
 <p><strong>Beneath db?</strong> means that the path is beneath the main db dir and so is stored internally as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).</p>
 <p><strong>Weight</strong> means the relative amount of media you would like to store in that location. It only matters if you are spreading your files across multiple locations. If location A has a weight of 1 and B has a weight of 2, A will get approximately one third of your files and B will get approximately two thirds.</p>
-<p><strong>Max Size</strong> means the max total size of files the client will want to store in that location. Again, it only matters if you are spreading your files across multiple locations, but it is a simple way to ensure you don't go over a particular smaller hard drive's size. One location must always be limitless. This is not precise, so give it some padding. When one location is maxed out, the remaining locations will distribute the remainder of the files according to their respective weights. <em>For the meantime, this will not update by itself. If you import many files, the location may go over its limit and you will have to revisit 'move media files' to rebalance your files again. Bear with me--I will fix this soon with the background migrate.</em> </p>
+<p><strong>Max Size</strong> means the max total size of files the client will want to store in that location. Again, it only matters if you are spreading your files across multiple locations, but it is a simple way to ensure you don't go over a particular smaller hard drive's size. One location must always be limitless. This is not precise, so give it some padding. When one location is maxed out, the remaining locations will distribute the remainder of the files according to their respective weights. <em>For the meantime, this will not update by itself. If you import many files, the location may go over its limit and you will have to revisit <code>database-&gt;locations</code> to rebalance your files again. Bear with me--I will fix this soon with the background migrate.</em> </p>
 <p>Let's set up an example move:</p>
 <p><img alt="" src="images/db_migration_move_pending.png" /></p>
 <p>I made several changes:</p>
@@ -3369,7 +3369,7 @@
 <h2 id="granularity">granularity<a class="headerlink" href="#granularity" title="Permanent link">&para;</a></h2>
 <p><span class="hydrus-warning">ADVANCED</span></p>
 <p>When you first start, the hydrus database stores its files in a two-hex 'granularity'. This means that your files or thumbnails are split into two sets of 256 folders called 'fxx' or 'txx', where 'xx' is 00-ff in hexadecimal and corresponding to the prefix hex of a particular file hash. As the largest clients ran into the millions of files, each subfolder was getting pretty large, slowing access latency in certain cases (e.g. "open externally" causing an external video player to scan the origin folder to search for subtitle files). We realised we needed a finer granularity of storage.</p>
-<p>As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx', for two sets of 4096 partitions. You can see your current granularity on the <code>database-&gt;move media files</code> dialog and open up a sub-panel just to handle this variable:</p>
+<p>As of v660, we are experimenting with three-hex storage, which means that each 'fxx' or 'txx' folder now has 16 subfolders, 0-f, and thus each internal prefix would be 'fxxx' and 'txxx', for two sets of 4096 partitions. You can see your current granularity on the <code>database-&gt;locations</code> dialog and open up a sub-panel just to handle this variable:</p>
 <p><img alt="" src="images/db_migration_granularity_panel.png" /></p>
 <p>Changing your granularity means moving every single file and thumbnail in your collection. There are two issues with this:</p>
 <h3 id="it_can_take_a_while">it can take a while<a class="headerlink" href="#it_can_take_a_while" title="Permanent link">&para;</a></h3>
@@ -3464,7 +3464,7 @@
 <li>check <code>options-&gt;open externally</code> and update anything as needed</li>
 <li>check <code>options-&gt;exporting</code> and update the default export directory</li>
 <li>check a file's <code>right-click-&gt;share-&gt;export files</code> window to see what the default export path there is</li>
-<li>check <code>database-&gt;move media files</code> and remove any empty stubs from the old system</li>
+<li>check <code>database-&gt;locations</code> and remove any empty stubs from the old system</li>
 <li>edit your import folders to point at the correct locations</li>
 <li>edit your export folders to point at the correct locations</li>
 <li>unpause import/export folders</li>
@@ -3492,7 +3492,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 10, 2026 17:03:54 UTC">August 10, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 6, 2026 22:05:50 UTC">September 6, 2026</span>
   </span>
 
     

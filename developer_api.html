@@ -5831,9 +5831,9 @@ Accept: application/json
 </ul>
 <p>But I strongly encourage you to move away from them as soon as reasonably possible. Look up the service keys you need with <a href="#get_service">/get_service</a> or <a href="#get_services">/get_services</a>.</p>
 <p>If you have a clever script/program that does many things, then hit up <a href="#get_services">/get_services</a> on session initialisation and cache an internal map of key_to_name for the labels to use when you present services to the user.</p>
-<p>Also, note that all users can now copy their service keys from <em>review services</em>.</p>
+<p>Also, note that all users can now copy their service keys from <em>services-&gt;review</em>.</p>
 <h2 id="services_object">The Services Object<a class="headerlink" href="#services_object" title="Permanent link">&para;</a></h2>
-<p>Hydrus manages its different available domains and actions with what it calls <em>services</em>. If you are a regular user of the program, you will know about <em>review services</em> and <em>manage services</em>. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.</p>
+<p>Hydrus manages its different available domains and actions with what it calls <em>services</em>. If you are a regular user of the program, you will know about <em>services-&gt;review</em> and <em>services-&gt;edit</em>. The Client API needs to refer to services, either to accept commands from you or to tell you what metadata files have and where.</p>
 <p>When the client tells you about the available services, it gives you the following structure, typically under a <code>services_v2</code> key right off the root node.</p>
 <div class="highlight"><span class="filename">Services Object (actually a List)</span><pre><span></span><code><span class="p">[</span>
 <span class="w">  </span><span class="p">{</span>
@@ -6004,17 +6004,17 @@ Accept: application/json
 <li>22 - a 'inc/dec' rating service with positive integer rating</li>
 <li>99 - server administration</li>
 </ul>
-<p><code>type_pretty</code> is something you can show users. Hydrus uses the same labels in <em>manage services</em> and so on.</p>
+<p><code>type_pretty</code> is something you can show users. Hydrus uses the same labels in <code>services-&gt;edit</code> and so on.</p>
 <p>Rating services have some extra data:</p>
 <ul>
-<li>They all have some <code>colours</code> for differing rating states, the same as you'd see in <code>manage services</code>. Pen and brush are the line and the fill of the rating star shape, respectively. <code>like</code> generally means set/left-click, <code>dislike</code> means off/right-click, <code>null</code> means not set, and <code>mixed</code> is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.</li>
+<li>They all have some <code>colours</code> for differing rating states, the same as you'd see in <code>services-&gt;edit</code>. Pen and brush are the line and the fill of the rating star shape, respectively. <code>like</code> generally means set/left-click, <code>dislike</code> means off/right-click, <code>null</code> means not set, and <code>mixed</code> is what I show in the edit rating dialog for multiple files when the files have differing values. Feel free to use them however you like.</li>
 <li>They all have <code>show_in_thumbnail</code> and <code>show_in_thumbnail_even_when_null</code>, which you can obey in your display context if convenient.</li>
 <li>Like/dislike and numerical services have <code>star_shape</code>, which is one of <code>circle | square | fat star | pentagram star | six point star | eight point star | x shape | square cross | triangle up | triangle down | triangle right | triangle left | diamond | rhombus right | rhombus left | hourglass | pentagon | hexagon | small hexagon | heart | teardrop | crescent moon</code> -or- <code>svg</code>, which means a custom user svg that can be fetched with <a href="#get_service_rating_svg">/get_service_rating_svg</a>.</li>
 <li>Numerical services have <code>min_stars</code> (0 or 1) and <code>max_stars</code> (1 to 20). <code>allows_zero</code> lines up with <code>min_stars</code> and is for your convenience.</li>
 </ul>
 <p>If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a &#8536;, select from a dropdown list, do whatever you like!</p>
 <p>If you want to know the services in a client, hit up <a href="#get_services">/get_services</a>, which simply gives the above. The same structure appears in a few other calls for convenience, like <a href="#get_files_file_metadata">/get_files/file_metadata</a>, since that refers to many different services when it is talking about file locations and ratings and so on.</p>
-<p>Note: If you need to do some quick testing, you should be able to copy the <code>service_key</code> of any service by hitting the 'copy service key' button in <em>review services</em>.</p>
+<p>Note: If you need to do some quick testing, you should be able to copy the <code>service_key</code> of any service by hitting the 'copy service key' button in <em>services-&gt;review</em>.</p>
 <h2 id="CDPP">Current Deleted Pending Petitioned<a class="headerlink" href="#CDPP" title="Permanent link">&para;</a></h2>
 <p>The content storage and update pipeline systems in hydrus consider content (e.g. 'on file service x, file y exists', 'on tag service x, file y has tag z', or 'on rating service x, file y has rating z') as existing within a blend of four states:</p>
 <ul>
@@ -6158,7 +6158,7 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div>
 <h3 id="request_new_permissions"><strong>GET <code>/request_new_permissions</code></strong><a class="headerlink" href="#request_new_permissions" title="Permanent link">&para;</a></h3>
-<p><em>Register a new external program with the client. This requires the 'add from api request' mini-dialog under</em> services-&gt;review services <em>to be open, otherwise it will 403.</em></p>
+<p><em>Register a new external program with the client. This requires the 'add from api request' mini-dialog under</em> services-&gt;review <em>to be open, otherwise it will 403.</em></p>
 <dl>
 <dt>Restricted access:</dt>
 <dd>NO.</dd>
@@ -6958,8 +6958,8 @@ Accept: application/json
 <p class="admonition-title">Tag Relationships Apply In A Complicated Way</p>
 <p>There are two caveats to this data:  </p>
 <ol>
-<li>The siblings and parents here are not just what is in <em>tags-&gt;manage tag siblings/parents</em>, they are the final computed combination of rules as set in <em>tags-&gt;manage where tag siblings and parents apply</em>. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.</li>
-<li>This is what is <em>actually processed, right now,</em> for those user preferences, as per <em>tags-&gt;sibling/parent sync-&gt;review current sync</em>. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.</li>
+<li>The siblings and parents here are not just what is in <code>tags-&gt;siblings/parents</code>, they are the final computed combination of rules as set in <code>tags-&gt;advanced-&gt;manage where tag siblings and parents apply</code>. The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.</li>
+<li>This is what is <em>actually processed, right now,</em> for those user preferences, as per <code>tags-&gt;sync-&gt;review current sibling/parent sync</code>. It reflects what they currently see in the UI. If the user still has pending sync work, this computation will change in future, perhaps radically (e.g. if they just removed the whole PTR ruleset two minutes ago), as will the rest of the "display" domain. The results may be funky while a user is in the midst of syncing, but these values are fine for most purposes. In the short term, you can broadly assume that the rules here very closely align with what you see in a recent file metadata call that pulls storage vs display mappings. If you want to decorate an autocomplete results call with sibling or parent data, this data is good for that.</li>
 </ol>
 </div>
 <ul>
@@ -7022,7 +7022,7 @@ Accept: application/json
 <span class="p">}</span>
 </code></pre></div></dd>
 </dl>
-<p>The <code>tags</code> list will be sorted by descending count. The various rules in <em>tags-&gt;manage tag display and search</em> (e.g. no pure <code>*</code> searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.</p>
+<p>The <code>tags</code> list will be sorted by descending count. The various rules in <code>tags-&gt;display/search</code> (e.g. no pure <code>*</code> searches on certain services) will also be checked--and if violated, you will get 200 OK but an empty result.</p>
 <p>The <code>autocomplete_text</code> structure lets you know how hydrus sees the search. <code>search_text</code> is a basic cleaned-up version of what text the user entered, and <code>inclusive</code> is whether they prepended their search text with a hyphen '-' character. If the user has entered an exclusive search, you may with to prepend all the results' display, similarly, with a hypen.</p>
 <p>Note that if your client api access is only allowed to search certain tags, the results will be similarly filtered.</p>
 <h3 id="add_tags_add_tags"><strong>POST <code>/add_tags/add_tags</code></strong><a class="headerlink" href="#add_tags_add_tags" title="Permanent link">&para;</a></h3>
@@ -7985,7 +7985,7 @@ Accept: application/json
 <p><code>is_trashed</code> means if the file is currently in the trash but available on the hard disk. <code>is_deleted</code> means currently either in the trash or completely deleted from disk.</p>
 <p><code>file_services</code> stores which file services the file is <i>current</i>ly in and <em>deleted</em> from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be <code>null</code>, if they are unknown (e.g. a <code>time_deleted</code> for the file deleted before this information was tracked). The <code>time_modified</code> can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.</p>
 <p><code>ipfs_multihashes</code> stores the ipfs service key to any known multihash for the file. </p>
-<p>The <code>thumbnail_width</code> and <code>thumbnail_height</code> are a generally reliable prediction but aren't a promise. The actual thumbnail you get from <a href="#get_files_thumbnail">/get_files/thumbnail</a> will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.</p>
+<p>The <code>thumbnail_width</code> and <code>thumbnail_height</code> are a generally reliable prediction but aren't a promise. The actual thumbnail you get from <a href="#get_files_thumbnail">/get_files/thumbnail</a> will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can serve your own generic filetype thumbnail, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.</p>
 <p><code>include_notes</code> will decide whether to show a file's notes, in a simple names-&gt;texts Object.</p>
 <p><code>include_milliseconds</code> will determine if timestamps are integers (<code>1641044491</code>), which is the default, or floats with three significant figures (<code>1641044491.485</code>). As of v559, all file timestamps across the program are internally tracked with milliseconds.</p>
 <p>If the file has a thumbnail, <code>blurhash</code> gives a base 83 encoded string of its <a href="https://blurha.sh/">blurhash</a>. <code>pixel_hash</code> is an SHA256 of the image's pixel data and should exactly match for pixel-identical files (it is used in the duplicate system for 'must be pixel duplicates').</p>
@@ -8259,7 +8259,7 @@ Accept: application/json
 <span class="w">    </span><span class="p">]</span>
 <span class="p">}</span>
 </code></pre></div>
-<p>Note that <code>ideal_weight</code> and <code>max_num_bytes</code> are provided for courtesy and mean nothing fixed. Each storage location might store anything, thumbnails or files or nothing, regardless of the ideal situation. Whenever a folder is non-ideal, the 'move media files' dialog shows "files need to be moved now", but it will still keep doing its thing.</p>
+<p>Note that <code>ideal_weight</code> and <code>max_num_bytes</code> are provided for courtesy and mean nothing fixed. Each storage location might store anything, thumbnails or files or nothing, regardless of the ideal situation. Whenever a folder is non-ideal, the <code>database-&gt;locations</code> dialog shows "files need to be moved now", but it will still keep doing its thing.</p>
 <p>For now, a prefix only occurs in one location, so there will always be 512 total prefixes in this response, all unique. <strong>However, please note that this will not always be true!</strong> In a future expansion, the client will be, on user command, slowly migrating files from one place to another in the background, and during that time there will be multiple valid locations for a file to actually be. When this happens, you will have to hit all the possible locations and test.</p>
 <p>Also, it won't be long before the client supports moving to <em>some</em> form of three- and four-character prefix. I am still thinking how this will happen other than it will be an atomic change--no slow migration where we try to support both at once--but it will certainly complicate something in here (e.g. while the prefix may be 'f012', maybe the subfolder will be '\f01\2'), so we'll see.</p>
 <h3 id="get_files_render"><strong>GET <code>/get_files/render</code></strong><a class="headerlink" href="#get_files_render" title="Permanent link">&para;</a></h3>
@@ -10048,7 +10048,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 3, 2026 22:52:04 UTC">August 3, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 6, 2026 22:05:50 UTC">September 6, 2026</span>
   </span>
 
     

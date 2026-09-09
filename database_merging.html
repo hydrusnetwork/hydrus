@@ -3165,14 +3165,14 @@
 <p>If you want to preserve inbox/archive status, a good solution here is just to do this whole migration in two jobs--once for <code>system:inbox</code>, then for <code>system:archive</code>. For the archive job, set up the 'file import options' to archive everything on import, or just <code>ctrl+a-&gt;F7</code>.</p>
 <p>Like with the export, if you have a simple job, run it through the manual import process, but if you have a complicated or large job, look into an temporary import folder. Generally speaking, very large jobs run faster without having to do UI stuff like thumbnail drawing and updating, so an import folder or export folder is always going to handle bigger things better.</p>
 <h2 id="migrating_many_tags">migrating many tags<a class="headerlink" href="#migrating_many_tags" title="Permanent link">&para;</a></h2>
-<p>If you only want to migrate tags, or you have millions of tags and would rather something faster or more powerful than sidecars, look at <code>tags-&gt;migrate tags</code>. You can choose to export your tags from the source to a Hydrus Tag Archive (HTA), which is an external file that holds all the info hydrus needs to apply a tag to a file, and then on the destination, the same dialog allows you to pull tags from an HTA.</p>
+<p>If you only want to migrate tags, or you have millions of tags and would rather something faster or more powerful than sidecars, look at <code>tags-&gt;migrate</code>. You can choose to export your tags from the source to a Hydrus Tag Archive (HTA), which is an external file that holds all the info hydrus needs to apply a tag to a file, and then on the destination, the same dialog allows you to pull tags from an HTA.</p>
 <p>The source will look something like this:</p>
 <p><a href="images/database_merging_hta_source.png"><img alt="" src="images/database_merging_hta_source.png" /></a></p>
 <p>And the destination like this:</p>
 <p><a href="images/database_merging_hta_dest.png"><img alt="" src="images/database_merging_hta_dest.png" /></a></p>
 <p>Note that I have set 'all known files with tags' as the domain in both source and destination. It isn't super important, but setting that rather than 'my files' means you don't have to worry about which order you do the file/tag import to the destination, and it covers a bit more data from the source for deleted files and stuff.</p>
 <h2 id="perfect_preservation">perfect preservation<a class="headerlink" href="#perfect_preservation" title="Permanent link">&para;</a></h2>
-<p>I would like to add a 'eat this client' wizard to the program one day that will have sophisticated service interrogation and UI for defining content sources and destinations. Something like 'migrate tags' but for all content types. I'd also like 'universal' sidecar templates that you can setup with one click. Unfortunately we aren't there yet.</p>
+<p>I would like to add a 'eat this client' wizard to the program one day that will have sophisticated service interrogation and UI for defining content sources and destinations. Something like <code>tags-&gt;migrate</code> but for all content types. I'd also like 'universal' sidecar templates that you can setup with one click. Unfortunately we aren't there yet.</p>
 <p>If you want to preserve as much as possible in a clever way, or just something that isn't covered by sidecars, like duplicate file relations, your best bet is writing your own script that uses the <a href="client_api.html">Client API</a>.</p>
 
 
@@ -3194,7 +3194,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="October 1, 2025 21:05:10 UTC">October 1, 2025</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 6, 2026 21:35:16 UTC">September 6, 2026</span>
   </span>
 
     
