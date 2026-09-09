@@ -608,7 +608,7 @@ class EditProcessCallPanel( QW.QWidget ):
         env = os.environ.copy()
         
         PATH = env[ 'PATH' ]
-        print( PATH )
+        
         path_components = PATH.split( os.pathsep )
         
         message = 'As hydrus sees it, your PATH is as follows. Any executable you specify with just a name, rather than a full path, needs to exist in one of these locations. You should be very very careful in ever editing your PATH. Ask a chatbot if you need to learn more. Recall that if you ever do change it, you need to restart hydrus (in a new terminal if needed) to see the changes here.'

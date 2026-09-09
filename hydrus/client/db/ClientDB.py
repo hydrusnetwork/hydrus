@@ -8512,11 +8512,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 executable_manager.SetClean()
                 
-                del new_options_dict[ 'web_browser_launch_paths' ]
-                del new_options_dict[ 'open_externally_launch_paths' ]
+                if 'web_browser_launch_paths' in new_options_dict:
+                    
+                    del new_options_dict[ 'web_browser_launch_paths' ]
+                    
+                
+                if 'open_externally_launch_paths' in new_options_dict:
+                    
+                    del new_options_dict[ 'open_externally_launch_paths' ]
+                    
                 
                 self.modules_serialisable.SetJSONDump( new_options )
-                
                 self.modules_serialisable.SetJSONDump( executable_manager )
                 
             except Exception as e:
