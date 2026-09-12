@@ -760,8 +760,6 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall )
         
-        self._edit_actual_call_window = QW.QWidget( self )
-        
         self._call_types_to_windows = {
             ClientExecutableActualCall.ExecutableLocalProcessCall : EditProcessCallPanel( self ),
             ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile : DefaultLaunchFileWidget( self ),
