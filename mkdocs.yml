@@ -27,6 +27,7 @@ nav:
       - adding_new_downloaders.md
       - getting_started_subscriptions.md
       - duplicates.md
+      - external_programs.md
   - Advanced:
     - advanced_siblings.md
     - advanced_parents.md

@@ -76,9 +76,9 @@ executable_pipeline_types_to_output_params = {
 }
 
 executable_pipeline_types_to_strs = {
-    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE : 'open externally (single file)',
-    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_MUPLITPLE_FILES : 'open externally (multiple files)',
-    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL : 'open URL (single URL)',
+    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE : 'send single file',
+    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_MUPLITPLE_FILES : 'send multiple files',
+    EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL : 'send single URL',
 }
 
 executable_pipeline_types_to_desc_strs = {

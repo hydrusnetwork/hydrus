@@ -33,6 +33,7 @@ plugins:
         'help/downloader_sharing.md': 'downloader_sharing.md'
         'help/downloader_url_classes.md': 'downloader_url_classes.md'
         'help/duplicates.md': 'duplicates.md'
+        'help/external_programs.md': 'external_programs.md'
         'help/faq.md': 'faq.md'
         'help/getting_started_downloading.md': 'getting_started_downloading.md'
         'help/getting_started_files.md': 'getting_started_files.md'

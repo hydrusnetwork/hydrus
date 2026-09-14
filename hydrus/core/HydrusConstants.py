@@ -1578,6 +1578,7 @@ DOCUMENTATION_RATINGS = 'getting_started_ratings.html'
 DOCUMENTATION_SIDECARS = 'advanced_sidecars.html'
 DOCUMENTATION_ABOUT_DOCS = "about_docs.html"
 DOCUMENTATION_IMPORT_OPTIONS = 'getting_started_import_options.html'
+DOCUMENTATION_EXTERNAL_PROGRAMS = 'external_programs.html'
 
 # default options
 

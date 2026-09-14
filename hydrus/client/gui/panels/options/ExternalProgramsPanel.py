@@ -20,6 +20,7 @@ from hydrus.client.executables import ClientExecutableDefaults
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -33,6 +34,7 @@ from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.parsing import ClientParsing
 
 class DefaultLaunchFileWidget( QW.QWidget ):
@@ -1348,6 +1350,16 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options = new_options
         
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_EXTERNAL_PROGRAMS )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the external programs help', 'Open the HTML help that talks about this whole system.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
         message = 'This system is under active development.'
         message += '\n\n'
         message += 'Here we can teach your client about other programs it can call to complete jobs. You set them up here, and they will appear as options in appropriate places around the client. Each job has a certain type, starting with simple things like "open file in external program", and, as I write the pipelines for them, we will eventually get tasks like "download URL" and "suggest tags". Depending on the job type, it will have certain call parameters (e.g. a local media file path) that hydrus can pass on to the external program (e.g. an AI model for tagging). In future, there will also be response parameters (e.g. a list of tags) that hydrus will then ingest.'
@@ -1412,6 +1424,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, external_calls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
