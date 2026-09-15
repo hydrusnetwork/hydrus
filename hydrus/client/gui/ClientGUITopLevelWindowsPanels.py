@@ -5,6 +5,7 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
@@ -195,6 +196,10 @@ class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
     def __init__( self, parent, title, frame_key = 'quick_yesno_dialog' ):
         
         super().__init__( parent, title, frame_key = frame_key )
+        
+        max_height = ClientGUIFunctions.ConvertTextToPixelHeight( self, 48 )
+        
+        self.setMaximumHeight( max_height )
         
     
     def _GetButtonBox( self ):
