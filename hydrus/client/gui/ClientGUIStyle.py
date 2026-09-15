@@ -10,6 +10,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 
+from hydrus.client import ClientGlobals as CG
+
 DEFAULT_HYDRUS_STYLESHEET = ''
 ORIGINAL_STYLE_NAME = None
 CURRENT_STYLE_NAME = None
@@ -204,6 +206,8 @@ def SetStyleSheet( stylesheet, name, prepend_hydrus = True ):
         app_instance.setStyleSheet( stylesheet_to_use )
         
         CURRENT_STYLESHEET = stylesheet_to_use
+        
+        CG.client_controller.pub( 'notify_new_stylesheet' )
         
     
 

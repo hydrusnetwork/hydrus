@@ -442,6 +442,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
         CG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'update', 'notify_new_stylesheet' )
         CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
         CG.client_controller.sub( self, '_MaintainNeighbourPrefetch', 'notify_image_finished_rendering' )
         

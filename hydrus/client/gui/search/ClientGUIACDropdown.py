@@ -965,6 +965,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_stylesheet' )
         CG.client_controller.sub( self, 'DoDropdownHideShow', 'notify_page_change' )
         
         self._refresh_results_updater.Update()

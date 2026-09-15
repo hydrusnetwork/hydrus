@@ -3289,6 +3289,7 @@ class EmbedButton( QW.QWidget ):
         self.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'update', 'notify_new_stylesheet' )
         
     
     def _Redraw( self, painter ):

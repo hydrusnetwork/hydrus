@@ -130,6 +130,7 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
         
         CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_stylesheet' )
         CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         
         self._had_changes_to_tag_presentation_while_hidden = False
@@ -2923,7 +2924,8 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
         self._empty_page_status_override = None
         
         CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'NotifyNewStyleOrColourset', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'NotifyNewStyleOrColourset', 'notify_new_stylesheet' )
         CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
         
         self._had_changes_to_tag_presentation_while_hidden = False
@@ -4912,6 +4914,11 @@ class MediaResultsPanelGraphicsViewTest( CAC.ApplicationCommandProcessorMixin, C
             
             self.activateWindow()
             
+        
+    
+    def NotifyNewStyleOrColourset( self ):
+        
+        self._UpdateBackgroundColour()
         
     
     def PageHidden( self ):

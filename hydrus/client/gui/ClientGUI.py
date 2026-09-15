@@ -4570,6 +4570,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _ManageOptions( self ):
         
+        original_new_options = self._new_options.Duplicate()
+        
         title = 'manage options'
         frame_key = 'manage_options_dialog'
         
@@ -4630,7 +4632,12 @@ ATTACH "client.mappings.db" as external_mappings;'''
         self._controller.pub( 'wake_daemons' )
         self.SetStatusBarDirty()
         self._controller.pub( 'refresh_page_name' )
-        self._controller.pub( 'notify_new_colourset' )
+        
+        if original_new_options.GetString( 'current_colourset' ) != CG.client_controller.new_options.GetString( 'current_colourset' ):
+            
+            self._controller.pub( 'notify_new_colourset' )
+            
+        
         self._controller.pub( 'notify_new_favourite_tags' )
         
         CG.client_controller.ReinitGlobalSettings()

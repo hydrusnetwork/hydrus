@@ -4178,6 +4178,13 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         self._RedrawMedia( affected_media )
         
     
+    def NotifyNewStyleOrColourset( self ):
+        
+        self.ThumbnailsReset()
+        
+        super().NotifyNewStyleOrColourset()
+        
+    
     def PageShown( self ):
         
         super().PageShown()

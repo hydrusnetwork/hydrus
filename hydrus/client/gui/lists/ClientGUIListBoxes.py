@@ -3213,6 +3213,7 @@ class ListBoxTags( ListBox ):
         
         CG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_stylesheet' )
         CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
         self.setContextMenuPolicy( QC.Qt.ContextMenuPolicy.CustomContextMenu )
