@@ -59,6 +59,11 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
+    def CheckLooksOkForImport( self ):
+        
+        raise NotImplementedError()
+        
+    
     def GetCommandDescription( self ) -> str:
         
         raise NotImplementedError()
@@ -366,6 +371,31 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return True
         
     
+    def CheckLooksOkForImport( self ):
+        
+        issues = []
+        
+        if len( self._executable_path ) > 256:
+            
+            issues.append( f'The executable path is over 256 characters: {self._executable_path}' )
+            
+        
+        if len( self._executable_parameter_templates ) > 16:
+            
+            issues.append( f'There are more than 16 parameters: {self._executable_parameter_templates}' )
+            
+        
+        if len( ' '.join( self._executable_parameter_templates ) ) > 1024:
+            
+            issues.append( f'The parameters\' total length is over 1024 characters: {self._executable_parameter_templates}' )
+            
+        
+        if len( issues ) > 0:
+            
+            raise HydrusExceptions.ExecutableException( '\n\n'.join( issues ) )
+            
+        
+    
     def GetCommandDescription( self ) -> str:
         
         if self._executable_path == '':
@@ -526,6 +556,11 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return False
         
     
+    def CheckLooksOkForImport( self ):
+        
+        pass
+        
+    
     def GetCommandDescription( self ) -> str:
         
         return '-hardcoded- Call OS default file launcher'
@@ -596,6 +631,11 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
     def CanTestAvailability( self ):
         
         return False
+        
+    
+    def CheckLooksOkForImport( self ):
+        
+        pass
         
     
     def GetCommandDescription( self ) -> str:

@@ -1400,7 +1400,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         external_calls_list_panel.AddButton( 'edit', self._EditCallable, enabled_only_on_single_selection = True )
         external_calls_list_panel.AddDeleteButton()
         external_calls_list_panel.AddSeparator()
-        external_calls_list_panel.AddImportExportButtons( ( ClientExecutableCallables.ClientExecutableCallable, ), self._AddCallableFullyFormed )
+        external_calls_list_panel.AddImportExportButtons( ( ClientExecutableCallables.ClientExecutableCallable, ), self._AddCallableViaImport )
         external_calls_list_panel.AddDefaultsButton( self._GetDefaultCallables, self._AddCallableFullyFormed )
         
         #
@@ -1459,6 +1459,27 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         call.GenerateNewCallableKey()
         
         self._external_calls.AddData( call )
+        
+    
+    def _AddCallableViaImport( self, call: ClientExecutableCallables.ClientExecutableCallable ):
+        
+        try:
+            
+            call.CheckLooksOkForImport()
+            
+        except Exception as e:
+            
+            message = f'Hey, a call you are trying to import, "{call.GetName()}", seems to be a bit weird. Are you sure you want to import it? The problem is:\n\n{e}'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.DialogCode.Accepted:
+                
+                raise HydrusExceptions.CancelledException( 'User declined to add--the import looked weird.' )
+                
+            
+        
+        self._AddCallableFullyFormed( call )
         
     
     def _ConvertCallableToDisplayTuple( self, call: ClientExecutableCallables.ClientExecutableCallable ):
