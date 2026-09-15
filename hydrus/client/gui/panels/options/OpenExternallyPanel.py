@@ -67,7 +67,7 @@ class EditOpenFileIdsAndNamesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            message = 'You have added all the "open single file" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             raise HydrusExceptions.CancelledException( message )
@@ -197,7 +197,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if len( choice_tuples ) == 0:
             
-            message = 'You have added all the "open single file" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             raise HydrusExceptions.CancelledException( message )
