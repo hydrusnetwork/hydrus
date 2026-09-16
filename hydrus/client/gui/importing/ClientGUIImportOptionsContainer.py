@@ -804,7 +804,7 @@ class ImportOptionsContainerFavouritesButton( ClientGUICommon.IconButton ):
         
         super().__init__( parent, CC.global_icons().star, self._ShowMenu )
         
-        self.setToolTip( ClientGUIFunctions.WrapToolTip( 'favourites' ) )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( 'favourites/profiles' ) )
         
         self._import_options_container_manager = import_options_container_manager
         self._edit_allowed = edit_allowed
@@ -938,7 +938,7 @@ class ImportOptionsContainerFavouritesButton( ClientGUICommon.IconButton ):
         
         import_options_caller_type_for_summaries = IOC.IMPORT_OPTIONS_CALLER_TYPE_POST_URLS
         
-        ClientGUIMenus.AppendMenuLabel( menu, 'favourites', make_it_bold = True )
+        ClientGUIMenus.AppendMenuLabel( menu, 'favourites/profiles', make_it_bold = True )
         ClientGUIMenus.AppendSeparator( menu )
         
         if len( names_to_favourite_options_containers ) > 0:

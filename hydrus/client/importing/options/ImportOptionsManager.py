@@ -228,9 +228,11 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     
     def _AddFavourite( self, name: str, import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        name = HydrusData.GetNonDupeName( name, set( self._names_to_favourite_import_options_containers.keys() ) )
+        actual_name = HydrusData.GetNonDupeName( name, set( self._names_to_favourite_import_options_containers.keys() ) )
         
-        self._names_to_favourite_import_options_containers[ name ] = import_options_container
+        self._names_to_favourite_import_options_containers[ actual_name ] = import_options_container
+        
+        return actual_name
         
     
     def _DeleteFavourite( self, name: str ):
@@ -349,9 +351,11 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            self._AddFavourite( name, import_options_container )
+            actual_name = self._AddFavourite( name, import_options_container )
             
             self._SetDirty()
+            
+            return actual_name
             
         
     
@@ -384,9 +388,11 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             
             self._DeleteFavourite( original_name )
             
-            self._AddFavourite( name, import_options_container )
+            actual_name = self._AddFavourite( name, import_options_container )
             
             self._SetDirty()
+            
+            return actual_name
             
         
     

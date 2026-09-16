@@ -54,7 +54,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        default_import_options_panel = ClientGUICommon.StaticBox( self, 'default import options' )
+        default_import_options_panel = ClientGUICommon.StaticBox( self, 'default import options', can_expand = True, start_expanded = True )
         
         default_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( default_import_options_panel )
         
@@ -76,7 +76,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteDefaultMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteDefaultFillIn ) )
         
-        self._paste_default_button = default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        self._paste_default_button = default_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
         self._default_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_manager, edit_allowed = True )
         default_import_options_list_panel.AddWindow( self._default_favourites_button )
@@ -88,7 +88,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        url_class_import_options_panel = ClientGUICommon.StaticBox( self, 'url class import options' )
+        url_class_import_options_panel = ClientGUICommon.StaticBox( self, 'url class import options', can_expand = True, start_expanded = True, expanded_size_vertical_policy = QW.QSizePolicy.Policy.Expanding )
         
         url_class_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( url_class_import_options_panel )
         
@@ -110,13 +110,41 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteURLClassMerge ) )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteURLClassFillIn ) )
         
-        self._paste_url_class_button = url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste a new set of options from the clipboard', menu_template_items, enabled_only_on_selection = True )
+        self._paste_url_class_button = url_class_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste options from the clipboard', menu_template_items, enabled_only_on_selection = True )
         
         self._url_class_favourites_button = ClientGUIImportOptionsContainer.ImportOptionsContainerFavouritesButton( self, self._import_options_manager, edit_allowed = True )
         url_class_import_options_list_panel.AddWindow( self._url_class_favourites_button )
         
         url_class_import_options_list_panel.AddButton( 'edit', self._EditURLClass, enabled_only_on_single_selection = True )
         url_class_import_options_list_panel.AddButton( 'clear', self._ClearURLClass, enabled_only_on_selection = True )
+        
+        #
+        
+        favourite_import_options_panel = ClientGUICommon.StaticBox( self, 'favourites/profiles', can_expand = True, start_expanded = True, expanded_size_vertical_policy = QW.QSizePolicy.Policy.Expanding )
+        
+        favourite_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( favourite_import_options_panel )
+        
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_IMPORT_OPTIONS.ID, self._ConvertFavouriteDataToDisplayTuple, self._ConvertFavouriteDataToSortTuple )
+        
+        self._favourite_import_options_list = ClientGUIListCtrl.BetterListCtrlTreeView( favourite_import_options_list_panel, 7, model, activation_callback = self._EditFavourite, delete_key_callback = self._DeleteFavourite )
+        
+        favourite_import_options_list_panel.SetListCtrl( self._favourite_import_options_list )
+        
+        self._copy_favourite_button = favourite_import_options_list_panel.AddIconButton( CC.global_icons().copy, self._CopyFavourite, enabled_only_on_single_selection = True )
+        
+        menu_template_items = []
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'custom paste: choose what you want', 'Open a dialog with the current options and what is in your clipboard and choose what to keep and overwrite.', self._PasteFavouriteCustom ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'merge-paste', 'Replace what is selected with what you have in the clipboard that is non-default.', self._PasteFavourite ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'fill-in-gaps-paste', 'Fill in what is currently default in the selected with what you have in the clipboard that is non-default.', self._PasteFavouriteMerge ) )
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'replace-paste', 'Replace what is selected with what you have in the clipboard.', self._PasteFavouriteFillIn ) )
+        
+        self._paste_favourites_button = favourite_import_options_list_panel.AddMenuIconButton( CC.global_icons().paste, 'paste options from the clipboard on top of selected favourites', menu_template_items, enabled_only_on_selection = True )
+        
+        favourite_import_options_list_panel.AddButton( 'add', self._AddFavourite )
+        favourite_import_options_list_panel.AddButton( 'edit', self._EditFavourite, enabled_only_on_single_selection = True )
+        favourite_import_options_list_panel.AddButton( 'delete', self._DeleteFavourite, enabled_only_on_selection = True )
         
         #
         
@@ -132,14 +160,37 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._url_class_import_options_list.Sort()
         
+        self._favourite_import_options_list.AddDatas( self._import_options_manager.GetFavouriteImportOptionContainers().items() )
+        
         #
         
+        label = 'This is what your downloaders will use when you do not override the settings on the specific importer. The override each other in a certain stacked order. You should set these up to be what you generally want for each context. Keep it simple and try for global before anything else!'
+        
+        st = ClientGUICommon.BetterStaticText( default_import_options_panel, label = label )
+        st.setWordWrap( True )
+        
+        default_import_options_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         default_import_options_panel.Add( default_import_options_list_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        label = 'You can also set special rules just for particular sites. Tag filtering can make sense here, but do not get lost in the weeds. If you are not sure which URL Class applies, just set what you want on one and copy/paste spam to the others on the same domain.'
+        
+        st = ClientGUICommon.BetterStaticText( url_class_import_options_panel, label = label )
+        st.setWordWrap( True )
+        
+        url_class_import_options_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         url_class_import_options_panel.Add( url_class_import_options_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        label = 'Set up your common templates here. You can easily load these specific options anywhere you see the star icon or on the little down arrow beside any "import options" button in an importer panel. If you do a manual import once a month that needs to go to a particular local file domain or follow certain filtering rules, do not re-make it every time: set it up here and give it a good name.'
+        
+        st = ClientGUICommon.BetterStaticText( favourite_import_options_panel, label = label )
+        st.setWordWrap( True )
+        
+        favourite_import_options_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        favourite_import_options_panel.Add( favourite_import_options_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
         
-        label = 'This is a new system that has migrated the three old file/tag/note import options into seven sub-types and allowing more sophisticated mix-and-match defaults and favourites/templating. I would like feedback on what is good/bad/confusing, thank you!'
+        label = 'This panel is advanced! The default settings are fine, so if you are not sure what is going on, hold off or check the help.'
         
         test_st = ClientGUICommon.BetterStaticText( self, label = label )
         test_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
@@ -151,13 +202,43 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         QP.AddToLayout( vbox, simple_mode_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, default_import_options_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, url_class_import_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, favourite_import_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         
-        self._default_favourites_button.loadFavourite.connect( self._LoadFavouriteDefault )
-        self._default_favourites_button.loadFavouriteCustom.connect( self._LoadFavouriteDefaultCustom )
-        self._url_class_favourites_button.loadFavourite.connect( self._LoadFavouriteURLClass )
-        self._url_class_favourites_button.loadFavouriteCustom.connect( self._LoadFavouriteURLClassCustom )
+        self._default_favourites_button.loadFavourite.connect( self._OverwriteDefault )
+        self._default_favourites_button.loadFavouriteCustom.connect( self._OverwriteDefaultCustom )
+        self._url_class_favourites_button.loadFavourite.connect( self._OverwriteURLClass )
+        self._url_class_favourites_button.loadFavouriteCustom.connect( self._OverwriteURLClassCustom )
+        
+    
+    def _AddFavourite( self ):
+        
+        name = 'new import options favourite/profile'
+        import_options_container = ImportOptionsContainer.ImportOptionsContainer()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit favourite/profile import options' ) as dlg:
+            
+            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel(
+                dlg,
+                self._import_options_manager,
+                IOC.IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES,
+                import_options_container,
+                favourites_name = name
+            )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_name = panel.GetName()
+                edited_import_options_container = panel.GetValue()
+                
+                actual_name = self._import_options_manager.AddFavourite( edited_name, edited_import_options_container )
+                self._favourite_import_options_list.AddData( ( actual_name, edited_import_options_container ) )
+                
+            
         
     
     def _ClearDefault( self ):
@@ -254,6 +335,26 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return sort_tuple
         
     
+    def _ConvertFavouriteDataToDisplayTuple( self, row: tuple[ str, ImportOptionsContainer.ImportOptionsContainer ] ):
+        
+        ( name, import_options_container ) = row
+        
+        pretty_name = name
+        
+        try:
+            
+            pretty_defaults = import_options_container.GetSummary( IOC.IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES )
+            
+        except Exception as e:
+            
+            pretty_defaults = f'ERROR: {e}'
+            
+        
+        return ( pretty_name, pretty_defaults )
+        
+    
+    _ConvertFavouriteDataToSortTuple = _ConvertFavouriteDataToDisplayTuple
+    
     def _ConvertURLClassDataToDisplayTuple( self, url_class: ClientNetworkingURLClass.URLClass ):
         
         url_class_key = url_class.GetClassKey()
@@ -302,6 +403,24 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._copy_default_button.ShowMicroNotification( f'Copied!' )
         
     
+    def _CopyFavourite( self ):
+        
+        selected = self._favourite_import_options_list.GetTopSelectedData()
+        
+        if selected is None:
+            
+            return
+
+
+        ( name, import_options_container ) = selected
+        
+        payload = import_options_container.DumpToString()
+        
+        CG.client_controller.pub( 'clipboard', 'text', payload )
+        
+        self._copy_favourite_button.ShowMicroNotification( f'Copied!' )
+        
+    
     def _CopyURLClass( self ):
         
         selected = self._url_class_import_options_list.GetTopSelectedData()
@@ -326,6 +445,41 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             CG.client_controller.pub( 'clipboard', 'text', payload )
             
             self._copy_url_class_button.ShowMicroNotification( f'Copied!' )
+            
+        
+    
+    def _DeleteFavourite( self ):
+        
+        selected_rows = self._favourite_import_options_list.GetData( only_selected = True )
+        
+        if len( selected_rows ) == 0:
+            
+            return
+            
+        
+        if len( selected_rows ) == 1:
+            
+            ( name, import_options_container ) = selected_rows
+            
+            message = f'Delete the favourite/profile named "{name}"?'
+            
+        else:
+            
+            message = f'Delete the {HydrusNumbers.ToHumanInt(len( selected_rows ))} selected favourites/profiles?'
+            
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        self._favourite_import_options_list.DeleteDatas( selected_rows )
+        
+        for ( name, import_options_container ) in selected_rows:
+            
+            self._import_options_manager.DeleteFavourite( name )
             
         
     
@@ -362,6 +516,40 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 self._import_options_manager.SetDefaultImportOptionsContainerForCallerType( import_options_caller_type, edited_import_options_container )
                 
                 self._default_import_options_list.UpdateDatas( ( selected, ) )
+                
+            
+        
+    
+    def _EditFavourite( self ):
+        
+        selected = self._favourite_import_options_list.GetTopSelectedData()
+        
+        if selected is None:
+            
+            return
+            
+        
+        ( name, import_options_container ) = selected
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit favourite/profile import options' ) as dlg:
+            
+            panel = ClientGUIImportOptionsContainer.EditImportOptionsContainerPanel(
+                dlg,
+                self._import_options_manager,
+                IOC.IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES,
+                import_options_container,
+                favourites_name = name
+            )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_name = panel.GetName()
+                edited_import_options_container = panel.GetValue()
+                
+                actual_name = self._import_options_manager.EditFavourite( name, edited_name, edited_import_options_container )
+                self._favourite_import_options_list.ReplaceData( selected, ( actual_name, edited_import_options_container ) )
                 
             
         
@@ -410,17 +598,17 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
     
-    def _LoadFavouriteDefault( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+    def _OverwriteDefault( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._LoadFavouriteDefaultDoIt( incoming_import_options_container, False )
-        
-    
-    def _LoadFavouriteDefaultCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
-        
-        self._LoadFavouriteDefaultDoIt( incoming_import_options_container, True )
+        self._OverwriteDefaultDoIt( incoming_import_options_container, False )
         
     
-    def _LoadFavouriteDefaultDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
+    def _OverwriteDefaultCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        self._OverwriteDefaultDoIt( incoming_import_options_container, True )
+        
+    
+    def _OverwriteDefaultDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
         
         selected_import_options_caller_types = self._default_import_options_list.GetData( only_selected = True )
         
@@ -477,17 +665,74 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._default_import_options_list.UpdateDatas( selected_import_options_caller_types )
         
     
-    def _LoadFavouriteURLClass( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+    def _OverwriteFavourite( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._LoadFavouriteURLClassDoIt( incoming_import_options_container, False )
-        
-    
-    def _LoadFavouriteURLClassCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
-        
-        self._LoadFavouriteURLClassDoIt( incoming_import_options_container, True )
+        self._OverwriteFavouriteDoIt( incoming_import_options_container, False )
         
     
-    def _LoadFavouriteURLClassDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
+    def _OverwriteFavouriteCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        self._OverwriteFavouriteDoIt( incoming_import_options_container, True )
+        
+    
+    def _OverwriteFavouriteDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
+        
+        selected_names_and_import_options_containers = self._favourite_import_options_list.GetData( only_selected = True )
+        
+        if len( selected_names_and_import_options_containers ) == 0:
+            
+            ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the favourites/profiles list--select something and try loading again.' )
+            
+            return
+            
+        
+        if do_custom_merge:
+            
+            if not self._favourite_import_options_list.HasOneSelected():
+                
+                ClientGUIDialogsMessage.ShowInformation( self, 'Hey, multiple items in the favourites list are selected. I am only going to do this on the topmost selected.' )
+                
+
+            ( name, current_import_options_container ) = self._favourite_import_options_list.GetTopSelectedData()
+            
+            try:
+                
+                final_import_options_container = ClientGUIImportOptionsContainer.DoCustomOverwrite(
+                    self,
+                    self._simple_mode.isChecked(),
+                    IOC.IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES,
+                    current_import_options_container,
+                    incoming_import_options_container
+                )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
+                
+            
+        else:
+            
+            final_import_options_container = incoming_import_options_container
+            
+        
+        for ( name, original_import_options_container ) in selected_names_and_import_options_containers:
+            
+            actual_name = self._import_options_manager.EditFavourite( name, name, final_import_options_container )
+            self._favourite_import_options_list.ReplaceData( ( name, original_import_options_container ), ( actual_name, final_import_options_container ) )
+            
+        
+    
+    def _OverwriteURLClass( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        self._OverwriteURLClassDoIt( incoming_import_options_container, False )
+        
+    
+    def _OverwriteURLClassCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        self._OverwriteURLClassDoIt( incoming_import_options_container, True )
+        
+    
+    def _OverwriteURLClassDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
         
         selected_url_classes = self._url_class_import_options_list.GetData( only_selected = True )
         
@@ -610,7 +855,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             return
             
         
-        self._LoadFavouriteDefault( pasted_import_options_container )
+        self._OverwriteDefaultCustom( pasted_import_options_container )
         
         self._paste_default_button.ShowMicroNotification( f'Pasted!' )
         
@@ -623,6 +868,72 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     def _PasteDefaultMerge( self ):
         
         self._PasteDefault( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
+        
+    
+    def _PasteFavourite( self, paste_type = ClientGUIImportOptionsContainer.PASTE_REPLACE ):
+        
+        try:
+            
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        names_and_import_options_containers = self._favourite_import_options_list.GetData( only_selected = True )
+        
+        for ( name, existing_import_options_container ) in names_and_import_options_containers:
+            
+            if paste_type in ( ClientGUIImportOptionsContainer.PASTE_MERGE, ClientGUIImportOptionsContainer.PASTE_FILL_IN ):
+                
+                edited_import_options_container = existing_import_options_container.Duplicate()
+                
+                if paste_type == ClientGUIImportOptionsContainer.PASTE_MERGE:
+                    
+                    edited_import_options_container.OverwriteWithThisSlice( pasted_import_options_container )
+                    
+                else:
+                    
+                    edited_import_options_container.FillInWithThisSlice( pasted_import_options_container )
+                    
+                
+            else:
+                
+                edited_import_options_container = pasted_import_options_container.Duplicate()
+                
+            
+            actual_name = self._import_options_manager.EditFavourite( name, name, edited_import_options_container )
+            self._favourite_import_options_list.ReplaceData( ( name, existing_import_options_container ), ( actual_name, edited_import_options_container ) )
+            
+        
+        self._paste_favourites_button.ShowMicroNotification( f'Pasted!' )
+        
+    
+    def _PasteFavouriteCustom( self ):
+        
+        try:
+            
+            pasted_import_options_container = ClientGUIImportOptionsContainer.GetPasteObject( self )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        self._OverwriteFavouriteCustom( pasted_import_options_container )
+        
+        self._paste_favourites_button.ShowMicroNotification( f'Pasted!' )
+        
+    
+    def _PasteFavouriteFillIn( self ):
+        
+        self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
+        
+    
+    def _PasteFavouriteMerge( self ):
+        
+        self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
         
     
     def _PasteURLClass( self, paste_type = ClientGUIImportOptionsContainer.PASTE_REPLACE ):
@@ -688,7 +999,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             return
             
         
-        self._LoadFavouriteURLClass( pasted_import_options_container )
+        self._OverwriteURLClassCustom( pasted_import_options_container )
         
         self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
         

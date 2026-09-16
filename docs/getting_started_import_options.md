@@ -3,9 +3,7 @@ title: Import Options
 ---
 
 !!! warning "THIS IS NEW"
-    This is a new system! All users will be migrated on v671 from the old file/tag/note options to a seven-part system!
-    
-    I am happy with the technical side of this, but it is not the most user-friendly. Most users never need to touch it, but if you frequently play around with custom import options, let me know what works well and badly and what in here or the UI is confusing.
+    I am happy with the technical side of this, but it is still not the most user-friendly. Most users never need to touch it, but if you frequently play around with custom import options, let me know what works well and badly and what in here or the UI is confusing.
 
 # Import Options
 
@@ -261,7 +259,7 @@ The bottom are:
 
 Generally speaking, you can just have a play around with the system and you'll get the feel for it.
 
-Since you may be copying from and then pasting onto seven separate sets of options, there are several kinds of paste:
+Since you may be copying from and then pasting onto multiple separate sets of options, there are several kinds of paste:
 
 [![](images/import_options_favourites_paste_menu.png)](images/import_options_favourites_paste_menu.png)
 
