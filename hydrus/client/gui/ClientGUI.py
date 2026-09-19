@@ -5416,8 +5416,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             self._tabs_tree_sidebar.setMinimumWidth( 100 )
             
-            self._controller.CallLaterQtSafe( self, 0.05, 'expand treeview', self._tabs_tree_sidebar.expandToDepth, 2 )
-            
         
     
     def _RefreshCurrentPage( self ):
