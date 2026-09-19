@@ -4612,10 +4612,19 @@ ATTACH "client.mappings.db" as external_mappings;'''
         res_changed = HC.options[ 'thumbnail_dimensions' ] != original_options[ 'thumbnail_dimensions' ]
         type_changed = test_new_options.GetInteger( 'thumbnail_scale_type' ) != original_new_options.GetInteger( 'thumbnail_scale_type' )
         dpr_changed = test_new_options.GetInteger( 'thumbnail_dpr_percent' ) != original_new_options.GetInteger( 'thumbnail_dpr_percent' )
+        blurhash_changed = test_new_options.GetBoolean( 'allow_blurhash_fallback' ) != original_new_options.GetBoolean( 'allow_blurhash_fallback' )
         
-        if res_changed or type_changed or dpr_changed:
+        if res_changed or type_changed or dpr_changed or blurhash_changed:
             
             CG.client_controller.pub( 'clear_thumbnail_cache' )
+            
+        
+        border_changed = test_new_options.GetInteger( 'thumbnail_border' ) != original_new_options.GetInteger( 'thumbnail_border' )
+        margin_changed = test_new_options.GetInteger( 'thumbnail_margin' ) != original_new_options.GetInteger( 'thumbnail_margin' )
+        
+        if border_changed or margin_changed:
+            
+            CG.client_controller.pub( 'thumbnail_layout_changed' )
             
         
         qt_style_name = test_new_options.GetNoneableString( 'qt_style_name' )

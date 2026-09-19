@@ -2868,6 +2868,7 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
         CG.client_controller.sub( self, 'NotifyFilesNeedRedraw', 'notify_files_need_redraw' )
         CG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         CG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
+        CG.client_controller.sub( self, 'NotifyNewThumbnailLayoutRules', 'thumbnail_layout_changed' )
         CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
         CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
@@ -4176,6 +4177,11 @@ class MediaResultsPanelThumbnailsGraphicsViewTest( ClientGUIMediaResultsPanel.Me
             
         
         self._RedrawMedia( affected_media )
+        
+    
+    def NotifyNewThumbnailLayoutRules( self ):
+        
+        self._ArrangeThumbnails()
         
     
     def NotifyNewStyleOrColourset( self ):
