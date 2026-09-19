@@ -1868,11 +1868,6 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._current_depth = max( -1, min( depth, max_depth ) )
         
-        self.depth_decrement.setEnabled( self._current_depth > -1 )
-        self.depth_increment.setEnabled( self._current_depth < max_depth )
-        self.collapse_all.setEnabled( self._current_depth > -1 )
-        self.expand_all.setEnabled( self._current_depth < max_depth )
-        
     
     def _SetCurrentPagePathText( self, page_name: str, tooltip: str ):
         
