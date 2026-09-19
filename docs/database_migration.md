@@ -177,6 +177,9 @@ You should now have _something_ like this (let's say the D drive is the fast SSD
 
 ![](images/db_migration_example.png)
 
+!!! info "File Folder Permissions"
+    Make sure that hydrus has read/write permissions to any new db or folder structures you point it at! This can be a subtle question in some NAS/Docker setups, where permissions rules can be sophisticated. Make sure the username that runs the hydrus process has full read/write access (which sometimes includes an extra "append" access, to _create_ a new file), and make sure it applies to subfolders too.
+
 ## moving to a new machine { id="to_new_OS" }
 
 The hydrus database is completely portable. Everything that makes your client your client is stored within what I have described above--there are no settings stored in a conf file somewhere in your OS. As well as moving your hydrus client around the same system, you can move it to another computer quite easily. You are generally looking at creating a new install and then moving your "db" folder from the old location to the new. It all jumps between Windows/Linux/macOS with no big modifications needed. The one thing you do need to check is the paths the database uses to talk to other parts of the local hard drive--for instance the location of an Export Folder.
