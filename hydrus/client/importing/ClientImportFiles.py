@@ -103,6 +103,7 @@ def CheckFileImportStatus( file_import_status: FileImportStatus ) -> FileImportS
     
     return file_import_status
     
+
 class FileImportJob( object ):
     
     def __init__( self, temp_path: str, import_options_container: ImportOptionsContainer.ImportOptionsContainer, human_file_description = None ):

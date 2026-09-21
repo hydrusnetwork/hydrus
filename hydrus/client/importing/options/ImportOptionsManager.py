@@ -8,6 +8,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.importing.options import ExternalProgramsImportOptions
 from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import ImportOptionsContainer
@@ -448,6 +449,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
                     LocationImportOptions.LocationImportOptions(),
                     NoteImportOptions.NoteImportOptions(),
                     PrefetchImportOptions.PrefetchImportOptions(),
+                    ExternalProgramsImportOptions.ExternalProgramsImportOptions(),
                     PresentationImportOptions.PresentationImportOptions(),
                     TagFilteringImportOptions.TagFilteringImportOptions(),
                     TagImportOptions.TagImportOptions(),
@@ -609,6 +611,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
                     import_options_container.SetImportOptions( LocationImportOptions.LocationImportOptions() )
                     import_options_container.SetImportOptions( NoteImportOptions.NoteImportOptions() )
                     import_options_container.SetImportOptions( PrefetchImportOptions.PrefetchImportOptions() )
+                    import_options_container.SetImportOptions( ExternalProgramsImportOptions.ExternalProgramsImportOptions() )
                     import_options_container.SetImportOptions( PresentationImportOptions.PresentationImportOptions() )
                     import_options_container.SetImportOptions( TagFilteringImportOptions.TagFilteringImportOptions() )
                     import_options_container.SetImportOptions( TagImportOptions.TagImportOptions() )
@@ -648,6 +651,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         import_options_container.SetImportOptions( location_import_options )
         import_options_container.SetImportOptions( NoteImportOptions.NoteImportOptions() )
         import_options_container.SetImportOptions( prefetch_import_options )
+        import_options_container.SetImportOptions( ExternalProgramsImportOptions.ExternalProgramsImportOptions() )
         import_options_container.SetImportOptions( PresentationImportOptions.PresentationImportOptions() )
         import_options_container.SetImportOptions( TagFilteringImportOptions.TagFilteringImportOptions() )
         import_options_container.SetImportOptions( TagImportOptions.TagImportOptions() )

@@ -7,6 +7,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
@@ -14,7 +15,9 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import CheckerImportOptions
+from hydrus.client.importing.options import ExternalProgramsImportOptions
 from hydrus.client.importing.options import FileFilteringImportOptions
+from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import LocationImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PrefetchImportOptions
@@ -213,6 +216,66 @@ class TestCheckerOptions( unittest.TestCase ):
         last_check_time = HydrusTime.GetNow() - 100000
         
         self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 3600 * ( 100000 // 3600 ) )
+        
+    
+
+class TestExternalProgramsImportOptions( unittest.TestCase ):
+    
+    def test_external_programs_import_options( self ):
+        
+        external_programs_import_options = ExternalProgramsImportOptions.ExternalProgramsImportOptions()
+        
+        external_programs_import_options.SetEntries( [] )
+        
+        #
+        
+        self.assertEqual( external_programs_import_options.GetSummary( IOC.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL ), '' )
+        
+        #
+        
+        entry_1 = ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry()
+        
+        entry_1.SetIdAndName( HydrusSerialisable.IdAndName( object_id = HydrusData.GenerateKey(), name = 'test external call 1' ) )
+        entry_1.SetDoItOnNew( True )
+        entry_1.SetDoItOnAlreadyIn( False )
+        
+        entry_2 = ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry()
+        
+        entry_2.SetIdAndName( HydrusSerialisable.IdAndName( object_id = HydrusData.GenerateKey(), name = 'test external call 2' ) )
+        entry_2.SetDoItOnNew( True )
+        entry_2.SetDoItOnAlreadyIn( True )
+        
+        entry_3 = ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry()
+        
+        entry_3.SetIdAndName( HydrusSerialisable.IdAndName( object_id = HydrusData.GenerateKey(), name = 'test external call 3' ) )
+        entry_3.SetDoItOnNew( False )
+        entry_3.SetDoItOnAlreadyIn( False )
+        
+        external_programs_import_options.SetEntries( [ entry_1, entry_2, entry_3 ] )
+        
+        #
+        
+        summary = external_programs_import_options.GetSummary( IOC.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL )
+        
+        self.assertTrue( 'test external call 1' in summary )
+        self.assertTrue( 'test external call 2' in summary )
+        self.assertTrue( 'test external call 3' in summary )
+        
+        #
+        
+        entries_response = external_programs_import_options.GetEntries()
+        
+        #
+        
+        entries_to_go_on_new = set( [ entry for entry in entries_response if entry.ShouldFire( CC.STATUS_SUCCESSFUL_AND_NEW ) ] )
+        
+        self.assertEqual( entries_to_go_on_new, { entry_1, entry_2 } )
+        
+        #
+        
+        entries_to_go_on_already_in = set( [ entry for entry in entries_response if entry.ShouldFire( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ) ] )
+        
+        self.assertEqual( entries_to_go_on_already_in, { entry_2 } )
         
     
 

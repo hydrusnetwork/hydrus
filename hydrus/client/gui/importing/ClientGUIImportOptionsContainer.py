@@ -1106,6 +1106,10 @@ class DefaultableImportOptionsPanel( ClientGUICommon.StaticBox ):
             
             self._options_panel = ClientGUIImportOptionsPanels.EditPresentationImportOptions( self, import_options )
             
+        elif self._import_options_type == IOC.IMPORT_OPTIONS_TYPE_EXTERNAL_PROGRAMS:
+            
+            self._options_panel = ClientGUIImportOptionsPanels.EditExternalProgramsImportOptionsPanel( self, import_options )
+            
         else:
             
             raise Exception( 'Unknown import options type!' )

@@ -29,7 +29,7 @@ def OpenExternallySingleFile( win: QW.QWidget, id_and_name: HydrusSerialisable.I
     
     try:
         
-        ClientExecutableActions.OpenExternallySingleFile( CG.client_controller.executable_manager, id_and_name, media_result )
+        ClientExecutableActions.SendSingleFile( CG.client_controller.executable_manager, id_and_name, media_result )
         
         return True
         
@@ -83,7 +83,7 @@ def OpenExternallyURL( win: QW.QWidget, id_and_name: HydrusSerialisable.IdAndNam
     
     try:
         
-        ClientExecutableActions.OpenExternallyURL( CG.client_controller.executable_manager, id_and_name, url )
+        ClientExecutableActions.SendSingleURL( CG.client_controller.executable_manager, id_and_name, url )
         
         return True
         

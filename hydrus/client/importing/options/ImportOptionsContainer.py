@@ -4,6 +4,7 @@ import typing
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.importing.options import ExternalProgramsImportOptions
 from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import LocationImportOptions
@@ -155,6 +156,11 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
             
         
         return new_import_options_container
+        
+    
+    def GetExternalProgramsImportOptions( self ) -> ExternalProgramsImportOptions.ExternalProgramsImportOptions:
+        
+        return typing.cast( ExternalProgramsImportOptions.ExternalProgramsImportOptions, self.GetImportOptions( IOC.IMPORT_OPTIONS_TYPE_EXTERNAL_PROGRAMS ) )
         
     
     def GetFileFilteringImportOptions( self ) -> FileFilteringImportOptions.FileFilteringImportOptions:

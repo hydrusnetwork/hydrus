@@ -8531,6 +8531,27 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 687:
+            
+            try:
+                
+                import_options_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER )
+                
+                from hydrus.client.importing.options import ImportOptionsConstants as IOC
+                
+                global_import_options_container = import_options_manager.GetDefaultImportOptionsContainerForCallerType( IOC.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL )
+                
+                from hydrus.client.importing.options import ExternalProgramsImportOptions
+                
+                global_import_options_container.SetImportOptions( ExternalProgramsImportOptions.ExternalProgramsImportOptions() )
+                
+                self.modules_serialisable.SetJSONDump( import_options_manager )
+                
+            except Exception as e:
+                
+                raise Exception( 'Hey, unfortunately I could not update your import options. Something is wrong. Roll back to v687 and tell hydev about this. There should be more info in the log.' ) from e
+                
+            
         #
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

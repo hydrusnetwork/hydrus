@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -22,6 +23,7 @@ from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.importing.options import ExternalProgramsImportOptions
 from hydrus.client.importing.options import FileFilteringImportOptions
 from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import LocationImportOptions
@@ -31,6 +33,165 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagFilteringImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
+
+class EditExternalProgramsImportOptionsSingleEntryPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, external_programs_import_options_single_entry: ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry, possible_ids_and_names: list[ HydrusSerialisable.IdAndName ] ):
+        
+        super().__init__( parent )
+        
+        self._id_and_name = ClientGUICommon.BetterChoice( self )
+        
+        for possible_id_and_name in possible_ids_and_names:
+            
+            self._id_and_name.addItem( possible_id_and_name.name, possible_id_and_name )
+            
+        
+        self._when_to_do_it = ClientGUICommon.BetterChoice( self )
+        
+        self._when_to_do_it.addItem( 'all file imports', ( True, True ) )
+        self._when_to_do_it.addItem( 'all new file imports', ( True, False ) )
+        self._when_to_do_it.addItem( 'all "already in db" imports', ( False, True ) )
+        self._when_to_do_it.addItem( 'no imports (will do nothing!)', ( False, False ) )
+        
+        self._id_and_name.SetValue( external_programs_import_options_single_entry.GetIdAndName() )
+        self._when_to_do_it.SetValue( ( external_programs_import_options_single_entry.DoItOnNew(), external_programs_import_options_single_entry.DoItOnAlreadyIn() ) )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._id_and_name, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._when_to_do_it, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( hbox )
+        
+    
+    def GetValue( self ) -> ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry:
+        
+        id_and_name = self._id_and_name.GetValue()
+        ( do_it_on_new, do_it_on_already_in ) = self._when_to_do_it.GetValue()
+        
+        entry = ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry()
+        
+        entry.SetIdAndName( id_and_name )
+        entry.SetDoItOnNew( do_it_on_new )
+        entry.SetDoItOnAlreadyIn( do_it_on_already_in )
+        
+        return entry
+        
+    
+
+class EditExternalProgramsImportOptionsPanel( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, external_programs_import_options: ExternalProgramsImportOptions.ExternalProgramsImportOptions ):
+        
+        super().__init__( parent )
+        
+        #
+        
+        self._entries = ClientGUIListBoxes.AddEditDeleteListBox( self, 6, self._EntryToStringForList, self._AddEntry, self._EditEntry )
+        
+        #
+        
+        self.SetValue( external_programs_import_options )
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        #
+        
+        QP.AddToLayout( vbox, self._entries, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox.addStretch( 0 )
+        
+        self.setLayout( vbox )
+        
+        #
+        
+        self._entries.listBoxChanged.connect( self.valueChanged )
+        
+    
+    def _AddEntry( self ):
+        
+        entry = ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry()
+        
+        from hydrus.client.executables import ClientExecutablePipelines
+        
+        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        
+        if len( possible_ids_and_names ) > 0:
+            
+            entry.SetIdAndName( possible_ids_and_names[ 0 ] )
+            
+        
+        return self._EditEntry( entry )
+        
+    
+    def _EditEntry( self, entry: ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry ):
+        
+        from hydrus.client.executables import ClientExecutablePipelines
+        
+        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        
+        if len( possible_ids_and_names ) == 0:
+            
+            message = f'Hey, there do not seem to be any "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE ]}" external program calls set! If you are in the options dialog and only just added some, please apply and re-open.'
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'No external calls!', message )
+            
+            raise HydrusExceptions.CancelledException( 'No calls to make!' )
+            
+        
+        if entry.GetIdAndName() not in possible_ids_and_names:
+            
+            message = 'Hey, just so you know, I do not see the entry\'s external call in the currently list of available calls. If you are fixing that now, great.'
+            
+            ClientGUIDialogsMessage.ShowInformation( self, message )
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'Edit external program call' ) as dlg:
+            
+            panel = EditExternalProgramsImportOptionsSingleEntryPanel( dlg, entry, possible_ids_and_names )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                edited_entry = panel.GetValue()
+                
+                return edited_entry
+                
+            else:
+                
+                raise HydrusExceptions.CancelledException( 'User cancelled out!' )
+                
+            
+        
+    
+    def _EntryToStringForList( self, entry: ExternalProgramsImportOptions.ExternalProgramsImportOptionsSingleEntry ) -> str:
+        
+        return entry.GetSummary( IOC.IMPORT_OPTIONS_CALLER_TYPE_GLOBAL )
+        
+    
+    def GetValue( self ) -> ExternalProgramsImportOptions.ExternalProgramsImportOptions:
+        
+        entries = self._entries.GetData()
+        
+        external_program_import_options = ExternalProgramsImportOptions.ExternalProgramsImportOptions()
+        
+        external_program_import_options.SetEntries( entries )
+        
+        return external_program_import_options
+        
+    
+    def SetValue( self, external_program_import_options: ExternalProgramsImportOptions.ExternalProgramsImportOptions ):
+        
+        self._entries.Clear()
+        
+        self._entries.AddDatas( external_program_import_options.GetEntries() )
+        
+    
 
 class EditFileFilteringImportOptionsPanel( QW.QWidget ):
     

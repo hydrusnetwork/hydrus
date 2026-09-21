@@ -9,7 +9,7 @@ from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
 from hydrus.client.media import ClientMediaResult
 
-def OpenExternallySingleFile( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_result: ClientMediaResult.MediaResult ):
+def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_result: ClientMediaResult.MediaResult ):
     
     if not media_result.GetLocationsManager().IsLocal():
         
@@ -50,7 +50,7 @@ def OpenExternallySingleFile( executable_manager: ClientExecutableManager.Execut
     return True
     
 
-def OpenExternallyMultipleFiles( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_results: list[ ClientMediaResult.MediaResult ] ):
+def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_results: list[ ClientMediaResult.MediaResult ] ):
     
     files_desc = f'{HydrusNumbers.ToHumanInt( len( media_results ))} files'
     
@@ -92,7 +92,7 @@ def OpenExternallyMultipleFiles( executable_manager: ClientExecutableManager.Exe
     call.Call( input_params )
     
 
-def OpenExternallyURL( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, url: str ):
+def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, url: str ):
     
     try:
         
