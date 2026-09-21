@@ -224,7 +224,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: collections.
     else:
         
         num_hashes = len( sha256_hashes )
-        num_remote_medias = len( [ not media.GetLocationsManager().IsLocal() for media in flat_media ] )
+        num_remote_medias = len( [ media for media in flat_media if not media.GetLocationsManager().IsLocal()] )
         
         source_to_desired = CG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
         
@@ -248,7 +248,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: collections.
                 message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusNumbers.ToHumanInt( num_remote_medias ) )
                 
             
-            if num_remote_medias < num_hashes:
+            if num_remote_medias < num_missing:
                 
                 message += ' It could be that some of the local files are currently missing this information in the hydrus database. A file maintenance job (under the database menu) can repopulate this data.'
                 

@@ -1942,7 +1942,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetLaunchFileExecutableIdsAndNames( self, mime ) -> list[ HydrusSerialisable.IdAndName ]:
         
-        if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
+        if mime in ( HC.APPLICATION_HYDRUS_CLIENT_COLLECTION, HC.APPLICATION_UNKNOWN ):
             
             return []
             
@@ -1955,7 +1955,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 
                 result = list( mimes_to_launch_file_executable_ids_and_names[ mime ] )
                 
-            else:
+            elif mime in HC.mimes_to_general_mimetypes:
                 
                 general_mimetype = HC.mimes_to_general_mimetypes[ mime ]
                 
@@ -1971,6 +1971,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                     
                     result = []
                     
+                
+            else:
+                
+                result = []
                 
             
             try:
