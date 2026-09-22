@@ -1405,9 +1405,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.status == CC.STATUS_UNKNOWN and not should_download_file:
             
-            self.SetStatus( file_import_status.status, note = file_import_status.note)
+            self.SetStatus( file_import_status.status, note = file_import_status.note )
             self.SetHash( file_import_status.hash )
-            self.DoExternalProgramCalls( full_import_options_container )
+            
+            if self.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+                
+                self.DoExternalProgramCalls( full_import_options_container )
+                
             
         
         return ( should_download_metadata, should_download_file )
