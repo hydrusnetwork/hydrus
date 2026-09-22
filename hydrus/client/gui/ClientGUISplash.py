@@ -45,7 +45,7 @@ class FrameSplashPanel( QW.QWidget ):
             
             renderer = QS.QSvgRenderer( splash_image_path )
             
-            logical_size = QC.QSize( 144, 196 )
+            logical_size = QC.QSizeF( 144, 196 )
             
             dpr = self.devicePixelRatio()
             
@@ -57,7 +57,7 @@ class FrameSplashPanel( QW.QWidget ):
             
             painter = QG.QPainter( hydrus_pixmap )
             
-            renderer.render( painter, QC.QRectF( QC.QPoint( 0, 0 ), logical_size ) )
+            renderer.render( painter, QC.QRectF( QC.QPointF( 0, 0 ), logical_size ) )
             painter.end()
             
         else:
