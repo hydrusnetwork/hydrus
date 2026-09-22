@@ -525,17 +525,14 @@ class EditPairActionsWidget( ClientGUICommon.StaticBox ):
             
         
         self._delete_a = QW.QCheckBox( self )
+        self._delete_a.setToolTip( ClientGUIFunctions.WrapToolTip( 'This sends the file to the trash.' ) )
+        
         self._delete_b = QW.QCheckBox( self )
+        self._delete_b.setToolTip( ClientGUIFunctions.WrapToolTip( 'This sends the file to the trash.' ) )
         
         self._use_default_duplicates_content_merge_options = QW.QCheckBox( self )
         
         self._custom_duplicate_content_merge_options = ClientGUIDuplicatesContentMergeOptions.EditDuplicateContentMergeOptionsWidget( self, HC.DUPLICATE_BETTER, ClientDuplicates.DuplicateContentMergeOptions(), can_expand = True, start_expanded = False )
-        
-        # TODO: a lovely panel that handles merge options lad
-        
-        # I really want this to be a live in-place widget, which means we'll have to dynamically update this guy with action as we switch things!!
-        # also, we'll want to disable/enable with the checkbox
-        # also, we'll want a favourites system, which the new staticbox could do
         
         #
         
