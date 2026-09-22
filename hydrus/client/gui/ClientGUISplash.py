@@ -45,12 +45,19 @@ class FrameSplashPanel( QW.QWidget ):
             
             renderer = QS.QSvgRenderer( splash_image_path )
             
-            hydrus_pixmap = QG.QPixmap( 144, 196 )
+            logical_size = QC.QSize( 144, 196 )
+            
+            dpr = self.devicePixelRatio()
+            
+            hydrus_pixmap = QG.QPixmap( round( logical_size.width() * dpr ), round( logical_size.height() * dpr ) )
+            
+            hydrus_pixmap.setDevicePixelRatio( dpr )
+            
             hydrus_pixmap.fill( QC.Qt.GlobalColor.transparent )
             
             painter = QG.QPainter( hydrus_pixmap )
             
-            renderer.render( painter )
+            renderer.render( painter, QC.QRectF( QC.QPoint( 0, 0 ), logical_size ) )
             painter.end()
             
         else:
