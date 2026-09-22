@@ -145,6 +145,11 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         pretty_incorrect_base_location = incorrect_base_location.path
         pretty_prefix = prefix
         
+        if len( pretty_prefix ) == 4:
+            
+            pretty_prefix = pretty_prefix[ : -1 ] + os.path.sep + pretty_prefix[ -1 ]
+            
+        
         display_tuple = ( pretty_incorrect_base_location, pretty_prefix, pretty_correct_base_location, pretty_ok )
         
         return display_tuple
