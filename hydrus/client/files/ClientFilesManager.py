@@ -46,6 +46,8 @@ class ClientFilesManager( object ):
         
         self._locations_to_free_space = {}
         
+        self._allow_deferred_physical_deletes = True
+        
         self._bad_error_occurred = False
         self._missing_subfolders = set()
         
@@ -1219,6 +1221,11 @@ class ClientFilesManager( object ):
     
     def DoDeferredPhysicalDeletes( self ):
         
+        if not self._allow_deferred_physical_deletes:
+            
+            return
+            
+        
         if not self._controller.CurrentlyIdle() and not self._controller.new_options.GetBoolean( 'deferred_file_deletes_in_normal_time' ):
             
             return
@@ -1247,6 +1254,13 @@ class ClientFilesManager( object ):
                         media_result = self._controller.Read( 'media_result', file_hash )
                         
                         expected_mime = media_result.GetMime()
+                        
+                        if expected_mime is None:
+                            
+                            self._allow_deferred_physical_deletes = False
+                            
+                            raise Exception( 'Hey, the system that deletes media files from the disk (deferred physical deletes) has been assigned a file that appears to have no file info. Your database has probably got a problem in its file hash store, and no more deferred deletes will happen until you restart the client. Run _database->regenerate->local hashes cache_ and restart the client. If that does not fix it, let hydev know.' )
+                            
                         
                         try:
                             
