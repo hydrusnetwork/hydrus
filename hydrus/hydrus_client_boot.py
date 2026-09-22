@@ -63,6 +63,7 @@ try:
     argparser.add_argument( '--db_transaction_commit_period', type = int, help = 'override how often (in seconds) database changes are saved to disk (default=30,min=10)' )
     argparser.add_argument( '--db_synchronous_override', type = int, choices = range(4), help = 'override SQLite Synchronous PRAGMA (default=2)' )
     argparser.add_argument( '--no_db_temp_files', action='store_true', help = 'run db temp operations entirely in memory' )
+    argparser.add_argument( '--non_interactive_update', action='store_true', help = 'for headless/absent updates. when a database update requires user action, make the default choice' )
     argparser.add_argument( '--boot_debug', action='store_true', help = 'print additional bootup information to the log' )
     argparser.add_argument( '--no_user_static_dir', action='store_true', help = 'do not allow a static dir in the db dir to override the install static dir contents' )
     argparser.add_argument( '--profile_mode', action='store_true', help = 'start the program with profile mode (db) on, capturing boot performance' )
@@ -77,6 +78,8 @@ try:
     db_dir = HydrusPaths.FigureOutDBDir( result.db_dir )
     
     HG.db_journal_mode = result.db_journal_mode
+    
+    HG.non_interactive_update = result.non_interactive_update
     
     if result.no_wal:
         

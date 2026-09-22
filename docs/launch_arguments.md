@@ -86,16 +86,19 @@ This starts the program with 'Profile Mode' turned on, which captures the perfor
 
 ##**`--pause_network_traffic`**
 
-This starts the program with `network->pause->all new network traffic` on. Useful for debugging a downloader in your boot session that is going crazy or stopping a problem subscription from launching.
+This starts the client with `network->pause->all new network traffic` on. Useful for debugging a downloader in your boot session that is going crazy or stopping a problem subscription from launching.
 
 ##**`--win_qt_darkmode_test`**
 
-**Windows only:** This starts the program with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
+**Windows only:** This starts the client with Qt's 'darkmode' detection enabled, as [here](https://doc.qt.io/qt-6/qguiapplication.html#platform-specific-arguments), set to 1 mode. It will override any existing qt.conf, so it is only for experimentation. We are going to experiment more with the 2 mode, but that locks the style to `windows`, and can't handle switches between light and dark mode.
 
 ##**`--no_qt_multimedia`**
 
-This stops the program from attempting to load the QtMultimedia libraries. Some environments have damaged or unstable QtMultimedia packages that appear to exist but cause segfaults on import; this resolves it.
+This stops the client from attempting to load the QtMultimedia libraries. Some environments have damaged or unstable QtMultimedia packages that appear to exist but cause segfaults on import; this resolves it.
 
+##**`--non_interactive_update`**
+
+This stops the client from asking any yes/no questions during update. These are rare (they are usually "do you want to schedule a lot of maintenance work now?"), but they do block update until answered, so if you need to do a headless/absent update, add this and the update will make the default choice.
 
 # server-specific arguments
 

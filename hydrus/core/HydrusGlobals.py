@@ -28,6 +28,8 @@ server_action = 'start'
 db_journal_mode = 'WAL'
 no_db_temp_files = False
 
+non_interactive_update = False
+
 boot_debug = False
 
 db_cache_size = 256
