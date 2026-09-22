@@ -153,15 +153,14 @@ To start lets explain memory tiers.  As memory moves further away from the CPU i
 The most straight forward way of doing this is to seperate where hydrus writes its SQLITE database(index) files, from where it writes the imported files.  But we can make a more flexible setup that will also keep our system responsive, we just need to make sure that the system writes to the fastest possible place first.  So let's illustrate the options.
 
 ```mermaid
-  graph
-  direction LR
-  CPU-->RAM;
-  RAM-->ZRAM;
-  ZRAM-->SSD;
-  SSD-->HDD;
+  graph LR
+  CPU-->RAM
+  RAM-->ZRAM
+  ZRAM-->SSD
+  SSD-->HDD
   subgraph Non-Volatile
-      SSD;
-      HDD;
+      SSD
+      HDD
   end
 ```
 
