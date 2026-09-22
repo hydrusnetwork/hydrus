@@ -247,6 +247,24 @@ class FileImportJob( object ):
         
         self._pre_import_file_status = CheckFileImportStatus( self._pre_import_file_status )
         
+        # ok let's say an import folder is adding files and tags, but is set via file filtering to skip pngs
+        # we hit a png that is 'already in db'. that status gets set and writecontentupdates is free to go ahead, ruh roh, user did not expect this
+        # we want to do a pre-file-info-generation 'checkisgoodtoimport' run so we can override that with a 'skipped' as necessary
+        if self._pre_import_file_status.AlreadyInDB():
+            
+            self.PopulateBasicFileInfoFromMediaResult()
+            
+            try:
+                
+                self.CheckIsGoodToImport()
+                
+            except HydrusExceptions.FileImportRulesException as e:
+                
+                self._pre_import_file_status.status = CC.STATUS_VETOED
+                self._pre_import_file_status.note = str( e )
+                
+            
+        
         if HG.file_import_report_mode:
             
             HydrusData.ShowText( 'File import job pre-import status: {}'.format( self._pre_import_file_status.ToString() ) )
@@ -609,6 +627,33 @@ class FileImportJob( object ):
     def GetBlurhash( self ) -> str:
         
         return self._blurhash
+        
+    
+    def PopulateBasicFileInfoFromMediaResult( self ):
+        
+        hash = self.GetHash()
+        
+        if hash is None:
+            
+            return
+            
+        
+        media_result = CG.client_controller.Read( 'media_result', hash )
+        
+        from hydrus.client.media import ClientMediaManagers
+        
+        fim: ClientMediaManagers.FileInfoManager = media_result.GetFileInfoManager()
+        
+        self._file_info = (
+            fim.size,
+            fim.mime,
+            fim.width,
+            fim.height,
+            fim.duration_ms,
+            fim.num_frames,
+            fim.has_audio,
+            fim.num_words
+        )
         
     
     def WriteContentUpdates( self ):
