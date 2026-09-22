@@ -199,11 +199,11 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
+                        self._SetTimestampPredicate( predicate_type, '>', time_pivot_ms )
                         
                     elif operator == '>':
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
+                        self._SetTimestampPredicate( predicate_type, '<', time_pivot_ms )
                         
                     elif operator == HC.UNICODE_APPROX_EQUAL:
                         
@@ -215,8 +215,8 @@ class FileSystemPredicates( object ):
                         earliest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( earliest_dt )
                         latest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( latest_dt )
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = earliest_time_pivot_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = latest_time_pivot_ms
+                        self._SetTimestampPredicate( predicate_type, '>', earliest_time_pivot_ms )
+                        self._SetTimestampPredicate( predicate_type, '<', latest_time_pivot_ms )
                         
                     
                 elif age_type == 'date':
@@ -238,24 +238,24 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
+                        self._SetTimestampPredicate( predicate_type, '<', time_pivot_ms )
                         
                     elif operator == '>':
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
+                        self._SetTimestampPredicate( predicate_type, '>', time_pivot_ms )
                         
                     elif operator == '=':
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = day_of_start_timestamp_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = day_of_end_timestamp_ms
+                        self._SetTimestampPredicate( predicate_type, '>', day_of_start_timestamp_ms )
+                        self._SetTimestampPredicate( predicate_type, '<', day_of_end_timestamp_ms )
                         
                     elif operator == HC.UNICODE_APPROX_EQUAL:
                         
                         previous_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
                         next_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
                         
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = previous_month_timestamp_ms
-                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = next_month_timestamp_ms
+                        self._SetTimestampPredicate( predicate_type, '>', previous_month_timestamp_ms )
+                        self._SetTimestampPredicate( predicate_type, '<', next_month_timestamp_ms )
                         
                     
                 
@@ -470,6 +470,30 @@ class FileSystemPredicates( object ):
                 self._file_viewing_stats_predicates.append( ( view_type, desired_canvas_types, operator, viewing_value ) )
                 
             
+        
+    
+    def _SetTimestampPredicate( self, predicate_type, operator, time_pivot_ms ):
+        
+        if predicate_type in self._system_pred_types_to_timestamp_ranges_ms:
+            
+            timestamp_ranges_ms = self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ]
+            
+            if operator in timestamp_ranges_ms:
+                
+                existing_time_pivot = timestamp_ranges_ms[ operator ]
+                
+                if operator == '<' and time_pivot_ms > existing_time_pivot:
+                    
+                    return
+                    
+                elif operator == '>' and time_pivot_ms < existing_time_pivot:
+                    
+                    return
+                    
+                
+            
+        
+        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ operator ] = time_pivot_ms
         
     
     def GetAdvancedTagPredicates( self ):
