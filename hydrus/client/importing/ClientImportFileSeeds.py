@@ -1237,7 +1237,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.SetStatus( file_import_status.status, note = file_import_status.note )
         self.SetHash( file_import_status.hash )
-        self.DoExternalProgramCalls( full_import_options_container )
         
     
     def ImportPath( self, file_seed_cache: "FileSeedCache", full_import_options_container: ImportOptionsContainer.ImportOptionsContainer, status_hook = None ):
@@ -1401,17 +1400,42 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
             
         
+        #
+        
+        if file_import_status.AlreadyInDB() and file_import_status.hash is not None and not full_import_options_container.GetFileFilteringImportOptions().AllowsAllBasedOnFileInfo():
+            
+            # even if this is already in db, should it be 'ignored' so we can skip writecontentupdates later?
+            
+            hash = file_import_status.hash
+            
+            media_result = CG.client_controller.Read( 'media_result', hash )
+            
+            from hydrus.client.media import ClientMediaManagers
+            
+            fim: ClientMediaManagers.FileInfoManager = media_result.GetFileInfoManager()
+            
+            try:
+                
+                full_import_options_container.GetFileFilteringImportOptions().CheckFileIsValid(
+                    fim.size,
+                    fim.mime,
+                    fim.width,
+                    fim.height
+                )
+                
+            except HydrusExceptions.FileImportRulesException as e:
+                
+                file_import_status.status = CC.STATUS_VETOED
+                file_import_status.note = str( e )
+                
+            
+        
         # update private status store if predictions are useful
         
         if self.status == CC.STATUS_UNKNOWN and not should_download_file:
             
             self.SetStatus( file_import_status.status, note = file_import_status.note )
             self.SetHash( file_import_status.hash )
-            
-            if self.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
-                
-                self.DoExternalProgramCalls( full_import_options_container )
-                
             
         
         return ( should_download_metadata, should_download_file )
@@ -1760,6 +1784,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     self.DownloadAndImportRawFile( file_url, full_import_options_container, network_job_factory, network_job_presentation_context_factory, status_hook, spawning_url = self._referral_url, file_seed_cache = file_seed_cache )
                     
+                
+            
+            if self.status in ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ):
+                
+                self.DoExternalProgramCalls( full_import_options_container )
                 
             
             did_substantial_work |= self.WriteContentUpdates( full_import_options_container )

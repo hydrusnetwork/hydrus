@@ -250,7 +250,7 @@ class FileImportJob( object ):
         # ok let's say an import folder is adding files and tags, but is set via file filtering to skip pngs
         # we hit a png that is 'already in db'. that status gets set and writecontentupdates is free to go ahead, ruh roh, user did not expect this
         # we want to do a pre-file-info-generation 'checkisgoodtoimport' run so we can override that with a 'skipped' as necessary
-        if self._pre_import_file_status.AlreadyInDB():
+        if self._pre_import_file_status.AlreadyInDB() and not self._import_options_container.GetFileFilteringImportOptions().AllowsAllBasedOnFileInfo():
             
             self.PopulateBasicFileInfoFromMediaResult()
             

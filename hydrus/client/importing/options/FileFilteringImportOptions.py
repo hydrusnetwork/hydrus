@@ -120,6 +120,29 @@ class FileFilteringImportOptions( IOC.ImportOptionsMetatype ):
             
         
     
+    def AllowsAllBasedOnFileInfo(self ):
+        
+        if True in (
+            self._min_size is not None,
+            self._max_size is not None,
+            self._max_gif_size is not None,
+            self._min_resolution is not None,
+            self._max_resolution is not None
+        ):
+            
+            return False
+            
+        
+        allowed_mimes = set( self.GetAllowedSpecificFiletypes() )
+        
+        if not set( HC.SEARCHABLE_MIMES ).issubset( allowed_mimes ):
+            
+            return False
+            
+        
+        return True
+        
+    
     def CheckNetworkDownload( self, possible_mime, num_bytes, is_complete_file_size ):
         
         if is_complete_file_size:
