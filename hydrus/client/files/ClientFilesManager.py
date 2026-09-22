@@ -1255,7 +1255,7 @@ class ClientFilesManager( object ):
                         
                         expected_mime = media_result.GetMime()
                         
-                        if expected_mime is None:
+                        if expected_mime is None or expected_mime == HC.APPLICATION_UNKNOWN:
                             
                             self._allow_deferred_physical_deletes = False
                             
