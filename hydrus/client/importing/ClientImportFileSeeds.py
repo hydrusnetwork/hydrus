@@ -1280,6 +1280,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 self.Import( path, full_import_options_container, status_hook = status_hook )
                 
             
+            if self.status in ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT ):
+                
+                self.DoExternalProgramCalls( full_import_options_container )
+                
+            
             self.WriteContentUpdates( full_import_options_container )
             
         except HydrusExceptions.VetoException as e:
