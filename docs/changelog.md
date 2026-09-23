@@ -7,6 +7,50 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 688](https://github.com/hydrusnetwork/hydrus/releases/tag/v688)
+
+### run external program on import
+
+* when importing files, there is a new 'external programs import options'. it allows you to run a 'send single file' call every time a file imports with a result of 'successful (and new)', 'successful (already in db)', or both. if you are building a secondary database of your hydrus files, let's say some special duplicate or search data, you can now auto-populate this guy with your new imports
+* when the import options panels are in simple mode, this new options type appears in global, local hard drive import, import folders, and specific import options. I expect most people who use this will want it for either a specific import folder or for everything
+
+### exe manager misc
+
+* I added a first draft of an 'executable manager' help page to https://hydrusnetwork.github.io/hydrus/external_programs.html . the options page now links to this
+* the 'open externally (single file)' and 'open URL (single URL)' executable types are renamed to 'send single file' and 'send single URL'
+* the 'default programs' options page is renamed back to 'open externally'
+* if you import an local process call with any of: exe path longer than 256 characters; more than 16 parameters; or more than 1024 characters of parameters, then the import routine tells you about the weirdness, showing what is weird, and asks if you are yes/no ok to add it
+
+### import options
+
+* the `options->import options` panel now shows your favourites/presets in a new list. this is the stuff normally tucked into the 'star' button, just exposed better. it is all synced with the star button, so changes show up immediately
+* the box-panels holding the three lists are now also collapsible, if you need more space
+* added some simple texts to the boxes and tweaked some labels here. 'favourites' are now generally called 'favourites/presets'
+* fixed the default/url class 'paste custom' menu option to actually boot the customise panel, rather than just doing a paste-merge
+* the 'Pasted!' micro-notifications in the options panel no longer appear when the paste action is cancelled
+
+### misc
+
+* added `--non_interactive_update` launch switch, which makes the client auto-choose the
+* recommended default choice if the update routine wants to ask the user a yes/no question. if you do headless/absent updates, let me know if this is sufficient
+* the splash screen now prefers to use an svg, and I have drawn an svg for it to use. it looks like the old png. feel free to create your own `db_dir/static/hydrus_splash.svg`  (or .png) file and that will be used instead. it renders at 144x196, the size of the old png, but maybe we can adjust a little now we have the tech
+* fixed a small blank box that was appearing in some stylesheets in the 'external call' box of the new exe manager UI
+* fixed thumbnail redraw in the new thumbnail rendering tech when you change stylesheets or flip darkmode or change blurhash rendering
+* fixed thumbnail redraw in the new thumbnail rendering tech when you change thumb border or margin
+* yes/no dialogs (and some other 'quick' dialogs) now max out at ~48 lines of text height. they get a scrolling panel and everything, but if these guys want to dump a gigantic list or error traceback or something, they'll stop being a giant column
+* all file imports will now assign 'ignored' status to a file that is 'already in db' but for which the file filtering options would deny (let's say you have an import folder set up to not get any pngs). previously, these files were set as 'already in db', before the file filtering checks had a chance to make a judgment, and since the file was therefore considered 'successful', additional metadata like tags could be applied even though the file would have been ignored otherwise. it will now be set as 'ignored' and no metadata added
+* if you have multiple since/before time predicates of a particular type in a search (e.g. 'imported since two weeks ago' and 'imported since one week ago'), the search is now careful to select the most restrictive of those, satisfying both. previously it pseudorandomly selected one to use (issue #2089)
+* fixed the 'x files were not in client' error label when you try to copy some non-sha256 hashes and not all of them can be found. it was counting wrong before and just saying the total selection size
+* fixed right-clicking on files with unknown filetype (the new open-with executable stuff wasn't handling it correct)
+* if the deferred physical delete system encounters a file with seemingly no file info, the system now stops deferred physical delete for that boot and gives the user a note that they should regen their local hashes cache. this symptom seems to be a knock-on from a desynced hash cache
+
+### boring stuff
+
+* refactored some 'manage options' stuff so it is less coupled to the dialog
+* the favourite tags list is now only refreshed across your autocomplete dropdowns if it actually changes on an options ok
+* some custom-colour widgets now only redraw themselves if darkmode actually flips on options ok
+* fixed a mermaid chart in the 'virtual memory in linux' help
+
 ## [Version 687](https://github.com/hydrusnetwork/hydrus/releases/tag/v687)
 
 ### misc
@@ -488,41 +532,3 @@ title: Changelog
 * removed some erroneous copy/paste spam from new code
 * did some method reordering and other linting cleanup
 * Main GUI no longer eventFilters itself just for minimise tracking
-
-## [Version 678](https://github.com/hydrusnetwork/hydrus/releases/tag/v678)
-
-### misc
-
-* audio files that have embedded images will now get thumbnails! all your existing audio files will be scheduled for a thumb regen on update
-* fixed the core ffmpeg video metadata info call to use the 'ffmpeg timeout' option, which by accident it wasn't. thank you for the reports here; this was what was stuck on 15 seconds timeout despite the new option
-* the file import object right-click menu now differentiates parsed tags from inherited tags, and the gallery import object right-click menu now shows inherited tags (issue #2056)
-* pdf documents that have empty human-readable file metadata text (this happens when they have no Title, Author, Subject, or Keywords) are now considered to have no such text. all pdfs are scheduled for a 'has human-readable text' regen on update
-
-### some more UI
-
-* thanks to a user, we have some more UI updates.
-* the options search system reveals some tucked-away widgets better and excludes some other things appropriately
-* there are new shortcut commands for the new per-player mute/unmute/flip-mute (issue #2050)
-* I fixed some issues with the per-player mute (issue #2049)
-* there's an `EXPERIMENTAL: Show tab tree view` setting under `options->gui pages` that has some neat new tech, with a tree to replace the existing tab-bar and some interesting flags to move the main page sidebar to the right. this needs a bit more work but is another thing we are playing with and will bring us a few steps towards a more modular 'place it where you like' UI layout
-
-### boring mute cleanup
-
-* tore out and rewrote the new per-player mute/unmute pipeline, fixing several issues related to mute check logic and subsequent state setting, also cleaned up some bad enum names and non-hooked-up signals (issue #2054)
-* for KISS, the Qt and mpv players no longer track mute options; they just handle the doing of it. the parent container now tracks and reacts to options changes and the new per-player state
-* the volume menu now offers a way to stop forcing mute/unmute
-
-### boring ffmpeg cleanup
-
-* added audio and image ffmpeg stream parsing
-* added image stream rendering for audio thumbnail gen
-* refactored the monolith thumbgen call, made it more reliable for weird failure cases
-* refactored ffmpeg rendering calls to their own file
-* misc ffmpeg calling and parsing refactoring and cleanup
-* removed defunct 'only render first second' frame-counting hack
-* deleted some redundant old psd ffmpeg code
-* added a note to the install help about FFMPEG on Linux (issue #2052)
-
-### other boring code cleanup
-
-* fixed and cleaned up the layout code and some options juggling in the new treeview experiment, cleaned up some misc splitter/sizes stuff along the way

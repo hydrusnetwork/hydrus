@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_688"><a href="#version_688">version 688</a></h2>
+                    <ul>
+                        <li><h3>run external program on import</h3></li>
+                        <li>when importing files, there is a new 'external programs import options'. it allows you to run a 'send single file' call every time a file imports with a result of 'successful (and new)', 'successful (already in db)', or both. if you are building a secondary database of your hydrus files, let's say some special duplicate or search data, you can now auto-populate this guy with your new imports</li>
+                        <li>when the import options panels are in simple mode, this new options type appears in global, local hard drive import, import folders, and specific import options. I expect most people who use this will want it for either a specific import folder or for everything</li>
+                        <li><h3>exe manager misc</h3></li>
+                        <li>I added a first draft of an 'executable manager' help page to https://hydrusnetwork.github.io/hydrus/external_programs.html . the options page now links to this</li>
+                        <li>the 'open externally (single file)' and 'open URL (single URL)' executable types are renamed to 'send single file' and 'send single URL'</li>
+                        <li>the 'default programs' options page is renamed back to 'open externally'</li>
+                        <li>if you import an local process call with any of: exe path longer than 256 characters; more than 16 parameters; or more than 1024 characters of parameters, then the import routine tells you about the weirdness, showing what is weird, and asks if you are yes/no ok to add it</li>
+                        <li><h3>import options</h3></li>
+                        <li>the `options-&gt;import options` panel now shows your favourites/presets in a new list. this is the stuff normally tucked into the 'star' button, just exposed better. it is all synced with the star button, so changes show up immediately</li>
+                        <li>the box-panels holding the three lists are now also collapsible, if you need more space</li>
+                        <li>added some simple texts to the boxes and tweaked some labels here. 'favourites' are now generally called 'favourites/presets'</li>
+                        <li>fixed the default/url class 'paste custom' menu option to actually boot the customise panel, rather than just doing a paste-merge</li>
+                        <li>the 'Pasted!' micro-notifications in the options panel no longer appear when the paste action is cancelled</li>
+                        <li><h3>misc</h3></li>
+                        <li>added `--non_interactive_update` launch switch, which makes the client auto-choose the</li>
+                        <li>recommended default choice if the update routine wants to ask the user a yes/no question. if you do headless/absent updates, let me know if this is sufficient</li>
+                        <li>the splash screen now prefers to use an svg, and I have drawn an svg for it to use. it looks like the old png. feel free to create your own `db_dir/static/hydrus_splash.svg`  (or .png) file and that will be used instead. it renders at 144x196, the size of the old png, but maybe we can adjust a little now we have the tech</li>
+                        <li>fixed a small blank box that was appearing in some stylesheets in the 'external call' box of the new exe manager UI</li>
+                        <li>fixed thumbnail redraw in the new thumbnail rendering tech when you change stylesheets or flip darkmode or change blurhash rendering</li>
+                        <li>fixed thumbnail redraw in the new thumbnail rendering tech when you change thumb border or margin</li>
+                        <li>yes/no dialogs (and some other 'quick' dialogs) now max out at ~48 lines of text height. they get a scrolling panel and everything, but if these guys want to dump a gigantic list or error traceback or something, they'll stop being a giant column</li>
+                        <li>all file imports will now assign 'ignored' status to a file that is 'already in db' but for which the file filtering options would deny (let's say you have an import folder set up to not get any pngs). previously, these files were set as 'already in db', before the file filtering checks had a chance to make a judgment, and since the file was therefore considered 'successful', additional metadata like tags could be applied even though the file would have been ignored otherwise. it will now be set as 'ignored' and no metadata added</li>
+                        <li>if you have multiple since/before time predicates of a particular type in a search (e.g. 'imported since two weeks ago' and 'imported since one week ago'), the search is now careful to select the most restrictive of those, satisfying both. previously it pseudorandomly selected one to use (issue #2089)</li>
+                        <li>fixed the 'x files were not in client' error label when you try to copy some non-sha256 hashes and not all of them can be found. it was counting wrong before and just saying the total selection size</li>
+                        <li>fixed right-clicking on files with unknown filetype (the new open-with executable stuff wasn't handling it correct)</li>
+                        <li>if the deferred physical delete system encounters a file with seemingly no file info, the system now stops deferred physical delete for that boot and gives the user a note that they should regen their local hashes cache. this symptom seems to be a knock-on from a desynced hash cache</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>refactored some 'manage options' stuff so it is less coupled to the dialog</li>
+                        <li>the favourite tags list is now only refreshed across your autocomplete dropdowns if it actually changes on an options ok</li>
+                        <li>some custom-colour widgets now only redraw themselves if darkmode actually flips on options ok</li>
+                        <li>fixed a mermaid chart in the 'virtual memory in linux' help</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_687"><a href="#version_687">version 687</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

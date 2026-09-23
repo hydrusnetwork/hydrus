@@ -3,7 +3,7 @@ title: External Programs
 ---
 
 !!! warning "Notice"
-    This system is under construction, and this help page is a first draft. At the moment, the exe manager only supports 'open file externally' and 'open URL externally' jobs, but I expect to extend it to do more soon.
+    This system is under construction, and this help page is a first draft. At the moment, the exe manager only supports 'send single file' and 'send single URL' jobs, but I expect to extend it to do more soon.
 
 ## other programs { id="intro" }
 
