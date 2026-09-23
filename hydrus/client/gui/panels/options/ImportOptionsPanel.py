@@ -600,12 +600,12 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def _OverwriteDefault( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteDefaultDoIt( incoming_import_options_container, False )
+        return self._OverwriteDefaultDoIt( incoming_import_options_container, False )
         
     
     def _OverwriteDefaultCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteDefaultDoIt( incoming_import_options_container, True )
+        return self._OverwriteDefaultDoIt( incoming_import_options_container, True )
         
     
     def _OverwriteDefaultDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
@@ -616,7 +616,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the default list--select something and try loading again.' )
             
-            return
+            return False
             
         
         if do_custom_merge:
@@ -642,7 +642,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 
             except HydrusExceptions.CancelledException:
                 
-                return
+                return False
                 
             
         else:
@@ -654,7 +654,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Hey, the import options that was entered was not full, but the Global entry has to have something for everything. Please try again!' )
             
-            return
+            return False
             
         
         for import_options_caller_type in selected_import_options_caller_types:
@@ -664,15 +664,17 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._default_import_options_list.UpdateDatas( selected_import_options_caller_types )
         
+        return True
+        
     
     def _OverwriteFavourite( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteFavouriteDoIt( incoming_import_options_container, False )
+        return self._OverwriteFavouriteDoIt( incoming_import_options_container, False )
         
     
     def _OverwriteFavouriteCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteFavouriteDoIt( incoming_import_options_container, True )
+        return self._OverwriteFavouriteDoIt( incoming_import_options_container, True )
         
     
     def _OverwriteFavouriteDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
@@ -683,7 +685,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the favourites/profiles list--select something and try loading again.' )
             
-            return
+            return False
             
         
         if do_custom_merge:
@@ -707,7 +709,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 
             except HydrusExceptions.CancelledException:
                 
-                return
+                return False
                 
             
         else:
@@ -721,15 +723,17 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             self._favourite_import_options_list.ReplaceData( ( name, original_import_options_container ), ( actual_name, final_import_options_container ) )
             
         
+        return True
+        
     
     def _OverwriteURLClass( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteURLClassDoIt( incoming_import_options_container, False )
+        return self._OverwriteURLClassDoIt( incoming_import_options_container, False )
         
     
     def _OverwriteURLClassCustom( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
         
-        self._OverwriteURLClassDoIt( incoming_import_options_container, True )
+        return self._OverwriteURLClassDoIt( incoming_import_options_container, True )
         
     
     def _OverwriteURLClassDoIt( self, incoming_import_options_container: ImportOptionsContainer.ImportOptionsContainer, do_custom_merge: bool ):
@@ -740,7 +744,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Hey, nothing is selected in the URL Class list--select something and try loading again.' )
             
-            return
+            return False
             
         
         if do_custom_merge:
@@ -775,7 +779,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 
             except HydrusExceptions.CancelledException:
                 
-                return
+                return False
                 
             
         else:
@@ -792,6 +796,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._url_class_import_options_list.UpdateDatas( selected_url_classes )
         
+        return True
+        
     
     def _PasteDefault( self, paste_type = ClientGUIImportOptionsContainer.PASTE_REPLACE ):
         
@@ -801,7 +807,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
         import_options_caller_types = self._default_import_options_list.GetData( only_selected = True )
@@ -843,6 +849,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._paste_default_button.ShowMicroNotification( f'Pasted!' )
         
+        return True
+        
     
     def _PasteDefaultCustom( self ):
         
@@ -852,22 +860,27 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
-        self._OverwriteDefaultCustom( pasted_import_options_container )
+        it_worked = self._OverwriteDefaultCustom( pasted_import_options_container )
         
-        self._paste_default_button.ShowMicroNotification( f'Pasted!' )
+        if it_worked:
+            
+            self._paste_default_button.ShowMicroNotification( f'Pasted!' )
+            
+        
+        return it_worked
         
     
     def _PasteDefaultFillIn( self ):
         
-        self._PasteDefault( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
+        return self._PasteDefault( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
         
     
     def _PasteDefaultMerge( self ):
         
-        self._PasteDefault( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
+        return self._PasteDefault( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
         
     
     def _PasteFavourite( self, paste_type = ClientGUIImportOptionsContainer.PASTE_REPLACE ):
@@ -878,7 +891,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
         names_and_import_options_containers = self._favourite_import_options_list.GetData( only_selected = True )
@@ -909,6 +922,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._paste_favourites_button.ShowMicroNotification( f'Pasted!' )
         
+        return True
+        
     
     def _PasteFavouriteCustom( self ):
         
@@ -918,22 +933,27 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
-        self._OverwriteFavouriteCustom( pasted_import_options_container )
+        it_worked = self._OverwriteFavouriteCustom( pasted_import_options_container )
         
-        self._paste_favourites_button.ShowMicroNotification( f'Pasted!' )
+        if it_worked:
+            
+            self._paste_favourites_button.ShowMicroNotification( f'Pasted!' )
+            
+        
+        return it_worked
         
     
     def _PasteFavouriteFillIn( self ):
         
-        self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
+        return self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
         
     
     def _PasteFavouriteMerge( self ):
         
-        self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
+        return self._PasteFavourite( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
         
     
     def _PasteURLClass( self, paste_type = ClientGUIImportOptionsContainer.PASTE_REPLACE ):
@@ -944,7 +964,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
         url_classes = self._url_class_import_options_list.GetData( only_selected = True )
@@ -987,6 +1007,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
         
+        return True
+        
     
     def _PasteURLClassCustom( self ):
         
@@ -996,22 +1018,27 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         except HydrusExceptions.CancelledException:
             
-            return
+            return False
             
         
-        self._OverwriteURLClassCustom( pasted_import_options_container )
+        it_worked = self._OverwriteURLClassCustom( pasted_import_options_container )
         
-        self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
+        if it_worked:
+            
+            self._paste_url_class_button.ShowMicroNotification( f'Pasted!' )
+            
+        
+        return it_worked
         
     
     def _PasteURLClassFillIn( self ):
         
-        self._PasteURLClass( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
+        return self._PasteURLClass( paste_type = ClientGUIImportOptionsContainer.PASTE_FILL_IN )
         
     
     def _PasteURLClassMerge( self ):
         
-        self._PasteURLClass( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
+        return self._PasteURLClass( paste_type = ClientGUIImportOptionsContainer.PASTE_MERGE )
         
     
     def _ResetDefaultToDefault( self ):
