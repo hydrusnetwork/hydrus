@@ -1080,6 +1080,34 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="external_programs.html" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Programs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -3230,15 +3258,14 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
 <p>Are you trying to <strong>run hydrus on a 200 dollar miniPC</strong>, this is suprisingly doable, but you will need to really understand what you are tuning.</p>
 <p>To start lets explain memory tiers.  As memory moves further away from the CPU it becomes slower.  Memory close to the CPU is volatile, which means if you remove power from it, it disappears forever.  Conversely disk is called non-volatile memory, or persistant storage.  We want to get files written to non-volatile storage, and we don't want to have to compete to read non-volatile storage, we would also prefer to not have to compete for writing, butthis is harder.</p>
 <p>The most straight forward way of doing this is to seperate where hydrus writes its SQLITE database(index) files, from where it writes the imported files.  But we can make a more flexible setup that will also keep our system responsive, we just need to make sure that the system writes to the fastest possible place first.  So let's illustrate the options.</p>
-<pre class="mermaid"><code>  graph
-  direction LR
-  CPU--&gt;RAM;
-  RAM--&gt;ZRAM;
-  ZRAM--&gt;SSD;
-  SSD--&gt;HDD;
+<pre class="mermaid"><code>  graph LR
+  CPU--&gt;RAM
+  RAM--&gt;ZRAM
+  ZRAM--&gt;SSD
+  SSD--&gt;HDD
   subgraph Non-Volatile
-      SSD;
-      HDD;
+      SSD
+      HDD
   end</code></pre>
 <ol>
 <li><strong>RAM</strong>: Information must be in RAM for it to be operated on</li>
@@ -3288,7 +3315,7 @@ vm.swappiness<span class="o">=</span><span class="m">99</span>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 28, 2024 21:36:43 UTC">February 28, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 22, 2026 21:10:50 UTC">September 22, 2026</span>
   </span>
 
     
