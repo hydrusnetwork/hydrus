@@ -31,8 +31,7 @@ title: Changelog
 
 ### misc
 
-* added `--non_interactive_update` launch switch, which makes the client auto-choose the
-* recommended default choice if the update routine wants to ask the user a yes/no question. if you do headless/absent updates, let me know if this is sufficient
+* added `--non_interactive_update` launch switch, which makes the client auto-choose the recommended default choice if the update routine wants to ask the user a yes/no question. if you do headless/absent updates, let me know if this is sufficient
 * the splash screen now prefers to use an svg, and I have drawn an svg for it to use. it looks like the old png. feel free to create your own `db_dir/static/hydrus_splash.svg`  (or .png) file and that will be used instead. it renders at 144x196, the size of the old png, but maybe we can adjust a little now we have the tech
 * fixed a small blank box that was appearing in some stylesheets in the 'external call' box of the new exe manager UI
 * fixed thumbnail redraw in the new thumbnail rendering tech when you change stylesheets or flip darkmode or change blurhash rendering
