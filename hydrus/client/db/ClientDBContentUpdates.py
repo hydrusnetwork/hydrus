@@ -620,6 +620,11 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                     self.DeleteFiles( service_id, hash_ids )
                                     
                                 
+                                if action == HC.CONTENT_UPDATE_DELETE:
+                                    
+                                    self._cursor_transaction_wrapper.pub_after_job( 'notify_file_deleted' )
+                                    
+                                
                             elif action == HC.CONTENT_UPDATE_UNDELETE:
                                 
                                 self.UndeleteFiles( service_id, hash_ids )

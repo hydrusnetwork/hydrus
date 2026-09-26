@@ -3995,6 +3995,7 @@ class DB( HydrusDB.HydrusDB ):
                 'import_file' : self._ImportFile,
                 'import_update' : self._ImportUpdate,
                 'maintain_similar_files_search_for_potential_duplicates' : self._PerceptualHashesSearchForPotentialDuplicates,
+                'maintain_trash' : self._MaintainTrash,
                 'migration_clear_job' : self._MigrationClearJob,
                 'migration_start_mappings_job' : self._MigrationStartMappingsJob,
                 'migration_start_pairs_job' : self._MigrationStartPairsJob,
@@ -4494,6 +4495,75 @@ class DB( HydrusDB.HydrusDB ):
         )
         
         self._modules.append( self.modules_files_duplicates_auto_resolution_search )
+        
+    
+    def _MaintainTrash( self, expected_work_time: float ):
+        
+        def get_current_total_trash_size():
+            
+            service_info = self._GetServiceInfoSpecific( self.modules_services.trash_service_id, HC.LOCAL_FILE_TRASH_DOMAIN, { HC.SERVICE_INFO_TOTAL_SIZE } )
+            
+            return service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
+            
+        
+        time_to_stop = HydrusTime.GetNowFloat() + expected_work_time
+        
+        still_work_to_do = False
+        
+        if HC.options[ 'trash_max_size' ] is not None:
+            
+            max_size = HC.options[ 'trash_max_size' ] * 1048576
+            
+            while get_current_total_trash_size() > max_size:
+                
+                hashes = self._GetTrashHashes( limit = 1 )
+                
+                if len( hashes ) > 0:
+                    
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+                    
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
+                    
+                    self.modules_content_updates.ProcessContentUpdatePackage( content_update_package )
+                    
+                    still_work_to_do = True
+                    
+                else:
+                    
+                    self._DeleteServiceInfo( CC.TRASH_SERVICE_KEY, [ HC.SERVICE_INFO_TOTAL_SIZE ] )
+                    
+                
+                if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                    
+                    return still_work_to_do
+                    
+                
+            
+        
+        if HC.options[ 'trash_max_age' ] is not None:
+            
+            max_age = HC.options[ 'trash_max_age' ] * 3600
+            
+            hashes = self._GetTrashHashes( limit = 1, minimum_age = max_age )
+            
+            while len( hashes ) > 0:
+                
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
+                
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.HYDRUS_LOCAL_FILE_STORAGE_SERVICE_KEY, content_update )
+                
+                self.modules_content_updates.ProcessContentUpdatePackage( content_update_package )
+                
+                still_work_to_do = True
+                
+                if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                    
+                    return still_work_to_do
+                    
+                
+            
+        
+        return still_work_to_do
         
     
     def _ManageDBError( self, job, e ):
