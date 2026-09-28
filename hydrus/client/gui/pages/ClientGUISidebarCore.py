@@ -309,7 +309,7 @@ class Sidebar( QW.QScrollArea ):
     
     def GetDefaultEmptyMediaResultsPanel( self, win: QW.QWidget ) -> ClientGUIMediaResultsPanel.MediaResultsPanel:
         
-        panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( win, self._page_key, self._page_manager, [] )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( win, self._page_key, self._page_manager, [] )
         
         status = self._GetDefaultEmptyPageStatusOverride()
         

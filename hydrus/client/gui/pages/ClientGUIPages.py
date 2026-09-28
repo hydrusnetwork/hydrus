@@ -237,7 +237,7 @@ class Page( QW.QWidget ):
                 
                 sorted_initial_media_results = [ hashes_to_media_results[ hash ] for hash in self._initial_hashes if hash in hashes_to_media_results ]
                 
-                media_panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self, self._page_key, self._page_manager, sorted_initial_media_results )
+                media_panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self, self._page_key, self._page_manager, sorted_initial_media_results )
                 
                 self._SwapMediaResultsPanel( media_panel )
                 

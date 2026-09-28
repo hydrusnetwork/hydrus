@@ -728,7 +728,7 @@ class MediaMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
         
         media_panel = media_page.GetMediaResultsPanel()
         
-        if media_panel is None or not isinstance( media_panel, ( ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails, ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnailsGraphicsViewTest ) ):
+        if media_panel is None or not isinstance( media_panel, ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails ):
             
             return 
             

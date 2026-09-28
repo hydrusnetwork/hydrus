@@ -368,7 +368,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'qt_media_player_null_audio_on_silent_media' : False,
             'mpv_null_audio_on_silent_media' : False,
             'mpv_allow_crashy_files_silently' : False,
-            'test_thumbnails_graphics_view' : True,
             'copy_import_files_to_temp_dir' : True,
             'treeview_hides_tabs' : False,
             'treeview_controls_at_top' : False,

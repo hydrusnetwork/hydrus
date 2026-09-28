@@ -169,7 +169,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
         
         self._query_job_status.Cancel()
         
-        panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self._page, self._page_key, self._page_manager, [] )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, [] )
         
         panel.SetEmptyPageStatusOverride( 'search cancelled!' )
         
@@ -273,7 +273,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
         else:
             
-            panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self._page, self._page_key, self._page_manager, [] )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, [] )
             
             panel.SetEmptyPageStatusOverride( 'no search' )
             
@@ -584,7 +584,7 @@ class SidebarQuery( ClientGUISidebarCore.Sidebar ):
             
             location_context = self._page_manager.GetLocationContext()
             
-            panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self._page, self._page_key, self._page_manager, media_results )
+            panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
             
             # little ugly, but whatever we out here for now
             panel.SetTagContext( self._tag_autocomplete.GetFileSearchContext().GetTagContext() )

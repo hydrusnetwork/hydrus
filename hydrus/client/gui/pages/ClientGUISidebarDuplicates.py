@@ -812,7 +812,7 @@ class SidebarDuplicateFilter( ClientGUISidebarCore.Sidebar ):
             media_results = []
             
         
-        panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self._page, self._page_key, self._page_manager, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
         
         panel.SetEmptyPageStatusOverride( 'no dupes found' )
         

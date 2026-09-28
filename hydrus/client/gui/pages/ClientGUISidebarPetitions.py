@@ -1220,7 +1220,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
             media_results = CG.client_controller.Read( 'media_results', hashes )
             
         
-        panel = ClientGUIMediaResultsPanelThumbnails.GetThumbnailPanelBridge( self._page, self._page_key, self._page_manager, media_results )
+        panel = ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails( self._page, self._page_key, self._page_manager, media_results )
         
         panel.Collect( self._media_collect_widget.GetValue() )
         

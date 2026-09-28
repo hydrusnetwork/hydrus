@@ -236,7 +236,6 @@ class Controller( HydrusController.HydrusController ):
         self.call_after_catcher = ClientGUICallAfter.CallAfterEventCatcher( QW.QApplication.instance() )
         
         self.thumbnails_cache = None
-        self.thumbnails_cache_graphics_view_test = None
         
         Controller.my_instance = self
         
@@ -696,7 +695,6 @@ class Controller( HydrusController.HydrusController ):
         self.images_cache.Clear()
         self.image_tiles_cache.Clear()
         self.thumbnails_cache.Clear()
-        self.thumbnails_cache_graphics_view_test.Clear()
         
     
     def ClipboardHasImage( self ):
@@ -1315,10 +1313,8 @@ class Controller( HydrusController.HydrusController ):
         
         self.images_cache = ClientCaches.ImageRendererCache( self )
         self.image_tiles_cache = ClientCaches.ImageTileCache( self )
+        # TODO: if this guy still needs a mainloop, formalise him all as a mainloop manager. atm he calls his own loop start argh
         self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
-        # TODO: When you move this guy to being the only thumb cache, and when you clean up the thumbs rendering pipeline...
-        # if this guy still has a mainloop, move him to being a DAEMON and formalise it all as a manager. atm he calls his own loop start argh
-        self.thumbnails_cache_graphics_view_test = ClientCaches.ThumbnailCacheGraphicsViewTest( self )
         
         self.frame_splash_status.SetText( 'initialising managers' )
         
@@ -2387,11 +2383,6 @@ class Controller( HydrusController.HydrusController ):
         if self.thumbnails_cache is not None:
             
             self.thumbnails_cache.shutdown()
-            
-        
-        if self.thumbnails_cache_graphics_view_test is not None:
-            
-            self.thumbnails_cache_graphics_view_test.shutdown()
             
         
         if self._is_booted:

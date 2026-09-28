@@ -424,7 +424,6 @@ class Controller( object ):
         self.images_cache = ClientCaches.ImageRendererCache( self )
         self.image_tiles_cache = ClientCaches.ImageTileCache( self )
         self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
-        self.thumbnails_cache_graphics_view_test = ClientCaches.ThumbnailCacheGraphicsViewTest( self )
         
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         
