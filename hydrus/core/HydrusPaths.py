@@ -1554,31 +1554,35 @@ def PathExistsAndIsDir( path: str ):
 
 def PathIsFree( path ):
     
-    try:
+    # this trick does not work on POSIX and has false positives in some complicated permission setups
+    if HC.PLATFORM_WINDOWS:
         
         try:
             
-            stat_result = os.stat( path )
+            try:
+                
+                stat_result = os.stat( path )
+                
+            except FileNotFoundError:
+                
+                return False
+                
             
-        except FileNotFoundError:
+            current_bits = stat_result.st_mode
+            
+            if current_bits & stat.S_IWRITE:
+                
+                os.rename( path, path ) # rename a path to itself
+                
+                return True
+                
+            
+        except OSError as e: # 'already in use by another process' or an odd filename too long error
+            
+            HydrusData.Print( 'Already in use/inaccessible: ' + path )
             
             return False
             
-        
-        current_bits = stat_result.st_mode
-        
-        if current_bits & stat.S_IWRITE:
-            
-            os.rename( path, path ) # rename a path to itself
-            
-            return True
-            
-        
-    except OSError as e: # 'already in use by another process' or an odd filename too long error
-        
-        HydrusData.Print( 'Already in use/inaccessible: ' + path )
-        
-        return False
         
     
     try:
