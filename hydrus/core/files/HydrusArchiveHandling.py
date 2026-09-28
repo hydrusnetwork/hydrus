@@ -15,7 +15,7 @@ def ExtractSingleFileFromZip( path_to_zip, filename_to_extract, extract_into_fil
         
         with zip_handle.open( filename_to_extract ) as reader:
             
-            with open( extract_into_file_path, "wb" ) as writer:
+            with open( extract_into_file_path, 'wb' ) as writer:
                 
                 writer.write( reader.read() )
                 

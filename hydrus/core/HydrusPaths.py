@@ -19,6 +19,11 @@ from hydrus.core import HydrusTime
 from hydrus.core.processes import HydrusSubprocess
 from hydrus.core.processes import HydrusThreading
 
+if not HC.PLATFORM_WINDOWS:
+    
+    import fcntl
+    
+
 def oserror_is_device_access_trouble( e: OSError ):
     """
     Is this "OSError [Errno 112] Host is down" or one of its friends.
@@ -1554,8 +1559,9 @@ def PathExistsAndIsDir( path: str ):
 
 def PathIsFree( path ):
     
-    # this trick does not work on POSIX and has false positives in some complicated permission setups
     if HC.PLATFORM_WINDOWS:
+        
+        # this trick does not work on POSIX and has false positives in some complicated permission setups
         
         try:
             
@@ -1584,19 +1590,49 @@ def PathIsFree( path ):
             return False
             
         
-    
-    try:
         
-        with open( path, 'rb' ) as f:
+        try:
             
-            return True
+            with open( path, 'rb' ) as f:
+                
+                return True
+                
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'Could not open the file: ' + path )
+            
+            return False
             
         
-    except Exception as e:
+    else:
         
-        HydrusData.Print( 'Could not open the file: ' + path )
-        
-        return False
+        try:
+            
+            with open( path, 'rb' ) as f:
+                
+                try:
+                    
+                    fcntl.flock( f, fcntl.LOCK_EX | fcntl.LOCK_NB )
+                    
+                except BlockingIOError:
+                    
+                    HydrusData.Print( 'Already in use/inaccessible due to exclusive lock: ' + path )
+                    
+                    return False
+                    
+                else: # 2026-09-28: first try/except/else block by hydev, thanks AI
+                    
+                    return True
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'Could not open the file: ' + path )
+            
+            return False
+            
         
     
 
