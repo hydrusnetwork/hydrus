@@ -7200,7 +7200,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._last_systray_hide_happened_because_of_main_gui_minimise = happening_because_of_main_gui_minimise
         
-        visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if tlw.isVisible() or tlw.isMinimized() ]
+        # in some Window Managers, the systray has to make a real-deal window to do its icon
+        # https://github.com/hydrusnetwork/hydrus/issues/2091
+        # this is a hacky solution but it'll do for now; maybe in future we'll whitelist rather than black
+        def looks_like_tlw_systray_widget( win: QW.QWidget ):
+            
+            return 'QSystemTrayIcon' in win.metaObject().className()
+            
+        
+        visible_tlws = [ tlw for tlw in QW.QApplication.topLevelWidgets() if ( tlw.isVisible() or tlw.isMinimized() ) and not looks_like_tlw_systray_widget( tlw ) ]
         
         visible_dialogs = [ tlw for tlw in visible_tlws if isinstance( tlw, QW.QDialog ) ]
         
