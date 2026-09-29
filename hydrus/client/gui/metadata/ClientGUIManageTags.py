@@ -150,6 +150,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         for page in self._tag_services.GetPages():
             
+            page = typing.cast( ManageTagsPanel._Panel, page )
+            
             content_update_packages.extend( page.GetContentUpdatePackages() )
             
         
@@ -158,9 +160,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def _NotifyCurrentPageWeAreLookingAtIt( self ):
         
-        current_page: ManageTagsPanel._Panel | None = self._tag_services.currentWidget()
+        current_page = self._tag_services.currentWidget()
         
         if current_page is not None:
+            
+            current_page = typing.cast( ManageTagsPanel._Panel, current_page )
             
             CG.client_controller.CallAfterQtSafe( current_page, current_page.NotifyPageChange )
             
@@ -219,6 +223,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 for page in self._tag_services.GetPages():
                     
+                    page = typing.cast( ManageTagsPanel._Panel, page )
+                    
                     page.SetMedia( self._current_media )
                     
                 
@@ -232,6 +238,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         ClientGUIScrolledPanels.ManagePanel.CleanBeforeDestroy( self )
         
         for page in self._tag_services.GetPages():
+            
+            page = typing.cast( ManageTagsPanel._Panel, page )
             
             page.CleanBeforeDestroy()
             
@@ -253,9 +261,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         self._NotifyCurrentPageWeAreLookingAtIt()
         
-        current_page: ManageTagsPanel._Panel | None = self._tag_services.currentWidget()
+        current_page = self._tag_services.currentWidget()
         
         if current_page is not None and CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = typing.cast( ManageTagsPanel._Panel, current_page )
             
             CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
@@ -372,7 +382,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._tag_presentation_location = tag_presentation_location
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
-            self._media = set()
+            self._media: list[ ClientMediaSingle.MediaSingle ] = []
             
             self._pending_content_update_packages = []
             
@@ -641,25 +651,24 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ]
                 
-                choice_text_lookup = {}
-                
-                choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
-                choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
-                choice_text_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record (CANNOT BE UNDONE)'
-                choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend (add)'
-                choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition to remove'
-                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'undo pend'
-                choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'undo petition to remove'
-                
-                choice_tooltip_lookup = {}
-                
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_ADD ] = 'this adds the tags to this local tag domain'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag domain. it leaves a deletion record'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'this removes the record that we have deleted this tag'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_PEND ] = 'this pends the tags to be added to this tag repository when you upload'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'this petitions the tags for deletion from this tag repository when you upload'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'this rescinds the currently pending tags, so they will not be added'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PETITION ] = 'this rescinds the current tag petitions, so they will not be deleted'
+                choice_text_lookup = {
+                    HC.CONTENT_UPDATE_ADD: 'add', HC.CONTENT_UPDATE_DELETE: 'delete',
+                    HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD: 'clear deletion record (CANNOT BE UNDONE)',
+                    HC.CONTENT_UPDATE_PEND: 'pend (add)',
+                    HC.CONTENT_UPDATE_PETITION: 'petition to remove',
+                    HC.CONTENT_UPDATE_RESCIND_PEND: 'undo pend',
+                    HC.CONTENT_UPDATE_RESCIND_PETITION: 'undo petition to remove',
+                }
+
+                choice_tooltip_lookup = {
+                    HC.CONTENT_UPDATE_ADD : 'this adds the tags to this local tag domain',
+                    HC.CONTENT_UPDATE_DELETE : 'this deletes the tags from this local tag domain. it leaves a deletion record',
+                    HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'this removes the record that we have deleted this tag',
+                    HC.CONTENT_UPDATE_PEND : 'this pends the tags to be added to this tag repository when you upload',
+                    HC.CONTENT_UPDATE_PETITION : 'this petitions the tags for deletion from this tag repository when you upload',
+                    HC.CONTENT_UPDATE_RESCIND_PEND : 'this rescinds the currently pending tags, so they will not be added',
+                    HC.CONTENT_UPDATE_RESCIND_PETITION : 'this rescinds the current tag petitions, so they will not be deleted',
+                }
                 
                 for choice_action in preferred_order:
                     
@@ -1280,7 +1289,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if media is None:
                 
-                media = set()
+                media = []
                 
             
             self._media = media
