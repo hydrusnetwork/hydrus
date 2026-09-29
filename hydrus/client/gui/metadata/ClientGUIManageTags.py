@@ -364,6 +364,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             super().__init__( parent )
             
+            # TODO: when we pull the logic out of this dialog, make sure we maintain a synced state of the current tags and counts
+            # too often I am re-fetching the GetCurrent and friends of all media TagManagers. we can do better
+            
             self._location_context = location_context
             self._tag_service_key = tag_service_key
             self._tag_presentation_location = tag_presentation_location
@@ -535,6 +538,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             currents = [ tags_manager.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
             pendings = [ tags_manager.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
             petitioneds = [ tags_manager.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
+            deleteds = [ tags_manager.GetDeleted( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
             
             num_files = len( self._media )
             
@@ -545,6 +549,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             for tag in tags:
                 
                 num_current = sum( ( 1 for current in currents if tag in current ) )
+                num_deleted = sum( ( 1 for deleted in deleteds if tag in deleted ) )
                 
                 if self._i_am_local_tag_service:
                     
@@ -563,6 +568,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         if num_current > 0:
                             
                             choices[ HC.CONTENT_UPDATE_DELETE ].append( ( tag, num_current ) )
+                            
+                        
+                        if num_deleted > 0:
+                            
+                            choices[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ].append( ( tag, num_deleted ) )
                             
                         
                     
@@ -629,12 +639,13 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 bdc_choices = []
                 
-                preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION ]
+                preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ]
                 
                 choice_text_lookup = {}
                 
                 choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
                 choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
+                choice_text_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record'
                 choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend (add)'
                 choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition to remove'
                 choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'undo pend'
@@ -643,7 +654,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 choice_tooltip_lookup = {}
                 
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_ADD ] = 'this adds the tags to this local tag domain'
-                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag domain'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'this deletes the tags from this local tag domain. it leaves a deletion record'
+                choice_tooltip_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'this removes the record that we have deleted this tag'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_PEND ] = 'this pends the tags to be added to this tag repository when you upload'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'this petitions the tags for deletion from this tag repository when you upload'
                 choice_tooltip_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'this rescinds the currently pending tags, so they will not be added'
@@ -702,11 +714,18 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     if len( tags ) > 1:
                         
-                        message = 'The file{} some of those tags, but not all, so there are different things you can do.'.format( 's have' if len( self._media ) > 1 else ' has' )
+                        if len( self._media ) > 1:
+                            
+                            message = 'The tags have different statuses on the file, so there are different things you can do.'
+                            
+                        else:
+                            
+                            message = f'The tags have different statuses on the {HydrusNumbers.ToHumanInt( len( self._media ) )} files, so there are different things you can do.'
+                            
                         
                     else:
                         
-                        message = 'Of the {} files being managed, some have that tag, but not all of them do, so there are different things you can do.'.format( HydrusNumbers.ToHumanInt( len( self._media ) ) )
+                        message = f'Of the {HydrusNumbers.ToHumanInt( len( self._media ) )} files being managed, some have that tag, but not all of them do, so there are different things you can do.'
                         
                     
                     ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message )
@@ -776,7 +795,15 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             recent_tags = set()
             
             medias_and_tags_managers = [ ( m, m.GetTagsManager() ) for m in self._media ]
-            medias_and_sets_of_tags = [ ( m, tm.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ) for ( m, tm ) in medias_and_tags_managers ]
+            medias_and_sets_of_tags = [
+                (
+                    m,
+                    tm.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ),
+                    tm.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ),
+                    tm.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ),
+                    tm.GetDeleted( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                ) for ( m, tm ) in medias_and_tags_managers
+            ]
             
             # there is a big CPU hit here as every time you ProcessContentUpdatePackage, the tagsmanagers need to regen caches lmao
             # so if I refetch current tags etc... for every tag loop, we end up getting 16 million tagok calls etc...
@@ -786,30 +813,34 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 if choice_action == HC.CONTENT_UPDATE_ADD:
                     
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag not in mc ]
                     
                 elif choice_action == HC.CONTENT_UPDATE_DELETE:
                     
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag in mc ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD:
+                    
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag in md ]
                     
                 elif choice_action == HC.CONTENT_UPDATE_PEND:
                     
                     # check petitioned too, we don't want both at once!
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc and tag not in mp and tag not in mpt ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag not in mc and tag not in mp and tag not in mpt ]
                     
                 elif choice_action == HC.CONTENT_UPDATE_PETITION:
                     
                     # check current even though we don't have to (it makes it more human to say things need to be current here before being petitioned)
                     # check pending too, we don't want both at once!
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc and tag not in mpt and tag not in mp ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag in mc and tag not in mpt and tag not in mp ]
                     
                 elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND:
                     
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mp ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag in mp ]
                     
                 elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION:
                     
-                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mpt ]
+                    media_to_affect = [ m for ( m, mc, mp, mpt, md ) in medias_and_sets_of_tags if tag in mpt ]
                     
                 else:
                     
@@ -1195,15 +1226,42 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 if self._new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' ):
                     
+                    tags_managers = [ m.GetTagsManager() for m in self._media ]
+                    
+                    current_and_pending_tags = set()
+                    deleted_tags = set()
+                    
+                    for tags_manager in tags_managers:
+                        
+                        current_and_pending_tags.update( tags_manager.GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
+                        deleted_tags.update( tags_manager.GetDeleted( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
+                        
+                    
+                    if not deleted_tags.isdisjoint( tags ):
+                        
+                        if not current_and_pending_tags.isdisjoint( tags ):
+                            
+                            verb = 'remove/purge'
+                            
+                        else:
+                            
+                            verb = 'purge (remove deletion record)'
+                            
+                        
+                    else:
+                        
+                        verb = 'remove'
+                        
+                    
                     if len( tags ) < 10:
                         
-                        message = 'Are you sure you want to remove these tags:'
+                        message = f'Are you sure you want to {verb} these tags:'
                         message += '\n' * 2
                         message += '\n'.join( ( HydrusText.ElideText( tag, 64 ) for tag in tags ) )
                         
                     else:
                         
-                        message = 'Are you sure you want to remove these ' + HydrusNumbers.ToHumanInt( len( tags ) ) + ' tags?'
+                        message = f'Are you sure you want to {verb} these {HydrusNumbers.ToHumanInt( len( tags ) )} tags?'
                         
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
