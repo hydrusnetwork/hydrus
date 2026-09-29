@@ -645,7 +645,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 choice_text_lookup[ HC.CONTENT_UPDATE_ADD ] = 'add'
                 choice_text_lookup[ HC.CONTENT_UPDATE_DELETE ] = 'delete'
-                choice_text_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record'
+                choice_text_lookup[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] = 'clear deletion record (CANNOT BE UNDONE)'
                 choice_text_lookup[ HC.CONTENT_UPDATE_PEND ] = 'pend (add)'
                 choice_text_lookup[ HC.CONTENT_UPDATE_PETITION ] = 'petition to remove'
                 choice_text_lookup[ HC.CONTENT_UPDATE_RESCIND_PEND ] = 'undo pend'
