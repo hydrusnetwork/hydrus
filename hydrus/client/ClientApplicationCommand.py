@@ -453,7 +453,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_LEFT : 'if input & results list are empty, move to left one service page',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_PAGE_RIGHT : 'if input & results list are empty, move to right one service page',
     SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_PREVIOUS : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
-    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to previous media',
+    SIMPLE_AUTOCOMPLETE_IF_EMPTY_MEDIA_NEXT : 'if input & results list are empty and in media viewer manage tags dialog, move to next media',
     SIMPLE_MEDIA_SEEK_DELTA : 'seek media',
     SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'profile mode: flip on/off',
     SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show: flip on/off',
