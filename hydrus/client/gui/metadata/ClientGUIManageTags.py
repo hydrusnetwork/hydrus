@@ -1252,9 +1252,19 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                             
                             verb = 'remove/purge'
                             
+                            if not self._i_am_local_tag_service:
+                                
+                                verb = 'remove the current tags within'
+                                
+                            
                         else:
                             
                             verb = 'purge (remove deletion record)'
+                            
+                            if not self._i_am_local_tag_service:
+                                
+                                return
+                                
                             
                         
                     else:
