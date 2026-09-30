@@ -7,6 +7,17 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 689](https://github.com/hydrusnetwork/hydrus/releases/tag/v689)
+
+### all misc this week
+
+* for local file services, you can now delete a deleted tag record in manage tags. if you are looking at a deleted tags (i.e. one with an X count, like `skirt (X1)`), then actioning it (double-click etc..) now gives you the option to either undelete it or clear its deletion record. the 'remove? yes/no' dialog that you may have set to appear when you hit the delete key will now say whether you are about to remove or purge your selection
+* the daemon that deletes overflowing/old files from the trash (when you give the trash a max size or age under `options->files and trash`) is migrated from the old daemon type to the newer. it uses fewer database queries to work, has smarter and lower-latency work/sleep timings that cap out after a half-second of dynamically flexible work, no longer fights with the user if they happen to undelete the oldest trashed files while it is working, avoids work for the sixty seconds after you delete a file from anywhere, and deletes up to the satisfaction of the rules and no further (previously, it would work in batches and cut the trash down to way under the size/age the rules asked for)
+* a 'is this file in use by another process?' test on to-be-imported files no longer attempts the 'rename file to itself' method in non-Windows. this test was false-positive failing on some POSIX systems with advanced permission setups and had no true-positive outcome
+* the 'is this file in use by another process?' test now checks in with `flock` in non-Windows systems. it'll try to open a read on the file and grab an exclusive lock; if either fail, it says no. if this flock test causes permission issues in your storage setup, it _should_ still work while spitting info to log; you can turn it off completely with a new checkbox in `options->files and trash`
+* fixed disappearing system tray icons on 'hide to system tray' on OSes with a Window Manager that needs a full QWidget for the system tray icon. thanks to the reporting user for figuring this out! (issue #2091)
+* fixed the 'move left/right one tab/service page' and 'move to previous/next media' shortcut actions not being listed as choosable action types in the autocomplete shortcut set! (issue #2087)
+
 ## [Version 688](https://github.com/hydrusnetwork/hydrus/releases/tag/v688)
 
 ### run external program on import
@@ -468,66 +479,3 @@ title: Changelog
 
 * I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
 * in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
-
-## [Version 679](https://github.com/hydrusnetwork/hydrus/releases/tag/v679)
-
-### misc
-
-* added a checkbox to `options->importing` to disable .cbz scanning. switch this off, and .cbzs will import or metadata-rescan as .zips
-* fixed a recent issue where the mouse could become perma-hidden in the media viewer when transitioning to an mpv window with the mouse clicked down (e.g. in archive/delete)
-* on Linux, I no longer set an application-associated desktop file on boot if you do not have a `io.github.hydrusnetwork.hydrus.desktop` file in your Applications dir(s). this fixes a warning many LInux users were seeing on boot
-
-### system tray
-
-* I gave the system tray hide/show tech a KISS pass. the main controls are now: 'left-click' the system tray will either (restore and) bring the program to the front, or, if it is already the front, minimise it. 'middle-click' the system tray does the full hide/show that disappears the gui from the taskbar. the 'system tray' options panel now says this specifically
-* when windows go through the hide/show cycle, they remember their state better. if a media viewer is minimised before the hide, it now remembers that
-* the system tray now has the 'minimise/close to system tray' and 'start in system tray' options in a new submenu. if there is a problem restoring from hide state (and thus you can't get to the options), there is now an escape hatch
-* restoring from minimise is also more reliable; if the main gui was maximised before the minimise, it remembers this better
-* some loop-de-doop systray icon double-click handling was removed. just middle-click it bro
-* the "doesn't work half the time" 'restore/minimise' menu option is removed from system-tray right-click. just left-click it bro
-
-### file embedded text clarity
-
-* the 'embedded metadata' text that many images have, and which you can review using the little document button up top of the media viewer, has never been great. it grabs everything our image decoder can see and spits it into something human-readable. today I clip out many common file metadata rows so that when you see this property, you'll actually see something rich and not the ten-thousandth instance of 'this is a jfif'
-* specifically, the keys of `jfif, jfif_unit, jfif_density, jfif_version, dpi, compression, resolution, srgb, gamma, and chromaticity` are no longer included in the metadata text. these are file property strings that PIL munged on load, not true embedded textual metadata. if a file has these tags (and if it has ICC profile data too), this is now presented in nice hardcoded lines below the embedded text box, same place it currently says 'progressive' and 'subsampling' for jpegs. less noise in the complex bit, more signal in the hardcoded bit!
-* I am NOT scheduling a 'has embedded text?' rescan on existing files just yet. there are more rows out there, like 'Software' and a bunch of 'adobe' stuff. I'll keep working here, and advanced users please give me your feedback, and when we've culled things to our satisfaction, I'll trigger a regen on all old files and we'll wipe out a whole bunch of false-positive 'has embedded text' flags and make this thing interesting and useful
-
-### custom temp dir
-
-* the `temp_dir` launch argument can now be relative to your userdir, like `~/blah/hydrus_temp`, or simply relative, `db/temp`, which will be treated as relative to the base install dir, and it'll now resolve properly
-* if you specify a dir that does not exist, hydrus will try to create it
-* if you specify a dir that does not have write permission, hydrus now raises an exception and boot is cancelled
-
-### faster manage tags
-
-* if you have the 'related tags' tag suggestions panel set up, the manage tags dialog is now much more careful about how it asks that guy to go fetch tags. previously, too many pages' of related tags could be searched for on init, and they were scheduled too aggressively, and on legit refresh calls we could get overlapping refreshes, all leading to wasted CPU work. I cleaned it up a bunch
-* if you have the 'file lookup scripts' tag suggestions panel set up, the manage tags dialog is now a frame or two faster to boot after first boot. the scripts are now cached rather than loaded for each service panel on each dialog load
-* on my fairly dense but session-light test client, this got manage tags on one file from 160ms down to 120ms load time
-
-### file maintenance updates
-
-* when files get metadata updates during file maintenance, e.g. it realises it has an ICC Profile when previously it did not think so, the file is now re-queued for search in all duplicates auto-resolution rules it is in with a pertinent status (i.e. did not match search, ready to test, failed test, passed test ready to action)
-* a bunch of 'ok this file has new metadata, reload the metadata object and redraw them thumb' signals are now more careful to only do that when the pertinent metadata actually changed
-* re-setting pixel hashes and perceptual hashes now skips the remove/set work if the desired hashes are already set
-
-### new client api projects
-
-* added a couple links to the client api help: first, one to 'hydit', which is a lightweight, feature-rich hydrus client for Android (https://github.com/BashCooler/hydit)
-* second, 'kaimen', which shows hydrus searches in your file explorer using virtual FUSE mounts (https://github.com/Dry-Leaf/kaimen)
-
-### some mostly boring duplicates cleanup/optimisation
-
-* added an index to optimise some duplicate-files setting code that would particularly slow down a client with many alternates
-* optimised a particular 'reset potential dupe search' update call that is used in various file relationship dissolve and 'remove alternate member' operations (and I think some triggered by normal but complicated duplicate-setting operations too as certain groups are merged)
-* optimised a number of sqlite delete calls, particularly in the duplicate files system, and particularly for clients with many dupes or alts, that were performing inefficiently on non-bleeding-edge versions of SQLite due to a particular dual-index OR clause
-* fixed a file domain filtering issue with the 'maintenance: fix orphan potential pairs' job in duplicates auto-resolution; in some cases it was adding pairs that were outside of the rule's location context
-
-* boring UI cleanup
-* did a big cleanup and decoupling refactor on the new TreeView test. all my code here needs a good cleanup as we integrate the new tech, because it is groaning under the weight of five rewrites, including a transition through UI engines from years ago, and there is weird stuff all over
-* decoupled the history panel from the new view, added some cleaner signals for close/reposition
-* decoupled the filter panel too, same deal
-* fixed filter panel focus-on-show
-* removed the Application-wide eventfilter hook, which was eating a ton of CPU, and redirected to an object focus hook and a new main gui geometry/window state change signal
-* removed some erroneous copy/paste spam from new code
-* did some method reordering and other linting cleanup
-* Main GUI no longer eventFilters itself just for minimise tracking
