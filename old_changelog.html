@@ -35,6 +35,19 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_689"><a href="#version_689">version 689</a></h2>
+                    <ul>
+                        <li><h3>all misc this week</h3></li>
+                        <li>with the tests complete, everyone is moved to the new 'GraphicsView' thumbnail rendering system. the old thumbnail grid rendering code and related thumb cache and other objects are deleted</li>
+                        <li>for local file services, you can now delete a deleted tag record in manage tags. if you are looking at a deleted tags (i.e. one with an X count, like `skirt (X1)`), then actioning it (double-click etc..) now gives you the option to either undelete it or clear its deletion record. the 'remove? yes/no' dialog that you may have set to appear when you hit the delete key will now say whether you are about to remove or purge your selection</li>
+                        <li>the daemon that deletes overflowing/old files from the trash (when you give the trash a max size or age under `options-&gt;files and trash`) is migrated from the old daemon type to the newer. it uses fewer database queries to work, has smarter and lower-latency work/sleep timings that cap out after a half-second of dynamically flexible work, no longer fights with the user if they happen to undelete the oldest trashed files while it is working, avoids work for the sixty seconds after you delete a file from anywhere, and deletes up to the satisfaction of the rules and no further (previously, it would work in batches and cut the trash down to way under the size/age the rules asked for)</li>
+                        <li>a 'is this file in use by another process?' test on to-be-imported files no longer attempts the 'rename file to itself' method in non-Windows. this test was false-positive failing on some POSIX systems with advanced permission setups and had no true-positive outcome</li>
+                        <li>the 'is this file in use by another process?' test now checks in with `flock` in non-Windows systems. it'll try to open a read on the file and grab an exclusive lock; if either fail, it says no. if this flock test causes permission issues in your storage setup, it _should_ still work while spitting info to log; you can turn it off completely with a new checkbox in `options-&gt;files and trash`</li>
+                        <li>fixed disappearing system tray icons on 'hide to system tray' on OSes with a Window Manager that needs a full QWidget for the system tray icon. thanks to the reporting user for figuring this out! (issue #2091)</li>
+                        <li>fixed the 'move left/right one tab/service page' and 'move to previous/next media' shortcut actions not being listed as choosable action types in the autocomplete shortcut set! (issue #2087)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_688"><a href="#version_688">version 688</a></h2>
                     <ul>
                         <li><h3>run external program on import</h3></li>
