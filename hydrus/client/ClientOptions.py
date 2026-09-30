@@ -387,6 +387,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'force_enter_on_radio_buttons_to_do_dialog_ok' : True,
             'make_child_frames_qt_tool' : True,
             'copy_notes_quick_click_only_copies_text' : False,
+            'do_flock_already_in_use_test_in_posix' : True,
         }
         
         #

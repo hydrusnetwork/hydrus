@@ -1557,6 +1557,8 @@ def PathExistsAndIsDir( path: str ):
     return stat_is_dir( path_stat )
     
 
+DO_FLOCK_ALREADY_IN_USE_TEST_IN_POSIX = True
+
 def PathIsFree( path ):
     
     if HC.PLATFORM_WINDOWS:
@@ -1611,17 +1613,35 @@ def PathIsFree( path ):
             
             with open( path, 'rb' ) as f:
                 
-                try:
+                if DO_FLOCK_ALREADY_IN_USE_TEST_IN_POSIX:
                     
-                    fcntl.flock( f, fcntl.LOCK_EX | fcntl.LOCK_NB )
+                    try:
+                        
+                        fcntl.flock( f, fcntl.LOCK_EX | fcntl.LOCK_NB )
+                        
+                    except BlockingIOError:
+                        
+                        HydrusData.Print( 'Already in use/inaccessible due to exclusive lock: ' + path )
+                        
+                        return False
+                        
+                    except PermissionError:
+                        
+                        return True
+                        
+                    except OSError as e:
+                        
+                        HydrusData.Print( f'Got an OSError on a flock call to "{path}":' )
+                        HydrusData.PrintException( e, do_wait = False )
+                        
+                        return True
+                        
+                    else: # 2026-09-28: first try/except/else block by hydev, thanks AI
+                        
+                        return True
+                        
                     
-                except BlockingIOError:
-                    
-                    HydrusData.Print( 'Already in use/inaccessible due to exclusive lock: ' + path )
-                    
-                    return False
-                    
-                else: # 2026-09-28: first try/except/else block by hydev, thanks AI
+                else:
                     
                     return True
                     

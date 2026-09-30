@@ -1272,6 +1272,7 @@ class Controller( HydrusController.HydrusController ):
         from hydrus.core import HydrusPaths
         
         HydrusPaths.DO_NOT_DO_CHMOD_MODE = self.new_options.GetBoolean( 'do_not_do_chmod_mode' )
+        HydrusPaths.DO_FLOCK_ALREADY_IN_USE_TEST_IN_POSIX = self.new_options.GetBoolean( 'do_flock_already_in_use_test_in_posix' )
         
         with self._thread_slot_lock:
             
