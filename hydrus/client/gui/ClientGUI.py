@@ -577,6 +577,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._tabs_tree_view.emptySpaceDoubleLeftClicked.connect( self._notebook.ChooseNewPageForDeepestNotebook )
         
         self._notebook.selectionChanged.connect( self._tabs_tree_view.SelectLeafFromNotebookPage )
+        self._notebook.dataChanged.connect( self._tabs_tree_view.RefreshCurrentPagePath )
         
         self.page_nav_history = ClientGUIPages.PagesHistory()
         

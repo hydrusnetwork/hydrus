@@ -658,6 +658,11 @@ class PagesNotebookTreeModel( QC.QAbstractItemModel ):
             
             target_notebook = target_data.parent.obj
             
+            if row == -1:
+                
+                row = parent.row()
+                
+            
         
         if row == -1:
             
