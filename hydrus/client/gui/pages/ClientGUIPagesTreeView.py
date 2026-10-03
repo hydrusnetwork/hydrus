@@ -1048,6 +1048,9 @@ class TreeViewWithDnD( QW.QTreeView ):
                 
                 self.emptySpaceDoubleLeftClicked.emit()
                 
+                event.accept()
+                return
+                
             
             elif event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier and self.model().GetKindFromIndex( index ) in ( 'page', 'notebook' ):
                 
@@ -1055,10 +1058,9 @@ class TreeViewWithDnD( QW.QTreeView ):
                 
                 notebook.tabBar().tabDoubleLeftClicked.emit( index.row() )
                 
-            
-            event.accept()
-            
-            return
+                event.accept()
+                return
+                
             
         
         QW.QTreeView.mouseDoubleClickEvent( self, event )
