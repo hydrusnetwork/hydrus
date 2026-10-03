@@ -701,8 +701,7 @@ class TreeViewItemDelegate( QW.QStyledItemDelegate ):
 class TreeViewWithDnD( QW.QTreeView ):
     
     leafDragAndDropped = QC.Signal( QW.QWidget, QW.QWidget )
-    currentPagePathChanged = QC.Signal( str )
-    currentPageNameChanged = QC.Signal( str, str )
+    currentPagePathChanged = QC.Signal( str, str )
     emptySpaceDoubleLeftClicked = QC.Signal()
     
     def __init__( self, parent = None ):
@@ -801,8 +800,7 @@ class TreeViewWithDnD( QW.QTreeView ):
             tooltip = full_name
             
         
-        self.currentPagePathChanged.emit( full_name )
-        self.currentPageNameChanged.emit( page_name, tooltip )
+        self.currentPagePathChanged.emit( page_name, tooltip )
         
     
     def _ApplyFilterToParent( self, parent: QC.QModelIndex ) -> bool:
@@ -866,38 +864,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
     
-    def _EmitCurrentPageText( self, index: QC.QModelIndex ):
-        
-        model = self.model()
-        
-        if model is None:
-            
-            return
-            
-        
-        full_name = ''
-        page_name = ''
-        tooltip = ''
-        
-        if hasattr( model, 'GetFullNameFromIndex' ):
-            
-            full_name = model.GetFullNameFromIndex( index )
-            
-        
-        if hasattr( model, 'GetPageNameAndTooltipFromIndex' ):
-            
-            page_name, tooltip = model.GetPageNameAndTooltipFromIndex( index )
-            
-        else:
-            
-            page_name = full_name
-            tooltip = full_name
-            
-        
-        self.currentPagePathChanged.emit( full_name )
-        self.currentPageNameChanged.emit( page_name, tooltip )
-        
-    
     def _ExpandAncestors( self, index: QC.QModelIndex ):
         
         parents = []
@@ -925,6 +891,11 @@ class TreeViewWithDnD( QW.QTreeView ):
         model = self.model()
         
         if model is None:
+            
+            return
+            
+        
+        if model.GetKindFromIndex( index ) == 'notebook':
             
             return
             
@@ -1069,14 +1040,13 @@ class TreeViewWithDnD( QW.QTreeView ):
     def SelectLeafFromNotebookPage( self, notebook, tab_index ):
         
         model = self.model()
+        page = CG.client_controller.gui.GetCurrentPage()
         
-        if model is None:
+        if model is None or page is None:
             
             return
             
-        
-        parent_index = model._FindNotebookIndex( notebook )
-        index = model.index( tab_index, 0, parent_index )
+        index = model.FindIndexForPageKey( page.GetPageKey() )
         
         if index.isValid():
             
@@ -1520,18 +1490,6 @@ class TreeViewWithControls( QW.QWidget ):
         self.depth_decrement = ClientGUICommon.IconButton( self, CC.global_icons().position_previous, lambda: self.expandToDepth( self._current_depth - 1 ) )
         self.depth_decrement.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse to one less than last' ) )
         
-        # depth_1 = QW.QPushButton( '1', self._controls )
-        # depth_1.clicked.connect( lambda: self.expandToDepth( 0 ) )
-        # depth_1.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 1' ) )
-        
-        # depth_2 = QW.QPushButton( '2', self._controls )
-        # depth_2.clicked.connect( lambda: self.expandToDepth( 1 ) )
-        # depth_2.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 2' ) )
-        
-        # depth_3 = QW.QPushButton( '3', self._controls )
-        # depth_3.clicked.connect( lambda: self.expandToDepth( 2 ) )
-        # depth_3.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 3' ) )
-        
         self.depth_increment = ClientGUICommon.IconButton( self._controls, CC.global_icons().position_next, lambda: self.expandToDepth( self._current_depth + 1 ) )
         self.depth_increment.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to one more than last' ) )
         
@@ -1553,16 +1511,11 @@ class TreeViewWithControls( QW.QWidget ):
         self._current_page_path.setCursor( QC.Qt.CursorShape.PointingHandCursor )
         self._current_page_path.mousePressEvent = self._CurrentPagePathClicked
         
-        if hasattr( self._tree, 'currentPageNameChanged' ):
-            
-            self._tree.currentPageNameChanged.connect( self._SetCurrentPagePathText )
-            self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
-            
-        elif hasattr( self._tree, 'currentPagePathChanged' ):
-            
-            self._tree.currentPagePathChanged.connect( self._current_page_path.setText )
-            self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
-            
+        self._tree.currentPagePathChanged.connect( self._SetCurrentPagePathText )
+        self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
+        
+        self._tree.expanded.connect( lambda index: ( self.depth_decrement.setEnabled( True ), self.collapse_all.setEnabled( True ) ) )
+        self._tree.collapsed.connect( lambda index: ( self.depth_increment.setEnabled( True ), self.expand_all.setEnabled( True ) ) )
         
         self._controls_button = ClientGUIMenuButton.CogIconButton( self._controls, self._GetCogMenuTemplateItems() )
         self._controls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Tree view controls' ) )
@@ -1590,22 +1543,13 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._expanding_panel_splitter = QW.QSplitter( QC.Qt.Orientation.Vertical )
         
-        if self._panel_at_top:
-            #self._expanding_panel_splitter.addWidget( self._expanding_panel )
-            self._expanding_panel_splitter.addWidget( self._tree )
-            
-        else:
-            self._expanding_panel_splitter.addWidget( self._tree )
-            #self._expanding_panel_splitter.addWidget( self._expanding_panel )
+        self._expanding_panel_splitter.addWidget( self._tree )
         
         self._expanding_panel_splitter.setSizes( CG.client_controller.new_options.GetIntegerList( 'treeview_expanding_panel_splitter_size' ) )
         self._expanding_panel_splitter.splitterMoved.connect( self._SplitterSizeChanged )
         
         #
         
-        # self._controls_layout.addWidget( depth_1 )
-        # self._controls_layout.addWidget( depth_2 )
-        # self._controls_layout.addWidget( depth_3 )
         self._controls_layout.addWidget( self.collapse_all )
         self._controls_layout.addWidget( self.depth_decrement )
         self._controls_layout.addWidget( self.depth_increment )
@@ -2117,34 +2061,35 @@ class TreeViewWithControls( QW.QWidget ):
         
         if depth < 0:
             
+            self._current_depth = -1
+            self._tree.collapseAll()
+            
             self.depth_decrement.setEnabled( False )
             self.depth_increment.setEnabled( True )
             self.collapse_all.setEnabled( False )
             self.expand_all.setEnabled( True )
-            self._current_depth = -1
-            
-            self._tree.collapseAll()
             
         
         elif depth >= model.GetViewDepth() - 1:
+            
+            self._current_depth = model.GetViewDepth() - 1
+            self._tree.expandAll()
             
             self.depth_decrement.setEnabled( True )
             self.depth_increment.setEnabled( False )
             self.collapse_all.setEnabled( True )
             self.expand_all.setEnabled( False )
-            self._current_depth = model.GetViewDepth() - 1
-            
-            self._tree.expandAll()
-            
+
+        
         else:
+            
+            self._current_depth = depth
+            self._tree.expandToDepth( depth )
             
             self.depth_decrement.setEnabled( True )
             self.depth_increment.setEnabled( True )
             self.collapse_all.setEnabled( True )
             self.expand_all.setEnabled( True )
-            
-            self._current_depth = depth
-            self._tree.expandToDepth( depth )
             
         
     
