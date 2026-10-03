@@ -1042,9 +1042,19 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         index = self.indexAt( event.position().toPoint() )
         
-        if ( event.button() == QC.Qt.MouseButton.LeftButton and not index.isValid() ):
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
-            self.emptySpaceDoubleLeftClicked.emit()
+            if not index.isValid():
+                
+                self.emptySpaceDoubleLeftClicked.emit()
+                
+            
+            elif event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier and self.model().GetKindFromIndex( index ) in ( 'page', 'notebook' ):
+                
+                notebook = self.model().GetParentNotebookFromIndex( index )
+                
+                notebook.tabBar().tabDoubleLeftClicked.emit( index.row() )
+                
             
             event.accept()
             
