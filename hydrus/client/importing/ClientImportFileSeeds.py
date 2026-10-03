@@ -1299,6 +1299,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             self.SetStatus( CC.STATUS_ERROR, exception = e )
             
+        finally:
+            
+            if self.status == CC.STATUS_UNKNOWN:
+                
+                self.SetStatus( CC.STATUS_ERROR, note = 'problem: import status was never set!' )
+                
+            
         
         file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
         
@@ -1874,6 +1881,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             time.sleep( 3 )
             
         finally:
+            
+            if self.status == CC.STATUS_UNKNOWN:
+                
+                self.SetStatus( CC.STATUS_ERROR, note = 'problem: import status was never set!' )
+                
             
             file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
             

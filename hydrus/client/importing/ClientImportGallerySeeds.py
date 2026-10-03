@@ -786,6 +786,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
         finally:
             
+            if self.status == CC.STATUS_UNKNOWN:
+                
+                self.SetStatus( CC.STATUS_ERROR, note = 'problem: import status was never set!' )
+                
+            
             gallery_seed_log.NotifyGallerySeedsUpdated( ( self, ) )
             
         
