@@ -394,7 +394,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( tags_panel, 'tags', self._tag_presentation_location, show_siblings_sort = True )
             
-            self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self._tag_presentation_location, self.EnterTags, self.RemoveTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self._tag_presentation_location, self.EnterTagsFromListActivation, self.RemoveTagsFromListDelete )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -460,7 +460,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             #
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( tags_panel, self.AddTags, self._location_context, self._tag_service_key, show_paste_button = True )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( tags_panel, self.AddTagsFromAC, self._location_context, self._tag_service_key, show_paste_button = True )
             
             self._add_tag_box.movePageLeft.connect( self.movePageLeft )
             self._add_tag_box.movePageRight.connect( self.movePageRight )
@@ -475,7 +475,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, len( media ) == 1, self.AddTags )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, len( media ) == 1, self.AddTagsFromSuggested )
             
             self._UpdateShowDeleted() # before setmedia
             
@@ -1048,7 +1048,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def _PasteComingFromAC( self, tags: list[ str ] ):
             
-            self.AddTags( tags, only_add = True )
+            self.EnterTags( tags, only_add = True )
             
         
         def _RemoveTagsButton( self ):
@@ -1103,7 +1103,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._deleted_tags_show_button.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
             
         
-        def AddTags( self, tags, only_add = False ):
+        def AddTagsFromAC( self, tags ):
+            
+            only_add = False
             
             if not self._new_options.GetBoolean( 'allow_remove_on_manage_tags_input' ):
                 
@@ -1114,6 +1116,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 self.EnterTags( tags, only_add = only_add )
                 
+            
+        
+        def AddTagsFromSuggested( self, tags ):
+            
+            self.EnterTags( tags, only_add = True )
             
         
         def CleanBeforeDestroy( self ):
@@ -1132,6 +1139,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 self._EnterTags( tags, only_add = only_add )
                 
+            
+        
+        def EnterTagsFromListActivation( self, tags ):
+            
+            self.EnterTags( tags )
             
         
         def GetContentUpdatePackages( self ):
@@ -1293,6 +1305,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 self._EnterTags( tags, only_remove = True )
                 
+            
+        
+        def RemoveTagsFromListDelete( self, tags ):
+            
+            self.RemoveTags( tags )
             
         
         def SetMedia( self, media ):
