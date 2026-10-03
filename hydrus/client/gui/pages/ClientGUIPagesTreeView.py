@@ -660,7 +660,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
 
-class TreeViewRowHeightDelegate( QW.QStyledItemDelegate ):
+class TreeViewItemDelegate( QW.QStyledItemDelegate ):
     
     def __init__( self, parent: QW.QWidget ):
         
@@ -683,6 +683,18 @@ class TreeViewRowHeightDelegate( QW.QStyledItemDelegate ):
         return size_hint
         
     
+    def paint( self, painter, option, index ):
+        
+        option = QW.QStyleOptionViewItem( option )
+        
+        if CG.client_controller.new_options.GetBoolean( 'treeview_hide_focus_rectangle' ): 
+            
+            option.state &= ~QW.QStyle.StateFlag.State_HasFocus
+            
+        
+        super().paint( painter, option, index )
+        
+    
 
 # TODO: THIS WHOLE THING IS A MESS OF FIVE DIFFERENT REWRITES, it needs a good look and cleanup and perhaps pulling into different pieces
 # Base tree view that uses a PagesNotebookTreeModel( QC.QAbstractItemModel ) to allow more control over pages/notebooks
@@ -697,9 +709,9 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         super().__init__( parent )
         
-        self._row_height_delegate = TreeViewRowHeightDelegate( self )
+        self._row_height_paint_delegate = TreeViewItemDelegate( self )
         
-        self.setItemDelegate( self._row_height_delegate )
+        self.setItemDelegate( self._row_height_paint_delegate )
         self.setUniformRowHeights( True )
         self.setIndentation( CG.client_controller.new_options.GetInteger( 'treeview_indentation' ) )
         self.SetRowHeight( CG.client_controller.new_options.GetInteger( 'treeview_row_height' ) )
@@ -763,7 +775,7 @@ class TreeViewWithDnD( QW.QTreeView ):
     
     def SetRowHeight( self, row_height: int ):
     
-        self._row_height_delegate.SetRowHeight( row_height )
+        self._row_height_paint_delegate.SetRowHeight( row_height )
         self.doItemsLayout()
         self.viewport().update()
         
@@ -1968,13 +1980,19 @@ class TreeViewWithControls( QW.QWidget ):
 
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_collapse_all_children_upon_parent_closed' )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Collapse all children when parent is closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.', check_manager ) )
-
+        
+        styling_template_items = []
+        
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_alternating_row_colours' )
         check_manager.AddNotifyCall( lambda: self._tree.setAlternatingRowColors( CG.client_controller.new_options.GetBoolean( 'treeview_alternating_row_colours' ) ) )
-
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Shade alternating rows', 'Style the tree view with alternating colour shading per row.', check_manager ) )
+        styling_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Shade alternating rows', 'Style the tree view with alternating colour shading per row.', check_manager ) )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_hide_focus_rectangle' )
+        check_manager.AddNotifyCall( self._tree.viewport().update )
+        styling_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Hide the focus rectangle', 'Do not show the dotted focus rectangle around the current row.', check_manager ) )
+        
+
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'style/display', styling_template_items ) )
         
         spacing_template_items = []
         spacing_template_items.append( ClientGUIMenuButton.MenuTemplateItemSlider( 'indent width', 'The horizontal indentation added for each nested tree level.', lambda: CG.client_controller.new_options.GetInteger( 'treeview_indentation' ), 4, 64, 1, self._SetTreeViewIndentation ) )
