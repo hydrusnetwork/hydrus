@@ -1134,6 +1134,11 @@ class TreeViewWithDnD( QW.QTreeView ):
         self.ReapplyFilter()
         
     
+    def RefreshCurrentPagePath( self ):
+        
+        self._EmitCurrentIndexText( self.currentIndex() )
+        
+    
     def SetFilterText( self, text: str ):
         
         self._filter_text = str( text ).strip().casefold()
