@@ -727,6 +727,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         self.setDropIndicatorShown( True )
         self.setDragDropMode( QW.QAbstractItemView.DragDropMode.InternalMove )
         self.setDefaultDropAction( QC.Qt.DropAction.MoveAction )
+        self.setAutoExpandDelay( 500 )
         
         self.setSelectionBehavior( QW.QAbstractItemView.SelectionBehavior.SelectRows )
         self.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
@@ -741,6 +742,81 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         self.activated.connect( self._OnTreeActivated )
         self.doubleClicked.connect( self._OnTreeActivated )
+        
+        self.viewport().installEventFilter( self )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if watched is self.viewport() and event.type() in ( QC.QEvent.Type.DragEnter, QC.QEvent.Type.DragMove, QC.QEvent.Type.Drop ):
+            
+            mime_data = event.mimeData()
+            
+            if mime_data.hasFormat( 'application/x-hydrus-page-tree-index' ) or mime_data.hasFormat( 'application/hydrus-tab' ):
+                
+                return super().eventFilter( watched, event )
+                
+            if event.type() == QC.QEvent.Type.DragMove:
+                
+                option_name = 'page_drag_change_tab_with_shift' if event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier else 'page_drag_change_tab_normally'
+                
+                if CG.client_controller.new_options.GetBoolean( option_name ):
+                    
+                    index = self.indexAt( event.position().toPoint() )
+                    
+                    if index.isValid():
+                        
+                        page_key = self.model().GetPageKeyFromIndex( index )
+                        
+                        if page_key is not None:
+                            
+                            CG.client_controller.gui.ShowPage( page_key )
+                            
+                        
+                    
+                
+            if event.type() == QC.QEvent.Type.Drop:
+                
+                dest_notebook = None
+                tab_index = None
+                index = self.indexAt( event.position().toPoint() )
+                
+                if index.isValid():
+                    
+                    dest_notebook = self.model().GetParentNotebookFromIndex( index )
+                    tab_index = index.row()
+                    
+                    if self.model().GetKindFromIndex( index ) == 'notebook':
+                        
+                        dest_notebook = dest_notebook.widget( tab_index )
+                        tab_index = dest_notebook.count()
+                        
+                    
+                
+                event.setDropAction( CG.client_controller.gui.GetDropTarget().OnData( mime_data, event.proposedAction(), dest_notebook, tab_index ) )
+                event.accept()
+                
+            else:
+                
+                event.acceptProposedAction()
+                
+            return True
+            
+        return super().eventFilter( watched, event )
+        
+    
+    def dropEvent( self, event ):
+        
+        if not event.mimeData().hasFormat( 'application/x-hydrus-page-tree-index' ):
+            
+            return super().dropEvent( event )
+            
+        
+        page_key = self.model().GetPageKeyFromIndex( self.currentIndex() )
+        
+        super().dropEvent( event )
+        
+        CG.client_controller.gui.ShowPage( page_key )
         
     
     def model( self ) -> ClientGUIPagesTreeModel.PagesNotebookTreeModel:

@@ -273,7 +273,7 @@ class FileDropTarget( QC.QObject ):
         return False
         
     
-    def OnData( self, mime_data, result ):
+    def OnData( self, mime_data, result, dest_notebook = None, tab_index = None  ):
         
         media_dnd = isinstance( mime_data, QMimeDataHydrusFiles )
         urls_dnd = mime_data.hasUrls()
@@ -289,7 +289,7 @@ class FileDropTarget( QC.QObject ):
                 
                 if page_key is not None:
                     
-                    CG.client_controller.CallAfterQtSafe( self, self._media_callable, page_key, hashes )  # callafter so we can terminate dnd event now
+                    CG.client_controller.CallAfterQtSafe( self, self._media_callable, page_key, hashes, dest_notebook, tab_index )  # callafter so we can terminate dnd event now
                     
                 
             
