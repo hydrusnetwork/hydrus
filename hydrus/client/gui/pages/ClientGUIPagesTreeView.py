@@ -976,7 +976,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             return
             
         
-        self._ExpandAncestors( index )
         self._SetCurrentIndex( index )
         
         if scroll:
@@ -1655,29 +1654,6 @@ class TreeViewWithControls( QW.QWidget ):
         return depth
         
     
-    def _GetEventGlobalPos( self, event ):
-        
-        if hasattr( event, 'globalPosition' ):
-            
-            return event.globalPosition().toPoint()
-            
-        
-        return event.globalPos()
-        
-    
-    def _GlobalPointInsideWidget( self, global_pos, widget ) -> bool:
-        
-        if widget is None or not widget.isVisible():
-            
-            return False
-            
-        
-        top_left = widget.mapToGlobal( widget.rect().topLeft() )
-        rect = QC.QRect( top_left, widget.rect().size() )
-        
-        return rect.contains( global_pos )
-        
-    
     def _HideFilterPanel( self ):
         
         self._filter_panel.hide()
@@ -1712,34 +1688,6 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._controls_at_top = False
         CG.client_controller.new_options.SetBoolean( 'treeview_controls_at_top', False )
-        
-    
-    def _MoveExpandingPanelToTop( self ):
-        
-        if self._panel_at_top:
-            
-            return
-            
-        
-        self._expanding_panel_splitter.widget(0).deleteLater()
-        self._expanding_panel_splitter.insertWidget( 0, self._expanding_panel )
-        
-        self._panel_at_top = True
-        CG.client_controller.new_options.SetBoolean( 'treeview_expanding_panel_at_top', True )
-        
-    
-    def _MoveExpandingPanelToBottom( self ):
-        
-        if not self._panel_at_top:
-            
-            return
-            
-        
-        self._expanding_panel_splitter.widget(0).deleteLater()
-        self._expanding_panel_splitter.addWidget( self._expanding_panel )
-        
-        self._panel_at_top = False
-        CG.client_controller.new_options.SetBoolean( 'treeview_expanding_panel_at_top', False )
         
     
     def _PositionPanelNearWidget( self, panel: QW.QWidget, widget: QW.QWidget, avoid_widgets = None ):
