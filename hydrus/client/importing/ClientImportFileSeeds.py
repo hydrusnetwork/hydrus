@@ -1306,8 +1306,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 self.SetStatus( CC.STATUS_ERROR, note = 'problem: import status was never set!' )
                 
             
-        
-        file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
+            file_seed_cache.NotifyFileSeedsUpdated( ( self, ) )
+            
         
     
     def IsAPostURL( self ):
