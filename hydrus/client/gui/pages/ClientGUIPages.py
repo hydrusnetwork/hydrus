@@ -3436,7 +3436,7 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
             
         
     
-    def MediaDragAndDropDropped( self, source_page_key, hashes ):
+    def MediaDragAndDropDropped( self, source_page_key, hashes, dest_notebook = None, tab_index = None ):
         
         source_page = self.GetPageFromPageKey( source_page_key )
         
@@ -3451,9 +3451,14 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         screen_position = ClientGUIFunctions.GetMousePos()
         
-        dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
-        
-        tab_index = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, screen_position )
+        if dest_notebook is None:
+            
+            dest_notebook = self._GetNotebookFromScreenPosition( screen_position )
+            
+        if tab_index is None:
+            
+            tab_index = ClientGUIFunctions.NotebookScreenToHitTest( dest_notebook, screen_position )
+            
         
         do_add = True
         # do chase - if we need to chase to an existing dest page on which we dropped files

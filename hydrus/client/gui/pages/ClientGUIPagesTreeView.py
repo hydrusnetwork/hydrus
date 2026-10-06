@@ -660,7 +660,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
         
     
 
-class TreeViewRowHeightDelegate( QW.QStyledItemDelegate ):
+class TreeViewItemDelegate( QW.QStyledItemDelegate ):
     
     def __init__( self, parent: QW.QWidget ):
         
@@ -683,23 +683,34 @@ class TreeViewRowHeightDelegate( QW.QStyledItemDelegate ):
         return size_hint
         
     
+    def paint( self, painter, option, index ):
+        
+        option = QW.QStyleOptionViewItem( option )
+        
+        if CG.client_controller.new_options.GetBoolean( 'treeview_hide_focus_rectangle' ): 
+            
+            option.state &= ~QW.QStyle.StateFlag.State_HasFocus
+            
+        
+        super().paint( painter, option, index )
+        
+    
 
 # TODO: THIS WHOLE THING IS A MESS OF FIVE DIFFERENT REWRITES, it needs a good look and cleanup and perhaps pulling into different pieces
 # Base tree view that uses a PagesNotebookTreeModel( QC.QAbstractItemModel ) to allow more control over pages/notebooks
 class TreeViewWithDnD( QW.QTreeView ):
     
     leafDragAndDropped = QC.Signal( QW.QWidget, QW.QWidget )
-    currentPagePathChanged = QC.Signal( str )
-    currentPageNameChanged = QC.Signal( str, str )
+    currentPagePathChanged = QC.Signal( str, str )
     emptySpaceDoubleLeftClicked = QC.Signal()
     
     def __init__( self, parent = None ):
         
         super().__init__( parent )
         
-        self._row_height_delegate = TreeViewRowHeightDelegate( self )
+        self._row_height_paint_delegate = TreeViewItemDelegate( self )
         
-        self.setItemDelegate( self._row_height_delegate )
+        self.setItemDelegate( self._row_height_paint_delegate )
         self.setUniformRowHeights( True )
         self.setIndentation( CG.client_controller.new_options.GetInteger( 'treeview_indentation' ) )
         self.SetRowHeight( CG.client_controller.new_options.GetInteger( 'treeview_row_height' ) )
@@ -716,6 +727,7 @@ class TreeViewWithDnD( QW.QTreeView ):
         self.setDropIndicatorShown( True )
         self.setDragDropMode( QW.QAbstractItemView.DragDropMode.InternalMove )
         self.setDefaultDropAction( QC.Qt.DropAction.MoveAction )
+        self.setAutoExpandDelay( 500 )
         
         self.setSelectionBehavior( QW.QAbstractItemView.SelectionBehavior.SelectRows )
         self.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )
@@ -730,6 +742,81 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         self.activated.connect( self._OnTreeActivated )
         self.doubleClicked.connect( self._OnTreeActivated )
+        
+        self.viewport().installEventFilter( self )
+        
+    
+    def eventFilter( self, watched, event ):
+        
+        if watched is self.viewport() and event.type() in ( QC.QEvent.Type.DragEnter, QC.QEvent.Type.DragMove, QC.QEvent.Type.Drop ):
+            
+            mime_data = event.mimeData()
+            
+            if mime_data.hasFormat( 'application/x-hydrus-page-tree-index' ) or mime_data.hasFormat( 'application/hydrus-tab' ):
+                
+                return super().eventFilter( watched, event )
+                
+            if event.type() == QC.QEvent.Type.DragMove:
+                
+                option_name = 'page_drag_change_tab_with_shift' if event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier else 'page_drag_change_tab_normally'
+                
+                if CG.client_controller.new_options.GetBoolean( option_name ):
+                    
+                    index = self.indexAt( event.position().toPoint() )
+                    
+                    if index.isValid():
+                        
+                        page_key = self.model().GetPageKeyFromIndex( index )
+                        
+                        if page_key is not None:
+                            
+                            CG.client_controller.gui.ShowPage( page_key )
+                            
+                        
+                    
+                
+            if event.type() == QC.QEvent.Type.Drop:
+                
+                dest_notebook = None
+                tab_index = None
+                index = self.indexAt( event.position().toPoint() )
+                
+                if index.isValid():
+                    
+                    dest_notebook = self.model().GetParentNotebookFromIndex( index )
+                    tab_index = index.row()
+                    
+                    if self.model().GetKindFromIndex( index ) == 'notebook':
+                        
+                        dest_notebook = dest_notebook.widget( tab_index )
+                        tab_index = dest_notebook.count()
+                        
+                    
+                
+                event.setDropAction( CG.client_controller.gui.GetDropTarget().OnData( mime_data, event.proposedAction(), dest_notebook, tab_index ) )
+                event.accept()
+                
+            else:
+                
+                event.acceptProposedAction()
+                
+            return True
+            
+        return super().eventFilter( watched, event )
+        
+    
+    def dropEvent( self, event ):
+        
+        if not event.mimeData().hasFormat( 'application/x-hydrus-page-tree-index' ):
+            
+            return super().dropEvent( event )
+            
+        
+        page_key = self.model().GetPageKeyFromIndex( self.currentIndex() )
+        
+        super().dropEvent( event )
+        
+        CG.client_controller.gui.ShowPage( page_key )
         
     
     def model( self ) -> ClientGUIPagesTreeModel.PagesNotebookTreeModel:
@@ -763,7 +850,7 @@ class TreeViewWithDnD( QW.QTreeView ):
     
     def SetRowHeight( self, row_height: int ):
     
-        self._row_height_delegate.SetRowHeight( row_height )
+        self._row_height_paint_delegate.SetRowHeight( row_height )
         self.doItemsLayout()
         self.viewport().update()
         
@@ -789,8 +876,7 @@ class TreeViewWithDnD( QW.QTreeView ):
             tooltip = full_name
             
         
-        self.currentPagePathChanged.emit( full_name )
-        self.currentPageNameChanged.emit( page_name, tooltip )
+        self.currentPagePathChanged.emit( page_name, tooltip )
         
     
     def _ApplyFilterToParent( self, parent: QC.QModelIndex ) -> bool:
@@ -854,38 +940,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
     
-    def _EmitCurrentPageText( self, index: QC.QModelIndex ):
-        
-        model = self.model()
-        
-        if model is None:
-            
-            return
-            
-        
-        full_name = ''
-        page_name = ''
-        tooltip = ''
-        
-        if hasattr( model, 'GetFullNameFromIndex' ):
-            
-            full_name = model.GetFullNameFromIndex( index )
-            
-        
-        if hasattr( model, 'GetPageNameAndTooltipFromIndex' ):
-            
-            page_name, tooltip = model.GetPageNameAndTooltipFromIndex( index )
-            
-        else:
-            
-            page_name = full_name
-            tooltip = full_name
-            
-        
-        self.currentPagePathChanged.emit( full_name )
-        self.currentPageNameChanged.emit( page_name, tooltip )
-        
-    
     def _ExpandAncestors( self, index: QC.QModelIndex ):
         
         parents = []
@@ -913,6 +967,11 @@ class TreeViewWithDnD( QW.QTreeView ):
         model = self.model()
         
         if model is None:
+            
+            return
+            
+        
+        if model.GetKindFromIndex( index ) == 'notebook':
             
             return
             
@@ -993,7 +1052,6 @@ class TreeViewWithDnD( QW.QTreeView ):
             return
             
         
-        self._ExpandAncestors( index )
         self._SetCurrentIndex( index )
         
         if scroll:
@@ -1030,13 +1088,25 @@ class TreeViewWithDnD( QW.QTreeView ):
         
         index = self.indexAt( event.position().toPoint() )
         
-        if ( event.button() == QC.Qt.MouseButton.LeftButton and not index.isValid() ):
+        if event.button() == QC.Qt.MouseButton.LeftButton:
             
-            self.emptySpaceDoubleLeftClicked.emit()
+            if not index.isValid():
+                
+                self.emptySpaceDoubleLeftClicked.emit()
+                
+                event.accept()
+                return
+                
             
-            event.accept()
-            
-            return
+            elif event.modifiers() & QC.Qt.KeyboardModifier.ShiftModifier and self.model().GetKindFromIndex( index ) in ( 'page', 'notebook' ):
+                
+                notebook = self.model().GetParentNotebookFromIndex( index )
+                
+                notebook.tabBar().tabDoubleLeftClicked.emit( index.row() )
+                
+                event.accept()
+                return
+                
             
         
         QW.QTreeView.mouseDoubleClickEvent( self, event )
@@ -1045,14 +1115,13 @@ class TreeViewWithDnD( QW.QTreeView ):
     def SelectLeafFromNotebookPage( self, notebook, tab_index ):
         
         model = self.model()
+        page = CG.client_controller.gui.GetCurrentPage()
         
-        if model is None:
+        if model is None or page is None:
             
             return
             
-        
-        parent_index = model._FindNotebookIndex( notebook )
-        index = model.index( tab_index, 0, parent_index )
+        index = model.FindIndexForPageKey( page.GetPageKey() )
         
         if index.isValid():
             
@@ -1139,6 +1208,11 @@ class TreeViewWithDnD( QW.QTreeView ):
             
         
         self.ReapplyFilter()
+        
+    
+    def RefreshCurrentPagePath( self ):
+        
+        self._EmitCurrentIndexText( self.currentIndex() )
         
     
     def SetFilterText( self, text: str ):
@@ -1496,18 +1570,6 @@ class TreeViewWithControls( QW.QWidget ):
         self.depth_decrement = ClientGUICommon.IconButton( self, CC.global_icons().position_previous, lambda: self.expandToDepth( self._current_depth - 1 ) )
         self.depth_decrement.setToolTip( ClientGUIFunctions.WrapToolTip( 'Collapse to one less than last' ) )
         
-        # depth_1 = QW.QPushButton( '1', self._controls )
-        # depth_1.clicked.connect( lambda: self.expandToDepth( 0 ) )
-        # depth_1.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 1' ) )
-        
-        # depth_2 = QW.QPushButton( '2', self._controls )
-        # depth_2.clicked.connect( lambda: self.expandToDepth( 1 ) )
-        # depth_2.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 2' ) )
-        
-        # depth_3 = QW.QPushButton( '3', self._controls )
-        # depth_3.clicked.connect( lambda: self.expandToDepth( 2 ) )
-        # depth_3.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to depth 3' ) )
-        
         self.depth_increment = ClientGUICommon.IconButton( self._controls, CC.global_icons().position_next, lambda: self.expandToDepth( self._current_depth + 1 ) )
         self.depth_increment.setToolTip( ClientGUIFunctions.WrapToolTip( 'Expand to one more than last' ) )
         
@@ -1529,16 +1591,11 @@ class TreeViewWithControls( QW.QWidget ):
         self._current_page_path.setCursor( QC.Qt.CursorShape.PointingHandCursor )
         self._current_page_path.mousePressEvent = self._CurrentPagePathClicked
         
-        if hasattr( self._tree, 'currentPageNameChanged' ):
-            
-            self._tree.currentPageNameChanged.connect( self._SetCurrentPagePathText )
-            self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
-            
-        elif hasattr( self._tree, 'currentPagePathChanged' ):
-            
-            self._tree.currentPagePathChanged.connect( self._current_page_path.setText )
-            self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
-            
+        self._tree.currentPagePathChanged.connect( self._SetCurrentPagePathText )
+        self._tree.currentPagePathChanged.connect( self.PopulateHistoryIfOpen )
+        
+        self._tree.expanded.connect( lambda index: ( self.depth_decrement.setEnabled( True ), self.collapse_all.setEnabled( True ) ) )
+        self._tree.collapsed.connect( lambda index: ( self.depth_increment.setEnabled( True ), self.expand_all.setEnabled( True ) ) )
         
         self._controls_button = ClientGUIMenuButton.CogIconButton( self._controls, self._GetCogMenuTemplateItems() )
         self._controls_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Tree view controls' ) )
@@ -1566,22 +1623,13 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._expanding_panel_splitter = QW.QSplitter( QC.Qt.Orientation.Vertical )
         
-        if self._panel_at_top:
-            #self._expanding_panel_splitter.addWidget( self._expanding_panel )
-            self._expanding_panel_splitter.addWidget( self._tree )
-            
-        else:
-            self._expanding_panel_splitter.addWidget( self._tree )
-            #self._expanding_panel_splitter.addWidget( self._expanding_panel )
+        self._expanding_panel_splitter.addWidget( self._tree )
         
         self._expanding_panel_splitter.setSizes( CG.client_controller.new_options.GetIntegerList( 'treeview_expanding_panel_splitter_size' ) )
         self._expanding_panel_splitter.splitterMoved.connect( self._SplitterSizeChanged )
         
         #
         
-        # self._controls_layout.addWidget( depth_1 )
-        # self._controls_layout.addWidget( depth_2 )
-        # self._controls_layout.addWidget( depth_3 )
         self._controls_layout.addWidget( self.collapse_all )
         self._controls_layout.addWidget( self.depth_decrement )
         self._controls_layout.addWidget( self.depth_increment )
@@ -1687,29 +1735,6 @@ class TreeViewWithControls( QW.QWidget ):
         return depth
         
     
-    def _GetEventGlobalPos( self, event ):
-        
-        if hasattr( event, 'globalPosition' ):
-            
-            return event.globalPosition().toPoint()
-            
-        
-        return event.globalPos()
-        
-    
-    def _GlobalPointInsideWidget( self, global_pos, widget ) -> bool:
-        
-        if widget is None or not widget.isVisible():
-            
-            return False
-            
-        
-        top_left = widget.mapToGlobal( widget.rect().topLeft() )
-        rect = QC.QRect( top_left, widget.rect().size() )
-        
-        return rect.contains( global_pos )
-        
-    
     def _HideFilterPanel( self ):
         
         self._filter_panel.hide()
@@ -1744,34 +1769,6 @@ class TreeViewWithControls( QW.QWidget ):
         
         self._controls_at_top = False
         CG.client_controller.new_options.SetBoolean( 'treeview_controls_at_top', False )
-        
-    
-    def _MoveExpandingPanelToTop( self ):
-        
-        if self._panel_at_top:
-            
-            return
-            
-        
-        self._expanding_panel_splitter.widget(0).deleteLater()
-        self._expanding_panel_splitter.insertWidget( 0, self._expanding_panel )
-        
-        self._panel_at_top = True
-        CG.client_controller.new_options.SetBoolean( 'treeview_expanding_panel_at_top', True )
-        
-    
-    def _MoveExpandingPanelToBottom( self ):
-        
-        if not self._panel_at_top:
-            
-            return
-            
-        
-        self._expanding_panel_splitter.widget(0).deleteLater()
-        self._expanding_panel_splitter.addWidget( self._expanding_panel )
-        
-        self._panel_at_top = False
-        CG.client_controller.new_options.SetBoolean( 'treeview_expanding_panel_at_top', False )
         
     
     def _PositionPanelNearWidget( self, panel: QW.QWidget, widget: QW.QWidget, avoid_widgets = None ):
@@ -1968,13 +1965,19 @@ class TreeViewWithControls( QW.QWidget ):
 
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_collapse_all_children_upon_parent_closed' )
         menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Collapse all children when parent is closed', 'If this is unchecked, collapsing a page-of-pages node will remember the expanded state of all its sub-pages. Otherwise, it will be collapsed completely.', check_manager ) )
-
+        
+        styling_template_items = []
+        
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_alternating_row_colours' )
         check_manager.AddNotifyCall( lambda: self._tree.setAlternatingRowColors( CG.client_controller.new_options.GetBoolean( 'treeview_alternating_row_colours' ) ) )
-
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Shade alternating rows', 'Style the tree view with alternating colour shading per row.', check_manager ) )
+        styling_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Shade alternating rows', 'Style the tree view with alternating colour shading per row.', check_manager ) )
         
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'treeview_hide_focus_rectangle' )
+        check_manager.AddNotifyCall( self._tree.viewport().update )
+        styling_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'Hide the focus rectangle', 'Do not show the dotted focus rectangle around the current row.', check_manager ) )
+        
+
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'style/display', styling_template_items ) )
         
         spacing_template_items = []
         spacing_template_items.append( ClientGUIMenuButton.MenuTemplateItemSlider( 'indent width', 'The horizontal indentation added for each nested tree level.', lambda: CG.client_controller.new_options.GetInteger( 'treeview_indentation' ), 4, 64, 1, self._SetTreeViewIndentation ) )
@@ -2087,34 +2090,35 @@ class TreeViewWithControls( QW.QWidget ):
         
         if depth < 0:
             
+            self._current_depth = -1
+            self._tree.collapseAll()
+            
             self.depth_decrement.setEnabled( False )
             self.depth_increment.setEnabled( True )
             self.collapse_all.setEnabled( False )
             self.expand_all.setEnabled( True )
-            self._current_depth = -1
-            
-            self._tree.collapseAll()
             
         
         elif depth >= model.GetViewDepth() - 1:
+            
+            self._current_depth = model.GetViewDepth() - 1
+            self._tree.expandAll()
             
             self.depth_decrement.setEnabled( True )
             self.depth_increment.setEnabled( False )
             self.collapse_all.setEnabled( True )
             self.expand_all.setEnabled( False )
-            self._current_depth = model.GetViewDepth() - 1
-            
-            self._tree.expandAll()
-            
+
+        
         else:
+            
+            self._current_depth = depth
+            self._tree.expandToDepth( depth )
             
             self.depth_decrement.setEnabled( True )
             self.depth_increment.setEnabled( True )
             self.collapse_all.setEnabled( True )
             self.expand_all.setEnabled( True )
-            
-            self._current_depth = depth
-            self._tree.expandToDepth( depth )
             
         
     

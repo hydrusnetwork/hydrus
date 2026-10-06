@@ -376,7 +376,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'treeview_always_expand_to_current_tab_after_reset' : False,
             'treeview_collapse_all_children_upon_parent_closed' : False,
             'treeview_alternating_row_colours' : False,
-            'treeview_animate_current_node' : True,
+            'treeview_hide_focus_rectangle' : True,
             'treeview_history_box_pinned' : False,
             'allow_comic_book_archive_detection' : True,
             'minimise_client_to_system_tray_bugfix_deferred_state_set' : False,
