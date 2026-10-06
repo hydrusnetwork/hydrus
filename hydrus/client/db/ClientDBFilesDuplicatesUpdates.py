@@ -634,6 +634,13 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
         return self._location_contexts_to_potential_duplicate_id_pairs_and_distances[ location_context ].Duplicate()
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:
+        
+        tables_and_columns = []
+        
+        return tables_and_columns
+        
+    
     def NotifyFilesEnteringDomains( self, hash_ids, only_for_this_file_service_key = None ):
         
         rows = []
