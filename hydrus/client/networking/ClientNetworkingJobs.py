@@ -1894,7 +1894,7 @@ class NetworkJob( object ):
             
             if HG.started_shutdown or HydrusThreading.IsThreadShuttingDown():
                 
-                raise HydrusExceptions.ShutdownException()
+                raise HydrusExceptions.ProgramShutdownException()
                 
             elif self._error_exception is not None:
                 

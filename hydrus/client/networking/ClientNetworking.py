@@ -96,7 +96,7 @@ class NetworkEngine( object ):
             
             if self._is_shutdown:
                 
-                raise HydrusExceptions.ShutdownException( 'Network engine is shut down!' )
+                raise HydrusExceptions.DaemonShutdownException( 'Network engine is shut down!' )
                 
             
             job.engine = self

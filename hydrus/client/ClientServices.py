@@ -1670,7 +1670,7 @@ class ServiceRestricted( ServiceRemote ):
                     raise
                     
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.ProgramShutdownException:
                 
                 return
                 
@@ -2419,7 +2419,7 @@ class ServiceRepository( ServiceRestricted ):
                 self._LogFinalRowSpeed( content_start_time, total_content_rows_completed, 'content rows' )
                 
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             return
             
@@ -2830,7 +2830,7 @@ class ServiceRepository( ServiceRestricted ):
                     self.SyncThumbnails( stop_time )
                     
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.ProgramShutdownException:
                 
                 pass
                 

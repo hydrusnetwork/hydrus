@@ -378,7 +378,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     
                     gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW
                     
-                except HydrusExceptions.ShutdownException:
+                except HydrusExceptions.ProgramShutdownException:
                     
                     gallery_seed_status = CC.STATUS_VETOED
                     parser_status = 'program is shutting down'

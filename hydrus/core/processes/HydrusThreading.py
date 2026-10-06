@@ -21,7 +21,7 @@ def CheckIfThreadShuttingDown()-> None:
     
     if IsThreadShuttingDown():
         
-        raise HydrusExceptions.ShutdownException( 'Thread is shutting down!' )
+        raise HydrusExceptions.ProgramShutdownException( 'Thread is shutting down!' )
         
     
 
@@ -302,11 +302,11 @@ class DAEMONWorker( DAEMON ):
                     
                     self._callable( self._controller )
                     
-                except HydrusExceptions.ShutdownException:
+                except HydrusExceptions.ProgramShutdownException:
                     
                     if HG.shutdown_report_mode:
                         
-                        HydrusData.DebugPrint( f'Daemon worker "{self._name}" encountered a Shutdown exception inside of the main callable.' )
+                        HydrusData.DebugPrint( f'Daemon worker "{self._name}" encountered a Program Shutdown exception inside of the main callable.' )
                         
                     
                     return
@@ -321,11 +321,11 @@ class DAEMONWorker( DAEMON ):
                 self._DoAWait( self._period )
                 
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             if HG.shutdown_report_mode:
                 
-                HydrusData.DebugPrint( f'Daemon worker "{self._name}" encountered a Shutdown exception outside of the main callable.' )
+                HydrusData.DebugPrint( f'Daemon worker "{self._name}" encountered a Program Shutdown exception outside of the main callable.' )
                 
             
             return
@@ -412,7 +412,7 @@ class THREADCallToThread( DAEMON ):
                     
                     if result is SHUTDOWN_SENTINEL:
                         
-                        raise HydrusExceptions.ShutdownException()
+                        raise HydrusExceptions.DaemonShutdownException()
                         
                     
                     ( callable, args, kwargs ) = result
@@ -436,11 +436,20 @@ class THREADCallToThread( DAEMON ):
                     
                     del callable
                     
-                except HydrusExceptions.ShutdownException:
+                except HydrusExceptions.DaemonShutdownException:
                     
                     if HG.shutdown_report_mode:
                         
-                        HydrusData.DebugPrint( f'Daemon CallToWorker "{self._name}" encountered a Shutdown exception while processing a job.' )
+                        HydrusData.DebugPrint( f'Daemon CallToWorker "{self._name}" encountered a Daemon Shutdown exception while processing a job.' )
+                        
+                    
+                    return
+                    
+                except HydrusExceptions.ProgramShutdownException:
+                    
+                    if HG.shutdown_report_mode:
+                        
+                        HydrusData.DebugPrint( f'Daemon CallToWorker "{self._name}" encountered a Program Shutdown exception while processing a job.' )
                         
                     
                     return
@@ -459,7 +468,7 @@ class THREADCallToThread( DAEMON ):
                 time.sleep( 0.00001 )
                 
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             if HG.shutdown_report_mode:
                 
@@ -893,11 +902,20 @@ class JobScheduler( threading.Thread ):
                 
                 self._StartWork()
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.DaemonShutdownException:
                 
                 if HG.shutdown_report_mode:
                     
-                    HydrusData.DebugPrint( f'Job Scheduler encountered a Shutdown exception in its mainloop.' )
+                    HydrusData.DebugPrint( f'Job Scheduler encountered a Daemon Shutdown exception in its mainloop.' )
+                    
+                
+                return
+                
+            except HydrusExceptions.ProgramShutdownException:
+                
+                if HG.shutdown_report_mode:
+                    
+                    HydrusData.DebugPrint( f'Job Scheduler encountered a Program Shutdown exception in its mainloop.' )
                     
                 
                 return

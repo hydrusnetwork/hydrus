@@ -79,7 +79,7 @@ def CheckProgramIsNotShuttingDown():
     
     if HG.model_shutdown:
         
-        raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+        raise HydrusExceptions.ProgramShutdownException( 'Application is shutting down!' )
         
     
 
@@ -304,7 +304,7 @@ def ConvertExceptionTupleToNiceTrace( etype, value, tb ):
         etype = HydrusExceptions.UnknownException
         
     
-    if etype == HydrusExceptions.ShutdownException:
+    if etype == HydrusExceptions.ProgramShutdownException:
         
         return
         
@@ -361,7 +361,7 @@ def PrintException( e, do_wait = True ):
 
 def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
-    if etype == HydrusExceptions.ShutdownException:
+    if etype == HydrusExceptions.ProgramShutdownException:
         
         return 'shutting down'
         

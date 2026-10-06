@@ -65,7 +65,7 @@ def ProcessStartingAction( db_dir, action ):
             
         else:
             
-            raise HydrusExceptions.ShutdownException( 'The server is not running, so it cannot be stopped!' )
+            raise HydrusExceptions.ProgramShutdownException( 'The server is not running, so it cannot be stopped!' )
             
         
     elif action == 'restart':
@@ -100,7 +100,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     if ports is None:
         
-        raise HydrusExceptions.ShutdownException( 'Could not figure out the existing server\'s ports, so could not shut it down!' )
+        raise HydrusExceptions.ProgramShutdownException( 'Could not figure out the existing server\'s ports, so could not shut it down!' )
         
     
     session = requests.Session()
@@ -121,7 +121,7 @@ def ShutdownSiblingInstance( db_dir ):
             text += '\n'
             text += traceback.format_exc()
             
-            raise HydrusExceptions.ShutdownException( text )
+            raise HydrusExceptions.ProgramShutdownException( text )
             
         
         if 'server administration' in server_name:
@@ -138,7 +138,7 @@ def ShutdownSiblingInstance( db_dir ):
                 text += '\n'
                 text += r.text
                 
-                raise HydrusExceptions.ShutdownException( text )
+                raise HydrusExceptions.ProgramShutdownException( text )
                 
             
             time_waited = 0
@@ -151,7 +151,7 @@ def ShutdownSiblingInstance( db_dir ):
                 
                 if time_waited > 20:
                     
-                    raise HydrusExceptions.ShutdownException( 'Attempted to shut the existing server down, but it took too long!' )
+                    raise HydrusExceptions.ProgramShutdownException( 'Attempted to shut the existing server down, but it took too long!' )
                     
                 
             
@@ -161,7 +161,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     if not port_found:
         
-        raise HydrusExceptions.ShutdownException( 'The existing server did not have an administration service!' )
+        raise HydrusExceptions.ProgramShutdownException( 'The existing server did not have an administration service!' )
         
     
     HydrusData.Print( 'The existing server is shut down!' )

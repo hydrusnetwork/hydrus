@@ -115,7 +115,7 @@ def GetAllFilePaths( path: str, search_subdirectories: bool, clear_out_sidecars 
             
             if HG.started_shutdown:
                 
-                raise HydrusExceptions.ShutdownException()
+                raise HydrusExceptions.ProgramShutdownException()
                 
             
             ( sub_file_paths, sub_path_parsing_jobs ) = path_parsing_job.GetFilePathsAndSubPathParsingJobs()

@@ -1752,7 +1752,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                     
                     ( fetch_petition_header, outgoing_petition ) = CG.client_controller.CallBlockingToQt( self, qt_get_work )
                     
-                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                     
                     return
                     
@@ -1792,7 +1792,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                         
                         CG.client_controller.CallBlockingToQtFireAndForgetNoResponse( self, qt_petition_fetch_404, fetch_petition_header )
                         
-                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                         
                         return
                         
@@ -1869,7 +1869,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
                         
                         CG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
                         
-                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                         
                         return
                         

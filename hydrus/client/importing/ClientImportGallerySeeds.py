@@ -700,7 +700,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             self.SetStatus( status, note = note )
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             pass
             

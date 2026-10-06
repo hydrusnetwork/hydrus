@@ -180,7 +180,7 @@ def boot():
         
         HG.server_action = ServerController.ProcessStartingAction( db_dir, HG.server_action )
         
-    except HydrusExceptions.ShutdownException as e:
+    except HydrusExceptions.ProgramShutdownException as e:
         
         HydrusData.Print( e )
         
@@ -212,7 +212,7 @@ def boot():
                 controller.Run()
                 
             
-        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
+        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ProgramShutdownException ) as e:
             
             error = str( e )
             

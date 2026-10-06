@@ -890,7 +890,7 @@ class HydrusResource( Resource ):
                 
                 status_code = 426
                 
-            elif isinstance( e, ( HydrusExceptions.ServerBusyException, HydrusExceptions.ShutdownException ) ):
+            elif isinstance( e, ( HydrusExceptions.ServerBusyException, HydrusExceptions.ProgramShutdownException ) ):
                 
                 status_code = 503
                 

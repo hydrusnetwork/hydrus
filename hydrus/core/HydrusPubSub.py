@@ -122,7 +122,7 @@ class HydrusPubSub( object ):
                                 
                                 HydrusProfiling.Profile( summary, HydrusData.Call( callable, *args, **kwargs ), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
                                 
-                            except HydrusExceptions.ShutdownException:
+                            except HydrusExceptions.ProgramShutdownException:
                                 
                                 return False
                                 
@@ -136,7 +136,7 @@ class HydrusPubSub( object ):
                                 
                                 callable( *args, **kwargs )
                                 
-                            except HydrusExceptions.ShutdownException:
+                            except HydrusExceptions.ProgramShutdownException:
                                 
                                 return False
                                 

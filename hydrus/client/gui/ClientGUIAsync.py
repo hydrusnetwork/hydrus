@@ -64,7 +64,7 @@ class AsyncQtJob( object ):
                 
                 CG.client_controller.CallBlockingToQt( self._win, self._publish_callable, result )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 pass
                 
@@ -83,7 +83,7 @@ class AsyncQtJob( object ):
                     
                     CG.client_controller.CallBlockingToQt( self._win, self._ui_restoration_callable )
                     
-                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                     
                     pass
                     
@@ -109,7 +109,7 @@ class AsyncQtJob( object ):
                 
                 we_have_reported_ok = True
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 pass
                 
@@ -128,7 +128,7 @@ class AsyncQtJob( object ):
                 
                 we_have_reported_ok = True
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 pass
                 
@@ -213,7 +213,7 @@ class AsyncQtUpdater( object ):
                     
                     pre_work_args = CG.client_controller.CallBlockingToQt( self._win, self._pre_work_callable )
                     
-                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                     
                     self._win = None
                     
@@ -238,7 +238,7 @@ class AsyncQtUpdater( object ):
                 
                 CG.client_controller.CallBlockingToQt( self._win, qt_deliver_result, result )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 self._win = None
                 
@@ -333,7 +333,7 @@ class FastThreadToGUIUpdater( object ):
             
             self._func( *args, **kwargs )
             
-        except HydrusExceptions.ShutdownException:
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
             
             pass
             

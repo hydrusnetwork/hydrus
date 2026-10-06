@@ -20,7 +20,7 @@ def AddPaddingToDimensions( dimensions, padding ):
 
 def CatchExceptionClient( etype, value, tb ):
     
-    if etype == HydrusExceptions.ShutdownException:
+    if etype == HydrusExceptions.ProgramShutdownException:
         
         return
         
@@ -136,7 +136,7 @@ def ShowExceptionClient( e, do_wait = True ):
 
 def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
-    if etype == HydrusExceptions.ShutdownException:
+    if etype == HydrusExceptions.ProgramShutdownException:
         
         return
         

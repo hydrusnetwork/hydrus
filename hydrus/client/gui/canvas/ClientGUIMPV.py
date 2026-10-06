@@ -192,7 +192,7 @@ def log_handler( loglevel, component, message ):
             
             CG.client_controller.CallBlockingToQtTLW( EmergencyDumpOutGlobal, probably_crashy, f'{component}: {message}' )
             
-        except HydrusExceptions.ShutdownException:
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
             
             pass
             

@@ -217,7 +217,7 @@ def ReadFetch(
                 
                 media = CG.client_controller.CallBlockingToQt( win, qt_media_callable )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 job_status.Cancel()
                 

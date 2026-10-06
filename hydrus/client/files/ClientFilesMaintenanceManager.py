@@ -1164,7 +1164,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                                 
                             
                         
-                    except HydrusExceptions.ShutdownException:
+                    except HydrusExceptions.ProgramShutdownException:
                         
                         # no worries
                         

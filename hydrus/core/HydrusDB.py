@@ -957,7 +957,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         if self._loop_finished:
             
-            raise HydrusExceptions.ShutdownException()
+            raise HydrusExceptions.DaemonShutdownException()
             
         
         self._jobs_queue.put( job )
@@ -1291,7 +1291,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             if isinstance( result, HydrusDBBase.JobDatabase ):
                 
-                result.PutResult( HydrusExceptions.ShutdownException() )
+                result.PutResult( HydrusExceptions.DaemonShutdownException() )
                 
             
         

@@ -458,7 +458,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 job_status.SetVariable( 'result', result )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException, HydrusExceptions.CancelledException ) as e:
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.StoppingException, HydrusExceptions.CancelledException ) as e:
                 
                 job_status.SetErrorException( e )
                 
@@ -496,7 +496,7 @@ class Controller( HydrusController.HydrusController ):
             
             if HG.model_shutdown or not self._qt_app_running:
                 
-                raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+                raise HydrusExceptions.ProgramShutdownException( 'Application is shutting down!' )
                 
             
             done_event.wait( 1.0 )
@@ -518,7 +518,7 @@ class Controller( HydrusController.HydrusController ):
             raise e
             
         
-        raise HydrusExceptions.ShutdownException()
+        raise Exception( 'Somehow this blocking Qt job finished without a result or error!' )
         
     
     def CallBlockingToQtFireAndForgetNoResponse( self, win, func, *args, **kwargs ) -> None:
@@ -527,7 +527,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.CallBlockingToQt( win, func, *args, **kwargs )
             
-        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
             
             pass
             
@@ -539,17 +539,10 @@ class Controller( HydrusController.HydrusController ):
         
         if main_tlw is None:
             
-            raise HydrusExceptions.ShutdownException( 'Could not find a TLW! I think the program is shutting down or has not yet created a splash!' )
+            raise HydrusExceptions.ProgramShutdownException( 'Could not find a TLW! I think the program is shutting down or has not yet created a splash!' )
             
         
-        try:
-            
-            return self.CallBlockingToQt( main_tlw, func, *args, **kwargs )
-            
-        except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
-            
-            raise HydrusExceptions.ShutdownException( 'Program is shutting down!' )
-            
+        return self.CallBlockingToQt( main_tlw, func, *args, **kwargs )
         
     
     def CallAfterQtSafe( self, qobject: QC.QObject, func, *args, **kwargs ) -> None:
@@ -643,7 +636,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 if result != QW.QDialog.DialogCode.Accepted:
                     
-                    raise HydrusExceptions.ShutdownException()
+                    raise HydrusExceptions.ProgramShutdownException()
                     
                 
             
@@ -1015,7 +1008,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 self.CleanRunningFile()
                 
-            except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ProgramShutdownException ):
                 
                 pass
                 
@@ -1232,7 +1225,7 @@ class Controller( HydrusController.HydrusController ):
                     
                 else:
                     
-                    raise HydrusExceptions.ShutdownException( 'File system failed, user chose to quit.' )
+                    raise HydrusExceptions.ProgramShutdownException( 'File system failed, user chose to quit.' )
                     
                 
             
@@ -2570,7 +2563,7 @@ class Controller( HydrusController.HydrusController ):
             
             self.CheckAlreadyRunning()
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             self._DestroySplash()
             
@@ -2589,7 +2582,7 @@ class Controller( HydrusController.HydrusController ):
             
             self._is_booted = True
             
-        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
+        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ProgramShutdownException ) as e:
             
             HydrusData.Print( e )
             

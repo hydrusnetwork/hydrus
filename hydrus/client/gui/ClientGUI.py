@@ -5127,7 +5127,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                         
                         CG.client_controller.subscriptions_manager.SetSubscriptions( subscriptions )
                         
-                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+                    except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                         
                         return
                         
@@ -6256,7 +6256,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                     
                     page_key = CG.client_controller.CallBlockingToQtTLW( qt_session_gubbins )
                     
-                except HydrusExceptions.ShutdownException:
+                except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                     
                     return
                     
@@ -6505,7 +6505,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                 
                 CG.client_controller.CallBlockingToQt( self, qt_test_ac )
                 
-            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ShutdownException ):
+            except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
                 
                 HydrusData.Print( 'Test could not finish because of a shutdown, looks like.' )
                 

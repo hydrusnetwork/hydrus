@@ -52,8 +52,11 @@ class FileMissingException( HydrusException ): pass
 class DirectoryMissingException( HydrusException ): pass
 class SerialisationException( HydrusException ): pass
 class NameException( HydrusException ): pass
-class ShutdownException( HydrusException ): pass
 class QtDeadWindowException( HydrusException ): pass
+
+class StoppingException( HydrusException ): pass
+class DaemonShutdownException( HydrusException ): pass
+class ProgramShutdownException( HydrusException ): pass
 
 class ExecutableException( HydrusException ): pass
 class SubprocessTimedOut( ExecutableException ): pass

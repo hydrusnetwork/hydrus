@@ -945,7 +945,7 @@ class ParentActionContext( TagPairActionContext ):
             
             statuses_to_pairs = CG.client_controller.Read( 'tag_parents', self._service_key, tags = tags, where_chain_includes_pending_or_petitioned = where_chain_includes_pending_or_petitioned )
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             return {}
             
@@ -1024,7 +1024,7 @@ class SiblingActionContext( TagPairActionContext ):
             
             statuses_to_pairs = CG.client_controller.Read( 'tag_siblings', self._service_key, tags = tags, where_chain_includes_pending_or_petitioned = where_chain_includes_pending_or_petitioned )
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.ProgramShutdownException:
             
             return {}
             

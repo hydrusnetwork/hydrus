@@ -1748,7 +1748,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._SyncQueryLogContainers()
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.ProgramShutdownException:
                 
                 HydrusData.Print( f'Exiting subscription "{self._name}" due to program shutdown.' )
                 
@@ -1809,7 +1809,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 time.sleep( 5 )
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.ProgramShutdownException:
                 
                 HydrusData.Print( f'Exiting subscription "{self._name}" due to program shutdown.' )
                 

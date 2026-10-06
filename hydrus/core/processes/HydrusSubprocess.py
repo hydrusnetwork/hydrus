@@ -362,7 +362,7 @@ def SubprocessCommunicate( cmd, process: subprocess.Popen, timeout: int ):
                 pass
                 
             
-            raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
+            raise HydrusExceptions.ProgramShutdownException( 'Application is shutting down!' )
             
         
     
@@ -473,7 +473,7 @@ class SubprocessContext( object ):
                     
                     HydrusData.CheckProgramIsNotShuttingDown()
                     
-                except HydrusExceptions.ShutdownException:
+                except HydrusExceptions.ProgramShutdownException:
                     
                     return
                     

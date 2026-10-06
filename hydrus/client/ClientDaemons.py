@@ -82,9 +82,19 @@ class ManagerWithMainLoop( object ):
     
     def _CheckShutdown( self ):
         
-        if HydrusThreading.IsThreadShuttingDown() or self._shutdown or self._serious_error_encountered:
+        if HydrusThreading.IsThreadShuttingDown():
             
-            raise HydrusExceptions.ShutdownException()
+            raise HydrusExceptions.ProgramShutdownException()
+            
+        
+        if self._shutdown:
+            
+            raise HydrusExceptions.DaemonShutdownException( f'I ({self}) have shut down my mainloop!' )
+            
+        
+        if self._serious_error_encountered:
+            
+            raise HydrusExceptions.DaemonShutdownException( f'I ({self}) have encountered a serious error!' )
             
         
     
@@ -147,11 +157,17 @@ class ManagerWithMainLoop( object ):
             # get a wait period( still work to do )
             # do a wait
             
-        except HydrusExceptions.ShutdownException:
+        except HydrusExceptions.DaemonShutdownException:
+            
+            HydrusData.DebugPrint( f'MainLoop Manager "{self}" caught a Daemon Shutdown exception in its mainloop.' )
+            
+            pass
+            
+        except HydrusExceptions.ProgramShutdownException:
             
             if HG.shutdown_report_mode:
                 
-                HydrusData.DebugPrint( f'MainLoop Manager "{self}" caught a Shutdown exception in its mainloop.' )
+                HydrusData.DebugPrint( f'MainLoop Manager "{self}" caught a Program Shutdown exception in its mainloop.' )
                 
             
             pass

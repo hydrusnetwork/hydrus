@@ -807,7 +807,7 @@ def GetDuplicateComparisonStatementsSlow( shown_media_result: ClientMediaResult.
                     statements_and_scores[ 'a_and_b_are_visual_duplicates' ] = ( simple_score_statement, -10 )
                     
                 
-            except HydrusExceptions.ShutdownException:
+            except HydrusExceptions.ProgramShutdownException:
                 
                 pass
                 
@@ -844,7 +844,7 @@ def GetVisualData( media_result: ClientMediaResult.MediaResult ) -> ClientVisual
             
             if HydrusThreading.IsThreadShuttingDown():
                 
-                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                raise HydrusExceptions.ProgramShutdownException( 'Seems like program is shutting down!' )
                 
             
             time.sleep( 0.1 )
@@ -883,7 +883,7 @@ def GetVisualDataTiled( media_result: ClientMediaResult.MediaResult ) -> ClientV
             
             if HydrusThreading.IsThreadShuttingDown():
                 
-                raise HydrusExceptions.ShutdownException( 'Seems like program is shutting down!' )
+                raise HydrusExceptions.ProgramShutdownException( 'Seems like program is shutting down!' )
                 
             
             time.sleep( 0.1 )
