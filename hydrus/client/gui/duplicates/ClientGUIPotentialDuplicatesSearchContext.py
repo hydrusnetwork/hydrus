@@ -597,7 +597,7 @@ class PotentialDuplicatesSortWidget( QW.QWidget ):
         
         super().__init__( parent )
         
-        choice_tuples = [ ( 'sort by: ' + ClientDuplicates.dupe_pair_sort_string_lookup[ sort_type ], sort_type ) for sort_type in (
+        choice_tuples = [ ( 'sort pairs by: ' + ClientDuplicates.dupe_pair_sort_string_lookup[ sort_type ], sort_type ) for sort_type in (
             ClientDuplicates.DUPE_PAIR_SORT_MAX_FILESIZE,
             ClientDuplicates.DUPE_PAIR_SORT_MIN_FILESIZE,
             ClientDuplicates.DUPE_PAIR_SORT_SIMILARITY,
