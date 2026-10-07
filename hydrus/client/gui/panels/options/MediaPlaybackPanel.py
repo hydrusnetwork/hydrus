@@ -293,7 +293,11 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( mpv_panel, rows )
         
-        label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, if you have everything set up in a different file already, you can overwrite your mpv.conf from that path here.\n\nNote, however, that applying a new mpv.conf will not "reset/undo" any options that are now ommitted in the new file. If you want to remove a line, edit/update the mpv.conf and then restart the client.'
+        label = 'MPV loads up the "mpv.conf" file in your database directory. Feel free to edit that file in place any time--it is reloaded in hydrus every time you ok this options dialog. Or, if you have everything set up in a different file already, you can overwrite your mpv.conf from that path here.'
+        label += '\n\n'
+        label += 'Note, however, that changing your mpv.conf will not "undo" any options that are now omitted. If you want to remove a specific option (thus resetting it to the mpv default), you need to restart the client.'
+        label += '\n\n'
+        label += 'The full mpv conf spec is very large and complicated. Try talking to a chatbot to figure out what you need.'
         
         st = ClientGUICommon.BetterStaticText( mpv_panel, label = label )
         st.setWordWrap( True )
