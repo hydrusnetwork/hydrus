@@ -31,26 +31,10 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         
         self._idle_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 30, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore normal browsing' )
         self._idle_mouse_period = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 10, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore mouse movements' )
-        self._idle_mouse_period.setToolTip( ClientGUIFunctions.WrapToolTip( 'This applies to mouse movements anywhere in your system, not just over the hydrus window.' ) )
+        self._idle_mouse_period.setToolTip( ClientGUIFunctions.WrapToolTip( 'Depending on your Window Manager, this may mean mouse movements anywhere in your system, or just those over the hydrus window.' ) )
         self._idle_mode_client_api_timeout = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 5, min = 1, max = 1000, multiplier = 60, unit = 'minutes', none_phrase = 'ignore client api' )
         self._system_busy_cpu_percent = ClientGUICommon.BetterSpinBox( self._idle_panel, min = 5, max = 99 )
         self._system_busy_cpu_count = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, 1, min = 1, max = 64, unit = 'cores', none_phrase = 'ignore cpu usage' )
-        
-        #
-        
-        self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown', can_expand = True, start_expanded = False )
-        
-        self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
-        
-        for idle_id in ( CC.IDLE_NOT_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN, CC.IDLE_ON_SHUTDOWN_ASK_FIRST ):
-            
-            self._idle_shutdown.addItem( CC.idle_string_lookup[ idle_id], idle_id )
-            
-        
-        self._idle_shutdown.currentIndexChanged.connect( self._EnableDisableIdleShutdown )
-        
-        self._idle_shutdown_max_minutes = ClientGUICommon.BetterSpinBox( self._shutdown_panel, min=1, max=1440 )
-        self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 60, days = True, hours = True, minutes = True )
         
         #
         
@@ -221,10 +205,6 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self._system_busy_cpu_percent.setValue( self._new_options.GetInteger( 'system_busy_cpu_percent' ) )
         self._system_busy_cpu_count.SetValue( self._new_options.GetNoneableInteger( 'system_busy_cpu_count' ) )
         
-        self._idle_shutdown.SetValue( HC.options[ 'idle_shutdown' ] )
-        self._idle_shutdown_max_minutes.setValue( HC.options['idle_shutdown_max_minutes'] )
-        self._shutdown_work_period.SetValue( self._new_options.GetInteger( 'shutdown_work_period' ) )
-        
         self._file_maintenance_during_idle.setChecked( self._new_options.GetBoolean( 'file_maintenance_during_idle' ) )
         
         file_maintenance_idle_throttle_files = self._new_options.GetInteger( 'file_maintenance_idle_throttle_files' )
@@ -325,29 +305,17 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         
         #
         
-        rows = []
-        
-        rows.append( ( 'Run jobs on shutdown: ', self._idle_shutdown ) )
-        rows.append( ( 'Only run shutdown jobs once per: ', self._shutdown_work_period ) )
-        rows.append( ( 'Max number of minutes to run shutdown jobs: ', self._idle_shutdown_max_minutes ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( self._shutdown_panel, rows )
-        
-        self._shutdown_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        #
-        
         text = '***'
         text += '\n'
         text +='If you are a new user or do not completely understand these options, please do not touch them! Do not set the client to be idle all the time unless you know what you are doing or are testing something and are prepared for potential problems!'
         text += '\n'
         text += '***'
         text += '\n' * 2
-        text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. Typically, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
+        text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. In some cases, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
         text += '\n' * 2
-        text += 'You can set these jobs to run only when the client is idle, or only during shutdown, or neither, or both. If you leave the client on all the time in the background, focusing on \'idle time\' processing is often ideal. If you have a slow computer, relying on \'shutdown\' processing (which you can manually start when convenient), is often better.'
+        text += 'These jobs usually run in the background. That might be while you use the program, or only when the client is idle, or both (or even, if you really want, neither!). There are many timing options. If you have a slow computer, push your work to mostly "idle time" and make sure to leave your client open (and minimised is fine) every now and then so it can catch up on what it needs to.'
         text += '\n' * 2
-        text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back control. This is not always possible, and even when it is, it will sometimes take several minutes, particularly on slower machines or those on HDDs rather than SSDs.'
+        text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back non-laggy control. This is not always easy; it will sometimes take several minutes to save big work, particularly on slower machines.'
         text += '\n' * 2
         text += 'If the client believes the system is busy, it will generally not start jobs.'
         
@@ -357,7 +325,6 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         
         self._jobs_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._jobs_panel.Add( self._idle_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._jobs_panel.Add( self._shutdown_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
@@ -489,7 +456,6 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self.setLayout( vbox )
         
         self._EnableDisableIdleNormal()
-        self._EnableDisableIdleShutdown()
         
         self._system_busy_cpu_count.valueChanged.connect( self._EnableDisableCPUPercent )
         
@@ -513,14 +479,6 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         self._EnableDisableCPUPercent()
         
     
-    def _EnableDisableIdleShutdown( self ):
-        
-        enabled = self._idle_shutdown.GetValue() != CC.IDLE_NOT_ON_SHUTDOWN
-        
-        self._shutdown_work_period.setEnabled( enabled )
-        self._idle_shutdown_max_minutes.setEnabled( enabled )
-        
-    
     def UpdateOptions( self ):
         
         HC.options[ 'idle_normal' ] = self._idle_normal.isChecked()
@@ -531,11 +489,6 @@ class MaintenanceAndProcessingPanel( ClientGUIOptionsPanelBase.OptionsPagePanel 
         
         self._new_options.SetInteger( 'system_busy_cpu_percent', self._system_busy_cpu_percent.value() )
         self._new_options.SetNoneableInteger( 'system_busy_cpu_count', self._system_busy_cpu_count.GetValue() )
-        
-        HC.options[ 'idle_shutdown' ] = self._idle_shutdown.GetValue()
-        HC.options[ 'idle_shutdown_max_minutes' ] = self._idle_shutdown_max_minutes.value()
-        
-        self._new_options.SetInteger( 'shutdown_work_period', self._shutdown_work_period.GetValue() )
         
         self._new_options.SetBoolean( 'file_maintenance_during_idle', self._file_maintenance_during_idle.isChecked() )
         

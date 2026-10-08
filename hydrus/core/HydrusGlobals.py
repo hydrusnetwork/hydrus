@@ -103,7 +103,6 @@ autocomplete_delay_mode = False
 
 blurhash_mode = False
 
-do_idle_shutdown_work = False
 shutdown_complete = False
 restart = False
 

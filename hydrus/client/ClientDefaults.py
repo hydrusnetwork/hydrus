@@ -24,8 +24,6 @@ def GetClientDefaultOptions():
     options[ 'idle_period' ] = 60 * 30
     options[ 'idle_mouse_period' ] = 60 * 10
     options[ 'idle_normal' ] = True
-    options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
-    options[ 'idle_shutdown_max_minutes' ] = 5
     options[ 'trash_max_age' ] = 72
     options[ 'trash_max_size' ] = 2048
     options[ 'remove_trashed_files' ] = False

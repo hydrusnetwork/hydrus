@@ -425,7 +425,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_ZOOM_CANVAS_FILL_Y_VIEWER_CENTER : 'fill canvas vertically with forced media viewer center',
     SIMPLE_ZOOM_CANVAS_FILL_AUTO : 'auto-fill closest dimension',
     SIMPLE_ZOOM_CANVAS_FILL_AUTO_VIEWER_CENTER : 'auto-fill closest dimension with forced media viewer center',
-    SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE : 'exit program: close and force shutdown maintenance',
+    SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE : 'exit program: close (legacy; used to run shutdown maintenance)',
     SIMPLE_ZOOM_IN_VIEWER_CENTER : 'zoom: in with forced media viewer center',
     SIMPLE_ZOOM_OUT_VIEWER_CENTER : 'zoom: out with forced media viewer center',
     SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER : 'zoom: switch 100% and canvas fit with forced media viewer center',

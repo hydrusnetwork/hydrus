@@ -1843,7 +1843,6 @@ class ServiceRepository( ServiceRestricted ):
         
         popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusNumbers.ValueRangeToPrettyString( rows_done, total_rows ), rows_s )
         
-        CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_status.SetStatusText( popup_message, 2 )
         
     
@@ -1955,7 +1954,6 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = HydrusNumbers.ValueRangeToPrettyString( i, len( update_hashes ) )
                     
-                    CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
                     job_status.SetGauge( i, len( update_hashes ) )
                     
@@ -2137,7 +2135,6 @@ class ServiceRepository( ServiceRestricted ):
             num_updates_to_do = len( definition_hashes_and_content_types ) + len( content_hashes_and_content_types )
             
             CG.client_controller.pub( 'message', job_status )
-            CG.client_controller.frame_splash_status.SetTitleText( title, print_to_log = False )
             
             total_definition_rows_completed = 0
             total_content_rows_completed = 0
@@ -2152,10 +2149,6 @@ class ServiceRepository( ServiceRestricted ):
                 for ( definition_hash, content_types ) in definition_hashes_and_content_types:
                     
                     progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
-                    
-                    splash_title = '{} sync: processing updates: {}'.format( self._name, progress_string )
-                    
-                    CG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
                     status = 'processing: {}'.format( progress_string )
                     
@@ -2281,10 +2274,6 @@ class ServiceRepository( ServiceRestricted ):
                 for ( content_hash, content_types ) in content_hashes_and_content_types:
                     
                     progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done, num_updates_to_do )
-                    
-                    splash_title = '{} sync: processing updates: {}'.format( self._name, progress_string )
-                    
-                    CG.client_controller.frame_splash_status.SetTitleText( splash_title, clear_undertexts = False, print_to_log = False )
                     
                     status = 'processing: {}'.format( progress_string )
                     
@@ -2476,38 +2465,6 @@ class ServiceRepository( ServiceRestricted ):
             
         
         ServiceRestricted._UpdateServiceOptions( self, service_options )
-        
-    
-    def CanDoIdleShutdownWork( self ):
-        
-        with self._lock:
-            
-            if not self._CanSyncProcess():
-                
-                return False
-                
-            
-            service_key = self._service_key
-            
-        
-        content_types_we_are_processing = self._GetContentTypesWeAreProcessing()
-        
-        ( num_local_updates, num_updates, content_types_to_num_processed_updates, content_types_to_num_updates ) = CG.client_controller.Read( 'repository_progress', service_key )
-        
-        for ( content_type, num_processed_updates ) in content_types_to_num_processed_updates.items():
-            
-            if content_type not in content_types_we_are_processing:
-                
-                continue
-                
-            
-            if num_processed_updates < content_types_to_num_updates[ content_type ]:
-                
-                return True
-                
-            
-        
-        return False
         
     
     def CanSyncDownload( self ):
@@ -2901,7 +2858,6 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = HydrusNumbers.ValueRangeToPrettyString( i, num_to_do )
                     
-                    CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
                     job_status.SetGauge( i, num_to_do )
                     

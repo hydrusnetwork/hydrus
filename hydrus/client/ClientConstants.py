@@ -156,16 +156,6 @@ hamming_string_lookup = {
     HAMMING_SPECULATIVE : 'speculative'
 }
 
-IDLE_NOT_ON_SHUTDOWN = 0
-IDLE_ON_SHUTDOWN = 1
-IDLE_ON_SHUTDOWN_ASK_FIRST = 2
-
-idle_string_lookup = {
-    IDLE_NOT_ON_SHUTDOWN : 'do not run jobs on shutdown',
-    IDLE_ON_SHUTDOWN : 'run jobs on shutdown if needed',
-    IDLE_ON_SHUTDOWN_ASK_FIRST : 'run jobs on shutdown if needed, but ask first'
-}
-
 IMPORT_FOLDER_DELETE = 0
 IMPORT_FOLDER_IGNORE = 1
 IMPORT_FOLDER_MOVE = 2

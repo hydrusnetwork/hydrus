@@ -58,7 +58,6 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.last_shutdown_work_time' : ( 'CREATE TABLE IF NOT EXISTS {} ( last_shutdown_work_time INTEGER );', 400 ),
             'main.analyze_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER, timestamp_ms INTEGER );', 400 ),
             'main.vacuum_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, timestamp_ms INTEGER );', 400 ),
             'main.deferred_delete_tables' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER );', 567 )
@@ -265,7 +264,6 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 for name in HydrusLists.IterateListRandomlyAndFast( names_to_analyze ):
                     
-                    CG.client_controller.frame_splash_status.SetText( 'analyzing ' + name )
                     job_status.SetStatusText( 'analyzing ' + name )
                     
                     time.sleep( 0.02 )
@@ -509,20 +507,6 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return data
         
     
-    def GetLastShutdownWorkTime( self ):
-        
-        result = self._Execute( 'SELECT last_shutdown_work_time FROM last_shutdown_work_time;' ).fetchone()
-        
-        if result is None:
-            
-            return 0
-            
-        
-        ( last_shutdown_work_time, ) = result
-        
-        return last_shutdown_work_time
-        
-    
     def GetTableNamesDueAnalysis( self, force_reanalyze = False ) -> list:
         
         db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
@@ -648,13 +632,6 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             
         
         return vacuum_data
-        
-    
-    def RegisterShutdownWork( self ):
-        
-        self._Execute( 'DELETE FROM last_shutdown_work_time;' )
-        
-        self._Execute( 'INSERT INTO last_shutdown_work_time ( last_shutdown_work_time ) VALUES ( ? );', ( HydrusTime.GetNow(), ) )
         
     
     def RegisterSuccessfulVacuum( self, name: str ):

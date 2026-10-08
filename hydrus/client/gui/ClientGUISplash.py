@@ -276,15 +276,9 @@ class FrameSplash( QW.QWidget ):
         
         self._my_panel = FrameSplashPanel( self, self._controller, frame_splash_status )
         
-        self._cancel_shutdown_maintenance = ClientGUICommon.BetterButton( self, 'stop shutdown maintenance', self.CancelShutdownMaintenance )
-        
-        self._cancel_shutdown_maintenance.hide()
-        
         #
         
         self._vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( self._vbox, self._cancel_shutdown_maintenance, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         QP.AddToLayout( self._vbox, self._my_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
@@ -300,18 +294,5 @@ class FrameSplash( QW.QWidget ):
         self.show()
         
         self.raise_()
-        
-    
-    def CancelShutdownMaintenance( self ):
-        
-        self._cancel_shutdown_maintenance.setText( 'stopping' + HC.UNICODE_ELLIPSIS )
-        self._cancel_shutdown_maintenance.setEnabled( False )
-        
-        HG.do_idle_shutdown_work = False
-        
-    
-    def ShowCancelShutdownButton( self ):
-        
-        self._cancel_shutdown_maintenance.show()
         
     

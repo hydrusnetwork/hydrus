@@ -624,13 +624,6 @@ class HydrusController( object ):
                 return True
                 
             
-        elif maintenance_mode == HC.MAINTENANCE_SHUTDOWN:
-            
-            if not HG.do_idle_shutdown_work:
-                
-                return True
-                
-            
         
         if stop_time is not None:
             

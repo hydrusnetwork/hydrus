@@ -186,13 +186,9 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
             
             action = command.GetSimpleAction()
             
-            if action == CAC.SIMPLE_EXIT_APPLICATION:
+            if action in ( CAC.SIMPLE_EXIT_APPLICATION, CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE ):
                 
                 CG.client_controller.gui.TryToExit()
-                
-            elif action == CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE:
-                
-                CG.client_controller.gui.TryToExit( force_shutdown_maintenance = True )
                 
             elif action == CAC.SIMPLE_RESTART_APPLICATION:
                 

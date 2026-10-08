@@ -23,7 +23,7 @@ class JobStatus( object ):
         self._maintenance_mode = maintenance_mode
         self._only_start_if_unbusy = only_start_if_unbusy
         self._stop_time = stop_time
-        self._cancel_on_shutdown = cancel_on_shutdown and maintenance_mode != HC.MAINTENANCE_SHUTDOWN
+        self._cancel_on_shutdown = cancel_on_shutdown
         
         self._cancelled = False
         self._paused = False

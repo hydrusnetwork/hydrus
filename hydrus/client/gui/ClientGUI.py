@@ -3501,8 +3501,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
             ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, restart = True )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit/force maintenance', 'Shut the client down and force any outstanding shutdown maintenance to run.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, force_shutdown_maintenance = True )
-        
         ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToExit, role = QW.QAction.MenuRole.QuitRole )
         
         return ( menu, '&file' )
@@ -8468,13 +8466,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             action = command.GetSimpleAction()
             
-            if action == CAC.SIMPLE_EXIT_APPLICATION:
+            if action in ( CAC.SIMPLE_EXIT_APPLICATION, CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE ):
                 
                 self.TryToExit()
-                
-            elif action == CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE:
-                
-                self.TryToExit( force_shutdown_maintenance = True )
                 
             elif action == CAC.SIMPLE_RESTART_APPLICATION:
                 
@@ -9232,7 +9226,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._notebook.ShowPage( page )
         
     
-    def TryToExit( self, restart = False, force_shutdown_maintenance = False ):
+    def TryToExit( self, restart = False ):
         
         if not self._controller.DoingFastExit():
             
@@ -9301,80 +9295,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if restart:
             
             HG.restart = True
-            
-        
-        if force_shutdown_maintenance or HG.do_idle_shutdown_work:
-            
-            HG.do_idle_shutdown_work = True
-            
-        else:
-            
-            try:
-                
-                idle_shutdown_action = self._controller.options[ 'idle_shutdown' ]
-                
-                last_shutdown_work_time = self._controller.Read( 'last_shutdown_work_time' )
-                
-                shutdown_work_period = self._controller.new_options.GetInteger( 'shutdown_work_period' )
-                
-                shutdown_work_due = HydrusTime.TimeHasPassed( last_shutdown_work_time + shutdown_work_period )
-                
-                if shutdown_work_due:
-                    
-                    if idle_shutdown_action == CC.IDLE_ON_SHUTDOWN:
-                        
-                        HG.do_idle_shutdown_work = True
-                        
-                    elif idle_shutdown_action == CC.IDLE_ON_SHUTDOWN_ASK_FIRST:
-                        
-                        idle_shutdown_max_minutes = self._controller.options[ 'idle_shutdown_max_minutes' ]
-                        
-                        time_to_stop = HydrusTime.GetNow() + ( idle_shutdown_max_minutes * 60 )
-                        
-                        work_to_do = self._controller.GetIdleShutdownWorkDue( time_to_stop )
-                        
-                        if len( work_to_do ) > 0:
-                            
-                            text = 'Is now a good time for the client to do up to ' + HydrusNumbers.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
-                            text += '\n' * 2
-                            
-                            if CG.client_controller.IsFirstStart():
-                                
-                                text += 'Since this is your first session, this maintenance should just be some quick initialisation work. It should only take a few seconds.'
-                                text += '\n' * 2
-                                
-                            
-                            text += 'The outstanding jobs appear to be:'
-                            text += '\n' * 2
-                            text += '\n'.join( work_to_do )
-                            
-                            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Maintenance is due', auto_no_time = 15, check_for_cancelled = True )
-                            
-                            if was_cancelled:
-                                
-                                return
-                                
-                            elif result == QW.QDialog.DialogCode.Accepted:
-                                
-                                HG.do_idle_shutdown_work = True
-                                
-                            else:
-                                
-                                # if they said no, don't keep asking
-                                self._controller.Write( 'register_shutdown_work' )
-                                
-                            
-                        
-                    
-                
-            except Exception as e:
-                
-                self._controller.BlockingSafeShowCriticalMessage( 'shutdown error', 'There was a problem trying to review pending shutdown maintenance work. No shutdown maintenance work will be done, and info has been written to the log. Please let hydev know.' )
-                
-                HydrusData.PrintException( e )
-                
-                HG.do_idle_shutdown_work = False
-                
             
         
         CG.client_controller.CallAfterQtSafe( self, self._controller.Exit )

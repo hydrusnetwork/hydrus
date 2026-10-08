@@ -186,9 +186,9 @@ def report_content_speed_to_job_status( job_status, rows_done, total_rows, preci
     
     popup_message = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
-    CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
     
+
 def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusTime.GetNowPrecise() - precise_timestamp
@@ -197,7 +197,6 @@ def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_nam
     
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
-    CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
     
 
@@ -2597,22 +2596,6 @@ class DB( HydrusDB.HydrusDB ):
         return predicates
         
     
-    def _GetMaintenanceDue( self, stop_time ):
-        
-        jobs_to_do = []
-        
-        # analyze
-        
-        names_to_analyze = self.modules_db_maintenance.GetTableNamesDueAnalysis()
-        
-        if len( names_to_analyze ) > 0:
-            
-            jobs_to_do.append( 'analyze ' + HydrusNumbers.ToHumanInt( len( names_to_analyze ) ) + ' table_names' )
-            
-        
-        return jobs_to_do
-        
-    
     def _GetNumsPending( self ):
         
         services = self.modules_services.GetServices( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.IPFS ) )
@@ -3893,7 +3876,6 @@ class DB( HydrusDB.HydrusDB ):
                 'file_system_predicates' : self._GetFileSystemPredicates,
                 'inbox_hashes' : self._FilterInboxHashes,
                 'is_an_orphan' : self._IsAnOrphan,
-                'maintenance_due' : self._GetMaintenanceDue,
                 'migration_filter_pairs_by_count' : self._MigrationFilterPairsByCount,
                 'migration_get_mappings' : self._MigrationGetMappings,
                 'migration_get_pairs' : self._MigrationGetPairs,
@@ -3937,7 +3919,6 @@ class DB( HydrusDB.HydrusDB ):
                 'hash_status' : self.modules_files_metadata_rich.GetHashStatus,
                 'have_hashed_serialised_objects' : self.modules_serialisable.HaveHashedJSONDumps,
                 'ideal_client_files_locations' : self.modules_files_physical_storage.GetIdealClientFilesLocations,
-                'last_shutdown_work_time' : self.modules_db_maintenance.GetLastShutdownWorkTime,
                 'media_predicates' : self.modules_tag_display.GetMediaPredicates,
                 'media_result' : self.modules_media_results.GetMediaResultFromHash,
                 'media_results' : self.modules_media_results.GetMediaResultsFromHashes,
@@ -4076,7 +4057,6 @@ class DB( HydrusDB.HydrusDB ):
                 'regenerate_similar_files_search_count_numbers' : self.modules_similar_files.RegenerateSearchCacheNumbers,
                 'regenerate_tag_siblings_and_parents_cache' : self.modules_tag_display.RegenerateTagSiblingsAndParentsCache,
                 'resync_potential_pairs_to_hydrus_local_file_storage' : self.modules_files_duplicates_updates.ResyncPotentialPairsToHydrusLocalFileStorage,
-                'register_shutdown_work' : self.modules_db_maintenance.RegisterShutdownWork,
                 'relocate_client_files' : self.modules_files_physical_storage.RelocateClientFiles,
                 'remove_alternates_member' : self.modules_files_duplicates_updates.RemoveAlternateMemberFromHashes,
                 'remove_duplicates_member' : self.modules_files_duplicates_updates.RemoveMediaIdMemberFromHashes,
@@ -8641,6 +8621,25 @@ class DB( HydrusDB.HydrusDB ):
             except Exception as e:
                 
                 raise Exception( 'Hey, unfortunately I could not update your import options. Something is wrong. Roll back to v687 and tell hydev about this. There should be more info in the log.' ) from e
+                
+            
+        
+        if version == 689:
+            
+            try:
+                
+                if self._TableExists( 'last_shutdown_work_time' ):
+                    
+                    self._Execute( 'DROP TABLE last_shutdown_work_time;' )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some old db data failed to delete! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
                 
             
         #

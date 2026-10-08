@@ -508,7 +508,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'wake_delay_period' : 15,
             'media_viewer_zoom_center' : ClientGUICanvasMedia.ZOOM_CENTERPOINT_MOUSE,
             'last_session_save_period_minutes' : 5,
-            'shutdown_work_period' : 86400,
             'max_network_jobs' : 15,
             'max_network_jobs_per_domain' : 3,
             'max_connection_attempts_allowed' : 5,

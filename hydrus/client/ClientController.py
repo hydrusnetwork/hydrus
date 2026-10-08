@@ -892,36 +892,6 @@ class Controller( HydrusController.HydrusController ):
         return False
         
     
-    def DoIdleShutdownWork( self ):
-        
-        self.frame_splash_status.SetSubtext( 'db' )
-        
-        stop_time = HydrusTime.GetNow() + ( self.options[ 'idle_shutdown_max_minutes' ] * 60 )
-        
-        self.MaintainDB( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
-        
-        if not self.new_options.GetBoolean( 'pause_repo_sync' ):
-            
-            services = self.services_manager.GetServices( HC.REPOSITORIES, randomised = True )
-            
-            for service in services:
-                
-                if HydrusTime.TimeHasPassed( stop_time ):
-                    
-                    return
-                    
-                
-                service = typing.cast( ClientServices.ServiceRepository, service )
-                
-                self.frame_splash_status.SetSubtext( '{} processing'.format( service.GetName() ) )
-                
-                service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_SHUTDOWN, stop_time = stop_time )
-                
-            
-        
-        self.Write( 'register_shutdown_work' )
-        
-    
     def DoSelfSigterm( self ):
         
         def do_it():
@@ -963,11 +933,6 @@ class Controller( HydrusController.HydrusController ):
                 if not self._doing_fast_exit:
                     
                     self.CreateSplash( 'hydrus client exiting' )
-                    
-                    if HG.do_idle_shutdown_work:
-                        
-                        self._splash.ShowCancelShutdownButton()
-                        
                     
                 
                 if self.gui is not None and QP.isValid( self.gui ):
@@ -1126,27 +1091,6 @@ class Controller( HydrusController.HydrusController ):
     def GetDefaultMPVConfPath( self ):
         
         return HydrusStaticDir.GetStaticPath( os.path.join( 'mpv-conf', 'default_mpv.conf' ) )
-        
-    
-    def GetIdleShutdownWorkDue( self, time_to_stop ):
-        
-        work_to_do = []
-        
-        work_to_do.extend( self.Read( 'maintenance_due', time_to_stop ) )
-        
-        services = self.services_manager.GetServices( HC.REPOSITORIES )
-        
-        for service in services:
-            
-            service = typing.cast( ClientServices.ServiceRepository, service )
-            
-            if service.CanDoIdleShutdownWork():
-                
-                work_to_do.append( service.GetName() + ' repository processing' )
-                
-            
-        
-        return work_to_do
         
     
     def GetMainGUI( self ):
@@ -1978,7 +1922,6 @@ class Controller( HydrusController.HydrusController ):
             
             self._restore_backup_path = path
             self._doing_fast_exit = False
-            HG.do_idle_shutdown_work = False
             HG.restart = True
             
             self.Exit()
@@ -2413,22 +2356,6 @@ class Controller( HydrusController.HydrusController ):
         self.frame_splash_status.SetSubtext( '' )
         
         if not self._doing_fast_exit:
-            
-            if HG.do_idle_shutdown_work:
-                
-                self.frame_splash_status.SetText( 'waiting for idle shutdown work' )
-                
-                try:
-                    
-                    self.DoIdleShutdownWork()
-                    
-                    self.frame_splash_status.SetSubtext( '' )
-                    
-                except Exception as e:
-                    
-                    self._ReportShutdownException()
-                    
-                
             
             self.frame_splash_status.SetSubtext( '' )
             
