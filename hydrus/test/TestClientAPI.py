@@ -23,7 +23,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFilesPhysicalStorage
-from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
@@ -7926,7 +7926,7 @@ class TestClientAPI( unittest.TestCase ):
                 thumbnail_scale_type = TG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
                 thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
-                ( thumbnail_expected_width, thumbnail_expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                ( thumbnail_expected_width, thumbnail_expected_height ) = HydrusImageThumbnails.GetThumbnailResolution( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 
                 metadata_row[ 'thumbnail_width' ] = thumbnail_expected_width
                 metadata_row[ 'thumbnail_height' ] = thumbnail_expected_height

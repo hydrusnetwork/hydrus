@@ -7,7 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
-from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -158,7 +158,7 @@ def CopyMediaBitmap( media: ClientMediaSingle.MediaSingle, bitmap_type: int ):
                 
                 if bitmap_type == CAC.BITMAP_TYPE_SOURCE_LOOKUPS and ( width > 1024 or height > 1024 ):
                     
-                    target_resolution = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                    target_resolution = HydrusImageThumbnails.GetThumbnailResolution( media.GetResolution(), ( 1024, 1024 ), HydrusImageThumbnails.THUMBNAIL_SCALE_TO_FIT, 100 )
                     
                     CG.client_controller.pub( 'clipboard', 'bmp', ( media, target_resolution ) )
                     

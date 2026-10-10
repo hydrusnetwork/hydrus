@@ -34,6 +34,7 @@ from hydrus.client import ClientServices
 from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
 from hydrus.client.caches import ClientCaches
+from hydrus.client.caches import ClientCacheThumbnails
 from hydrus.client.duplicates import ClientDuplicatesAutoResolution
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutableDefaults
@@ -423,7 +424,8 @@ class Controller( object ):
         
         self.images_cache = ClientCaches.ImageRendererCache( self )
         self.image_tiles_cache = ClientCaches.ImageTileCache( self )
-        self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
+        
+        self.thumbnails_cache = ClientCacheThumbnails.ThumbnailCache( self )
         
         self.server_session_manager = HydrusSessions.HydrusSessionManagerServer()
         

@@ -31,6 +31,7 @@ from hydrus.core.files import HydrusOfficeOpenXMLHandling
 from hydrus.core.files import HydrusOLEHandling
 from hydrus.core.files import HydrusORAHandling
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 from hydrus.core.networking import HydrusNetwork
 
 mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: HydrusStaticDir.GetStaticPath( 'hydrus.png' ) )
@@ -90,14 +91,14 @@ def GenerateDefaultThumbnail( mime: int, target_resolution: tuple[ int, int ] ):
     
     thumb_path = mimes_to_default_thumbnail_paths[ mime ]
     
-    return HydrusImageHandling.GenerateDefaultThumbnailNumPyFromPath( thumb_path, target_resolution )
+    return HydrusImageThumbnails.GenerateDefaultThumbnailNumPyFromPath( thumb_path, target_resolution )
     
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration_ms, num_frames, percentage_in = 35 ):
     
     thumbnail_numpy = GenerateThumbnailNumPy( path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in )
 
-    return HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
+    return HydrusImageThumbnails.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
     
 
 def PrintMoreThumbErrorInfo( e: Exception, message, extra_description: str | None = None ):

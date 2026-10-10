@@ -17,6 +17,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusFilesPhysicalStorage
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
@@ -404,7 +405,7 @@ class ClientFilesManager( object ):
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
         thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
-        target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+        target_resolution = HydrusImageThumbnails.GetThumbnailResolution( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
         percentage_in = self._controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
         
@@ -1587,7 +1588,7 @@ class ClientFilesManager( object ):
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
             thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( (media_width, media_height), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+            ( expected_width, expected_height ) = HydrusImageThumbnails.GetThumbnailResolution( (media_width, media_height), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
             if current_width != expected_width or current_height != expected_height:
                 

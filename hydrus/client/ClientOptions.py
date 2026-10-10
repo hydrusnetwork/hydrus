@@ -482,8 +482,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
         from hydrus.client.gui.widgets import ClientGUIPainterShapes
-        from hydrus.core.files.images import HydrusImageHandling
         from hydrus.core.files.images import HydrusImageColours
+        from hydrus.core.files.images import HydrusImageThumbnails
         from hydrus.client.metadata import ClientTags
         
         self._dictionary[ 'integers' ] = {
@@ -512,7 +512,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'max_network_jobs_per_domain' : 3,
             'max_connection_attempts_allowed' : 5,
             'max_request_attempts_allowed_get' : 5,
-            'thumbnail_scale_type' : HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY,
+            'thumbnail_scale_type' : HydrusImageThumbnails.THUMBNAIL_SCALE_DOWN_ONLY,
             'max_simultaneous_subscriptions' : 1,
             'gallery_page_wait_period_pages' : 15,
             'gallery_page_wait_period_subscriptions' : 5,

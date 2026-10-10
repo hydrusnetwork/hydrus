@@ -1251,8 +1251,10 @@ class Controller( HydrusController.HydrusController ):
         
         self.images_cache = ClientCaches.ImageRendererCache( self )
         self.image_tiles_cache = ClientCaches.ImageTileCache( self )
+        
+        from hydrus.client.caches import ClientCacheThumbnails
         # TODO: if this guy still needs a mainloop, formalise him all as a mainloop manager. atm he calls his own loop start argh
-        self.thumbnails_cache = ClientCaches.ThumbnailCache( self )
+        self.thumbnails_cache = ClientCacheThumbnails.ThumbnailCache( self )
         
         self.frame_splash_status.SetText( 'initialising managers' )
         

@@ -9,7 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
-from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -1189,7 +1189,7 @@ def AddShareMenu( win: QW.QWidget, command_processor: CAC.ApplicationCommandProc
             
             if width is not None and height is not None and ( width > 1024 or height > 1024 ):
                 
-                target_resolution = HydrusImageHandling.GetThumbnailResolution( focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                target_resolution = HydrusImageThumbnails.GetThumbnailResolution( focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageThumbnails.THUMBNAIL_SCALE_TO_FIT, 100 )
                 
                 ClientGUIMenus.AppendMenuItem( share_menu, 'copy source lookup bitmap ({}x{})'.format( target_resolution[0], target_resolution[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', command_processor.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_SOURCE_LOOKUPS ) )
                 

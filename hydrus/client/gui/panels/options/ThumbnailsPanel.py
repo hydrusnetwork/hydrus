@@ -2,7 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
-from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling, HydrusImageThumbnails
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
@@ -29,9 +29,9 @@ class ThumbnailsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._thumbnail_scale_type = ClientGUICommon.BetterChoice( thumbnail_appearance_box )
         
-        for t in ( HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, HydrusImageHandling.THUMBNAIL_SCALE_TO_FILL ):
+        for t in ( HydrusImageThumbnails.THUMBNAIL_SCALE_DOWN_ONLY, HydrusImageThumbnails.THUMBNAIL_SCALE_TO_FIT, HydrusImageThumbnails.THUMBNAIL_SCALE_TO_FILL ):
             
-            self._thumbnail_scale_type.addItem( HydrusImageHandling.thumbnail_scale_str_lookup[ t ], t )
+            self._thumbnail_scale_type.addItem( HydrusImageThumbnails.thumbnail_scale_str_lookup[ t ], t )
             
         
         # I tried <100%, but Qt seems to cap it to 1.0. Sad!
