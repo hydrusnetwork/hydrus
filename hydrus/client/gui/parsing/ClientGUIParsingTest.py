@@ -12,7 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -269,7 +269,7 @@ class TestPanel( QW.QWidget ):
                             f.write( example_bytes )
                             
                         
-                        mime = HydrusFileHandling.GetMime( temp_path )
+                        mime = HydrusFileTypeDetermination.GetMime( temp_path )
                         
                     except Exception as e:
                         

@@ -607,15 +607,6 @@ def GenerateFileBytesForRenderAPI( numpy_image, format: int, quality: int ):
     return GenerateFileBytesNumPy( numpy_image, ext, params )
     
 
-def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime ):
-    
-    numpy_image = GenerateNumPyImage( path, mime )
-    
-    thumbnail_numpy_image = ResizeNumPyImage( numpy_image, target_resolution )
-    
-    return thumbnail_numpy_image
-    
-
 def GenerateThumbnailBytesFromPIL( pil_image: PILImage.Image ) -> bytes:
     
     f = io.BytesIO()

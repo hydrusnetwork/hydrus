@@ -4,8 +4,9 @@ import time
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageThumbnails
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
@@ -23,7 +24,6 @@ from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchTagContext
-
 
 class HydrusResourceClientAPIRestrictedGetFiles( ClientLocalServerResources.HydrusResourceClientAPIRestricted ):
     
@@ -548,15 +548,15 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
                 
             except HydrusExceptions.FileMissingException:
                 
-                path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
+                path = HydrusImageThumbnails.mimes_to_default_thumbnail_paths[ mime ]
                 
             
         else:
             
-            path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
+            path = HydrusImageThumbnails.mimes_to_default_thumbnail_paths[ mime ]
             
         
-        response_mime = HydrusFileHandling.GetThumbnailMime( path )
+        response_mime = HydrusFileTypeDetermination.GetThumbnailMime( path )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = response_mime, path = path )
         
@@ -687,7 +687,7 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnailPath( HydrusResourceC
         
         if include_thumbnail_filetype:
             
-            thumb_mime = HydrusFileHandling.GetThumbnailMime( path )
+            thumb_mime = HydrusFileTypeDetermination.GetThumbnailMime( path )
             
             body_dict = {
                 'path' : path,

@@ -10,7 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusImageThumbnails
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -3406,7 +3406,7 @@ class EmbedButton( QW.QWidget ):
                 
                 thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( display_media_result )
                 
-                thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+                thumbnail_mime = HydrusFileTypeDetermination.GetThumbnailMime( thumbnail_path )
                 
                 self._thumbnail_qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
                 

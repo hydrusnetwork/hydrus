@@ -20,7 +20,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -1666,7 +1666,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             network_job.WriteContentBytesToPath( temp_path )
                             
-                            mime = HydrusFileHandling.GetMime( temp_path )
+                            mime = HydrusFileTypeDetermination.GetMime( temp_path )
                             
                             if mime in HC.ALLOWED_MIMES:
                                 

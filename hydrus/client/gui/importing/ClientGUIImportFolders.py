@@ -6,7 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -658,7 +658,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 filenames = list( os.listdir( path ) )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE]
                 
-                example_paths = [ f for f in [ os.path.join( path, filename ) for filename in filenames ] if os.path.isfile( f ) and HydrusFileHandling.GetMime( f ) in HC.ALLOWED_MIMES ]
+                example_paths = [ f for f in [ os.path.join( path, filename ) for filename in filenames ] if os.path.isfile( f ) and HydrusFileTypeDetermination.GetMime( f ) in HC.ALLOWED_MIMES ]
                 
                 self._sidecar_test_context_factory.SetExampleFilePaths( example_paths )
                 

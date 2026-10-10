@@ -14,8 +14,8 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusFilesPhysicalStorage
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageThumbnails
 from hydrus.core.processes import HydrusThreading
@@ -411,7 +411,7 @@ class ClientFilesManager( object ):
         
         try:
             
-            thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( file_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in )
+            thumbnail_bytes = HydrusImageThumbnails.GenerateThumbnailBytes( file_path, target_resolution, mime, duration_ms, num_frames, percentage_in = percentage_in )
             
         except Exception as e:
             
@@ -1578,7 +1578,7 @@ class ClientFilesManager( object ):
                 raise Exception()
                 
             
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( path )
+            thumbnail_mime = HydrusFileTypeDetermination.GetThumbnailMime( path )
             
             numpy_image = HydrusImageHandling.GenerateNumPyImage( path, thumbnail_mime )
             

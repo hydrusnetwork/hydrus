@@ -9,7 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusBlurhash
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageThumbnails
@@ -249,7 +249,7 @@ class ThumbnailCache( object ):
         
         try:
             
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+            thumbnail_mime = HydrusFileTypeDetermination.GetThumbnailMime( thumbnail_path )
             
             numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             
@@ -542,7 +542,7 @@ class ThumbnailCache( object ):
                 pass
                 
             
-            for ( mime, thumbnail_path ) in HydrusFileHandling.mimes_to_default_thumbnail_paths.items():
+            for ( mime, thumbnail_path ) in HydrusImageThumbnails.mimes_to_default_thumbnail_paths.items():
                 
                 if mime in HC.IMAGES and image_svg_hydrus_bitmap is not None:
                     

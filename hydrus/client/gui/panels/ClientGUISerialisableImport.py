@@ -11,7 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusStaticDir
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -95,7 +95,7 @@ def IngestPaths( paths ):
     
     for path in paths:
         
-        if HydrusFileHandling.GetIsPNGRealQuick( path ):
+        if HydrusFileTypeDetermination.GetIsPNGRealQuick( path ):
             
             try:
                 

@@ -10,6 +10,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files.images import HydrusBlurhash
 from hydrus.core.files.images import HydrusImageHandling
@@ -771,7 +772,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         try:
             
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
+            thumbnail_mime = HydrusFileTypeDetermination.GetThumbnailMime( thumbnail_path )
             
             numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             

@@ -10,7 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
@@ -2990,7 +2990,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 if os.path.exists( path ) and os.path.isfile( path ):
                     
-                    mime = HydrusFileHandling.GetMime( path )
+                    mime = HydrusFileTypeDetermination.GetMime( path )
                     
                     if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
                         

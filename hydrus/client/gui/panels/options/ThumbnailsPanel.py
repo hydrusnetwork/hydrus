@@ -2,7 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusNumbers
-from hydrus.core.files.images import HydrusImageHandling, HydrusImageThumbnails
+from hydrus.core.files.images import HydrusImageThumbnails
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions

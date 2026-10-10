@@ -8,6 +8,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
@@ -327,7 +328,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
         
         ( os_file_handle, temp_path ) = request.temp_file_info
         
-        mime = HydrusFileHandling.GetMime( temp_path )
+        mime = HydrusFileTypeDetermination.GetMime( temp_path )
         
         body_dict = {}
         

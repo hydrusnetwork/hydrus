@@ -3,7 +3,7 @@ import os
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
-from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client.files import ClientFiles
 
@@ -141,7 +141,7 @@ class LocalFileParse( object ):
                 
                 try:
                     
-                    mime = HydrusFileHandling.GetMime( path )
+                    mime = HydrusFileTypeDetermination.GetMime( path )
                     
                 except Exception as e:
                     
