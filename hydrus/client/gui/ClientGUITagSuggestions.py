@@ -432,7 +432,7 @@ class RelatedTagsPanel( QW.QWidget ):
         self._tag_display_type.valueChanged.connect( self._NotifyChangesToSearchContext )
         
     
-    def _FetchRelatedTagsNew( self, max_time_to_take ):
+    def _FetchRelatedTags( self, max_time_to_take ):
         
         def do_it( file_service_key, tag_service_key, tag_display_type, search_tags, other_tags_to_exclude ):
             
@@ -584,7 +584,7 @@ class RelatedTagsPanel( QW.QWidget ):
             
         else:
             
-            self._FetchRelatedTagsNew( self._last_max_time_to_take )
+            self._FetchRelatedTags( self._last_max_time_to_take )
             
         
     
@@ -602,21 +602,21 @@ class RelatedTagsPanel( QW.QWidget ):
         
         max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_1_duration_ms' ) )
         
-        self._FetchRelatedTagsNew( max_time_to_take )
+        self._FetchRelatedTags( max_time_to_take )
         
     
     def RefreshMedium( self ):
         
         max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
         
-        self._FetchRelatedTagsNew( max_time_to_take )
+        self._FetchRelatedTags( max_time_to_take )
         
     
     def RefreshThorough( self ):
         
         max_time_to_take = HydrusTime.SecondiseMSFloat( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
         
-        self._FetchRelatedTagsNew( max_time_to_take )
+        self._FetchRelatedTags( max_time_to_take )
         
     
     def MediaUpdated( self ):
