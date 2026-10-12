@@ -388,6 +388,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'make_child_frames_qt_tool' : True,
             'copy_notes_quick_click_only_copies_text' : False,
             'do_flock_already_in_use_test_in_posix' : True,
+            'tag_suggestions_related_tags_just_do_local_files_default' : True,
+            'tag_suggestions_related_tags_search_siblings_and_parents_default' : True,
         }
         
         #

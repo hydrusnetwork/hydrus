@@ -24,6 +24,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxesData
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -367,10 +368,14 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._tag_context_button = ClientGUISearch.TagContextButton( self, tag_context, combined_tags_ok = False )
         
-        self._just_do_local_files = ClientGUICommon.OnOffButton( self, on_label = 'just for my files', off_label = 'for all known files', start_on = True )
+        start_on = CG.client_controller.new_options.GetBoolean( 'tag_suggestions_related_tags_just_do_local_files_default' )
+        
+        self._just_do_local_files = ClientGUICommon.OnOffButton( self, on_label = 'just for my files', off_label = 'for all known files', start_on = start_on )
         self._just_do_local_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select how big the search is. Searching across all known files on a repository produces high quality results but takes a long time.' ) )
         
-        self._tag_display_type = ClientGUICommon.OnOffButton( self, on_label = 'searching through siblings and parents', off_label = 'not searching siblings and parents', start_on = True )
+        start_on = CG.client_controller.new_options.GetBoolean( 'tag_suggestions_related_tags_search_siblings_and_parents_default' )
+        
+        self._tag_display_type = ClientGUICommon.OnOffButton( self, on_label = 'searching through siblings and parents', off_label = 'not searching siblings and parents', start_on = start_on )
         self._tag_display_type.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select whether to search through the "display" tag store, which is connected and merged by sibling and parent data, or the "storage" store, which just has the raw mappings as they are edited.' ) )
         
         tt = 'If you select some tags, this will search using only those as reference!'
@@ -390,6 +395,18 @@ class RelatedTagsPanel( QW.QWidget ):
         self._button_3.setMinimumWidth( 30 )
         self._button_3.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
+        menu_template_items = []
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_suggestions_related_tags_just_do_local_files_default' )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'always start with "just for my files"', 'Select whether to boot this dialog searching just amongst your local files or all known files.', check_manager ) )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_suggestions_related_tags_search_siblings_and_parents_default' )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'always start with "searching through siblings and parents"', 'Select whether to boot this dialog searching siblings and parents or just "storage" tags.', check_manager ) )
+        
+        self._cog_button = ClientGUIMenuButton.CogIconButton( self, menu_template_items )
+        
         self._related_tags = ListBoxTagsSuggestionsFavourites( self, self._service_key, activate_callable, sort_tags = False )
         
         button_hbox = QP.HBoxLayout()
@@ -397,6 +414,7 @@ class RelatedTagsPanel( QW.QWidget ):
         QP.AddToLayout( button_hbox, self._button_1, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( button_hbox, self._button_2, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( button_hbox, self._button_3, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, self._status_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._tag_context_button, CC.FLAGS_EXPAND_PERPENDICULAR )

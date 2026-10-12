@@ -89,6 +89,12 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._related_tags_search_2_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
         self._related_tags_search_3_duration_ms = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min=50, max=60000 )
         
+        self._tag_suggestions_related_tags_just_do_local_files_default = QW.QCheckBox( suggested_tags_related_panel )
+        self._tag_suggestions_related_tags_just_do_local_files_default.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select whether to boot the widget searching just amongst your local files or all known files.' ) )
+        
+        self._tag_suggestions_related_tags_search_siblings_and_parents_default = QW.QCheckBox( suggested_tags_related_panel )
+        self._tag_suggestions_related_tags_search_siblings_and_parents_default.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select whether to boot the widget searching siblings and parents or just "storage" tags.' ) )
+        
         self._related_tags_concurrence_threshold_percent = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min = 1, max = 100 )
         tt = 'The related tags system looks for tags that tend to be used on the same files. Here you can set how strict it is. How many percent of tag A\'s files must tag B on for tag B to be a good suggestion? Higher numbers will mean fewer but more relevant suggestions.'
         self._related_tags_concurrence_threshold_percent.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
@@ -174,6 +180,9 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._related_tags_search_2_duration_ms.setValue( self._new_options.GetInteger( 'related_tags_search_2_duration_ms' ) )
         self._related_tags_search_3_duration_ms.setValue( self._new_options.GetInteger( 'related_tags_search_3_duration_ms' ) )
         
+        self._tag_suggestions_related_tags_just_do_local_files_default.setChecked( self._new_options.GetBoolean( 'tag_suggestions_related_tags_just_do_local_files_default' ) )
+        self._tag_suggestions_related_tags_search_siblings_and_parents_default.setChecked( self._new_options.GetBoolean( 'tag_suggestions_related_tags_search_siblings_and_parents_default' ) )
+        
         self._related_tags_concurrence_threshold_percent.setValue( self._new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) )
 
         ( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ) = self._new_options.GetRelatedTagsTagSliceWeights()
@@ -219,6 +228,8 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Initial/Quick search duration (ms): ', self._related_tags_search_1_duration_ms ) )
         rows.append( ( 'Medium search duration (ms): ', self._related_tags_search_2_duration_ms ) )
         rows.append( ( 'Thorough search duration (ms): ', self._related_tags_search_3_duration_ms ) )
+        rows.append( ( 'Start searching "my files": ', self._tag_suggestions_related_tags_just_do_local_files_default ) )
+        rows.append( ( 'Start searching "siblings and parents": ', self._tag_suggestions_related_tags_search_siblings_and_parents_default ) )
         rows.append( ( 'Tag concurrence threshold %: ', self._related_tags_concurrence_threshold_percent ) )
         
         gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
@@ -528,6 +539,9 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetInteger( 'related_tags_search_1_duration_ms', self._related_tags_search_1_duration_ms.value() )
         self._new_options.SetInteger( 'related_tags_search_2_duration_ms', self._related_tags_search_2_duration_ms.value() )
         self._new_options.SetInteger( 'related_tags_search_3_duration_ms', self._related_tags_search_3_duration_ms.value() )
+        
+        self._new_options.SetBoolean( 'tag_suggestions_related_tags_just_do_local_files_default', self._tag_suggestions_related_tags_just_do_local_files_default.isChecked() )
+        self._new_options.SetBoolean( 'tag_suggestions_related_tags_search_siblings_and_parents_default', self._tag_suggestions_related_tags_search_siblings_and_parents_default.isChecked() )
         
         self._new_options.SetInteger( 'related_tags_concurrence_threshold_percent', self._related_tags_concurrence_threshold_percent.value() )
         
