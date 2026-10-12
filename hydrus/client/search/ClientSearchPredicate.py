@@ -1354,6 +1354,29 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return None
         
     
+    def GetKnownTagImplications( self ):
+        
+        # what tags does this guy add?
+        
+        implications = set()
+        
+        if self._ideal_sibling is not None:
+            
+            implications.add( self._ideal_sibling )
+            
+        else:
+            
+            implications.add( self._value )
+            
+        
+        for parent in self._parent_predicates:
+            
+            implications.update( parent.GetKnownTagImplications() )
+            
+        
+        return implications
+        
+    
     def GetMagicSortValue( self ):
         
         if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:

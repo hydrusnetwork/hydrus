@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -34,31 +35,45 @@ from hydrus.client.search import ClientSearchTagContext
 
 def FilterSuggestedPredicatesForMedia( predicates: collections.abc.Sequence[ ClientSearchPredicate.Predicate ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ ClientSearchPredicate.Predicate ]:
     
-    tags = [ predicate.GetValue() for predicate in predicates ]
+    # step one: check for ideal tags and parents! don't suggest something that already exists by other means
     
-    filtered_tags = FilterSuggestedTagsForMedia( tags, medias, service_key )
+    predicates_to_tag_implications = { predicate : predicate.GetKnownTagImplications() for predicate in predicates }
     
-    filtered_predicates = [ predicate for predicate in predicates if predicate.GetValue() in filtered_tags ]
+    tags_to_look_at = HydrusLists.MassUnion( predicates_to_tag_implications.values() )
+    
+    useful_tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tags_to_look_at, medias, service_key )
+    
+    filtered_predicates = [ predicate for ( predicate, tag_implications ) in predicates_to_tag_implications.items() if not tag_implications.isdisjoint( useful_tags ) ]
+    
+    # step two: check for storage tags, since the fundamental tag filtering guy will not be aware of ideal/parent tags on a recently-pended tag
+    # TODO: you can remove this when we have a Tag object that knows this stuff and tag managers will be able to answer fully
+    
+    predicates_to_storage_tags = { predicate : predicate.GetValue() for predicate in filtered_predicates }
+    
+    tags_to_look_at = set( predicates_to_storage_tags.values() )
+    
+    useful_tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_STORAGE, tags_to_look_at, medias, service_key )
+    
+    filtered_predicates = [ predicate for ( predicate, storage_tag ) in predicates_to_storage_tags.items() if storage_tag in useful_tags ]
     
     return filtered_predicates
     
 
-def FilterSuggestedTagsForMedia( tags: collections.abc.Sequence[ str ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ str ]:
+def FilterSuggestedTagsForMedia( tag_display_type: int, tags: collections.abc.Sequence[ str ], medias: collections.abc.Collection[ ClientMedia.Media ], service_key: bytes ) -> list[ str ]:
     
     num_media = len( medias )
     
     useful_tags_set = set( tags )
     
-    ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( medias, service_key, ClientTags.TAG_DISPLAY_STORAGE )
+    ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( medias, service_key, tag_display_type )
     
     current_tags_to_count.update( pending_tags_to_count )
     
     # TODO: figure out a nicer way to filter out siblings and parents here
+    # I moved it forward with the updated filtersuggestedpredicates above, but we aren't there yet since the GetMediasTagCount does not know ideals until a full content update goes through with the calcs
+    # getting there though; once we can do the calc in a tag object itself since we know ideals in each manager, I think we'll know everything
     # maybe have to wait for when tags always know their siblings
     # then we could also filter out worse/better siblings of the same count
-    
-    # this is a sync way for now:
-    # db_tags_to_ideals_and_parents = CG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
     
     for ( tag, count ) in current_tags_to_count.items():
         
@@ -95,7 +110,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
             
             tags = set( self._GetTagsFromTerms( self._selected_terms ) )
             
-            self._activate_callable( tags, only_add = True )
+            self._activate_callable( tags )
             
             self._RemoveSelectedTerms()
             
@@ -114,7 +129,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
     
     def ActivateAll( self ):
         
-        self._activate_callable( self.GetTags(), only_add = True )
+        self._activate_callable( self.GetTags() )
         
     
     def TakeFocusForUser( self ):
@@ -144,7 +159,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
             
             tags = set( self._GetTagsFromTerms( self._selected_terms ) )
             
-            self._activate_callable( tags, only_add = True )
+            self._activate_callable( tags )
             
             self._RemoveSelectedTerms()
             
@@ -209,7 +224,7 @@ class MostUsedTagsPanel( QW.QWidget ):
         
         ClientTagSorting.SortTags( CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location ), favourites )
         
-        tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
+        tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_STORAGE, favourites, self._media, self._service_key )
         
         self._favourite_tags.SetTags( tags )
         
@@ -294,7 +309,7 @@ class RecentTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        tags = FilterSuggestedTagsForMedia( self._last_fetched_tags, self._media, self._service_key )
+        tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_STORAGE, self._last_fetched_tags, self._media, self._service_key )
         
         self._recent_tags.SetTags( tags )
         
@@ -376,7 +391,14 @@ class RelatedTagsPanel( QW.QWidget ):
         start_on = CG.client_controller.new_options.GetBoolean( 'tag_suggestions_related_tags_search_siblings_and_parents_default' )
         
         self._tag_display_type = ClientGUICommon.OnOffButton( self, on_label = 'searching through siblings and parents', off_label = 'not searching siblings and parents', start_on = start_on )
-        self._tag_display_type.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select whether to search through the "display" tag store, which is connected and merged by sibling and parent data, or the "storage" store, which just has the raw mappings as they are edited.' ) )
+        
+        tt = 'Select whether to search through the "display" tag store, which is connected and merged by sibling and parent data, or the "storage" store, which just has the raw mappings as they are edited.'
+        tt += '\n\n'
+        tt += 'NOTE: The namespace weighting/filtering still applies to tags in their ideal, sibling form. If you want to de-weight all "series" tags, then searching for "my cool series" when a "my cool series->series:my cool series" sibling relationship exists will cause that tag to not be searched, since it ultimately _is_ a "series" tag. Same deal for suggested results: they are weighed on how they will ideally appear in the end, not what they actually are.'
+        tt += '\n\n'
+        tt += 'This widget will not suggest any tags that sibling to anything that anything that already exists will sibling to, either. Nor will it suggest a parent that is already implied. Every suggestion this list offers should make an actual change to what you see when the dialog oks.'
+        
+        self._tag_display_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'If you select some tags, this will search using only those as reference!'
         
@@ -434,7 +456,7 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def _FetchRelatedTags( self, max_time_to_take ):
         
-        def do_it( file_service_key, tag_service_key, tag_display_type, search_tags, other_tags_to_exclude ):
+        def do_it( file_service_key, tag_service_key, tag_display_type, search_tags ):
             
             def qt_code( predicates, num_done, num_to_do, num_skipped, total_time_took ):
                 
@@ -506,8 +528,7 @@ class RelatedTagsPanel( QW.QWidget ):
                 max_time_to_take = max_time_to_take,
                 concurrence_threshold = concurrence_threshold,
                 search_tag_slices_weight_dict = search_tag_slices_weight_dict,
-                result_tag_slices_weight_dict = result_tag_slices_weight_dict,
-                other_tags_to_exclude = other_tags_to_exclude
+                result_tag_slices_weight_dict = result_tag_slices_weight_dict
             )
             
             total_time_took = HydrusTime.GetNowPrecise() - start_time
@@ -524,12 +545,10 @@ class RelatedTagsPanel( QW.QWidget ):
         if len( self._selected_tags ) == 0:
             
             search_tags = ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
-            other_tags_to_exclude = None
             
         else:
             
             search_tags = self._selected_tags
-            other_tags_to_exclude = set( ClientMedia.GetMediasTags( self._media, self._service_key, ClientTags.TAG_DISPLAY_STORAGE, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) ) ).difference( self._selected_tags )
             
         
         if len( search_tags ) == 0:
@@ -563,7 +582,7 @@ class RelatedTagsPanel( QW.QWidget ):
             tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
             
         
-        CG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, tag_display_type, search_tags, other_tags_to_exclude )
+        CG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, tag_display_type, search_tags )
         
     
     def _NotifyChangesToSearchContext( self ):
@@ -590,10 +609,12 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        tags = [ predicate.GetValue() for predicate in self._last_fetched_predicates ]
+        #tags = [ predicate.GetValue() for predicate in self._last_fetched_predicates ]
         
-        filtered_tags = FilterSuggestedTagsForMedia( tags, self._media, self._service_key )
-        #predicates = FilterSuggestedPredicatesForMedia( self._last_fetched_predicates, self._media, self._service_key )
+        #filtered_tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_STORAGE, tags, self._media, self._service_key )
+        filtered_predicates = FilterSuggestedPredicatesForMedia( self._last_fetched_predicates, self._media, self._service_key )
+        
+        filtered_tags = [ predicate.GetValue() for predicate in filtered_predicates ]
         
         self._related_tags.SetTags( filtered_tags )
         
@@ -757,7 +778,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        tags = FilterSuggestedTagsForMedia( self._last_fetched_tags, self._media, self._service_key )
+        tags = FilterSuggestedTagsForMedia( ClientTags.TAG_DISPLAY_STORAGE, self._last_fetched_tags, self._media, self._service_key )
         
         self._tags.SetTags( tags )
         

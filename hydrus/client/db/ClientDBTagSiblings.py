@@ -729,6 +729,21 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return tag_ids_to_ideal_tag_ids
         
     
+    def GetTagsToIdealTags( self, display_type: int, tag_service_key: bytes, tags ):
+        
+        tag_service_id = self.modules_services.GetServiceId( tag_service_key )
+        
+        tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tags = tags )
+        
+        tag_ids_to_ideal_tag_ids = self.GetTagIdsToIdealTagIds( display_type, tag_service_id, set( tag_ids_to_tags.keys() ) )
+        
+        ideal_tag_ids_to_ideal_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = set( tag_ids_to_ideal_tag_ids.values() ) )
+        
+        tags_to_ideal_tags = { tag : ideal_tag_ids_to_ideal_tags[ tag_ids_to_ideal_tag_ids[ tag_id ] ] for ( tag_id, tag ) in tag_ids_to_tags.items() }
+        
+        return tags_to_ideal_tags
+        
+    
     def GetTagSiblingsForTags( self, service_key, tags ) -> dict[ str, set[ str ] ]:
         
         if service_key == CC.COMBINED_TAG_SERVICE_KEY:

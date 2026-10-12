@@ -3047,18 +3047,36 @@ class DB( HydrusDB.HydrusDB ):
         return ( results_dict, we_stopped_early )
         
     
-    def _GetRelatedTags( self, file_service_key, tag_context: ClientSearchTagContext.TagContext, search_tags, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, max_time_to_take = 0.5, max_results = 100, concurrence_threshold = 0.04, search_tag_slices_weight_dict = None, result_tag_slices_weight_dict = None, other_tags_to_exclude = None ):
+    def _GetRelatedTags(
+        self,
+        file_service_key: bytes,
+        tag_context: ClientSearchTagContext.TagContext,
+        search_tags: collections.abc.Collection[ str ],
+        tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL,
+        max_time_to_take = 0.5,
+        max_results = 100,
+        concurrence_threshold = 0.04,
+        search_tag_slices_weight_dict = None,
+        result_tag_slices_weight_dict = None
+    ):
         
         # a user provided the basic idea here
         
-        def get_weight_from_dict( tag, d ):
+        # ok hydev is revisiting this in 2026-10. this code is fun but a mess so I suspect we'll want to break it into bits somehow and maybe spin it into its own module
+        # regardless, one persistent tricky thing is that siblings and parents haven't been addressed properly
+        # we'll recommend a search tag or judge a result tag based on itself rather than its ideal, which isn't actually what the user expects and wants
+        # if they say "I don't want no series tags in my results", don't suggest a tag that siblings to one
+        # we had a similar issue where we were suggesting tags that already existed via another sibling, but I'm pretty sure we handled that already
+        # anyway I am fixing it now and further saying this whole guy could do with a modular rethink now it does useful stuff and isn't just a weird experiment
+        
+        def get_weight_from_dict( ideal_tag, d ):
             
             if d is None:
                 
                 return 1.0
                 
             
-            ( n, s ) = HydrusTags.SplitTag( tag )
+            ( n, s ) = HydrusTags.SplitTag( ideal_tag )
             
             if n in d:
                 
@@ -3079,23 +3097,29 @@ class DB( HydrusDB.HydrusDB ):
         
         stop_time_for_finding_results = HydrusTime.GetNowPrecise() + ( max_time_to_take * 0.85 )
         
-        search_tags = [ search_tag for search_tag in search_tags if get_weight_from_dict( search_tag, search_tag_slices_weight_dict ) != 0.0 ]
-        
-        if len( search_tags ) == 0:
-            
-            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'no search tags to work with!' ) ] )
-            
-        
-        search_tag_service_id = self.modules_services.GetServiceId( search_tag_service_key )
-        display_tag_service_id = self.modules_services.GetServiceId( display_tag_service_key )
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
-        
         if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
             
             search_tags = self.modules_tag_siblings.GetIdeals( tag_display_type, display_tag_service_key, search_tags )
             
             # I had a thing here that added the parents, but it gave some whack results compared to what you expected
             
+            search_tags_to_ideals = { search_tag : search_tag for search_tag in search_tags }
+            
+        else:
+            
+            search_tags_to_ideals = self.modules_tag_siblings.GetTagsToIdealTags( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_key, search_tags )
+            
+        
+        search_tags = [ search_tag for search_tag in search_tags if get_weight_from_dict( search_tags_to_ideals[ search_tag ], search_tag_slices_weight_dict ) != 0.0 ]
+        
+        if len( search_tags ) == 0:
+            
+            return ( num_tags_searched, num_tags_to_search, num_skipped, [ ClientSearchPredicate.Predicate( ClientSearchPredicate.PREDICATE_TYPE_TAG, value = 'no useful search tags to work with!' ) ] )
+            
+        
+        search_tag_service_id = self.modules_services.GetServiceId( search_tag_service_key )
+        display_tag_service_id = self.modules_services.GetServiceId( display_tag_service_key )
+        file_service_id = self.modules_services.GetServiceId( file_service_key )
         
         search_tag_ids_to_search_tags = self.modules_tags_local_cache.GetTagIdsToTags( tags = search_tags )
         
@@ -3113,7 +3137,7 @@ class DB( HydrusDB.HydrusDB ):
         # 2
             # we have an options structure for value of namespace, so we'll do biggest numbers first
         
-        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: ( - get_weight_from_dict( search_tag_ids_to_search_tags[ row[0] ], search_tag_slices_weight_dict ), row[1] ) )
+        search_tag_ids_flat_sorted_ascending = sorted( search_tag_ids_to_total_counts.items(), key = lambda row: ( - get_weight_from_dict( search_tags_to_ideals[ search_tag_ids_to_search_tags[ row[0] ] ], search_tag_slices_weight_dict ), row[1] ) )
         
         search_tags_sorted_ascending = []
         
@@ -3200,26 +3224,9 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        # now let's filter stuff we don't want
+        # We used to filter stuff we didn't want here, but significant improvements to UI-level filtering meant we could skip it!
         
-        # we don't want to suggest ourselves
-        tag_ids_to_exclude = set( search_tag_ids_to_search_tags.keys() )
-        
-        if other_tags_to_exclude is not None:
-            
-            # this is the list of all tags in the list, don't want them either
-            other_tag_ideals = self.modules_tag_siblings.GetIdeals( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_key, other_tags_to_exclude )
-            
-            other_tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = other_tag_ideals ).keys() )
-            
-            tag_ids_to_exclude.update( other_tag_ids )
-            
-        
-        for ( search_tag_id, parent_tag_ids ) in self.modules_tag_parents.GetTagsToAncestors( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_id, set( tag_ids_to_exclude ) ).items():
-            
-            # we don't want any of their parents either!
-            tag_ids_to_exclude.update( parent_tag_ids )
-            
+        #
         
         unfiltered_search_tag_ids_to_tag_ids_to_matching_counts = search_tag_ids_to_tag_ids_to_matching_counts
         
@@ -3230,11 +3237,6 @@ class DB( HydrusDB.HydrusDB ):
             tag_ids_to_matching_counts = {}
             
             for ( suggestion_tag_id, suggestion_matching_count ) in unfiltered_tag_ids_to_matching_counts.items():
-                
-                if suggestion_tag_id in tag_ids_to_exclude:
-                    
-                    continue
-                    
                 
                 tag_ids_to_matching_counts[ suggestion_tag_id ] = suggestion_matching_count
                 
@@ -3288,7 +3290,7 @@ class DB( HydrusDB.HydrusDB ):
                 matching_count_multiplier = search_tag_count / max_num_files_to_search
                 
             
-            weight = get_weight_from_dict( search_tag_ids_to_search_tags[ search_tag_id ], search_tag_slices_weight_dict )
+            weight = get_weight_from_dict( search_tags_to_ideals[ search_tag_ids_to_search_tags[ search_tag_id ] ], search_tag_slices_weight_dict )
             
             for ( suggestion_tag_id, suggestion_matching_count ) in tag_ids_to_matching_counts.items():
                 
@@ -3331,13 +3333,24 @@ class DB( HydrusDB.HydrusDB ):
         
         predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, tag_ids_to_full_counts )
         
+        all_predicate_tags = { predicate.GetValue() for predicate in predicates }
+        
+        if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
+            
+            predicate_tags_to_ideal_tags = { predicate_tag : predicate_tag for predicate_tag in all_predicate_tags }
+            
+        else:
+            
+            predicate_tags_to_ideal_tags = self.modules_tag_siblings.GetTagsToIdealTags( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_key, all_predicate_tags )
+            
+        
         result_predicates = []
         
         for predicate in predicates:
             
-            tag = predicate.GetValue()
+            predicate_tag = predicate.GetValue()
             
-            weight = get_weight_from_dict( tag, result_tag_slices_weight_dict )
+            weight = get_weight_from_dict( predicate_tags_to_ideal_tags[ predicate_tag ], result_tag_slices_weight_dict )
             
             if weight == 0.0:
                 
