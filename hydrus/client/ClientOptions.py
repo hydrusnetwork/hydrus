@@ -147,7 +147,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'secret_discord_dnd_fix' : False,
             'show_unmatched_urls_in_media_viewer' : False,
             'set_search_focus_on_page_change' : False,
-            'allow_remove_on_manage_tags_input' : False,
             'yes_no_on_remove_on_manage_tags' : True,
             'activate_window_on_tag_search_page_activation' : False,
             'show_related_tags' : True,
@@ -744,6 +743,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'tab_tree_splitter_sizes_left' : [ 200, 1000 ],
             'tab_tree_splitter_sizes_right' : [ 1000, 200 ],
             'treeview_expanding_panel_splitter_size' : [ 700, 150 ],
+            'manage_tags_allowed_actions_ac_paste' : [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ],
+            'manage_tags_allowed_actions_ac_entry' : [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ],
         }
         
         #

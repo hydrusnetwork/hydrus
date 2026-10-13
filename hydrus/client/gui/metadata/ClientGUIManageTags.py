@@ -44,6 +44,116 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearchTagContext
 
+def flip_actions( allowed_actions: list[ int ], actions_to_flip ):
+    
+    add_it = set( allowed_actions ).isdisjoint( actions_to_flip )
+    
+    allowed_actions = [ action for action in allowed_actions if action not in actions_to_flip ]
+    
+    if add_it:
+        
+        allowed_actions.extend( actions_to_flip )
+        
+    
+    return allowed_actions
+    
+
+def flip_paste_delete_petition():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    
+
+def value_paste_delete_petition():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    return HC.CONTENT_UPDATE_DELETE in allowed_actions
+    
+
+def flip_paste_rescind():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    
+
+def value_paste_rescind():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    return HC.CONTENT_UPDATE_RESCIND_PEND in allowed_actions
+    
+
+def flip_paste_clear_deletion_record():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    
+
+def value_paste_clear_deletion_record():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    
+    return HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD in allowed_actions
+    
+
+def flip_entry_delete_petition():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
+    
+
+def value_entry_delete_petition():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    return HC.CONTENT_UPDATE_DELETE in allowed_actions
+    
+
+def flip_entry_rescind():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
+    
+
+def value_entry_rescind():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    return HC.CONTENT_UPDATE_RESCIND_PEND in allowed_actions
+    
+
+def flip_entry_clear_deletion_record():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
+    
+    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
+    
+
+def value_entry_clear_deletion_record():
+    
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    
+    return HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD in allowed_actions
+    
+
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: list[ ClientMediaSingle.MediaSingle ], immediate_commit = False, canvas_key = None ):
@@ -418,17 +528,51 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             menu_template_items = []
             
-            check_manager = ClientGUICommon.CheckboxManagerOptions( 'allow_remove_on_manage_tags_input' )
+            submenu_template_items = []
             
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'allow remove/petition result on tag input for already existing tag', 'If checked, inputting a tag that already exists will try to remove it.', check_manager ) )
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'add/pend is always allowed', 'This menu only configures which remove actions are permitted.' ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_delete_petition, value_paste_delete_petition )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'delete/petition', 'If you paste a tag and it already exists, do you want to delete/petition it?', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_rescind, value_paste_rescind )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'rescind pend/petition (only tag repositories)', 'If you paste a tag and it is pending or petitioned, do you want the option to undo that?', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_clear_deletion_record, value_paste_clear_deletion_record )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'clear deletion record (only local tag services)', 'If you paste a tag and it is deleted, do you want the option to clear it out completely?', check_manager ) )
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'allowed actions for autocomplete paste button:', submenu_template_items ) )
+            
+            submenu_template_items = []
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'add/pend is always allowed', 'This menu only configures which remove actions are permitted.' ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_delete_petition, value_entry_delete_petition )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'delete/petition', 'If you type a tag and it already exists, do you want to delete/petition it?', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_rescind, value_entry_rescind )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'rescind pend/petition (only tag repositories)', 'If you type a tag and it is pending or petitioned, do you want the option to undo that?', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_clear_deletion_record, value_entry_clear_deletion_record )
+            
+            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'clear deletion record (only local tag services)', 'If you type a tag and it is deleted, do you want the option to clear it out completely?', check_manager ) )
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'allowed actions for autocomplete regular input', submenu_template_items ) )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'yes_no_on_remove_on_manage_tags' )
             
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'confirm remove/petition tags on explicit delete actions', 'If checked, clicking the remove/petition tags button (or hitting the deleted key on the list) will first confirm the action with a yes/no dialog.', check_manager ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'confirm remove/petition tags', 'If checked, any delete or petition action will force the action choice dialog to appear even if there is only one valid action (the delete/petition).', check_manager ) )
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'ac_select_first_with_count' )
             
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'select the first tag result with actual count', 'If checked, when results come in, the typed entry, if it has no count, will be skipped.', check_manager ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'select the first tag result with actual count', 'If checked, when autocomplete results come in, the typed entry, if it has no count, will be skipped.', check_manager ) )
             
             menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
             
@@ -531,7 +675,12 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             CG.client_controller.sub( self, '_UpdateShowDeleted', 'notify_options_manage_tags_show_deleted_mappings' )
             
         
-        def _EnterTags( self, tags, only_add = False, only_remove = False, forced_reason = None ):
+        def _EnterTags( self, tags, allowed_actions: list[ int ], forced_reason = None ):
+            
+            if len( tags ) == 0:
+                
+                return
+                
             
             tags = HydrusTags.CleanTags( tags )
             
@@ -556,6 +705,10 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             choices = collections.defaultdict( list )
             
+            we_are_considering_an_undelete = False
+            we_are_otherwise_looking_at_something_unrecoverable = False
+            we_are_considering_a_remove = False
+            
             for tag in tags:
                 
                 num_current = sum( ( 1 for current in currents if tag in current ) )
@@ -563,7 +716,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 if self._i_am_local_tag_service:
                     
-                    if not only_remove:
+                    if HC.CONTENT_UPDATE_ADD in allowed_actions:
                         
                         if num_current < num_files:
                             
@@ -571,18 +724,31 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                             
                             choices[ HC.CONTENT_UPDATE_ADD ].append( ( tag, num_non_current ) )
                             
+                            if num_deleted > 0:
+                                
+                                we_are_considering_an_undelete = True
+                                
+                            
                         
                     
-                    if not only_add:
+                    if HC.CONTENT_UPDATE_DELETE in allowed_actions:
                         
                         if num_current > 0:
                             
                             choices[ HC.CONTENT_UPDATE_DELETE ].append( ( tag, num_current ) )
                             
+                            we_are_considering_a_remove = True
+                            
+                        
+                    
+                    if HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD in allowed_actions:
                         
                         if num_deleted > 0:
                             
                             choices[ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ].append( ( tag, num_deleted ) )
+                            
+                            we_are_otherwise_looking_at_something_unrecoverable = True
+                            we_are_considering_a_remove = True
                             
                         
                     
@@ -591,7 +757,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     num_pending = sum( ( 1 for pending in pendings if tag in pending ) )
                     num_petitioned = sum( ( 1 for petitioned in petitioneds if tag in petitioned ) )
                     
-                    if not only_remove:
+                    if HC.CONTENT_UPDATE_PEND in allowed_actions:
                         
                         # it is possible to have content petitioned without being current
                         # we don't want to pend in this case!
@@ -604,29 +770,38 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                             
                         
                     
-                    if not only_add:
+                    if HC.CONTENT_UPDATE_PETITION in allowed_actions:
                         
                         # although it is technically possible to petition content that doesn't exist yet...
                         # for human uses, we do not want to provide petition as an option unless it is already current
                         
-                        if num_current > num_petitioned and not only_add:
+                        if num_current > num_petitioned:
                             
                             num_petitionable = num_current - num_petitioned
                             
                             choices[ HC.CONTENT_UPDATE_PETITION ].append( ( tag, num_petitionable ) )
                             
-                        
-                        if num_pending > 0 and not only_add:
-                            
-                            choices[ HC.CONTENT_UPDATE_RESCIND_PEND ].append( ( tag, num_pending ) )
+                            we_are_considering_a_remove = True
                             
                         
                     
-                    if not only_remove:
+                    if HC.CONTENT_UPDATE_RESCIND_PEND in allowed_actions:
+                        
+                        if num_pending > 0:
+                            
+                            choices[ HC.CONTENT_UPDATE_RESCIND_PEND ].append( ( tag, num_pending ) )
+                            
+                            we_are_otherwise_looking_at_something_unrecoverable = True
+                            
+                        
+                    
+                    if HC.CONTENT_UPDATE_RESCIND_PETITION in allowed_actions:
                         
                         if num_petitioned > 0:
                             
                             choices[ HC.CONTENT_UPDATE_RESCIND_PETITION ].append( ( tag, num_petitioned ) )
+                            
+                            we_are_otherwise_looking_at_something_unrecoverable = True
                             
                         
                     
@@ -639,91 +814,94 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             # now we have options, let's ask the user what they want to do
             
-            if len( choices ) == 1:
-                
-                [ ( choice_action, tag_counts ) ] = list( choices.items() )
-                
-                tags = { tag for ( tag, count ) in tag_counts }
-                
-            else:
-                
-                bdc_choices = []
-                
-                preferred_order = [ HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ]
-                
-                choice_text_lookup = {
-                    HC.CONTENT_UPDATE_ADD: 'add', HC.CONTENT_UPDATE_DELETE: 'delete',
-                    HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD: 'clear deletion record (CANNOT BE UNDONE)',
-                    HC.CONTENT_UPDATE_PEND: 'pend (add)',
-                    HC.CONTENT_UPDATE_PETITION: 'petition to remove',
-                    HC.CONTENT_UPDATE_RESCIND_PEND: 'undo pend',
-                    HC.CONTENT_UPDATE_RESCIND_PETITION: 'undo petition to remove',
-                }
+            bdc_choices = []
+            
+            preferred_order = [
+                HC.CONTENT_UPDATE_ADD,
+                HC.CONTENT_UPDATE_DELETE,
+                HC.CONTENT_UPDATE_PEND,
+                HC.CONTENT_UPDATE_RESCIND_PEND,
+                HC.CONTENT_UPDATE_PETITION,
+                HC.CONTENT_UPDATE_RESCIND_PETITION,
+                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
+            ]
+            
+            choice_text_lookup = {
+                HC.CONTENT_UPDATE_ADD: 'add',
+                HC.CONTENT_UPDATE_DELETE: 'delete',
+                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD: 'clear deletion record (CANNOT BE UNDONE)',
+                HC.CONTENT_UPDATE_PEND: 'pend (add)',
+                HC.CONTENT_UPDATE_PETITION: 'petition to remove',
+                HC.CONTENT_UPDATE_RESCIND_PEND: 'undo pend',
+                HC.CONTENT_UPDATE_RESCIND_PETITION: 'undo petition to remove',
+            }
 
-                choice_tooltip_lookup = {
-                    HC.CONTENT_UPDATE_ADD : 'this adds the tags to this local tag domain',
-                    HC.CONTENT_UPDATE_DELETE : 'this deletes the tags from this local tag domain. it leaves a deletion record',
-                    HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'this removes the record that we have deleted this tag',
-                    HC.CONTENT_UPDATE_PEND : 'this pends the tags to be added to this tag repository when you upload',
-                    HC.CONTENT_UPDATE_PETITION : 'this petitions the tags for deletion from this tag repository when you upload',
-                    HC.CONTENT_UPDATE_RESCIND_PEND : 'this rescinds the currently pending tags, so they will not be added',
-                    HC.CONTENT_UPDATE_RESCIND_PETITION : 'this rescinds the current tag petitions, so they will not be deleted',
-                }
+            choice_tooltip_lookup = {
+                HC.CONTENT_UPDATE_ADD : 'this adds the tags to this local tag domain',
+                HC.CONTENT_UPDATE_DELETE : 'this deletes the tags from this local tag domain. it leaves a deletion record',
+                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD : 'this removes the record that we have deleted this tag',
+                HC.CONTENT_UPDATE_PEND : 'this pends the tags to be added to this tag repository when you upload',
+                HC.CONTENT_UPDATE_PETITION : 'this petitions the tags for deletion from this tag repository when you upload',
+                HC.CONTENT_UPDATE_RESCIND_PEND : 'this rescinds the currently pending tags, so they will not be added',
+                HC.CONTENT_UPDATE_RESCIND_PETITION : 'this rescinds the current tag petitions, so they will not be deleted',
+            }
+            
+            for choice_action in preferred_order:
                 
-                for choice_action in preferred_order:
+                if choice_action not in choices:
                     
-                    if choice_action not in choices:
-                        
-                        continue
-                        
-                    
-                    choice_text_prefix = choice_text_lookup[ choice_action ]
-                    
-                    tag_counts = choices[ choice_action ]
-                    
-                    choice_tags = { tag for ( tag, count ) in tag_counts }
-                    
-                    if len( choice_tags ) == 1:
-                        
-                        [ ( tag, count ) ] = tag_counts
-                        
-                        text = '{} "{}" for {} files'.format( choice_text_prefix, HydrusText.ElideText( tag, 64 ), HydrusNumbers.ToHumanInt( count ) )
-                        
-                    else:
-                        
-                        text = '{} {} tags'.format( choice_text_prefix, HydrusNumbers.ToHumanInt( len( choice_tags ) ) )
-                        
-                    
-                    data = ( choice_action, choice_tags )
-                    
-                    t_c_lines = [ choice_tooltip_lookup[ choice_action ] ]
-                    
-                    if len( tag_counts ) > 25:
-                        
-                        t_c = tag_counts[:25]
-                        
-                    else:
-                        
-                        t_c = tag_counts
-                        
-                    
-                    t_c_lines.extend( ( '{} - {} files'.format( tag, HydrusNumbers.ToHumanInt( count ) ) for ( tag, count ) in t_c ) )
-                    
-                    if len( tag_counts ) > 25:
-                        
-                        t_c_lines.append( 'and {} others'.format( HydrusNumbers.ToHumanInt( len( tag_counts ) - 25 ) ) )
-                        
-                    
-                    tooltip = '\n'.join( t_c_lines )
-                    
-                    bdc_choices.append( ( text, data, tooltip ) )
+                    continue
                     
                 
-                try:
+                choice_text_prefix = choice_text_lookup[ choice_action ]
+                
+                tag_counts = choices[ choice_action ]
+                
+                choice_tags = { tag for ( tag, count ) in tag_counts }
+                
+                if len( choice_tags ) == 1:
+                    
+                    [ ( tag, count ) ] = tag_counts
+                    
+                    text = '{} "{}" for {} files'.format( choice_text_prefix, HydrusText.ElideText( tag, 64 ), HydrusNumbers.ToHumanInt( count ) )
+                    
+                else:
+                    
+                    text = '{} {} tags'.format( choice_text_prefix, HydrusNumbers.ToHumanInt( len( choice_tags ) ) )
+                    
+                
+                data = ( choice_action, choice_tags )
+                
+                t_c_lines = [ choice_tooltip_lookup[ choice_action ] ]
+                
+                if len( tag_counts ) > 25:
+                    
+                    t_c = tag_counts[:25]
+                    
+                else:
+                    
+                    t_c = tag_counts
+                    
+                
+                t_c_lines.extend( ( '{} - {} files'.format( tag, HydrusNumbers.ToHumanInt( count ) ) for ( tag, count ) in t_c ) )
+                
+                if len( tag_counts ) > 25:
+                    
+                    t_c_lines.append( 'and {} others'.format( HydrusNumbers.ToHumanInt( len( tag_counts ) - 25 ) ) )
+                    
+                
+                tooltip = '\n'.join( t_c_lines )
+                
+                bdc_choices.append( ( text, data, tooltip ) )
+                
+            
+            try:
+                
+                if len( bdc_choices ) > 1:
                     
                     if len( tags ) > 1:
                         
-                        if len( self._media ) > 1:
+                        if len( self._media ) == 1:
                             
                             message = 'The tags have different statuses on the file, so there are different things you can do.'
                             
@@ -734,15 +912,36 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         
                     else:
                         
-                        message = f'Of the {HydrusNumbers.ToHumanInt( len( self._media ) )} files being managed, some have that tag, but not all of them do, so there are different things you can do.'
+                        if len( self._media ) == 1:
+                            
+                            message = 'There are different things you can do with this tag.'
+                            
+                        else:
+                            
+                            message = f'Of the {HydrusNumbers.ToHumanInt( len( self._media ) )} files being managed, some have that tag, but not all of them do, so there are different things you can do.'
+                            
                         
                     
-                    ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message )
+                else:
                     
-                except HydrusExceptions.CancelledException:
+                    message = 'Confirm your action.'
                     
-                    return
+                
+                if we_are_considering_an_undelete:
                     
+                    message += '\n\n'
+                    message += 'The "add" action involves an undelete of previously deleted tags; please consider if that is correct.'
+                    
+                
+                options_say_present_to_user = we_are_considering_a_remove and CG.client_controller.new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' )
+                print( options_say_present_to_user )
+                allow_insta_one_item_select = not ( we_are_considering_an_undelete or we_are_otherwise_looking_at_something_unrecoverable or options_say_present_to_user )
+                
+                ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message, allow_insta_one_item_select = allow_insta_one_item_select )
+                
+            except HydrusExceptions.CancelledException:
+                
+                return
                 
             
             reason = None
@@ -1048,7 +1247,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def _PasteComingFromAC( self, tags: list[ str ] ):
             
-            self.EnterTags( tags, only_add = True )
+            allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+            
+            self._EnterTags( tags, allowed_actions )
             
         
         def _RemoveTagsButton( self ):
@@ -1105,22 +1306,25 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def AddTagsFromAC( self, tags ):
             
-            only_add = False
+            allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
             
-            if not self._new_options.GetBoolean( 'allow_remove_on_manage_tags_input' ):
-                
-                only_add = True
-                
-            
-            if len( tags ) > 0:
-                
-                self.EnterTags( tags, only_add = only_add )
-                
+            self._EnterTags( tags, allowed_actions )
             
         
         def AddTagsFromSuggested( self, tags ):
             
-            self.EnterTags( tags, only_add = True )
+            allowed_actions = [
+                HC.CONTENT_UPDATE_ADD,
+                HC.CONTENT_UPDATE_PEND,
+                HC.CONTENT_UPDATE_DELETE,
+                HC.CONTENT_UPDATE_PETITION,
+                HC.CONTENT_UPDATE_RESCIND_PEND,
+                HC.CONTENT_UPDATE_RESCIND_PETITION,
+                HC.CONTENT_UPDATE_UNDELETE,
+                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
+            ]
+            
+            self._EnterTags( tags, allowed_actions )
             
         
         def CleanBeforeDestroy( self ):
@@ -1133,17 +1337,20 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self.SetMedia( set() )
             
         
-        def EnterTags( self, tags, only_add = False ):
-            
-            if len( tags ) > 0:
-                
-                self._EnterTags( tags, only_add = only_add )
-                
-            
-        
         def EnterTagsFromListActivation( self, tags ):
             
-            self.EnterTags( tags )
+            allowed_actions = [
+                HC.CONTENT_UPDATE_ADD,
+                HC.CONTENT_UPDATE_PEND,
+                HC.CONTENT_UPDATE_DELETE,
+                HC.CONTENT_UPDATE_PETITION,
+                HC.CONTENT_UPDATE_RESCIND_PEND,
+                HC.CONTENT_UPDATE_RESCIND_PETITION,
+                HC.CONTENT_UPDATE_UNDELETE,
+                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
+            ]
+            
+            self._EnterTags( tags, allowed_actions )
             
         
         def GetContentUpdatePackages( self ):
@@ -1245,65 +1452,17 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if len( tags ) > 0:
                 
-                if self._new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' ):
-                    
-                    tags_managers = [ m.GetTagsManager() for m in self._media ]
-                    
-                    current_and_pending_tags = set()
-                    deleted_tags = set()
-                    
-                    for tags_manager in tags_managers:
-                        
-                        current_and_pending_tags.update( tags_manager.GetCurrentAndPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
-                        deleted_tags.update( tags_manager.GetDeleted( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) )
-                        
-                    
-                    if not deleted_tags.isdisjoint( tags ):
-                        
-                        if not current_and_pending_tags.isdisjoint( tags ):
-                            
-                            verb = 'remove/purge'
-                            
-                            if not self._i_am_local_tag_service:
-                                
-                                verb = 'remove the current tags within'
-                                
-                            
-                        else:
-                            
-                            verb = 'purge (remove deletion record)'
-                            
-                            if not self._i_am_local_tag_service:
-                                
-                                return
-                                
-                            
-                        
-                    else:
-                        
-                        verb = 'remove'
-                        
-                    
-                    if len( tags ) < 10:
-                        
-                        message = f'Are you sure you want to {verb} these tags:'
-                        message += '\n' * 2
-                        message += '\n'.join( ( HydrusText.ElideText( tag, 64 ) for tag in tags ) )
-                        
-                    else:
-                        
-                        message = f'Are you sure you want to {verb} these {HydrusNumbers.ToHumanInt( len( tags ) )} tags?'
-                        
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                    
-                    if result != QW.QDialog.DialogCode.Accepted:
-                        
-                        return
-                        
-                    
+                # whether deleting with the 'remove tags' button or pressing delete key on the list, we have a static expectation of potential actions
+                # no options here
                 
-                self._EnterTags( tags, only_remove = True )
+                allowed_actions = [
+                    HC.CONTENT_UPDATE_DELETE,
+                    HC.CONTENT_UPDATE_PETITION,
+                    HC.CONTENT_UPDATE_RESCIND_PEND,
+                    HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
+                ]
+                
+                self._EnterTags( tags, allowed_actions )
                 
             
         
