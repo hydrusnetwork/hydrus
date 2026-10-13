@@ -13,6 +13,7 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.importing import ClientGUIImportOptionsContainer
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import ImportOptionsContainer
@@ -57,6 +58,27 @@ class SpecificImportOptionsContainerButton( ClientGUICommon.ButtonWithMenuArrow 
         json_string = self._import_options_container.DumpToString()
         
         CG.client_controller.pub( 'clipboard', 'text', json_string )
+        
+    
+    def _EditDefaultImportOptions( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit default import options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            from hydrus.client.gui.panels.options import ImportOptionsPanel 
+            
+            options_panel = ImportOptionsPanel.ImportOptionsPanel( panel, CG.client_controller.new_options, CG.client_controller.import_options_manager )
+            
+            panel.SetControl( options_panel )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                options_panel.UpdateOptions()
+                
+            
         
     
     def _EditOptions( self ):
@@ -194,6 +216,10 @@ class SpecificImportOptionsContainerButton( ClientGUICommon.ButtonWithMenuArrow 
             ClientGUIMenus.AppendMenu( menu, load_menu, 'load' )
             ClientGUIMenus.AppendMenu( menu, load_custom_menu, 'custom load' )
             
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'edit defaults and favourites', 'Open up the options panel for import options.', self._EditDefaultImportOptions )
         
         ClientGUIMenus.AppendSeparator( menu )
         

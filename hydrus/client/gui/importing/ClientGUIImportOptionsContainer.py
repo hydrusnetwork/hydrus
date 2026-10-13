@@ -363,7 +363,18 @@ class EditImportOptionsOverwritePanel( ClientGUIScrolledPanels.EditPanel ):
 
 class EditImportOptionsContainerPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, import_options_container_manager: ImportOptionsManager.ImportOptionsManager, import_options_caller_type: int, import_options_container: ImportOptionsContainer.ImportOptionsContainer, url_class_keys: list[ bytes ] | None = None, simple_mode: bool = True, restrict_to_non_downloader_types = False, favourites_name: str | None = None ):
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        import_options_container_manager: ImportOptionsManager.ImportOptionsManager,
+        import_options_caller_type: int,
+        import_options_container: ImportOptionsContainer.ImportOptionsContainer,
+        url_class_keys: list[ bytes ] | None = None,
+        simple_mode: bool = True,
+        restrict_to_non_downloader_types = False,
+        favourites_name: str | None = None,
+        show_button_to_edit_manager = False,
+    ):
         
         if url_class_keys is None:
             
@@ -472,6 +483,8 @@ class EditImportOptionsContainerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._favourites_button = ImportOptionsContainerFavouritesButton( self, self._import_options_container_manager, edit_allowed = self._import_options_caller_type != IOC.IMPORT_OPTIONS_CALLER_TYPE_FAVOURITES, current_value_callable = self.GetValue )
         
+        self._edit_defaults_button = ClientGUICommon.BetterButton( self, 'edit defaults', self._EditDefaultImportOptions )
+        
         self._listbook = ClientGUIListBook.ListBook( self, list_chars_height = len( import_options_types_to_list_here ), orientation = QC.Qt.Orientation.Vertical, no_vertical_scrollbar = True )
         
         #
@@ -527,6 +540,9 @@ class EditImportOptionsContainerPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( button_hbox, self._favourites_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( button_hbox, self._edit_defaults_button, CC.FLAGS_ON_RIGHT )
+        
+        self._edit_defaults_button.setVisible( show_button_to_edit_manager )
         
         vbox = QP.VBoxLayout()
         
@@ -575,6 +591,44 @@ class EditImportOptionsContainerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self.SetValue( final_import_options_container )
         
+    
+    def _EditDefaultImportOptions( self ):
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit default import options' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            from hydrus.client.gui.panels.options import ImportOptionsPanel 
+            
+            options_panel = ImportOptionsPanel.ImportOptionsPanel( panel, CG.client_controller.new_options, CG.client_controller.import_options_manager )
+            
+            panel.SetControl( options_panel )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                
+                # this is cheeky but it is generally ok since this 'edit defaults' action does only appear when we are using the real guy
+                options_panel.UpdateOptions()
+                
+                self._import_options_container_manager = CG.client_controller.import_options_manager
+                
+                full_default_import_options_container = self._GetFullDefaultStackImportOptionsContainer()
+                
+                for ( i, page ) in enumerate( self._listbook.GetPages() ):
+                    
+                    page = typing.cast( DefaultableImportOptionsPanel, page )
+                    
+                    page.SetFullDefaultImportOptionsContainer( full_default_import_options_container )
+                    
+                
+                self._UpdateLabels()
+                
+                self._favourites_button.SetImportOptionsManager( self._import_options_container_manager)
+                
+            
+        
+    
     
     def _GetFullDefaultStackImportOptionsContainer( self ):
         
@@ -785,7 +839,8 @@ class EditSpecificImportOptionsContainerPanel( EditImportOptionsContainerPanel )
             IOC.IMPORT_OPTIONS_CALLER_TYPE_SPECIFIC_IMPORTER,
             import_options_container,
             simple_mode = simple_mode,
-            restrict_to_non_downloader_types = restrict_to_non_downloader_types
+            restrict_to_non_downloader_types = restrict_to_non_downloader_types,
+            show_button_to_edit_manager = True
         )
         
     
@@ -1021,6 +1076,11 @@ class ImportOptionsContainerFavouritesButton( ClientGUICommon.IconButton ):
         CGC.core().PopupMenu( self, menu )
         
     
+    def SetImportOptionsManager( self, import_options_container_manager: ImportOptionsManager.ImportOptionsManager ):
+        
+        self._import_options_container_manager = import_options_container_manager
+        
+    
 
 class DefaultableImportOptionsPanel( ClientGUICommon.StaticBox ):
     
@@ -1243,6 +1303,20 @@ class DefaultableImportOptionsPanel( ClientGUICommon.StaticBox ):
     def IsDefault( self ) -> bool:
         
         return self._use_default_dropdown.GetValue()
+        
+    
+    def SetFullDefaultImportOptionsContainer( self, full_default_import_options_container: ImportOptionsContainer.ImportOptionsContainer ):
+        
+        self._full_default_import_options_container = full_default_import_options_container
+        
+        self._use_default_dropdown.setItemText( 0, f'use the default import options ({self._full_default_import_options_container.GetSourceLabel( self._import_options_type )})' )
+        
+        if self._use_default_dropdown.GetValue():
+            
+            import_options = self._full_default_import_options_container.GetImportOptions( self._import_options_type )
+            
+            self._options_panel.SetValue( import_options )
+            
         
     
     def SetDefault( self, value: bool ):

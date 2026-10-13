@@ -28,6 +28,7 @@ from hydrus.client.importing.options import ImportOptionsManager
 class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def __init__( self, parent, new_options, import_options_manager: ImportOptionsManager.ImportOptionsManager ):
+        
         super().__init__( parent )
         
         self._new_options = new_options
@@ -161,6 +162,8 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._url_class_import_options_list.Sort()
         
         self._favourite_import_options_list.AddDatas( self._import_options_manager.GetFavouriteImportOptionContainers().items() )
+        
+        self._favourite_import_options_list.Sort()
         
         #
         
@@ -410,7 +413,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         if selected is None:
             
             return
-
+            
 
         ( name, import_options_container ) = selected
         
@@ -459,7 +462,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if len( selected_rows ) == 1:
             
-            ( name, import_options_container ) = selected_rows
+            [ ( name, import_options_container ) ] = selected_rows
             
             message = f'Delete the favourite/profile named "{name}"?'
             
@@ -1147,6 +1150,11 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         message = '''tl;dr: Go into "gallery/post urls" and make sure tags are going where you want. Never touch this again, and, on occasion, set a "custom" import options override on a specific downloader.'''
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
+        
+    
+    def GetValue( self ):
+        
+        return 1 # hack to make single ctrl panel work for other dialog loads
         
     
     def UpdateOptions( self ):
