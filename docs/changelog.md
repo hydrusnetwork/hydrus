@@ -7,6 +7,64 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 690](https://github.com/hydrusnetwork/hydrus/releases/tag/v690)
+
+### more treeview improvements
+
+* the user who has been working on the treeview experiment (under `options->gui pages` if you want to try it out!) has sent in more improvements (#2101)--
+* shift-double-click on a page entry in the treeview now does a page rename
+* the treeview page entries can now catch file drag and drops!
+* the cog icon has a new 'style/display' submenu with the alternate-row-colour setting and a new hide/show focus rectangle option
+* some bottom-label/page-name desync issues are fixed
+* fix when a page is first activated inside a notebook after selection moves from a different parent notebook, the parent notebook node would be highlighted instead of the activated page
+* fix the 'expand all' isnt enabled when i have a pages of pages inside another, and collapse the inner one (and the inverse situation)
+* fix some other small selection/activation bugs, clean up and consolidate some redundant code
+
+### no more shutdown maintenance
+
+* I have completely removed the 'do maintenance on shutdown' system. this system was old, creaky, inefficient, occasionally confusing, and had to jump through several unusual hoops to still work. it used to do a bunch of stuff, but I had whittled it down, over years, to just database analysis and repo processing work. removing it completely satisfies a long-term KISS plan
+* going forward, I will continue to push on maintenance work working in small increments in convenient invisible ways. ideally, most users should never care or have to bother with maintenance. I may add a 'yeah go nuts do work now' button for a convenient 'just do idle work now' mode in future, but for now, the plumbing behind shutdown is a bit simpler and a shutdown should now always be as prompt as possible
+* the related settings under `options->maintenance and processing` are removed, and the shortcut that did 'shutdown and force maintenance' now just does a normal shutdown
+
+### manage tags
+
+* _the manage tags dialog has more options on what happens when you enter tags. delete confirmations only take one 'yes' click, but it also interrupts you more when you are about to do something with no easy undo_
+* the 'confirm remove/petition tags on explicit delete actions' cog icon setting, which used to only apply on hitting the delete key on the taglist or the 'remove tags' button is now 'confirm remove/petition tags' and applies to all potential removes. instead of making a second yes/no dialog, it forces the action choice dialog to show even if there is only one available action (the delete/petition)
+* the action confirmation now appears even if there is only one action to do if that action is an undelete, clear deletion record, rescind pend, or rescind petitioned call
+* by default, the autocomplete paste button now only does add/pend actions (so if you paste tags that are already in the list, it will not offer to delete them or rescind pends or whatever), but you can allow it to do delete/petition, resind pend/petition, and clear deletion record if you like under a new cog icon submenu
+* by default, autocomplete tag entry can trigger any action except clear deletion record (add, delete, pend, petition, rescind pend, rescind petition), but you can configure it under a similar submenu
+* double-clicking the list to 'activate' it can now trigger any action (add, delete. clear deletion record, pend, petition, rescind pend, rescind petition). adding a tag from the tag suggestion boxes is the same (sans 'clear deletion record'), but since those lists filter themselves by tags already in the list, It'd be tricky to pull off one of the 'removes'
+* hitting the delete key on a list selection or hitting 'remove tags' button can now trigger delete, petition, rescind pend, or clear delete record outcomes
+* this retires the old 'allow remove/petition result on tag input for already existing tag', which was always a muddy fudge that I could never remember the precise meaning of
+* when you enter tags, there are more dialog labels to cover different situations. previously it would erroneously say 'of the 1 files being managed, some have that tag, but not all of them do' when showing the new add/clear deleted record choice, but now it handles stuff like that properly. further, it mentions if an 'add' action involves an undelete
+
+### related tags
+
+* _related tags works better in some clever ways; you don't have to do anything_
+* you can now customise whether 'related tags' starts with "just for my files" and "siblings and parents" on/off when the manage tags dialog boots. there's a cog icon on the related tags panel, and complementary checkboxes added to `options->tag suggestions->related tags`
+* the related tags search system does some smarter sibling lookups when it weights search and result tags, now weighting by the _ideal_ tag even when you search not in the sibling/parent space. if you don't want to receive any 'series' tags in your results, it will now stop giving you unnamespaced suggestions that sibling to a series tag. same deal for its searching tech
+* I have made significant improvements in how the 'related tags' list is filtered of tags that already exist in the list, so that it should be better about not suggesting a storage tag when a tag already in the list shares the same ideal tag or already includes the suggested via a parent implication. there are still a couple small holes here, but the improvement was enough that I have removed all the ugly and annoying filtering at the db level, saving some lookup time and making it so if you repeal an already-pending (tag repos) or already-current (local tags) tag, the 'related tags' list is probably going to spontaneously list it, since it already found that guy, knows it is important, and was actually hiding it already. it just makes for a more reactive list that you don't need to refresh so much if you remove something by mistake
+
+### import options
+
+* the 'import options' button-with-menu-arrow widget you see on every importer now allows you to edit the default import options (essentially just opening the `options->import options` panel on its own) from the menu. you can also open it from the edit panel itself with a new 'edit defaults' button. if you change the defaults, the panel should update on ok to show any new actual options inheritance
+* fixed the 'favourites' list in import options panel not sorting on init
+* fixed an error when trying to delete one favourite
+
+### couple of mpv things
+
+* updated the default_mpv.conf with formatting, some opening explanation blurb, and consolidated the info in the experimental confs into it as examples for the advanced user to check out. updated the label in the options help too; ask a chatbot works well for navigating the excellent-but-monstrous docs here: https://mpv.io/manual/master/
+* mpv `[error]`s of `Your platform doesn't support hardware accelerated X` are now ignored; previously they'd spam to log but the file would render fine
+
+### boring cleanup and little fixes
+
+* fixed `database->db maintenance->get tables using definitions`, which was failing due to a missing subclass method definition in one of the duplicate-file db modules
+* added a safety catch for file import or gallery download jobs so they always always get a status set, even if an error handler is supposed to but then fails; if nothing is set by an error handler, the job is set as error. we had one instance of this recently that had a looping file import job that was failing to set some sort of skip/ignore/error status because a backing daemon had shut down early
+* split the existing 'shutdown' exceptions into 'daemon' vs 'program' shutdown, so catchers can better handle the two situations
+* moved the client thumbnail cache to its own file, `ClientCacheThumbnails`, and wrote some new thumbnail sizing intention infrastructure
+* moved all the hydrus core thumbnail code to its own file `HydrusImageThumbnails`
+* moved the filetype determination code out to its own file `HydrusFileTypeDetermination`
+
 ## [Version 689](https://github.com/hydrusnetwork/hydrus/releases/tag/v689)
 
 ### all misc this week
@@ -442,41 +500,3 @@ title: Changelog
    - `pywin32` in Windows build env from `311` to `312`
    - Windows ffmpeg (GyanD) `8.1.1` to `8.1.2`
    - Linux build now comes with ffmpeg (BtbN) `2026-06-30`, which I think covers `8.1.2`
-
-## [Version 680](https://github.com/hydrusnetwork/hydrus/releases/tag/v680)
-
-### misc
-
-* updated the newish `tldextract` stuff (which helps navigate two-part domain suffixes like .co.uk in URL parsing) to no longer fetch a fresh suffix definition file on first ever use from `publicsuffix.org` and not to make a cache in `~/.cache/python-tldextract`. hydrus now ships with a copy of `public_suffix_list.dat` in the static dir for this library to use, and it doesn't make a cachedir entry any more. I regret not reading the docs closer! I also optimised this code so it should be a bit quicker now, too. thank you to the user who noticed this! (issue #2067)
-* I _think_ I may have fixed some of the heavy CPU thrashing we have seen during heavy work like archive/delete commit and such. if you have had bad UI lag, I would like to know if some of it suddenly leaps forward today
-* made file add/delete calls a tiny bit faster when they have many tags
-* some thumbnail generation scheduling is a little smarter, with expensive filetypes generated more reliably at the end of the queue
-* fixed thumbnail generation for cbz. sorry for the trouble--I messed something up with a recent refactor! all cbzs imported since july 5th will get a thumbnail regen call (issue #2069)
-* setup_venv.py now warns the user that the path will be deleted if they specify a non-standard venv path that already exists
-* added a little safety warning to the Client API page. I don't make any of those plugins and cannot guarantee anything about them--use your common sense!
-
-### system tray
-
-* you no longer need to be in advanced mode to see the system tray icon in Linux (old safety check I forgot about)
-* added two BUGFIX checkboxes to `options->system tray` for those who have odd minimise-to-system-tray behaviour. if you had trouble, try these out and let me know what works
-
-### number locale
-
-* added `TEST: Use your locale for integer rendering` to `options->gui`. try it out, let me know where it works well and badly. I noticed in a fake `fr_FR` locale that the space-separator somehow messed up some taglist rendering and made system predicates no longer parse correct (I guess I hardcode commas out of numbers)--anything else?
-* `system:filesize`, `system:ratio`, and `system:num pixels` now render with separators when the number exceeds 999
-
-### file permissions
-
-* there were some file import paths that did not set the standard hydrus file storage 'you can read and write this guy' permission bits (read+write on Windows, 644 otherwise), which I have fixed. this was affecting some downloads and some local file imports for some time in hydrus's past
-* if we try to move a file during larger 'move this directory here' type operations and get a permission error, hydrus now attempts to assign the hydrus-normal read/write permission bits before trying once more (issue #2064)
-* we are dealing with some legacy read-only guys here. I have a file maintenance job that tries to fix this retroactively, which I am considering firing off, sometime, to address this
-
-### embedded metadata
-
-* the test for the presence of file metadata is now more reliable and reflects what you see in the media viewer. previously, the file may not have been loaded the whole way during file import or file maintenance, and sometimes text was being missed, particularly in the new system where I filter out some stuff like DPI. it wasn't being missed in the media viewer since by happenstance it would generally check for EXIF beforehand, which triggers a full load. now, the thing that fetches embedded metadata now checks the file is loaded fully before grabbing the available text
-* when importing files, the embedded metadata test now saves an image load (it re-uses an earlier EXIF load, if one happened) to save a bit of time
-
-### future build
-
-* I am making another future build this week. This is a special build with new libraries that I would like advanced users to test out so I know they are safe to fold into the normal release.
-* in the release post, I will link to this alternate build. if you are experienced and would like to help me, please check it out
