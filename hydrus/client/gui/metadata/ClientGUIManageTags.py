@@ -934,7 +934,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                 
                 options_say_present_to_user = we_are_considering_a_remove and CG.client_controller.new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' )
-                print( options_say_present_to_user )
+                
                 allow_insta_one_item_select = not ( we_are_considering_an_undelete or we_are_otherwise_looking_at_something_unrecoverable or options_say_present_to_user )
                 
                 ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message, allow_insta_one_item_select = allow_insta_one_item_select )
@@ -1320,8 +1320,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 HC.CONTENT_UPDATE_PETITION,
                 HC.CONTENT_UPDATE_RESCIND_PEND,
                 HC.CONTENT_UPDATE_RESCIND_PETITION,
-                HC.CONTENT_UPDATE_UNDELETE,
-                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
+                HC.CONTENT_UPDATE_UNDELETE
             ]
             
             self._EnterTags( tags, allowed_actions )
