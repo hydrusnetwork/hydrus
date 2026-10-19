@@ -27,7 +27,7 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
         raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
@@ -63,7 +63,7 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
         raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
@@ -103,7 +103,7 @@ def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager
         raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         

@@ -3,6 +3,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client.executables import ClientExecutableActualCall
 from hydrus.client.executables import ClientExecutablePipelines
+from hydrus.client.executables import ClientExecutableResponses
 
 class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -16,7 +17,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         
         if pipeline_type is None:
             
-            pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE
+            pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE
             
         
         if actual_call is None:
@@ -53,7 +54,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         self._actual_call = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_actual_call )
         
     
-    def Call( self, input_params ):
+    def Call( self, input_params ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         return self._actual_call.Call( input_params )
         

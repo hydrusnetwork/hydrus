@@ -59,7 +59,7 @@ class EditOpenFileIdsAndNamesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _GetRemainingAvailableChoicesTuples( self ):
         
-        possible_executable_ids_and_names = self._executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        possible_executable_ids_and_names = self._executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
         
         existing_executable_ids_and_names = set( self.GetValue() )
         
@@ -67,7 +67,7 @@ class EditOpenFileIdsAndNamesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             raise HydrusExceptions.CancelledException( message )
@@ -189,7 +189,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         executable_manager = self._executable_manager_callable()
         
-        possible_executable_ids_and_names = executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL )
+        possible_executable_ids_and_names = executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
         
         existing_ids_and_names = set( self._launch_url_executable_ids_and_names.GetData() )
         
@@ -197,7 +197,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if len( choice_tuples ) == 0:
             
-            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
+            message = f'You have added all the "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL ]}" calls that are currently registered with the executable manager! Try going to the "external programs" panel to add more.'
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             raise HydrusExceptions.CancelledException( message )
@@ -370,7 +370,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             launch_url_executable_ids_and_names = [ executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
             
         
-        launch_url_executable_ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL, launch_url_executable_ids_and_names )
+        launch_url_executable_ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL, launch_url_executable_ids_and_names )
         
         self._new_options.SetLaunchURLExecutableIdsAndNames( launch_url_executable_ids_and_names )
         
@@ -383,7 +383,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 ids_and_names = [ executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
                 
             
-            ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE, ids_and_names )
+            ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE, ids_and_names )
             
             mimes_to_launch_file_executable_ids_and_names[ mime ] = ids_and_names
             

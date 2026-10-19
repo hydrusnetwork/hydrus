@@ -136,7 +136,7 @@ def GetSubprocessHideTerminalStartupInfo():
     return startupinfo
     
 
-def GetSubprocessKWArgs( hide_terminal = True, text = False, shell = False ):
+def GetSubprocessKWArgs( hide_terminal = True, text = False, this_is_a_potentially_long_lived_external_guy = False ):
     
     sbp_kwargs = {}
     
@@ -149,15 +149,38 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False, shell = False ):
         sbp_kwargs[ 'errors' ] = 'replace' # handling mp4s with invalid utf-8 metadata hooray
         
     
-    if shell:
-        
-        sbp_kwargs[ 'shell' ] = True
-        
-    
     if hide_terminal:
         
         sbp_kwargs[ 'startupinfo' ] = GetSubprocessHideTerminalStartupInfo()
         
+    
+    if this_is_a_potentially_long_lived_external_guy:
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            # stops terminal logging and terminal ctrl+c and such passing from/to children
+            sbp_kwargs[ 'creationflags' ] = subprocess.DETACHED_PROCESS
+            
+        else:
+            
+            # sets non-child in POSIX--it does the os.setsid( None ) nicely
+            sbp_kwargs[ 'start_new_session' ] = True
+            
+        
+        stdin_pipe = subprocess.DEVNULL
+        stdout_pipe = subprocess.DEVNULL
+        stderr_pipe = subprocess.DEVNULL
+        
+    else:
+        
+        stdin_pipe = subprocess.PIPE
+        stdout_pipe = subprocess.PIPE
+        stderr_pipe = subprocess.PIPE
+        
+    
+    sbp_kwargs[ 'stdin' ] = stdin_pipe
+    sbp_kwargs[ 'stdout' ] = stdout_pipe
+    sbp_kwargs[ 'stderr' ] = stderr_pipe
     
     if HG.subprocess_report_mode:
         
@@ -259,16 +282,16 @@ def ReportTimeoutError( cmd, timeout, stdout, stderr ):
     raise HydrusExceptions.SubprocessTimedOut( message )
     
 
-def RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal: bool, text: bool, shell: bool ):
+def RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, hide_terminal: bool, text: bool ):
     
-    # just a reminder, the "shell" arg says "hey throw this _string_ cmd at a shell for parsing". it is not excellent, broadly speaking, but--
-    # --it allows for simple commands to be run without breaking into [ exe_name, '-p', '/path/to/blah' ]
+    # for a long time, I allowed the 'shell = True' command here; it allows you to execute 'exe_name -p /path/to/blah' instead of [ exe_name, '-p', '/path/to/blah' ] because it basically just pastes that into a new terminal
+    # I have now exorcised it. it is a security problem and a pain in a couple ways
     
-    sbp_kwargs = GetSubprocessKWArgs( hide_terminal = hide_terminal, text = text, shell = shell )
+    sbp_kwargs = GetSubprocessKWArgs( hide_terminal = hide_terminal, text = text, this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy )
     
     try:
         
-        return subprocess.Popen( cmd, start_new_session = start_new_session, bufsize = bufsize, stdin = stdin_pipe, stdout = stdout_pipe, stderr = stderr_pipe, **sbp_kwargs )
+        return subprocess.Popen( cmd, bufsize = bufsize, **sbp_kwargs )
         
     except FileNotFoundError:
         
@@ -293,29 +316,10 @@ def RunSubprocess(
     bufsize: int = 65536,
     this_is_a_potentially_long_lived_external_guy = False,
     hide_terminal = True,
-    text = True,
-    shell = False
+    text = True
 ):
     
-    if this_is_a_potentially_long_lived_external_guy:
-        
-        # sets non-child in POSIX--it does the os.setsid( None ) nicely
-        start_new_session = True
-        
-        stdin_pipe = None
-        stdout_pipe = None
-        stderr_pipe = None
-        
-    else:
-        
-        start_new_session = False
-        
-        stdin_pipe = subprocess.PIPE
-        stdout_pipe = subprocess.PIPE
-        stderr_pipe = subprocess.PIPE
-        
-    
-    process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text, shell )
+    process = RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, hide_terminal, text )
     
     if this_is_a_potentially_long_lived_external_guy:
         
@@ -449,16 +453,10 @@ class SubprocessContext( object ):
         
         self.SENTINEL = None
         
-        start_new_session = False
-        
-        stdin_pipe = subprocess.PIPE
-        stdout_pipe = subprocess.PIPE
-        stderr_pipe = subprocess.PIPE
-        
         self._timeout = timeout
         self._bufsize = bufsize
         
-        self.process = RunSubprocessRawCall( cmd, start_new_session, bufsize, stdin_pipe, stdout_pipe, stderr_pipe, hide_terminal, text, shell )
+        self.process = RunSubprocessRawCall( cmd, False, bufsize, hide_terminal, text, shell )
         
         HG.controller.CallToThread( self._THREADReader )
         

@@ -118,7 +118,7 @@ class EditExternalProgramsImportOptionsPanel( QW.QWidget ):
         
         from hydrus.client.executables import ClientExecutablePipelines
         
-        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
         
         if len( possible_ids_and_names ) > 0:
             
@@ -132,11 +132,11 @@ class EditExternalProgramsImportOptionsPanel( QW.QWidget ):
         
         from hydrus.client.executables import ClientExecutablePipelines
         
-        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        possible_ids_and_names = CG.client_controller.executable_manager.GetIdsAndNamesOfType( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
         
         if len( possible_ids_and_names ) == 0:
             
-            message = f'Hey, there do not seem to be any "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE ]}" external program calls set! If you are in the options dialog and only just added some, please apply and re-open.'
+            message = f'Hey, there do not seem to be any "{ClientExecutablePipelines.executable_pipeline_types_to_strs[ ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE ]}" external program calls set! If you are in the options dialog and only just added some, please apply and re-open.'
             
             ClientGUIDialogsMessage.ShowCritical( self, 'No external calls!', message )
             

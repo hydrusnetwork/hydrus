@@ -8245,7 +8245,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if path is None:
                         
-                        call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL )
+                        call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
                         
                     else:
                         
@@ -8295,7 +8295,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if path is None:
                             
-                            call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+                            call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
                             
                         else:
                             

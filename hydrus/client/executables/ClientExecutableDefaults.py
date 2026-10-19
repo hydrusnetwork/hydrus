@@ -21,7 +21,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'Default OS File Launch',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -39,7 +39,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'xdg-open',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -57,7 +57,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'gio open (Gnome)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -75,7 +75,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'kioclient exec (KDE)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -93,7 +93,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'firefox (file path)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -111,7 +111,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (file path)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -131,7 +131,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (file path) (Windows)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -149,7 +149,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'firefox (file path) (macOS)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -167,7 +167,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (file path) (macOS)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
     )
     
@@ -193,7 +193,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'Default OS URL Launch',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     
@@ -211,7 +211,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'firefox (URL)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     
@@ -229,7 +229,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (URL)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     
@@ -249,7 +249,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (URL) (Windows)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     
@@ -267,7 +267,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'firefox (URL) (macOS)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     
@@ -285,7 +285,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     call = ClientExecutableCallables.ClientExecutableCallable(
         'chrome (URL) (macOS)',
-        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
     )
     

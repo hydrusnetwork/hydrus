@@ -10,7 +10,9 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core.files import HydrusFileTypeDetermination
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -19,6 +21,7 @@ from hydrus.client.executables import ClientExecutableCallables
 from hydrus.client.executables import ClientExecutableDefaults
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
+from hydrus.client.executables import ClientExecutableResponses
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsDocumentation
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -502,7 +505,7 @@ class EditProcessCallPanel( QW.QWidget ):
         super().__init__( parent )
         
         self._we_are_initialised = False
-        self._pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE
+        self._pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE
         
         self._executable_path = ''
         self._executable_parameter_templates = []
@@ -520,8 +523,8 @@ class EditProcessCallPanel( QW.QWidget ):
         
         self._edit_executable_command_and_parameters_button = ClientGUICommon.BetterButton( self, 'edit', self._EditCommandAndParameters )
         
-        self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time' )
-        self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that you will be interacting with, like an external file viewer, set this to "this can live for a very long time", and hydrus will know to just spawn it and return immediately, without waiting for any response.' ) )
+        self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time/detach process' )
+        self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that will be open a while (perhaps longer than hydrus) and/or you will be interacting with (like an external file viewer), set this to "this can live for a very long time", and hydrus will know to just spawn it as a detached process and return immediately, without waiting for any response.' ) )
         
         self._hide_terminal = QW.QCheckBox( self )
         self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging. Note: it will regularly be ignored by certain OS/call situations, so do not panic if unchecking it does not seem to change anything.' ) )
@@ -552,7 +555,7 @@ class EditProcessCallPanel( QW.QWidget ):
         QP.AddToLayout( command_hbox, self._edit_executable_command_and_parameters_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         rows.append( ( 'command template: ', command_hbox ) )
-        rows.append( ( 'timeout: ', self._timeout ) )
+        rows.append( ( 'response timeout: ', self._timeout ) )
         rows.append( ( 'hide terminal: ', self._hide_terminal ) )
         rows.append( ( 'output is text: ', self._text ) )
         
@@ -844,13 +847,13 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
             ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall ),
         ]
         
-        if self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+        if self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
             
             labels_and_call_types.append(
                 ( 'default OS launch file call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile )
             )
             
-        elif self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+        elif self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
             
             labels_and_call_types.append(
                 ( 'default OS launch URL call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL )
@@ -957,7 +960,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         super().__init__( parent, 'testing' )
         
-        self._actual_call: ClientExecutableActualCall.ExecutableActualCall = ClientExecutableActualCall.ExecutableLocalProcessCall()
+        self._executable_callable = ClientExecutableCallables.ClientExecutableCallable( 'test' )
         
         self._test_availability_button = ClientGUICommon.BetterButton( self, 'test availability!', self._TestAvailability )
         
@@ -970,12 +973,16 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         self._test_call_button = ClientGUICommon.BetterButton( self, 'test call!', self._TestCall )
         
+        self._raw_output_panel = ClientGUICommon.StaticBox( self, 'raw output' )
+        
         # could make this a notebook in future, with the parsed output params as the first window and 'raw' response tucked away for debugging
-        self._raw_output_text_box = QW.QPlainTextEdit( self )
+        self._raw_output_text_box = QW.QPlainTextEdit( self._raw_output_panel )
         self._raw_output_text_box.setReadOnly( True )
         self._raw_output_text_box.setFont( QG.QFont( 'Monospace' ) )
         
         #
+        
+        self._raw_output_panel.Add( self._raw_output_text_box, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._currently_running_availability_test = False
         
@@ -987,7 +994,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self.Add( self._input_param_types_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._actual_command_preview, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._test_call_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._raw_output_text_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self.Add( self._raw_output_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
     
     def _GetInputParams( self ) -> dict[ int, str ]:
@@ -1001,7 +1008,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self._input_param_types_box.Clear()
         
         # don't do a sort here; the one we inherit is actually good
-        required_input_parameter_types = self._actual_call.GetInputParametersUsed()
+        required_input_parameter_types = self._executable_callable.GetCall().GetInputParametersUsed()
         
         for required_input_parameter_type in required_input_parameter_types:
             
@@ -1052,7 +1059,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         message = f'Testing{HC.UNICODE_ELLIPSIS}'
         
-        actual_call = self._actual_call
+        actual_call = self._executable_callable.GetCall()
         
         self._raw_output_text_box.setPlainText( message )
         
@@ -1070,14 +1077,64 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         def work_callable():
             
             # we might have a special call that returns test data or populates a TestStatus object as it works, and then we can spool stdout/stderr or http response or whatever here
-            output_params = actual_call.CallTest( input_params )
+            executable_response = actual_call.CallTest( input_params )
             
-            return output_params
+            return executable_response
             
         
-        def publish_callable( output_params ):
+        def publish_callable( executable_response: ClientExecutableResponses.ExecutableCallResponse ):
             
             message = 'Looks good!'
+            
+            pipeline_type = self._executable_callable.GetPipelineType()
+            
+            response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
+            
+            if len( response_types ) > 0:
+                
+                if ClientExecutablePipelines.RESPONSE_TYPE_IMPORTABLE_FILE in response_types:
+                    
+                    message += '\n\n'
+                    
+                    if executable_response.temp_file_info is None:
+                        
+                        message += 'Problem: No importable file set!'
+                        
+                    else:
+                        
+                        ( os_file_handle, temp_path ) = executable_response.temp_file_info
+                        
+                        try:
+                            
+                            mime = HydrusFileTypeDetermination.GetMime( temp_path )
+                            size = os.path.getsize( temp_path )
+                            
+                        except Exception as e:
+                            
+                            message += f'Problem with file: {e}'
+                            
+                        finally:
+                            
+                            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+                            
+                            executable_response.temp_file_info = None
+                            
+                        
+                    
+                
+                if ClientExecutablePipelines.RESPONSE_TYPE_MANDATORY_PARSABLE_METADATA in response_types or ClientExecutablePipelines.RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA in response_types:
+                    
+                    if len( executable_response.parsed_posts ) > 0:
+                        
+                        # TODO: figure out a nice display system here. atm 'ParsePretty' works at the parsing level, aieeee, so we can't just ask a parsed post to render itself. let's figure that out
+                        message += 'Some metadata parsed. Nicer display coming soon.'
+                        
+                    else:
+                        
+                        message += 'No metadata parsed!'
+                        
+                    
+                
             
             self._raw_output_text_box.setPlainText( message )
             
@@ -1095,7 +1152,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         message = f'Testing{HC.UNICODE_ELLIPSIS}'
         
         input_params = self._GetInputParams()
-        actual_call = self._actual_call
+        actual_call = self._executable_callable.GetCall()
         
         if isinstance( actual_call, ClientExecutableActualCall.ExecutableLocalProcessCall ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
             
@@ -1113,23 +1170,25 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
     
     def _UpdateAvailabilityTestButton( self ):
         
-        self._test_availability_button.setEnabled( self._actual_call.CanTestAvailability() and not self._currently_running_availability_test )
+        self._test_availability_button.setEnabled( self._executable_callable.GetCall().CanTestAvailability() and not self._currently_running_availability_test )
         
     
     def _UpdatePreview( self ):
         
         input_params = self._GetInputParams()
         
-        self._actual_command_preview.setText( self._actual_call.GetCommandPreviewWithInputParams( input_params ) )
+        self._actual_command_preview.setText( self._executable_callable.GetCall().GetCommandPreviewWithInputParams( input_params ) )
         
         self._raw_output_text_box.setPlainText( '' )
         
     
-    def SetActualCall( self, actual_call: ClientExecutableActualCall.ExecutableActualCall ):
+    def SetExecutableCallable( self, executable_callable: ClientExecutableCallables.ClientExecutableCallable ):
         
-        self._actual_call = actual_call
+        self._executable_callable = executable_callable
         
-        required_input_parameter_types = self._actual_call.GetInputParametersUsed()
+        actual_call = self._executable_callable.GetCall()
+        
+        required_input_parameter_types = actual_call.GetInputParametersUsed()
         
         if set( required_input_parameter_types ) != set( self._input_param_types_to_edit_panels.keys() ):
             
@@ -1154,8 +1213,8 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_type = ClientGUICommon.BetterChoice( self._pipeline_panel )
         
         for pipeline_type in [
-            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE,
-            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
+            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         ]:
             
             self._pipeline_type.addItem( ClientExecutablePipelines.executable_pipeline_types_to_strs[ pipeline_type ], pipeline_type )
@@ -1251,15 +1310,15 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pipeline_type_desc += '\n\n'
         
-        output_parameter_types = ClientExecutablePipelines.executable_pipeline_types_to_output_params[ pipeline_type ]
+        response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
         
-        if len( output_parameter_types ) == 0:
+        if len( response_types ) == 0:
             
             pipeline_type_desc += 'Expected output parameters: none'
             
         else:
             
-            pipeline_type_desc += 'Expected output parameters: ' + ', '.join( ( ClientExecutablePipelines.parameter_types_to_strs[ parameter_type ] for parameter_type in output_parameter_types ) )
+            pipeline_type_desc += 'Expected output parameters: ' + ', '.join( ( ClientExecutablePipelines.executable_response_types_to_strs[ response_type ] for response_type in response_types ) )
             
         
         self._pipeline_description.setText( pipeline_type_desc )
@@ -1271,9 +1330,9 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateTestPanel( self ):
         
-        actual_call = self._actual_call_panel.GetValue()
+        executable_callable = self.GetValue()
         
-        self._test_panel.SetActualCall( actual_call )
+        self._test_panel.SetExecutableCallable( executable_callable )
         
     
     def _UpdateValidity( self ):

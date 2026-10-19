@@ -11,6 +11,7 @@ from hydrus.core.processes import HydrusSubprocess
 
 from hydrus.client import ClientStrings
 from hydrus.client.executables import ClientExecutablePipelines
+from hydrus.client.executables import ClientExecutableResponses
 
 def CleanExecutableParameterTemplates( executable_parameter_templates: list[ str ] ):
     
@@ -39,7 +40,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Actual Call Superclass'
     SERIALISABLE_VERSION = 1
     
-    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         raise NotImplementedError()
         
@@ -84,12 +85,12 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def Call( self, input_parameters: dict ) -> dict:
+    def Call( self, input_parameters: dict ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         return self._DoCall( input_parameters )
         
     
-    def CallTest( self, input_parameters: dict ) -> dict:
+    def CallTest( self, input_parameters: dict ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         return self._DoCall( input_parameters, for_user_test = True )
         
@@ -213,7 +214,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         self._text = True
         
     
-    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         cmd = self._GetFinalCmd( input_parameters )
         
@@ -247,15 +248,18 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             HydrusSubprocess.ReportBadReturnCode( cmd, returncode, stdout, stderr )
             
         
-        # if this is a long-lived guy, no stdout/stderr processing
-        # if text, we can do json or whatever parsing on it
-        # if not text, we can eat a file bytes response
-        # can also be no response. maybe we were passed a temp file, the caller cares but we don't
-        # TODO: so yeah expand this guy to eat either text or bytes back and transmogrify that into a dict response that a higher guy will pick up
-        # if bytes, we should stream to a tempdir tbh that the Response can clean up
-        # TODO: consider validity parsing here when we _do_ get text back. standard veto content parser?
+        response = ClientExecutableResponses.ExecutableCallResponse()
         
-        return dict()
+        if not this_is_a_potentially_long_lived_external_guy:
+            
+            # consult my call data about what if anything we parse, whether there is a temp_file expected for import/parse, all that
+            # assign it to the response
+            # if we got stdout/err bytes, then spool that to a temp dir for the response
+            
+            pass
+            
+        
+        return response
         
     
     def _GetFinalCmd( self, input_parameters: dict[ int, str | list[ str ] ] ) -> list[ str ]:
@@ -494,7 +498,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         super().__init__()
         
     
-    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         try:
             
@@ -533,7 +537,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
             HydrusSubprocess.RunSubprocess( cmd, this_is_a_potentially_long_lived_external_guy = not for_user_test )
             
         
-        return dict()
+        return ClientExecutableResponses.ExecutableCallResponse()
         
     
     def _GetSerialisableInfo( self ):
@@ -597,7 +601,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         super().__init__()
         
     
-    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> dict:
+    def _DoCall( self, input_parameters: dict, for_user_test = False ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         try:
             
@@ -610,7 +614,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         
         webbrowser.open( url )
         
-        return dict()
+        return ClientExecutableResponses.ExecutableCallResponse()
         
     
     def _GetSerialisableInfo( self ):

@@ -98,11 +98,11 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+            if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
                 
                 results = [ call for call in self._callables if isinstance( call.GetCall(), ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile ) ]
                 
-            elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+            elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
                 
                 results = [ call for call in self._callables if isinstance( call.GetCall(), ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL ) ]
                 
@@ -113,23 +113,23 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             
             if len( results ) == 0:
                 
-                if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE:
+                if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
                     
                     actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
                     
                     call = ClientExecutableCallables.ClientExecutableCallable(
                         'Default OS File Launch',
-                        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+                        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
                         actual_call = actual_call
                     )
                     
-                elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL:
+                elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
                     
                     actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
                     
                     call = ClientExecutableCallables.ClientExecutableCallable(
                         'Default OS URL Launch',
-                        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL,
+                        pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
                         actual_call = actual_call
                     )
                     
@@ -157,12 +157,12 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
     
     def GetOSLaunchFileCallable( self ):
         
-        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_FILE )
+        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
         
     
     def GetOSLaunchURLCallable( self ):
         
-        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_OPEN_EXTERNALLY_SINGLE_URL )
+        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
         
     
     def IsDirty( self ):
