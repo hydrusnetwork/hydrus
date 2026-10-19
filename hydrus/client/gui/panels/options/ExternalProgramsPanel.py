@@ -526,9 +526,6 @@ class EditProcessCallPanel( QW.QWidget ):
         self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time/detach process' )
         self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that will be open a while (perhaps longer than hydrus) and/or you will be interacting with (like an external file viewer), set this to "this can live for a very long time", and hydrus will know to just spawn it as a detached process and return immediately, without waiting for any response.' ) )
         
-        self._text = QW.QCheckBox( self )
-        self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdout), uncheck it.' ) )
-        
         #
         
         vbox = QP.VBoxLayout()
@@ -553,7 +550,6 @@ class EditProcessCallPanel( QW.QWidget ):
         
         rows.append( ( 'command template: ', command_hbox ) )
         rows.append( ( 'response timeout: ', self._timeout ) )
-        rows.append( ( 'output is text: ', self._text ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -564,7 +560,6 @@ class EditProcessCallPanel( QW.QWidget ):
         self.setLayout( vbox )
         
         self._timeout.timeDeltaChanged.connect( self.valueChanged )
-        self._text.clicked.connect( self.valueChanged )
         
     
     def _EditCommandAndParameters( self ):
@@ -669,8 +664,6 @@ class EditProcessCallPanel( QW.QWidget ):
             actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( False )
             
         
-        actual_call.SetText( self._text.isChecked() )
-        
         return actual_call
         
     
@@ -735,8 +728,6 @@ class EditProcessCallPanel( QW.QWidget ):
             
             self._timeout.SetValue( actual_call.GetTimeout() )
             
-        
-        self._text.setChecked( actual_call.GetText() )
         
         self.blockSignals( False )
         

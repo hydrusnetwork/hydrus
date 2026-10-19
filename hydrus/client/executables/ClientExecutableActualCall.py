@@ -177,14 +177,15 @@ class LocalProcessCallInputParameterProcessingRule(HydrusSerialisable.Serialisab
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE ] = LocalProcessCallInputParameterProcessingRule
 
-# TODO: Make a LocalProcessCall that has a list of params, with slightly more complicated UI
-# Instead of the shell parsing, we can do better for difficult situations
+LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE = 0
+LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE = 1
+LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_INPUT_PARAMETER_TEMP_PATH = 2
 
 class ExecutableLocalProcessCall( ExecutableActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL
     SERIALISABLE_NAME = 'Local Process Call'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, executable_path: str | None = None, executable_parameter_templates: list[ str ] | None = None, input_parameter_processing_rules = None ):
         
@@ -210,7 +211,11 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         self._input_parameter_processing_rules: HydrusSerialisable.SerialisableList[ LocalProcessCallInputParameterProcessingRule ] = HydrusSerialisable.SerialisableList( input_parameter_processing_rules )
         self._timeout: int = 15
         self._this_is_a_potentially_long_lived_external_guy = False
-        self._text = True
+        self._parsable_response_source_type = LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE
+        self._parsable_response_name = ''
+        self._parsable_response_encoding = 'utf-8'
+        self._importable_response_source_type = LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE
+        self._importable_response_name = ''
         
     
     def _DoCall( self, input_parameters: dict, for_user_test = False ) -> ClientExecutableResponses.ExecutableCallResponse:
@@ -226,13 +231,17 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             ( timeout, this_is_a_potentially_long_lived_external_guy ) = ( self._timeout, self._this_is_a_potentially_long_lived_external_guy )
             
         
+        # always want clean text unless expecting blah
+        text = self._importable_response_source_type != LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE
+        
         try:
             
             ( stdout, stderr, returncode ) = HydrusSubprocess.RunSubprocess(
                 cmd,
                 timeout = timeout,
                 this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy,
-                text = self._text,
+                text = text,
+                text_encoding = self._parsable_response_encoding
             )
             
         except Exception as e:
@@ -341,7 +350,11 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             serialisable_input_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
-            self._text,
+            self._parsable_response_source_type,
+            self._parsable_response_name,
+            self._parsable_response_encoding,
+            self._importable_response_source_type,
+            self._importable_response_name,
         )
         
     
@@ -353,7 +366,11 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             serialisable_input_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
-            self._text,
+            self._parsable_response_source_type,
+            self._parsable_response_name,
+            self._parsable_response_encoding,
+            self._importable_response_source_type,
+            self._importable_response_name,
         ) = serialisable_info
         
         self._executable_parameter_templates = CleanExecutableParameterTemplates( serialisable_executable_parameter_templates )
@@ -390,6 +407,39 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            (
+                executable_path,
+                serialisable_executable_parameter_templates,
+                serialisable_input_parameter_processing_rules,
+                timeout,
+                this_is_a_potentially_long_lived_external_guy,
+                text,
+            ) = old_serialisable_info
+            
+            parsable_response_source_type = LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE
+            parsable_response_name = ''
+            parsable_response_encoding = 'utf-8'
+            importable_response_source_type = LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE
+            importable_response_name = ''
+            
+            new_serialisable_info = (
+                executable_path,
+                serialisable_executable_parameter_templates,
+                serialisable_input_parameter_processing_rules,
+                timeout,
+                this_is_a_potentially_long_lived_external_guy,
+                parsable_response_source_type,
+                parsable_response_name,
+                parsable_response_encoding,
+                importable_response_source_type,
+                importable_response_name,
+            )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -467,9 +517,9 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return self._executable_parameter_templates
         
     
-    def GetText( self ):
+    def GetParsableResponseEncoding( self ) -> str:
         
-        return self._text
+        return self._parsable_response_encoding
         
     
     def GetTimeout( self ):
@@ -482,9 +532,9 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return self._this_is_a_potentially_long_lived_external_guy
         
     
-    def SetText( self, value: bool ):
+    def SetParsableResponseEncoding( self, parsable_response_encoding: str ):
         
-        self._text = value
+        self._parsable_response_encoding = parsable_response_encoding
         
     
     def SetTimeout( self, value: int ):
