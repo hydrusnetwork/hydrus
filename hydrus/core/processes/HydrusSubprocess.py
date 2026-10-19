@@ -136,7 +136,9 @@ def GetSubprocessHideTerminalStartupInfo():
     return startupinfo
     
 
-def GetSubprocessKWArgs( hide_terminal = True, text = False, this_is_a_potentially_long_lived_external_guy = False ):
+DO_HIDE_TERMINAL_TEST = False
+
+def GetSubprocessKWArgs( text = False, text_encoding = 'utf-8', this_is_a_potentially_long_lived_external_guy = False ):
     
     sbp_kwargs = {}
     
@@ -145,11 +147,11 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False, this_is_a_potential
     if text:
         
         sbp_kwargs[ 'text' ] = True
-        sbp_kwargs[ 'encoding' ] = 'utf-8'
+        sbp_kwargs[ 'encoding' ] = text_encoding
         sbp_kwargs[ 'errors' ] = 'replace' # handling mp4s with invalid utf-8 metadata hooray
         
     
-    if hide_terminal:
+    if HC.PLATFORM_WINDOWS and not DO_HIDE_TERMINAL_TEST:
         
         sbp_kwargs[ 'startupinfo' ] = GetSubprocessHideTerminalStartupInfo()
         
@@ -172,6 +174,13 @@ def GetSubprocessKWArgs( hide_terminal = True, text = False, this_is_a_potential
         stderr_pipe = subprocess.DEVNULL
         
     else:
+        
+        if HC.PLATFORM_WINDOWS and DO_HIDE_TERMINAL_TEST:
+            
+            # this and DETACHED_PROCESS are mutually exclusive, so we'll stick it here
+            # this says "hey hide an ffmpeg terminal from popping up, but a GUI program is good"
+            sbp_kwargs[ 'creationflags' ] = subprocess.CREATE_NO_WINDOW
+            
         
         stdin_pipe = subprocess.PIPE
         stdout_pipe = subprocess.PIPE
@@ -282,12 +291,12 @@ def ReportTimeoutError( cmd, timeout, stdout, stderr ):
     raise HydrusExceptions.SubprocessTimedOut( message )
     
 
-def RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, hide_terminal: bool, text: bool ):
+def RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, text: bool, text_encoding: str ):
     
     # for a long time, I allowed the 'shell = True' command here; it allows you to execute 'exe_name -p /path/to/blah' instead of [ exe_name, '-p', '/path/to/blah' ] because it basically just pastes that into a new terminal
     # I have now exorcised it. it is a security problem and a pain in a couple ways
     
-    sbp_kwargs = GetSubprocessKWArgs( hide_terminal = hide_terminal, text = text, this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy )
+    sbp_kwargs = GetSubprocessKWArgs( text = text, text_encoding = text_encoding, this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy )
     
     try:
         
@@ -315,11 +324,11 @@ def RunSubprocess(
     timeout: int = 15,
     bufsize: int = 65536,
     this_is_a_potentially_long_lived_external_guy = False,
-    hide_terminal = True,
-    text = True
+    text = True,
+    text_encoding = 'utf-8',
 ):
     
-    process = RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, hide_terminal, text )
+    process = RunSubprocessRawCall( cmd, this_is_a_potentially_long_lived_external_guy, bufsize, text, text_encoding )
     
     if this_is_a_potentially_long_lived_external_guy:
         
@@ -442,7 +451,7 @@ def TerminateAndReapProcess( process: subprocess.Popen ):
 # TODO: expand this to handle stderr better
 class SubprocessContext( object ):
     
-    def __init__( self, cmd, timeout: int = 15, bufsize: int = 65536, hide_terminal = True, text = True, shell = False ):
+    def __init__( self, cmd, timeout: int = 15, bufsize: int = 65536, text = True, text_encoding = 'utf-8' ):
         
         self.finished = False
         
@@ -456,7 +465,7 @@ class SubprocessContext( object ):
         self._timeout = timeout
         self._bufsize = bufsize
         
-        self.process = RunSubprocessRawCall( cmd, False, bufsize, hide_terminal, text, shell )
+        self.process = RunSubprocessRawCall( cmd, False, bufsize, text, text_encoding )
         
         HG.controller.CallToThread( self._THREADReader )
         

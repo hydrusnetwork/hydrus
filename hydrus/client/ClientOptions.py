@@ -389,6 +389,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'do_flock_already_in_use_test_in_posix' : True,
             'tag_suggestions_related_tags_just_do_local_files_default' : True,
             'tag_suggestions_related_tags_search_siblings_and_parents_default' : True,
+            'do_new_hide_terminal_subprocess_tech_on_windows' : False,
         }
         
         #

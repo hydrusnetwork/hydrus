@@ -184,7 +184,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL
     SERIALISABLE_NAME = 'Local Process Call'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, executable_path: str | None = None, executable_parameter_templates: list[ str ] | None = None, input_parameter_processing_rules = None ):
         
@@ -210,7 +210,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         self._input_parameter_processing_rules: HydrusSerialisable.SerialisableList[ LocalProcessCallInputParameterProcessingRule ] = HydrusSerialisable.SerialisableList( input_parameter_processing_rules )
         self._timeout: int = 15
         self._this_is_a_potentially_long_lived_external_guy = False
-        self._hide_terminal = True
         self._text = True
         
     
@@ -233,7 +232,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
                 cmd,
                 timeout = timeout,
                 this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy,
-                hide_terminal = self._hide_terminal,
                 text = self._text,
             )
             
@@ -343,7 +341,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             serialisable_input_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
-            self._hide_terminal,
             self._text,
         )
         
@@ -356,7 +353,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             serialisable_input_parameter_processing_rules,
             self._timeout,
             self._this_is_a_potentially_long_lived_external_guy,
-            self._hide_terminal,
             self._text,
         ) = serialisable_info
         
@@ -368,6 +364,33 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
     def _TestAvailability( self ):
         
         return shutil.which( self._executable_path ) is not None
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            (
+                executable_path,
+                serialisable_executable_parameter_templates,
+                serialisable_input_parameter_processing_rules,
+                timeout,
+                this_is_a_potentially_long_lived_external_guy,
+                hide_terminal,
+                text,
+            ) = old_serialisable_info
+            
+            new_serialisable_info = (
+                executable_path,
+                serialisable_executable_parameter_templates,
+                serialisable_input_parameter_processing_rules,
+                timeout,
+                this_is_a_potentially_long_lived_external_guy,
+                text,
+            )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def CanTestAvailability( self ):
@@ -424,11 +447,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             
         
     
-    def GetHideTerminal( self ):
-        
-        return self._hide_terminal
-        
-    
     def GetInputParametersUsed( self ):
         
         return [ input_parameter_processing_rule.parameter_type for input_parameter_processing_rule in self._input_parameter_processing_rules ]
@@ -462,11 +480,6 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
     def GetThisIsAPotentiallyLongLivedExternalGuy( self ):
         
         return self._this_is_a_potentially_long_lived_external_guy
-        
-    
-    def SetHideTerminal( self, value: bool ):
-        
-        self._hide_terminal = value
         
     
     def SetText( self, value: bool ):

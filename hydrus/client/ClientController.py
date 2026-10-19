@@ -1192,6 +1192,10 @@ class Controller( HydrusController.HydrusController ):
         
         HydrusFileTypeDetermination.ALLOW_COMIC_BOOK_ARCHIVE_INSPECTION = self.new_options.GetBoolean( 'allow_comic_book_archive_detection' )
         
+        from hydrus.core.processes import HydrusSubprocess
+        
+        HydrusSubprocess.DO_HIDE_TERMINAL_TEST = self.new_options.GetBoolean( 'do_new_hide_terminal_subprocess_tech_on_windows' )
+        
         from hydrus.core.files.images import HydrusImageHandling
         from hydrus.core.files.images import HydrusImageNormalisation
         from hydrus.core.files.images import HydrusImageColours

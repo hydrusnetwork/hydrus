@@ -526,9 +526,6 @@ class EditProcessCallPanel( QW.QWidget ):
         self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time/detach process' )
         self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that will be open a while (perhaps longer than hydrus) and/or you will be interacting with (like an external file viewer), set this to "this can live for a very long time", and hydrus will know to just spawn it as a detached process and return immediately, without waiting for any response.' ) )
         
-        self._hide_terminal = QW.QCheckBox( self )
-        self._hide_terminal.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this unless you are debugging. Note: it will regularly be ignored by certain OS/call situations, so do not panic if unchecking it does not seem to change anything.' ) )
-        
         self._text = QW.QCheckBox( self )
         self._text.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the command returns text, check this. If it returns raw bytes (e.g. it does a file conversion and dumps it to stdout), uncheck it.' ) )
         
@@ -556,7 +553,6 @@ class EditProcessCallPanel( QW.QWidget ):
         
         rows.append( ( 'command template: ', command_hbox ) )
         rows.append( ( 'response timeout: ', self._timeout ) )
-        rows.append( ( 'hide terminal: ', self._hide_terminal ) )
         rows.append( ( 'output is text: ', self._text ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -568,7 +564,6 @@ class EditProcessCallPanel( QW.QWidget ):
         self.setLayout( vbox )
         
         self._timeout.timeDeltaChanged.connect( self.valueChanged )
-        self._hide_terminal.clicked.connect( self.valueChanged )
         self._text.clicked.connect( self.valueChanged )
         
     
@@ -674,7 +669,6 @@ class EditProcessCallPanel( QW.QWidget ):
             actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( False )
             
         
-        actual_call.SetHideTerminal( self._hide_terminal.isChecked() )
         actual_call.SetText( self._text.isChecked() )
         
         return actual_call
@@ -742,7 +736,6 @@ class EditProcessCallPanel( QW.QWidget ):
             self._timeout.SetValue( actual_call.GetTimeout() )
             
         
-        self._hide_terminal.setChecked( actual_call.GetHideTerminal() )
         self._text.setChecked( actual_call.GetText() )
         
         self.blockSignals( False )
@@ -1426,6 +1419,10 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
         
+        self._do_new_hide_terminal_subprocess_tech_on_windows = QW.QCheckBox( self )
+        tt = 'Hey, if you are an advanced Windows user, please try checking this, saving the options dialog, and then A) importing some video files and B) doing an "open externally" call that uses a specific executable process call to a graphical program, not the default OS launch option. Let me know if everything works or if you get ffmpeg terminal popups appearing over and over.'
+        self._do_new_hide_terminal_subprocess_tech_on_windows.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
         external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
         
         warning_message = 'IF YOU IMPORT A CALL HERE THAT SOMEONE ELSE MADE, MAKE SURE YOU INSPECT IT BEFORE HOOKING IT UP TO ANYTHING. LOOK AT THE PARAMETERS.'
@@ -1464,6 +1461,10 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
+        self._do_new_hide_terminal_subprocess_tech_on_windows.setChecked( self._new_options.GetBoolean( 'do_new_hide_terminal_subprocess_tech_on_windows' ) )
+        
+        #
+        
         external_calls_panel.Add( warning, CC.FLAGS_EXPAND_PERPENDICULAR )
         external_calls_panel.Add( external_calls_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1485,6 +1486,22 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            rows = []
+            
+            rows.append( ( 'TEST: Use new "hide terminal" tech on Windows:', self._do_new_hide_terminal_subprocess_tech_on_windows ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+        else:
+            
+            self._do_new_hide_terminal_subprocess_tech_on_windows.setVisible( False )
+            
+        
         QP.AddToLayout( vbox, external_calls_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         #
@@ -1621,6 +1638,8 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
     
     def UpdateOptions( self ):
+        
+        self._new_options.SetBoolean( 'do_new_hide_terminal_subprocess_tech_on_windows', self._do_new_hide_terminal_subprocess_tech_on_windows.isChecked() )
         
         # it comes dirty from here btw
         executable_manager = self.GetExecutableManager()
