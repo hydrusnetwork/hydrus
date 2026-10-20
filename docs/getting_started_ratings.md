@@ -4,11 +4,11 @@ title: Ratings
 
 # getting started with ratings  
 
-The hydrus client supports two kinds of ratings: _like/dislike_ and _numerical_. Let's start with the simpler one:
+The hydrus client supports several kinds of ratings. Let's start with the simplest one:
 
 ## like/dislike { id="like_dislike" }
 
-A new client starts with one of these, called 'favourites'. It can set one of two values to a file. It does not have to represent like or dislike--it can be anything you want, like 'send to export folder' or 'explicit/safe' or 'cool babes'. Go to _services->edit->add->local like/dislike ratings_:
+A new client starts with one of these, called 'favourites'. It starts as neutal, or 'unrated', and can be set with left-click to 'like' or right-click to 'dislike'. The on/off state does not have to represent like or dislike--it can be anything you want, such as 'safe/explicit', or only using the 'like' side as a sort of tag for a pool of 'send to export folder' or 'cool babes'. Go to _services->edit->add->local like/dislike ratings_:
 
 ![](images/ratings_like.png)
 
@@ -61,12 +61,12 @@ For like/dislike:
 
 - **Left-click:** Set 'like'
 - **Right-click:** Set 'dislike'
-- **Second X-click:** Set 'not rated'
+- **Second X-click:** Reset to 'not rated'
 
 For numerical:
 
 - **Left-click:** Set value
-- **Right-click:** Set 'not rated'
+- **Right-click:** Reset to 'not rated'
 
 For inc/dec:
 
