@@ -496,6 +496,139 @@ class EditProcessCallExecutableAndParametersPanel( ClientGUIScrolledPanels.EditP
         
     
 
+class ProcessCallImportableSourceWidget( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
+        
+        super().__init__( parent )
+        
+        # this will get more complicated one day, with dynamic list changes as input temp_path variable name stuff changes
+        
+        self._source_type_choice = ClientGUICommon.BetterChoice( self )
+        
+        self._source_type_choice.addItem( 'pipe', ClientExecutableActualCall.LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE )
+        
+        self._name_choice = ClientGUICommon.BetterChoice( self )
+        
+        self._name_choice.addItem( 'stdout', 'stdout' )
+        self._name_choice.addItem( 'stderr', 'stderr' )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'importable file result is at:' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._source_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._name_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( hbox )
+        
+        #
+        
+        self._source_type_choice.currentIndexChanged.connect( self.valueChanged )
+        self._name_choice.currentIndexChanged.connect( self.valueChanged )
+        
+    
+    def GetValue( self ):
+        
+        source_type = self._source_type_choice.GetValue()
+        name = self._name_choice.GetValue()
+        
+        return ( source_type, name )
+        
+    
+    def SetValue( self, source_type, name ):
+        
+        self._source_type_choice.SetValue( source_type )
+        self._name_choice.SetValue( name )
+        
+    
+
+class ProcessCallParsableSourceWidget( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent ):
+        
+        super().__init__( parent )
+        
+        # this will get more complicated one day, with dynamic list changes as input temp_path variable name stuff changes
+        
+        self._source_type_choice = ClientGUICommon.BetterChoice( self )
+        
+        self._source_type_choice.addItem( 'pipe', ClientExecutableActualCall.LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE )
+        
+        self._name_choice = ClientGUICommon.BetterChoice( self )
+        
+        self._name_choice.addItem( 'stdout', 'stdout' )
+        self._name_choice.addItem( 'stderr', 'stderr' )
+        
+        self._encoding = ClientGUICommon.NoneableTextCtrl( self, '', none_phrase = 'utf-8' )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'parsable result is at:' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._source_type_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._name_choice, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, ' using encoding ' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._encoding, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( hbox )
+        
+        #
+        
+        self._source_type_choice.currentIndexChanged.connect( self.valueChanged )
+        self._name_choice.currentIndexChanged.connect( self.valueChanged )
+        self._encoding.valueChanged.connect( self.valueChanged )
+        
+    
+    def GetValue( self ):
+        
+        source_type = self._source_type_choice.GetValue()
+        name = self._name_choice.GetValue()
+        
+        encoding = self._encoding.GetValue()
+        
+        if encoding is None:
+            
+            encoding = 'utf-8'
+            
+        
+        return ( source_type, name, encoding )
+        
+    
+    def SetOptional( self, optional: bool ):
+        
+        self._source_type_choice.clear()
+        
+        self._source_type_choice.addItem( 'pipe', ClientExecutableActualCall.LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE )
+        
+        if optional:
+            
+            self._source_type_choice.addItem( 'do not parse metadata', ClientExecutableActualCall.LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE )
+            
+        
+    
+    def SetValue( self, source_type, name, encoding ):
+        
+        self._source_type_choice.SetValue( source_type )
+        self._name_choice.SetValue( name )
+        
+        if encoding == 'utf-8':
+            
+            self._encoding.SetValue( None )
+            
+        else:
+            
+            self._encoding.SetValue( encoding )
+            
+        
+    
+
 class EditProcessCallPanel( QW.QWidget ):
     
     valueChanged = QC.Signal()
@@ -526,6 +659,9 @@ class EditProcessCallPanel( QW.QWidget ):
         self._timeout = ClientGUITime.NoneableTimeDeltaWidget( self, 15, min = 1, days = False, hours = False, minutes = True, seconds = True, milliseconds = False, none_phrase = 'this can live for a very long time/detach process' )
         self._timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the call takes longer than this, hydrus will stop waiting for any response, assume it is stuck, and try to terminate it. Be generous but not overly so.\n\nIf the call opens a program that will be open a while (perhaps longer than hydrus) and/or you will be interacting with (like an external file viewer), set this to "this can live for a very long time", and hydrus will know to just spawn it as a detached process and return immediately, without waiting for any response.' ) )
         
+        self._importable_source_widget = ProcessCallImportableSourceWidget( self )
+        self._parsable_source_widget = ProcessCallParsableSourceWidget( self )
+        
         #
         
         vbox = QP.VBoxLayout()
@@ -555,11 +691,16 @@ class EditProcessCallPanel( QW.QWidget ):
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        QP.AddToLayout( vbox, self._importable_source_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._parsable_source_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         vbox.addStretch( 0 )
         
         self.setLayout( vbox )
         
         self._timeout.timeDeltaChanged.connect( self.valueChanged )
+        self._parsable_source_widget.valueChanged.connect( self.valueChanged )
+        self._importable_source_widget.valueChanged.connect( self.valueChanged )
         
     
     def _EditCommandAndParameters( self ):
@@ -640,6 +781,14 @@ class EditProcessCallPanel( QW.QWidget ):
                 
             
         
+        response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ self._pipeline_type ]
+        timeout = self._timeout.GetValue()
+        
+        if len( response_types ) > 0 and timeout is None:
+            
+            raise HydrusExceptions.VetoException( f'This call expects a response, but you have set this process to be detached with indefinite timeout!' )
+            
+        
     
     def GetValue( self ):
         
@@ -663,6 +812,17 @@ class EditProcessCallPanel( QW.QWidget ):
             actual_call.SetTimeout( int( timeout ) )
             actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( False )
             
+        
+        ( source_type, response_name, response_encoding ) = self._parsable_source_widget.GetValue()
+        
+        actual_call.SetParsableResponseSourceType( source_type )
+        actual_call.SetParsableResponseName( response_name )
+        actual_call.SetParsableResponseEncoding( response_encoding )
+        
+        ( source_type, response_name ) = self._importable_source_widget.GetValue()
+        
+        actual_call.SetImportableResponseSourceType( source_type )
+        actual_call.SetImportableResponseName( response_name )
         
         return actual_call
         
@@ -693,6 +853,13 @@ class EditProcessCallPanel( QW.QWidget ):
             
             self._parameter_types_to_input_parameter_processing_rule_panels[ parameter_type ] = input_parameter_processing_rule_panel
             
+        
+        response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
+        
+        self._parsable_source_widget.setVisible( ClientExecutablePipelines.RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA in response_types or ClientExecutablePipelines.RESPONSE_TYPE_MANDATORY_PARSABLE_METADATA in response_types )
+        self._importable_source_widget.setVisible( ClientExecutablePipelines.RESPONSE_TYPE_IMPORTABLE_FILE in response_types )
+        
+        self._parsable_source_widget.SetOptional( ClientExecutablePipelines.RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA in response_types )
         
         self.valueChanged.emit()
         
@@ -728,6 +895,17 @@ class EditProcessCallPanel( QW.QWidget ):
             
             self._timeout.SetValue( actual_call.GetTimeout() )
             
+        
+        source_type = actual_call.GetParsableResponseSourceType()
+        response_name = actual_call.GetParsableResponseName()
+        response_encoding = actual_call.GetParsableResponseEncoding()
+        
+        self._parsable_source_widget.SetValue( source_type, response_name, response_encoding )
+        
+        source_type = actual_call.GetImportableResponseSourceType()
+        response_name = actual_call.GetImportableResponseName()
+        
+        self._importable_source_widget.SetValue( source_type, response_name )
         
         self.blockSignals( False )
         
@@ -1068,11 +1246,18 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         def publish_callable( executable_response: ClientExecutableResponses.ExecutableCallResponse ):
             
-            message = 'Looks good!'
-            
             pipeline_type = self._executable_callable.GetPipelineType()
             
             response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
+            
+            if len( response_types ) == 0:
+                
+                message = 'Looks good!'
+                
+            else:
+                
+                message = 'Call finished ok!'
+                
             
             if len( response_types ) > 0:
                 
@@ -1093,6 +1278,8 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
                             mime = HydrusFileTypeDetermination.GetMime( temp_path )
                             size = os.path.getsize( temp_path )
                             
+                            message += f'Received a {HydrusData.ToHumanBytes(size)} {HC.mime_string_lookup[mime]} file!'
+                            
                         except Exception as e:
                             
                             message += f'Problem with file: {e}'
@@ -1108,14 +1295,23 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
                 
                 if ClientExecutablePipelines.RESPONSE_TYPE_MANDATORY_PARSABLE_METADATA in response_types or ClientExecutablePipelines.RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA in response_types:
                     
-                    if len( executable_response.parsed_posts ) > 0:
+                    message += '\n\n'
+                    
+                    if len( executable_response.raw_parsable_response ) == 0:
                         
-                        # TODO: figure out a nice display system here. atm 'ParsePretty' works at the parsing level, aieeee, so we can't just ask a parsed post to render itself. let's figure that out
-                        message += 'Some metadata parsed. Nicer display coming soon.'
+                        message += 'Empty/no metadata document returned!'
                         
                     else:
                         
-                        message += 'No metadata parsed!'
+                        message += f'Received a metadata document of {HydrusNumbers.ToHumanInt(len( executable_response.raw_parsable_response))} characters!'
+                        
+                        message += '\n\n'
+                        
+                        page_parser = self._executable_callable.GetPageParser()
+                        
+                        pretty_text = page_parser.ParsePretty( {}, executable_response.raw_parsable_response )
+                        
+                        message += pretty_text
                         
                     
                 
@@ -1199,9 +1395,17 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         for pipeline_type in [
             ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
             ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
+            ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_GET_SINGLE_FILE_METADATA,
         ]:
             
-            self._pipeline_type.addItem( ClientExecutablePipelines.executable_pipeline_types_to_strs[ pipeline_type ], pipeline_type )
+            s = ClientExecutablePipelines.executable_pipeline_types_to_strs[ pipeline_type ]
+            
+            if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_GET_SINGLE_FILE_METADATA:
+                
+                s += ' (in testing!)'
+                
+            
+            self._pipeline_type.addItem( s, pipeline_type )
             
         
         self._pipeline_description = ClientGUICommon.BetterStaticText( self._pipeline_panel )

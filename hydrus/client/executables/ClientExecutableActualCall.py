@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core.processes import HydrusSubprocess
 
@@ -231,8 +232,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
             ( timeout, this_is_a_potentially_long_lived_external_guy ) = ( self._timeout, self._this_is_a_potentially_long_lived_external_guy )
             
         
-        # always want clean text unless expecting blah
-        text = self._importable_response_source_type != LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE
+        # text is now always False. we decode the channel we need so a crazy user can import on stdout and parse on stderr
         
         try:
             
@@ -240,8 +240,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
                 cmd,
                 timeout = timeout,
                 this_is_a_potentially_long_lived_external_guy = this_is_a_potentially_long_lived_external_guy,
-                text = text,
-                text_encoding = self._parsable_response_encoding
+                text = False
             )
             
         except Exception as e:
@@ -257,13 +256,61 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         
         response = ClientExecutableResponses.ExecutableCallResponse()
         
-        if not this_is_a_potentially_long_lived_external_guy:
+        if this_is_a_potentially_long_lived_external_guy:
             
-            # consult my call data about what if anything we parse, whether there is a temp_file expected for import/parse, all that
-            # assign it to the response
-            # if we got stdout/err bytes, then spool that to a temp dir for the response
+            return response
             
-            pass
+        
+        if self._importable_response_source_type == LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE:
+            
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( 'executable_call_file_import' )
+            response.temp_file_info = ( os_file_handle, temp_path )
+            
+            with open( temp_path, 'wb' ) as f:
+                
+                if self._importable_response_name == 'stdout':
+                    
+                    f.write( stdout )
+                    
+                elif self._importable_response_name == 'stderr':
+                    
+                    f.write( stderr )
+                    
+                else:
+                    
+                    raise NotImplementedError( f'Unknown importable response name "{self._importable_response_name}"!' )
+                    
+                
+            
+        elif self._importable_response_source_type == LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_INPUT_PARAMETER_TEMP_PATH:
+            
+            # name is the input variable name
+            # handle this situation; does the temp variable entry hold the os_file_handle? it should I guess, which adds a wrinkle
+            # TODO: make input params for a temp_path a little more complicated than just the temp_path string
+            raise NotImplementedError( 'We do not support this yet!' )
+            
+        
+        if self._parsable_response_source_type == LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE:
+            
+            if self._parsable_response_name == 'stdout':
+                
+                response.raw_parsable_response = stdout.decode( self._parsable_response_encoding, errors = 'replace' )
+                
+            elif self._parsable_response_name == 'stderr':
+                
+                response.raw_parsable_response = stderr.decode( self._parsable_response_encoding, errors = 'replace' )
+                
+            else:
+                
+                raise NotImplementedError( f'Unknown parsable response name "{self._parsable_response_name}"!' )
+                
+            
+        elif self._parsable_response_source_type == LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_INPUT_PARAMETER_TEMP_PATH:
+            
+            # name is the input variable name
+            # handle this situation; does the temp variable entry hold the os_file_handle? it should I guess, which adds a wrinkle
+            # TODO: make input params for a temp_path a little more complicated than just the temp_path string
+            raise NotImplementedError( 'We do not support this yet!' )
             
         
         return response
@@ -517,9 +564,29 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return self._executable_parameter_templates
         
     
+    def GetImportableResponseName( self ) -> str:
+        
+        return self._parsable_response_name
+        
+    
+    def GetImportableResponseSourceType( self ) -> int:
+        
+        return self._importable_response_source_type
+        
+    
     def GetParsableResponseEncoding( self ) -> str:
         
         return self._parsable_response_encoding
+        
+    
+    def GetParsableResponseName( self ) -> str:
+        
+        return self._parsable_response_name
+        
+    
+    def GetParsableResponseSourceType( self ) -> int:
+        
+        return self._parsable_response_source_type
         
     
     def GetTimeout( self ):
@@ -532,9 +599,29 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return self._this_is_a_potentially_long_lived_external_guy
         
     
+    def SetImportableResponseName( self, name: str ):
+        
+        self._importable_response_name = name
+        
+    
+    def SetImportableResponseSourceType( self, source_type: int ):
+        
+        self._importable_response_source_type = source_type
+        
+    
     def SetParsableResponseEncoding( self, parsable_response_encoding: str ):
         
         self._parsable_response_encoding = parsable_response_encoding
+        
+    
+    def SetParsableResponseName( self, name: str ):
+        
+        self._parsable_response_name = name
+        
+    
+    def SetParsableResponseSourceType( self, source_type: int ):
+        
+        self._parsable_response_source_type = source_type
         
     
     def SetTimeout( self, value: int ):

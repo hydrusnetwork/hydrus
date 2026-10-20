@@ -1777,7 +1777,7 @@ class NoneableDoubleSpinCtrl( QW.QWidget ):
     
 
 class NoneableTextCtrl( QW.QWidget ):
-
+    
     valueChanged = QC.Signal()
     
     def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none', min_chars_width: int | None = None ):
