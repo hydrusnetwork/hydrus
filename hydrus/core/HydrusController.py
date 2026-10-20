@@ -65,6 +65,7 @@ class HydrusController( object ):
         self._system_busy = False
         
         self._doing_fast_exit = False
+        self._doing_session_based_exit = False
         
         self.TouchTime( 'boot' )
         self.TouchTime( 'last_sleep_check' )

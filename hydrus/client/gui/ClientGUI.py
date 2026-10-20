@@ -3717,6 +3717,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendSeparator( tests )
         ClientGUIMenus.AppendMenuCheckItem( tests, 'fake petition mode', 'Fill the petition panels with fake local data for testing.', HG.fake_petition_mode, self._SwitchBoolean, 'fake_petition_mode' )
         ClientGUIMenus.AppendSeparator( tests )
+        ClientGUIMenus.AppendMenuItem( tests, 'do session sign-off (fake)', 'Test a session sign-off call for fast, ui-originating shutdown.', CG.client_controller.DoSessionShutdownSave )
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigterm )
         ClientGUIMenus.AppendMenuItem( tests, 'do self-sigterm (fake)', 'Test a sigterm call for fast, non-ui-originating shutdown.', CG.client_controller.DoSelfSigtermFake )
         ClientGUIMenus.AppendSeparator( tests )
