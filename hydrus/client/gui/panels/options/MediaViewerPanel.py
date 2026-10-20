@@ -19,7 +19,7 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         #
         
-        focus_panel = ClientGUICommon.StaticBox( self, 'closing focus' )
+        focus_panel = ClientGUICommon.StaticBox( self, 'focus/selection' )
         
         self._focus_media_tab_on_viewer_close_if_possible = QW.QCheckBox( focus_panel )
         self._focus_media_tab_on_viewer_close_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the search page you opened a media viewer from is still open, navigate back to it upon media viewer close. Useful if you use multiple media viewers launched from different pages. There is also a shortcut action to perform this on an individual basis.' ) )
@@ -32,6 +32,12 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._activate_main_gui_on_viewer_close = QW.QCheckBox( focus_panel )
         self._activate_main_gui_on_viewer_close.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will "activate" the Main GUI Window when any Media Viewer closes, which should bring it to the front and give it keyboard focus. Try this if your OS is playing funny games with focus when a media viewer closes.' ) )
+        
+        self._activate_window_on_tag_search_page_activation = QW.QCheckBox( focus_panel )
+        
+        tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
+        
+        self._activate_window_on_tag_search_page_activation.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -93,6 +99,7 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._focus_media_thumb_on_viewer_close.setChecked( self._new_options.GetBoolean( 'focus_media_thumb_on_viewer_close' ) )
         self._activate_main_gui_on_focusing_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_focusing_viewer_close' ) )
         self._activate_main_gui_on_viewer_close.setChecked( self._new_options.GetBoolean( 'activate_main_gui_on_viewer_close' ) )
+        self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
         
         self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
         self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
@@ -126,6 +133,7 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'When closing the media viewer, tell original search page to select exit media: ', self._focus_media_thumb_on_viewer_close ) )
         rows.append( ( 'ADVANCED: When closing the media viewer with the above focusing options, activate Main GUI: ', self._activate_main_gui_on_focusing_viewer_close ) )
         rows.append( ( 'DEBUG: When closing the media viewer at any time, activate Main GUI: ', self._activate_main_gui_on_viewer_close ) )
+        rows.append( ( 'Switch to main window when creating new file search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
         
         gridbox = ClientGUICommon.WrapInGrid( focus_panel, rows )
         
@@ -208,6 +216,7 @@ class MediaViewerPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'focus_media_thumb_on_viewer_close', self._focus_media_thumb_on_viewer_close.isChecked() )
         self._new_options.SetBoolean( 'activate_main_gui_on_focusing_viewer_close', self._activate_main_gui_on_focusing_viewer_close.isChecked() )
         self._new_options.SetBoolean( 'activate_main_gui_on_viewer_close', self._activate_main_gui_on_viewer_close.isChecked() )
+        self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
         
         self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
         self._new_options.SetBoolean( 'anchor_canvas_drags', self._anchor_canvas_drags.isChecked() )

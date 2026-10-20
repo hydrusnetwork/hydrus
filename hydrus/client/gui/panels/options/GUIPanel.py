@@ -30,12 +30,6 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         tt = 'This will listen for the OS telling the program a user log-off is imminent and start a quick shut down. Some wilder Window Managers out there may be sending this signal at times other than a log-off, so please test this out and let me know if your hydrus suddenly shuts off at random times!'
         self._test_session_exit_signal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._activate_window_on_tag_search_page_activation = QW.QCheckBox( self._main_gui_panel )
-        
-        tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
-        
-        self._activate_window_on_tag_search_page_activation.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
         #
         
         self._misc_panel = ClientGUICommon.StaticBox( self, 'misc' )
@@ -126,7 +120,6 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._confirm_client_exit.setChecked( HC.options[ 'confirm_client_exit' ] )
         self._test_session_exit_signal.setChecked( self._new_options.GetBoolean( 'test_session_exit_signal' ) )
         
-        self._activate_window_on_tag_search_page_activation.setChecked( self._new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' ) )
         self._always_show_iso_time.setChecked( self._new_options.GetBoolean( 'always_show_iso_time' ) )
         self._not_make_child_frames_qt_tool.setChecked( not self._new_options.GetBoolean( 'make_child_frames_qt_tool' ) )
         self._use_qt_locale_for_human_int.setChecked( self._new_options.GetBoolean( 'use_qt_locale_for_human_int' ) )
@@ -166,8 +159,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         rows.append( ( 'Application display name: ', self._app_display_name ) )
         rows.append( ( 'Confirm client exit: ', self._confirm_client_exit ) )
-        rows.append( ( 'TEST: Try hydev\'s new log-off detection for clean exit: ', self._test_session_exit_signal ) )
-        rows.append( ( 'Switch to main window when creating new file search page from media viewer: ', self._activate_window_on_tag_search_page_activation ) )
+        rows.append( ( 'TEST: Try new log-off detection for clean exit: ', self._test_session_exit_signal ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._main_gui_panel, rows )
         
@@ -393,8 +385,6 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetBoolean( 'use_native_menubar', self._use_native_menubar.isChecked() )
         
         self._new_options.SetInteger( 'human_bytes_sig_figs', self._human_bytes_sig_figs.value() )
-        
-        self._new_options.SetBoolean( 'activate_window_on_tag_search_page_activation', self._activate_window_on_tag_search_page_activation.isChecked() )
         
         app_display_name = self._app_display_name.text()
         
