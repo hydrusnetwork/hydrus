@@ -1,5 +1,6 @@
 import collections
 import collections.abc
+import subprocess
 
 from PIL import ExifTags
 
@@ -13,6 +14,7 @@ from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
+from hydrus.core.processes import HydrusSubprocess
 from hydrus.core.processes import HydrusThreading
 
 from hydrus.client import ClientConstants as CC
@@ -1807,6 +1809,7 @@ class JobSchedulerPanel( QW.QWidget ):
         self._list_ctrl.SetData( jobs )
         
     
+
 class ThreadsPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller" ):
@@ -2054,6 +2057,132 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         self._UpdateButtonLabel()
         
     
+
+class ReviewSubprocesses( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller ):
+        
+        self._controller = controller
+        
+        super().__init__( parent )
+        
+        self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBPROCESSES_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
+        
+        self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
+        
+        # maybe some buttons to control behaviour here for debug
+        
+        self._list_ctrl_panel.AddButton( 'refresh snapshot', self._RefreshSnapshot )
+        self._list_ctrl_panel.AddButton( 'clean up finished', self._CleanUp )
+        self._list_ctrl_panel.AddButton( 'terminate', self._Terminate, enabled_check_func = self._CanTerminate )
+        
+        if not HC.PLATFORM_WINDOWS:
+            
+            self._list_ctrl_panel.AddButton( 'kill', self._Kill, enabled_check_func = self._CanKill )
+            
+        
+        #
+        
+        self._list_ctrl.Sort()
+        
+        self._RefreshSnapshot()
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _CleanUp( self ):
+        
+        HydrusSubprocess.MaintainRegularProcesses()
+        HydrusSubprocess.ReapDeadLongLivedExternalProcesses()
+        
+        self._RefreshSnapshot()
+        
+    
+    def _GetRunningSelectedProcesses( self ):
+        
+        selected_processes = self._list_ctrl.GetData( only_selected = True )
+        
+        return { process for process in selected_processes if process.returncode is None }
+        
+    
+    def _CanKill( self ):
+        
+        return len( self._GetRunningSelectedProcesses() ) > 0
+        
+    
+    def _CanTerminate( self ):
+        
+        return len( self._GetRunningSelectedProcesses() ) > 0
+        
+    
+    def _ConvertDataToDisplayTuple( self, popen_object: subprocess.Popen ):
+        
+        command = str( popen_object.args )
+        pid = popen_object.pid
+        status = 'running' if popen_object.returncode is None else f'Done: {popen_object.returncode}'
+        
+        pretty_command = command
+        pretty_pid = str( pid )
+        pretty_status = status
+        
+        display_tuple = ( pretty_command, pretty_pid, pretty_status )
+        
+        return display_tuple
+        
+    
+    def _ConvertDataToSortTuple( self, popen_object: subprocess.Popen ):
+        
+        command = str( popen_object.args )
+        pid = popen_object.pid
+        status = 'running' if popen_object.returncode is None else f'Done: {popen_object.returncode}'
+        
+        sort_tuple = ( command, pid, status )
+        
+        return sort_tuple
+        
+    
+    def _Kill( self ):
+        
+        self._RefreshSnapshot()
+        
+        processes = self._GetRunningSelectedProcesses()
+        
+        for process in processes:
+            
+            process.kill()
+            
+        
+    
+    def _RefreshSnapshot( self ):
+        
+        subprocesses = HydrusSubprocess.GetAllKnownProcesses()
+        
+        self._list_ctrl.SetData( subprocesses )
+        
+    
+    def _Terminate( self ):
+        
+        self._RefreshSnapshot()
+        
+        processes = self._GetRunningSelectedProcesses()
+        
+        for process in processes:
+            
+            process.terminate()
+            
+        
+    
+
 
 class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
     

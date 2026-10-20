@@ -1702,3 +1702,23 @@ register_column_type( COLUMN_LIST_EXTERNAL_PROGRAMS.ID, COLUMN_LIST_EXTERNAL_PRO
 register_column_type( COLUMN_LIST_EXTERNAL_PROGRAMS.ID, COLUMN_LIST_EXTERNAL_PROGRAMS.COMMAND_DESCRIPTION, 'command', False, 60, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_EXTERNAL_PROGRAMS.ID ] = ( COLUMN_LIST_EXTERNAL_PROGRAMS.PIPELINE_TYPE, True )
+
+#
+
+class COLUMN_LIST_SUBPROCESSES_REVIEW( COLUMN_LIST_DEFINITION ):
+    
+    ID = 79
+    
+    COMMAND = 0
+    PID = 1
+    STATUS = 2
+    
+
+column_list_type_name_lookup[ COLUMN_LIST_SUBPROCESSES_REVIEW.ID ] = 'current subprocesses review'
+
+# TODO: start time, timeout info
+register_column_type( COLUMN_LIST_SUBPROCESSES_REVIEW.ID, COLUMN_LIST_SUBPROCESSES_REVIEW.COMMAND, 'command', False, 72, True )
+register_column_type( COLUMN_LIST_SUBPROCESSES_REVIEW.ID, COLUMN_LIST_SUBPROCESSES_REVIEW.PID, 'pid', False, 8, True )
+register_column_type( COLUMN_LIST_SUBPROCESSES_REVIEW.ID, COLUMN_LIST_SUBPROCESSES_REVIEW.STATUS, 'status', False, 10, True )
+
+default_column_list_sort_lookup[ COLUMN_LIST_SUBPROCESSES_REVIEW.ID ] = ( COLUMN_LIST_SUBPROCESSES_REVIEW.PID, True )

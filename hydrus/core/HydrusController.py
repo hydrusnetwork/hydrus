@@ -553,6 +553,7 @@ class HydrusController( object ):
         self._fast_job_scheduler.ClearOutDead()
         self._slow_job_scheduler.ClearOutDead()
         
+        HydrusSubprocess.MaintainRegularProcesses()
         HydrusSubprocess.ReapDeadLongLivedExternalProcesses()
         
     

@@ -201,8 +201,35 @@ def GetSubprocessKWArgs( text = False, text_encoding = 'utf-8', this_is_a_potent
     return sbp_kwargs
     
 
+# TODO: wrap these guys in a thing that holds start time and any timeout info and have a nicer manager
+
 long_lived_external_processes_lock = threading.Lock()
 long_lived_external_processes = set()
+
+regular_running_processes_lock = threading.Lock()
+regular_running_processes = set()
+
+def MaintainRegularProcesses():
+    
+    with regular_running_processes_lock:
+        
+        for process in list( regular_running_processes ):
+            
+            if process.returncode is not None:
+                
+                regular_running_processes.discard( process )
+                
+            
+        
+    
+
+def RegisterRegularProcess( process: subprocess.Popen ):
+    
+    with regular_running_processes_lock:
+        
+        regular_running_processes.add( process )
+        
+    
 
 def ReapDeadLongLivedExternalProcesses():
     
@@ -227,6 +254,23 @@ def RegisterLongLivedExternalProcess( process: subprocess.Popen ):
         
         long_lived_external_processes.add( process )
         
+    
+
+def GetAllKnownProcesses():
+    
+    processes = []
+    
+    with long_lived_external_processes_lock:
+        
+        processes.extend( long_lived_external_processes )
+        
+    
+    with regular_running_processes_lock:
+        
+        processes.extend( regular_running_processes )
+        
+    
+    return processes
     
 
 def ReportBadReturnCode( cmd, returncode, stdout, stderr ):
@@ -336,6 +380,8 @@ def RunSubprocess(
         
         return ( None, None, 0 )
         
+    
+    RegisterRegularProcess( process )
     
     ( stdout, stderr ) = SubprocessCommunicate( cmd, process, timeout )
     

@@ -3564,25 +3564,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenu( debug_menu, debug_modes, 'debug modes' )
         
-        profiling = ClientGUIMenus.GenerateMenu( debug_menu )
-        
-        profile_mode_message = 'If something is running slow, you can turn on a profile mode to have hydrus gather information on it. You probably want "db" profile mode, but if it seems to be lag related to dialog spawning or similar, you might like to try the "ui" mode.'
-        profile_mode_message += '\n' * 2
-        profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
-        profile_mode_message += '\n' * 2
-        profile_mode_message += 'The Query Planner mode makes detailed database analysis of specific database queries. This is sometimes useful to hydev, but he will usually ask for it specifically.'
-        profile_mode_message += '\n' * 2
-        profile_mode_message += 'More information is available in the help, under \'reducing lag\'.'
-        
-        ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
-        self._profile_mode_client_api_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (client api)', 'Run detailed \'profiles\' on Client API jobs.', HydrusProfiling.IsProfileMode( 'client_api' ), self.FlipProfileMode, 'client_api' )
-        self._profile_mode_db_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (db)', 'Run detailed \'profiles\' on db jobs.', HydrusProfiling.IsProfileMode( 'db' ), self.FlipProfileMode, 'db' )
-        self._profile_mode_threads_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (threads)', 'Run detailed \'profiles\' on background threaded tasks.', HydrusProfiling.IsProfileMode( 'threads' ), self.FlipProfileMode, 'threads' )
-        self._profile_mode_ui_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode (ui)', 'Run detailed \'profiles\' on some Qt jobs.', HydrusProfiling.IsProfileMode( 'ui' ), self.FlipProfileMode, 'ui' )
-        ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HydrusProfiling.query_planner_mode, CG.client_controller.FlipQueryPlannerMode )
-        
-        ClientGUIMenus.AppendMenu( debug_menu, profiling, 'profiling' )
-        
         report_modes = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'blurhash mode', 'Draw blurhashes instead of thumbnails.', HG.blurhash_mode, self._SwitchBoolean, 'blurhash_mode' )
@@ -3611,6 +3592,37 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'subscription report mode', 'Have the subscription system report what it is doing.', HG.subscription_report_mode, self._SwitchBoolean, 'subscription_report_mode' )
         
         ClientGUIMenus.AppendMenu( debug_menu, report_modes, 'report modes' )
+        
+        ClientGUIMenus.AppendSeparator( debug_menu )
+        
+        profiling_menu = ClientGUIMenus.GenerateMenu( debug_menu )
+        
+        profile_mode_message = 'If something is running slow, you can turn on a profile mode to have hydrus gather information on it. You probably want "db" profile mode, but if it seems to be lag related to dialog spawning or similar, you might like to try the "ui" mode.'
+        profile_mode_message += '\n' * 2
+        profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
+        profile_mode_message += '\n' * 2
+        profile_mode_message += 'The Query Planner mode makes detailed database analysis of specific database queries. This is sometimes useful to hydev, but he will usually ask for it specifically.'
+        profile_mode_message += '\n' * 2
+        profile_mode_message += 'More information is available in the help, under \'reducing lag\'.'
+        
+        ClientGUIMenus.AppendMenuItem( profiling_menu, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
+        self._profile_mode_client_api_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling_menu, 'profile mode (client api)', 'Run detailed \'profiles\' on Client API jobs.', HydrusProfiling.IsProfileMode( 'client_api' ), self.FlipProfileMode, 'client_api' )
+        self._profile_mode_db_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling_menu, 'profile mode (db)', 'Run detailed \'profiles\' on db jobs.', HydrusProfiling.IsProfileMode( 'db' ), self.FlipProfileMode, 'db' )
+        self._profile_mode_threads_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling_menu, 'profile mode (threads)', 'Run detailed \'profiles\' on background threaded tasks.', HydrusProfiling.IsProfileMode( 'threads' ), self.FlipProfileMode, 'threads' )
+        self._profile_mode_ui_menu_item = ClientGUIMenus.AppendMenuCheckItem( profiling_menu, 'profile mode (ui)', 'Run detailed \'profiles\' on some Qt jobs.', HydrusProfiling.IsProfileMode( 'ui' ), self.FlipProfileMode, 'ui' )
+        ClientGUIMenus.AppendMenuCheckItem( profiling_menu, 'query planner mode', 'Run detailed \'query plans\'.', HydrusProfiling.query_planner_mode, CG.client_controller.FlipQueryPlannerMode )
+        
+        ClientGUIMenus.AppendMenu( debug_menu, profiling_menu, 'profiling' )
+        
+        threads_menu = ClientGUIMenus.GenerateMenu( debug_menu )
+        
+        ClientGUIMenus.AppendMenuItem( threads_menu, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
+        ClientGUIMenus.AppendMenuItem( threads_menu, 'review subprocesses', 'Show current subprocesses and what they are doing.', self._ReviewSubprocesses )
+        ClientGUIMenus.AppendMenuItem( threads_menu, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
+        
+        ClientGUIMenus.AppendMenu( debug_menu, threads_menu, 'threads and processes' )
+        
+        ClientGUIMenus.AppendSeparator( debug_menu )
         
         gui_actions = ClientGUIMenus.GenerateMenu( debug_menu )
         
@@ -3656,10 +3668,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
         ClientGUIMenus.AppendMenuItem( data_actions, 'force database commit', 'Command the database to flush all pending changes to disk.', CG.client_controller.ForceDatabaseCommit )
-        ClientGUIMenus.AppendMenuItem( data_actions, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
         ClientGUIMenus.AppendMenuItem( data_actions, 'scan file storage folders', 'Test out that thing.', self._DebugScanStorage )
         ClientGUIMenus.AppendMenuItem( data_actions, 'show env', 'Print your current environment variables.', HydrusEnvironment.DumpEnv )
-        ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
         ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
         ClientGUIMenus.AppendSeparator( data_actions )
         ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program exit signal', 'Kill the program via a QApplication exit.', QW.QApplication.instance().exit )
@@ -6086,6 +6096,15 @@ ATTACH "client.mappings.db" as external_mappings;'''
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'tag display sync' )
         
         panel = ClientGUITagDisplayMaintenanceReview.ReviewTagDisplayMaintenancePanel( frame )
+        
+        frame.SetPanel( panel )
+        
+    
+    def _ReviewSubprocesses( self ):
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review subprocesses' )
+        
+        panel = ClientGUIScrolledPanelsReview.ReviewSubprocesses( frame, self._controller )
         
         frame.SetPanel( panel )
         
