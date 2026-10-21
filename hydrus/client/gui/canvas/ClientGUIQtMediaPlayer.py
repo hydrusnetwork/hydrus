@@ -287,6 +287,48 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _RefitVideo( self ):
         
+        # ok fixing flag-rotated vids, for which there appears to be a layout bug in Qt
+        # https://github.com/hydrusnetwork/hydrus/issues/2103
+        
+        vid_resolution = self._my_video_output.nativeSize()
+        
+        if not vid_resolution.isEmpty():
+            
+            try:
+                
+                orientation = self._media_player.metaData().value( QM.QMediaMetaData.Key.Orientation )
+                
+                angle = orientation.value
+                
+                if angle in ( 90, 270 ):
+                    
+                    vid_resolution = vid_resolution.transposed()
+                    
+                
+            except Exception as e:
+                
+                pass
+                
+            
+            self._my_video_output.setAspectRatioMode( QC.Qt.AspectRatioMode.IgnoreAspectRatio )
+            self._my_video_output.setSize( vid_resolution )
+            
+        
+        #
+        
+        # SLOP v2.0, this seems to do the same as below nice and easy, no transform whackery needed, so whatever issue we had with a margin before appears to be fixed??
+        
+        rect = self._my_video_output.sceneBoundingRect()
+        
+        if not rect.isEmpty():
+            
+            self._my_graphics_view.setSceneRect( rect )
+            self._my_graphics_view.fitInView( rect, QC.Qt.AspectRatioMode.KeepAspectRatio )
+            
+        
+        return
+        
+        '''
         # ok this is megaslop but it works
         # had to edit a bit for KISS since it was going bananas
         # doing fitInView( my_video.sceneBoundingRect ) gives some margin for some reason I don't know (viewport QSS?)
@@ -314,16 +356,9 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         tx = (Vw - Dw) / 2.0 - rect.left() * s
         ty = (Vh - Dh) / 2.0 - rect.top()  * s
         
-        self._my_graphics_view.setTransform( QG.QTransform( s, 0, 0, s, tx, ty ), False)
-        
+        self._my_graphics_view.setTransform( QG.QTransform( s, 0, 0, s, tx, ty ), False )
         '''
-        rect = self._my_video_output.sceneBoundingRect()
         
-        if rect.isValid() and rect.width() > 0 and rect.height() > 0:
-            
-            self._my_graphics_view.fitInView( rect, QC.Qt.AspectRatioMode.KeepAspectRatio )
-            
-        '''
     
     def _SetAudioDeviceFromOptions( self ):
         
