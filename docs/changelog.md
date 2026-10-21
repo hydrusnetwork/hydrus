@@ -7,6 +7,38 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 691](https://github.com/hydrusnetwork/hydrus/releases/tag/v691)
+
+### exe manager
+
+* the 'this can live for a very long time' checkbox is renamed and now detaches the process better on Windows and POSIX. the long-time child process should no longer pipe stdout/stderr to our terminal
+* the `text` checkbox is removed from 'local process call' edit panels; this will now be inferred from any parsable result settings, and with a specific encoding
+* the `hide terminal` checkbox is removed from 'local process call' edit panels. this was only affecting Windows and has few debug uses, so the behaviour is now always on
+* if you are a Windows user, the 'external programs' options panel has a new 'TEST' checkbox to try out some cleaner 'hide terminal' tech. if you are an advanced user, please check out its tooltip and let me know how you get on
+* in the first step of getting arbitrary 'tag suggestions' working, you can now set an executable call type of 'get metadata for a single file' type. this exposes a new setting at the bottom of the 'local process call' panel where you can specify whether the metadata arrives on `stdout` or `stderr`, and in which encoding, if not `utf-8`. there's no parsing yet (it'll use the same UI as the downloader system), so it will always say it parsed nothing, but the test panel is hooked up and we are now reading basic responses from external tag calls. if you are interested in this stuff, feel free to wire up a test situation
+
+### session log-off detection
+
+* I wrote a nicer hook for the signal that your OS sends to programs when the user is about to log off. hydrus has never been great about catching these events and sometimes has a non-clean exit when the computer shuts down. I am not 100% confident in my implementation yet, so it is hidden behind a new `TEST: Try new log-off detection for clean exit` under `options>gui`.
+* added `help->debug->tests->do session sign-off (fake)` to simulate this event firing
+* if the test is on and it happens, your log will especially state "doing fast session shutdown" when it triggers. the program hides and saves without showing the splash
+* I'm worried about whether some users session managers fire the event at a time other than logoff, e.g. every fifteen minutes for some extraneous checkpointing that is misfiring, so if you are interested in cleaner program exit on log-off, please switch this test on and let me know how it goes. does it save nicely when you log off, and does the program ever now close randomly?
+
+### misc
+
+* fixed an issue where the QtMediaPlayer would render flag-rotated videos in a too-small area
+* the command palette no longer gives 'label' results (menu items with text but no function) when searching the main menu or media menu
+* I juggled some of `help->debug` around, including adding a 'threads and subprocesses' submenu
+* added a 'review subprocesses' window to this new submenu. it shows the current subprocess snapshot with basic launch command, pid, and running/return code, and buttons to do reaping maintenance, and terminate (+kill on POSIX). as we do more executable manager stuff, we're running into needing a better window on this stuff, so this is a first draft. I think we'll want some more stuff like start time and timeout
+
+### boring stuff
+
+* I did a bunch of boring cleanup and infrastructure expansion in the exe manager to prep for fetching tags. there's new enums, a nicer response object to handle responses, and the test panel is ready to talk about file/metadata responses
+* local process calls now have 'parsable' and 'importable' sourcing data so they can pull a metadata document (with an encoding) or (in future) a raw importable file from a pipe or (in future) a temp_path input parameter
+* executable definitions now have a page parser to parse metadata documents in prep for tag suggestions, but there's no UI for it yet
+* moved `Switch to main window when creating new file search page from media viewer` from `options->gui` to `options->media viewer`
+* brought `Pillow` from `12.3.0` to `13.0.0` for a security update
+
 ## [Version 690](https://github.com/hydrusnetwork/hydrus/releases/tag/v690)
 
 ### more treeview improvements
@@ -400,103 +432,3 @@ title: Changelog
 * removed some old defunct Linux help regarding ffmpeg on the frozen builds. you got it now, bro
 * fixed some 'waiting for a work slot' labelling in the downloaders UI
 * a bunch of misc linting and some voodoo linting
-
-## [Version 681](https://github.com/hydrusnetwork/hydrus/releases/tag/v681)
-
-### misc
-
-* status bar 'busy' indicator is simpler, and the tooltip now says the number of threads working
-* wrote a catch to stop QSS stylesheets from specifying a hydrus property colour with transparency. these were drawing crazy, with noclip garbage left on bitmaps used for transparenty images and animations in the media viewer. also fixed the `e621_redux` stylesheet, where this issue was discovered, to simply set a background colour for the media viewer
-
-### more human-readable embedded metadata filtering
-
-* I further cleaned up what hydrus considers 'human-readable embedded metadata'. many more technical fields are now hidden from the little text panel, meaning when this guy does pop up, or you search 'has non-EXIF embedded metadata', you'll now tend to see something nice and human like 'Artist' or 'Title', or otherwise rich like an AI prompt or Character card
-* I now invite advanced users to do some 'determine if the file has non-EXIF embedded metadata' maintenance regenning on some 'has non-EXIF embedded metadata' files and tell me what technical/inhuman text remains in their collections. I'm getting pretty happy here and I expect to (optionally) schedule a big regen for all users pretty soon
-* the newly excluded fields are: 'software', 'transparency', 'bit_depth', 'duration', 'primary', 'default_image', 'Creation Time', 'create-date', 'modify-date', 'date:create', 'date:modify', 'chroma', 'loop', 'timestamp = 0', 'extension', 'photoshop', 'bbox', 'blend', 'mpoffset', 'disposal', 'interlace', 'aspect', 'sizes', a ton of 'Thumb::' garbage, 'iptc', 'Raw profile type exif', 'Raw profile type iptc' (ye olde XMP), 'xmp', 'XML:com.adobe.xmp', 'adobe', and 'adobe_transform'. a bunch of these are format specific DPI data and such and not useful to elevate to the user. the IPTC and XMP stuff will come back when I expand EXIF parsing
-* excluded 'comment' or 'Comment' from human-readable metadata fields if it matches a handful of 'Created with X' style regexes; this is now parsed as a 'software' field
-* the 'Creator' and 'Source' fields are now appended to the 'software' field
-* excluded any human-readable metadata fields that have null value or empty list/dict
-* I realised while doing this that maybe going for a whitelist of what we do want would be saner, but I think I prefer, for completeness and fun, to get everything and actually deal with the sore thumbs
-* put 'software' metadata field in the 'extra info' panel below, as 'source' ('source' rather than 'software' because sometimes stuff like Kodak blah blah comes through here). there's an argument to include this in human-readable fields, if we are keeping artist/title, but I'm falling on the side of extracting it. I like this field a lot as human-valuable and it'll be high priority to be its own thing when we add richer metadata storage/search
-* similarly, the 'create-date' and friends are cool and I'll figure out some way to pipe that to a 'file metadata' modified time 'domain'. you can't generally get any better than the file metadata for this
-* if a file has a 'chroma' field talking about '420' subsampling, this is now converted to a subsampling field in the 'extra info' panel, like for jpeg
-* optimised 'has human-readable metadata' test for a fast yes in many cases
-
-### new graphicsview thumbnail grid test
-
-* the new 'thumbnail rendering tech' TEST under `options->thumbnails` is fixed up a bit and ready for advanced users to tentatively try out. I think I have it doing pretty much everything the existing code does without complaint, but I would like to confirm that with a broader test. it only applies to new pages, so I recommend first opening a new page and do some of your normal stuff before you test your whole session with a full client restart
-* fixed 'collect-by' transitions, removing the ghost singles that hung around
-* fixed a late waterfall thumb keyerror when transitioning through collect-by states
-* fixed collections not redrawing for a new first media on sort-by changes
-* fixed updating the status bar on any collect-by change, in either old or new thumbgrid code. it now flips between '200 files' and '200 files in 12 collections' when you change the collections
-* fixed drawing of thumbs at higher than 100% UI scale (the bitmaps were cropped due to DPR fun)
-* fixed a blurhash thumb fallback route in the new test
-* shaved the test animation time down for snappier feel. I'm pretty sure the old animation is accidentally heavily curved so despite ostensibly being 0.5s it was visually done faster. new guy is now ~13 frames at 60Hz
-* did some KISS refactoring of this code
-
-### more de-laggification work
-
-* I hacked in a test last week to try a different way of scheduling jobs in the background. it worked very well and I seem to have found the cause of the 'I have a fat client and when it does heavy work like archive/delete filter commit, everything slows down a lot' issue. basically, when certain sorts of heavy work was going on, threads waiting on new work to do or database jobs to come back were getting into a kind of traffic jam and wasting lots of time figuring out who had to go first rather than letting the guy who was actually doing the work go ahead and do it. I have now replicated and cleaned my work to several places and big clients that do a lot should be a good bit less laggy when big things are going on
-* cleaned up the successful CallToThread anti-CPU-thrashing test, taking out older code and cleaning the loop of it
-* added anti-CPU-thrash tech to db mainloop
-* added anti-CPU-thrash tech to threads waiting on the db to finish current work
-* added anti-CPU-thrash tech to database jobs; when many threads are competing for the db, they'll wake less
-* added anti-CPU-thrash tech to network job waits; when many threads are competing for network resources, they'll wake less
-* added anti-CPU-thrash tech to pubsub, both in the managing daemon and any threads waiting on 'background work to free up'
-* added anti-CPU thrash tech to 'are we currently rendering any thumbnails?' wait, which a bunch of threads wait on before going ahead with their own work
-* added anti-CPU-thrash tech to the core read-write lock used in the filesystem. I was very careful here as this is not my fortÃ©, and tests are good. this should improve latency, particularly thumb and file loading latency, when many file imports are going on and the locks are churning, which is another place we've seen inexplicable lag during certain busy periods
-* retired the debug 'db ui-hang relief mode'. this was an interesting experiment but the incorrect solution to the problem of GUI threads waiting on the db
-
-### boring de-laggification stuff
-
-* wrote a new thread worker pool object to look after calltothreads
-* primary controller and test controller now use this same object to manage threads (test guy had its own hacky code before)
-* tightened up db mainloop shutdown--to assure that db jobs can wait forever safely, we now guarantee that every job posted will get explicitly woken with a result through db shutdown
-* network engine now guarantees every network job it gets will be done'd so waiting threads shall all be woken up on program shutdown
-* rejiggered some 'is it time to commit?' in db idle time stuff given the changes
-* cleaned up some thread status-checking locking, mostly in debug code
-* KISSed some network job status stuff, and removed some confusing shutdown detection from the core 'isdone' calls
-* removed defunct db I/O-locking error-handling code
-* pubsub takes work breaks more often
-* pubsub system now has a shutdown signal to tidy up waiters properly on shutdown
-* thumbnail caches now have an explicit shutdown signal and clean up after themselves better on shutdown
-* cleaned up some misc thumb cache code
-* misc shutdown code cleanup
-* reordered some controller shutdown code
-* misc cleanup of controller wait code
-* removal of spurious event flags in db and pubsub
-
-### future build committed
-
-* This release commits the changes tested with the recent future test build, which went well
-* the summary for this update is: loads of stuff
-* there are no special instructions for the update. update as normal
-* since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week.
-* the library changes are--
-   - `PySide6` (Qt) from `6.9.3` to `6.10.3`
-   - OpenCV (`opencv-python-headless`) from `4.12.0.88` to `4.13.0.92`
-   - `beatifulsoup4` `4.14.3` to `4.15.0`
-   - `cbor2` `6.1.1` to `6.1.3`
-   - `cryptography` `48.0.0` to `49.0.0`
-   - `Pillow` `12.2.0` to `12.3.0`
-   - `pillow-heif` `1.3.0` to `1.4.0`
-   - `pillow-jxl-plugin` `1.3.7` to `1.3.8`
-   - `pyopenssl` `26.2.0` to `26.3.0`
-   - `service-identity` `24.2.0` to `26.1.0`
-   - `numpy` `2.3.1` to `2.4.6` (this jump was a bit of a juggle, and now possible with OpenCV 4.13)
-   - `requests` `2.33.1` to `2.34.2`
-   - SQLite dll and sqlite3 terminal updated on Windows from `3.51.2` to `3.53.3`
-   - SQLite terminal executable `3.53.3` now added to Linux and added to new db folders just like the Windows extract
-* the 'test' library changes are--
-   - `PySide6` (Qt) from `6.10.3` to `6.11.1`
-   - OpenCV (`opencv-python-headless`) from `4.13.0.92` to `5.0.0.93`. I did some research, and this upcoming jump doesn't seem to be a super significant change for our purposes. mostly C++ cleanup and finally dropping python 2 support.
-* other stuff--
-   - db folder is now completely masked in gitignore
-* build environment--
-   - updated the workflow actions versions across the board
-   - Windows and Linux builds are moved from python 3.12 to 3.13
-   - `pyinstaller` `6.16.0` to `6.18.0`
-   - the builds now share the core pyproject.toml rather than using their own requirements.txt files
-   - `pywin32` in Windows build env from `311` to `312`
-   - Windows ffmpeg (GyanD) `8.1.1` to `8.1.2`
-   - Linux build now comes with ffmpeg (BtbN) `2026-06-30`, which I think covers `8.1.2`

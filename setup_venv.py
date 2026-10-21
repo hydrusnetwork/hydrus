@@ -415,7 +415,7 @@ def main():
             'lxml' : '<=6.1.1',
             'lz4' : '<=4.4.5',
             'olefile' : '<=0.47',
-            'pillow' : '<=12.3.0',
+            'pillow' : '<=13.0.0',
             'pillow-heif' : '<=1.4.0',
             'pillow-jxl-plugin' : '<=1.3.8',
             'psutil' : '<=7.2.2',

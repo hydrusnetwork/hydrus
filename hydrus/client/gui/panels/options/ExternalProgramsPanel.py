@@ -1402,7 +1402,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_GET_SINGLE_FILE_METADATA:
                 
-                s += ' (in testing!)'
+                s += ' (in testing--no parsing yet!)'
                 
             
             self._pipeline_type.addItem( s, pipeline_type )
