@@ -319,7 +319,11 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         #
         
-        # SLOP v2.0, this seems to do the same as below nice and easy, no transform whackery needed, so whatever issue we had with a margin before appears to be fixed??
+        '''
+        # SLOP v2.0, I thought this replaced the below perfectly, but it doesn't. it might be Qt, more likely my naive/whack layout and such
+        # do this, and the video gets a few pixels on the left, top, right (a little more on the right??) of white padding. probably on bottom too, but seek bar is there
+        # so the sceneBoundingRect has some rounding error or scaling padding or whatever, perhaps via QSS, going on
+        # or there's just one like 'centerOn' line missing
         
         rect = self._my_video_output.sceneBoundingRect()
         
@@ -329,12 +333,10 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             self._my_graphics_view.fitInView( rect, QC.Qt.AspectRatioMode.KeepAspectRatio )
             
         
-        return
-        
         '''
+        
         # ok this is megaslop but it works
         # had to edit a bit for KISS since it was going bananas
-        # doing fitInView( my_video.sceneBoundingRect ) gives some margin for some reason I don't know (viewport QSS?)
         
         self._my_graphics_view.scene().setSceneRect( self._my_video_output.mapRectToScene( self._my_video_output.boundingRect() ) )
         
@@ -360,7 +362,6 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         ty = (Vh - Dh) / 2.0 - rect.top()  * s
         
         self._my_graphics_view.setTransform( QG.QTransform( s, 0, 0, s, tx, ty ), False )
-        '''
         
     
     def _SetAudioDeviceFromOptions( self ):
