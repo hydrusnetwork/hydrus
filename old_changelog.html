@@ -35,6 +35,33 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_691"><a href="#version_691">version 691</a></h2>
+                    <ul>
+                        <li><h3>exe manager</h3></li>
+                        <li>the 'this can live for a very long time' checkbox is renamed and now detaches the process better on Windows and POSIX. the long-time child process should no longer pipe stdout/stderr to our terminal</li>
+                        <li>the `text` checkbox is removed from 'local process call' edit panels; this will now be inferred from any parsable result settings, and with a specific encoding</li>
+                        <li>the `hide terminal` checkbox is removed from 'local process call' edit panels. this was only affecting Windows and has few debug uses, so the behaviour is now always on</li>
+                        <li>if you are a Windows user, the 'external programs' options panel has a new 'TEST' checkbox to try out some cleaner 'hide terminal' tech. if you are an advanced user, please check out its tooltip and let me know how you get on</li>
+                        <li>in the first step of getting arbitrary 'tag suggestions' working, you can now set an executable call type of 'get metadata for a single file' type. this exposes a new setting at the bottom of the 'local process call' panel where you can specify whether the metadata arrives on `stdout` or `stderr`, and in which encoding, if not `utf-8`. there's no parsing yet (it'll use the same UI as the downloader system), so it will always say it parsed nothing, but the test panel is hooked up and we are now reading basic responses from external tag calls. if you are interested in this stuff, feel free to wire up a test situation</li>
+                        <li><h3>session log-off detection</h3></li>
+                        <li>I wrote a nicer hook for the signal that your OS sends to programs when the user is about to log off. hydrus has never been great about catching these events and sometimes has a non-clean exit when the computer shuts down. I am not 100% confident in my implementation yet, so it is hidden behind a new `TEST: Try new log-off detection for clean exit` under `options&gt;gui`.</li>
+                        <li>added `help-&gt;debug-&gt;tests-&gt;do session sign-off (fake)` to simulate this event firing</li>
+                        <li>if the test is on and it happens, your log will especially state "doing fast session shutdown" when it triggers. the program hides and saves without showing the splash</li>
+                        <li>I'm worried about whether some users session managers fire the event at a time other than logoff, e.g. every fifteen minutes for some extraneous checkpointing that is misfiring, so if you are interested in cleaner program exit on log-off, please switch this test on and let me know how it goes. does it save nicely when you log off, and does the program ever now close randomly?</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an issue where the QtMediaPlayer would render flag-rotated videos in a too-small area</li>
+                        <li>the command palette no longer gives 'label' results (menu items with text but no function) when searching the main menu or media menu</li>
+                        <li>I juggled some of `help-&gt;debug` around, including adding a 'threads and subprocesses' submenu</li>
+                        <li>added a 'review subprocesses' window to this new submenu. it shows the current subprocess snapshot with basic launch command, pid, and running/return code, and buttons to do reaping maintenance, and terminate (+kill on POSIX). as we do more executable manager stuff, we're running into needing a better window on this stuff, so this is a first draft. I think we'll want some more stuff like start time and timeout</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>I did a bunch of boring cleanup and infrastructure expansion in the exe manager to prep for fetching tags. there's new enums, a nicer response object to handle responses, and the test panel is ready to talk about file/metadata responses</li>
+                        <li>local process calls now have 'parsable' and 'importable' sourcing data so they can pull a metadata document (with an encoding) or (in future) a raw importable file from a pipe or (in future) a temp_path input parameter</li>
+                        <li>executable definitions now have a page parser to parse metadata documents in prep for tag suggestions, but there's no UI for it yet</li>
+                        <li>moved `Switch to main window when creating new file search page from media viewer` from `options-&gt;gui` to `options-&gt;media viewer`</li>
+                        <li>brought `Pillow` from `12.3.0` to `13.0.0` for a security update</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_690"><a href="#version_690">version 690</a></h2>
                     <ul>
                         <li><h3>more treeview improvements</h3></li>
