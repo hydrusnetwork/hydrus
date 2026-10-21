@@ -298,11 +298,14 @@ class QtMediaPlayer( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 orientation = self._media_player.metaData().value( QM.QMediaMetaData.Key.Orientation )
                 
-                angle = orientation.value
-                
-                if angle in ( 90, 270 ):
+                if orientation is not None:
                     
-                    vid_resolution = vid_resolution.transposed()
+                    angle = orientation.value
+                    
+                    if angle in ( 90, 270 ):
+                        
+                        vid_resolution = vid_resolution.transposed()
+                        
                     
                 
             except Exception as e:
