@@ -164,6 +164,8 @@ def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.
     return menu_item
     
 
+class LabelAction( QW.QAction ): pass
+
 def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = False, make_it_bold = False ):
     
     if no_copy:
@@ -188,7 +190,7 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = Fa
             
         
     
-    menu_item = QW.QAction( menu )
+    menu_item = LabelAction( menu )
     
     SetMenuTexts( menu_item, label, description )
     

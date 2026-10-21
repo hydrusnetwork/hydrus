@@ -6,10 +6,12 @@ from html import escape
 
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusNumbers
+
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui.pages import ClientGUIMediaResultsPanelThumbnails
-from hydrus.core import HydrusNumbers
 
 def GetSearchProvider( provider: int ) -> QAbstractLocatorSearchProvider | None:
     
@@ -597,6 +599,11 @@ class MainMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
             
             for action in menu.actions():
                 
+                if isinstance( action, ClientGUIMenus.LabelAction ):
+                    
+                    continue
+                    
+                
                 actionText = action.text().replace( "&", "" )
                 
                 if action.menu():
@@ -730,7 +737,7 @@ class MediaMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
         
         if media_panel is None or not isinstance( media_panel, ClientGUIMediaResultsPanelThumbnails.MediaResultsPanelThumbnails ):
             
-            return 
+            return
             
         
         self.menu = media_panel.GetMenu()
@@ -744,6 +751,11 @@ class MediaMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
             result = []
             
             for action in menu.actions():
+                
+                if isinstance( action, ClientGUIMenus.LabelAction ):
+                    
+                    continue
+                    
                 
                 actionText = action.text().replace( "&", "" )
                 
