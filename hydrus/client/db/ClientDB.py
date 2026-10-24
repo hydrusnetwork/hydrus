@@ -4539,7 +4539,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hashes = self._GetTrashHashes( limit = 1, minimum_age = max_age )
             
-            while len( hashes ) > 0:
+            if len( hashes ) > 0:
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
                 
