@@ -7,6 +7,17 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 692](https://github.com/hydrusnetwork/hydrus/releases/tag/v692)
+
+### security hotfix
+
+* An AI scanner has found a remote code execution bug in the hydrus client. This release fixes the issue. All users should update
+* the risk occurred when importing a user-made object like a downloader, when talking to a hydrus server like the PTR, or when anything communicated with the Client API.
+* The hydrus server was not vulnerable
+* After investigating the 5,000+ publicly shared downloaders on the user-run repo and 27,000+ PTR update files, I did not find any use of the exploit and am confident that there was no widespread use of the flaw. This is the time to update, in case the problem becomes real in the near future.
+* to help propagate the notice and make a hard split with unpatched clients, the hydrus network version has been bumped (to 21). Any client that tries to communicate with an updated server (which includes the PTR, which has just been updated) will get a message that they need to update.
+* The Client API also has a version bump, up to 96
+
 ## [Version 691](https://github.com/hydrusnetwork/hydrus/releases/tag/v691)
 
 ### exe manager
@@ -388,47 +399,3 @@ title: Changelog
 * added info to the 'help my db is broke' help page regarding `.clone` crashing/halting, the `.backup` command, and a very clever trick a user discovered regarding editing the `sqlite_schema` table to skip cloning a known-malformed table
 * the Docker package is updated to `Alpine 3.24` and should have improved HEIF support
 * skipped 'software/source' inspection when examining importing pdfs (this was silently failing, previously, because it was trying to load them as images)
-
-## [Version 682](https://github.com/hydrusnetwork/hydrus/releases/tag/v682)
-
-### more file metadata
-
-* the client can now inspect an image file and tell if it has (EXIF-like) XMP or IPTC metadata! the data will also show in the media viewer, in the extra info dialog
-* renamed the new 'source' metadata line to 'software/source'. sometimes it is 'photoshop'; sometimes it is a camera model; sometimes it is both
-* the client now tracks and generates 'has software/source', 'has xmp', and 'has iptc' flags, just like 'has exif' and friends. all _new_ files will get these flags and it is all saved to db and so on
-* there are new 'system:file property' predicates to search for these flags; they are also parseable
-* the file maintenance system has new jobs to regen these flags for existing files
-* these flags appear in the duplicate filter comparison statements and in some file flyout menu summaries and so on, similarly
-* 'has embedded metadata' and 'has non-EXIF metadata' and similar terms are now renamed (back) to 'has human-readable metadata'. this flag is now absolutely intended to be Artist, Title, Comment, and AI prompts kind of stuff. 'some dude probably typed this in once metadata'
-* I am, again, not yet triggering the big (optional) 'regen who has human-readable metadata' job for all existing files, but I think we are just about ready, so if no one has any issues with today's work, it'll be next week. we'll do all four xmp, iptc, software/source, and human-readable flags in one go and make something more useful out of all this. if you are an advanced user, give these new flags a spin and let me know what you think
-
-### Client API
-
-* file_metadata call now says `has_xmp`, `has_iptc`, and `has_software_source`, reflecting the above changes
-* Client API version is now 95
-
-### misc
-
-* the right-hand notes hover window in the media viewer now copies the name/note_text on a middle-click. it also has a tooltip that says what different clicks do (is this obscuring/annoying?)
-* the 'edit file notes' dialog has a little cog icon to alter how the copy button works; you can say whether you want all notes or just the current one in view, and you can say whether to copy as JSON, which the paste button accepts, or something more human
-* fixed the new GraphicsView thumbnail widget test to accept drag and drops
-* the options dialog now hides the Qt audio device fetch and list initialisation behind a button click. this has been a source of dialog crashing and other hassle in the past, so, like for mpv, the dialog now needs you to click a thing to go ask your lower level OS dlls whats up with audio device availability right now
-* I fixed an issue in the duplicates system that was sometimes causing non-accessible potential duplicate pairs to be registered. it was when a serf (a non-king member) of a multi-file duplicate group was queued up for potential duplicate discovery and found a pair while the king had since been physically deleted (this typically requires some non-deleting duplicate-setting and then a king delete and then a re-search potentials action, but a big client can have a few warts like this). on update, all clients will run the 'resync potnential duplicate pairs to storage' maintenance job to clean up any location-orphaned pairs
-* thanks to a user, fixed another instance of certain downloaders adding tags parsed in a gallery page fetch passing on their tags to a 'next page' gallery url
-
-### executables manager plan
-
-* I have planned out the basic shape of the executable manager, which is my big project for the second half of this year that will allow hydrus to call external exes and servers in a more flexible way. basically a reverse API that will add tech like 'please download this complicated URL' and 'generate clever tag suggestions for this file' without needing me to write the exe hooks. now I have sunken my teeth into it, I feel fairly good and hope to have richer 'open file/url externally' options page as the first step quite soon
-* in closer detail, I had a think, made a plan, and sketched out some early enums and objects
-* also wrote out a new serialisable tracker object for objects that have an immutable id and a string name label; something nicer than the hackery I have previously deployed in the downloader system
-
-### boring stuff
-
-* added `distortion` and `date:timestamp` to the ignored fields for human-readable metadata
-* since we now track seven boolean flags for stuff like 'has exif' and 'has transparency', I cleaned up _some_ of the db storage code here. I considered folding it all into one table, but in my experience, this particular shape of data doesn't benefit from such a thing. I kept it separate and spammy but KISS and collapsed the code to more shared calls. the search code however is now pretty spammy so I will revisit this
-* cleaned up some code in the master main gui drag and drop catcher and improved how it handles some drag mouse events. there's a small chance some odd drop bugs may be fixed in weirder OSes
-* added some unit tests for the new file metadata flag tech
-* fixed up some unit tests in the duplicates auto-resolution system that were skating on thin ice and needed tighter logic for my new 'only add potential duplicate pairs when they satisfy x and y' filter
-* removed some old defunct Linux help regarding ffmpeg on the frozen builds. you got it now, bro
-* fixed some 'waiting for a work slot' labelling in the downloaders UI
-* a bunch of misc linting and some voodoo linting

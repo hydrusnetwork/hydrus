@@ -1,6 +1,5 @@
 import collections.abc
 import http.cookiejar
-import pickle
 import requests
 import threading
 import typing
@@ -27,24 +26,9 @@ except Exception as e:
     SOCKS_PROXY_OK = False
     
 
-def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
+def AddCookieToSession( session, name, value, domain, path, expires ):
     
-    version = 0
-    port = None
-    port_specified = False
-    domain_specified = True
-    domain_initial_dot = domain.startswith( '.' )
-    path_specified = True
-    discard = expires is None
-    comment = None
-    comment_url = None
-    
-    if rest is None:
-        
-        rest = {}
-        
-    
-    cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+    cookie = CreateCookie( name, value, domain, path, expires )
     
     AddCookieToSessionActualCookie( session, cookie )
     
@@ -94,6 +78,59 @@ def ClearExpiredCookies( ambiguous_session ):
     EnsureSessionCookiesAreSynced( ambiguous_session, cookies )
     
 
+def ConvertCookieToTuple( cookie: http.cookiejar.Cookie ):
+    
+    name = cookie.name
+    value = cookie.value
+    domain = cookie.domain
+    path = cookie.path
+    expires = cookie.expires
+    
+    return ( name, value, domain, path, expires )
+    
+
+def ConvertRequestsCookieJarToSerialisable( cookie_jar: requests.sessions.RequestsCookieJar ):
+    
+    serialisable_cookie_tuples = []
+    
+    try:
+        
+        for cookie in list( cookie_jar ):
+            
+            cookie = typing.cast( object, cookie )
+            cookie = typing.cast( http.cookiejar.Cookie, cookie )
+            
+            serialisable_cookie_tuples.append( ConvertCookieToTuple( cookie ) )
+            
+        
+    except:
+        
+        # malformed data
+        pass
+        
+    
+    return serialisable_cookie_tuples
+    
+
+def CreateCookie( name, value, domain, path, expires ) -> http.cookiejar.Cookie:
+    
+    version = 0
+    port = None
+    port_specified = False
+    domain_specified = True
+    domain_initial_dot = domain.startswith( '.' )
+    path_specified = True
+    secure = False
+    discard = expires is None
+    comment = None
+    comment_url = None
+    rest = {}
+    
+    cookie = http.cookiejar.Cookie( version, name, value, port, port_specified, domain, domain_specified, domain_initial_dot, path, path_specified, secure, expires, discard, comment, comment_url, rest )
+    
+    return cookie
+    
+
 def EnsureSessionCookiesAreSynced( ambiguous_session, requests_cookies: requests.sessions.RequestsCookieJar ):
     """
     User just altered the cookie jar. If this jar is actually some temp dupe, let's set it back.
@@ -117,11 +154,60 @@ def GetRequestsSessionCookieJar( ambiguous_session ) -> requests.sessions.Reques
         
     
 
+def NetworkSessionManagerSessionContainerTupleV1Or2ToV3( version, old_serialisable_info ):
+    
+    import pickle
+    
+    if version == 1:
+        
+        ( serialisable_network_context, pickled_session_hex ) = old_serialisable_info
+        
+        try:
+            
+            session = pickle.loads( bytes.fromhex( pickled_session_hex ) )
+            
+        except Exception as e:
+            
+            session = requests.Session()
+            
+        
+        cookie_jar = GetRequestsSessionCookieJar( session )
+        
+        pickled_cookies_hex = pickle.dumps( cookie_jar ).hex()
+        
+        new_serialisable_info = ( serialisable_network_context, pickled_cookies_hex )
+        
+        ( version, old_serialisable_info ) = ( 2, new_serialisable_info )
+        
+    
+    if version != 2:
+        
+        raise Exception( 'Unknown SessionContainer version!' )
+        
+    
+    ( serialisable_network_context, pickled_cookies_hex ) = old_serialisable_info
+    
+    try:
+        
+        cookie_jar = typing.cast( requests.sessions.RequestsCookieJar, pickle.loads( bytes.fromhex( pickled_cookies_hex ) ) )
+        
+    except Exception as e:
+        
+        cookie_jar = requests.sessions.RequestsCookieJar()
+        
+    
+    serialisable_cookie_tuples = ConvertRequestsCookieJarToSerialisable( cookie_jar )
+    
+    new_serialisable_info = ( serialisable_network_context, serialisable_cookie_tuples )
+    
+    return new_serialisable_info
+    
+
 class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER
     SERIALISABLE_NAME = 'Session Manager Session Container'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     POOL_CONNECTION_TIMEOUT = 5 * 60
     
@@ -200,35 +286,39 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         serialisable_network_context = self.network_context.GetSerialisableTuple()
         
-        cookies = GetRequestsSessionCookieJar( self.session )
+        cookie_jar = GetRequestsSessionCookieJar( self.session )
         
-        pickled_cookies_hex = pickle.dumps( cookies ).hex()
+        serialisable_cookie_tuples = ConvertRequestsCookieJarToSerialisable( cookie_jar )
         
-        return ( serialisable_network_context, pickled_cookies_hex )
+        return ( serialisable_network_context, serialisable_cookie_tuples )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( serialisable_network_context, pickled_cookies_hex ) = serialisable_info
+        ( serialisable_network_context, serialisable_cookie_tuples ) = serialisable_info
         
         self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
         
         self.session = self._CreateEmptySession()
         
-        # TODO: Replace with actual http.cookiejar inspection/reconstruction
-        # since we now know how what we are dealing with, we could replace this pickling with actual iteration of http.cookie objects if we were careful, even to the specific fields
-        
         try:
             
-            cookies = typing.cast( requests.sessions.RequestsCookieJar, pickle.loads( bytes.fromhex( pickled_cookies_hex ) ) )
+            cookie_jar = requests.sessions.RequestsCookieJar()
+            
+            for ( name, value, domain, path, expires ) in serialisable_cookie_tuples:
+                
+                cookie = CreateCookie( name, value, domain, path, expires )
+                
+                cookie_jar.set_cookie( cookie )
+                
             
             if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
                 
-                ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( self.session, cookies )
+                ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( self.session, cookie_jar )
                 
             else:
                 
-                self.session.cookies = cookies
+                self.session.cookies = cookie_jar
                 
             
             ClearExpiredCookies( self.session )
@@ -243,24 +333,26 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         if version == 1:
             
-            ( serialisable_network_context, pickled_session_hex ) = old_serialisable_info
+            ( serialisable_network_context, _ ) = old_serialisable_info
             
-            try:
-                
-                session = pickle.loads( bytes.fromhex( pickled_session_hex ) )
-                
-            except Exception as e:
-                
-                session = requests.Session()
-                
+            # old deserialisation removed for security
             
-            cookies = GetRequestsSessionCookieJar( session )
-            
-            pickled_cookies_hex = pickle.dumps( cookies ).hex()
-            
-            new_serialisable_info = ( serialisable_network_context, pickled_cookies_hex )
+            new_serialisable_info = ( serialisable_network_context, '' )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            HydrusData.Print( 'Encountered an old NetworkSessionManagerSessionContainer outside of the prescribed db update routine. You can ignore this message.' )
+            
+            ( serialisable_network_context, _ ) = old_serialisable_info
+            
+            # old deserialisation removed for security
+            
+            new_serialisable_info = ( serialisable_network_context, [] )
+            
+            return ( 3, new_serialisable_info )
             
         
     

@@ -286,6 +286,18 @@ _All that said, and while updating is complex and every client is different, var
     * We no longer have the macOS App, sorry!
     * If you run from source, there are no special instructions. Update as normal.
 
+### all clients v691 and earlier should update to v692 or later { id="v691_vuln" }
+
+??? note "691 vulnerability"
+    At release of v691, an AI scanner discovered that hydrus had an important security flaw allowing remote code execution when loading a certain type of object from storage. Certain network and UI I/O used the vulnerable routine.
+    
+    * For a client, the risk occurred when importing a user-made object like a downloader, when talking to a hydrus server like the PTR, or when anything communicated with the Client API.
+    * The server was not affected by the vulnerability.
+    
+    After investigating the 5,000+ publicly shared downloaders and 27,000+ PTR update files, I did not find any use of the exploit and am confident that there was no widespread use of the flaw.
+    
+    The flaw is fixed in v692. Users who are running v691 or earlier should update to v692 or later.
+
 ## Backing up
 
 !!! danger "I am not joking around: if you end up liking hydrus, you should back up your database"

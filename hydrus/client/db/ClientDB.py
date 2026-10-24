@@ -8400,6 +8400,91 @@ class DB( HydrusDB.HydrusDB ):
                 self.pub_initial_message( message )
                 
             
+        
+        if version == 691:
+            
+            try:
+                
+                import json
+                from hydrus.client.networking import ClientNetworkingSessions
+                
+                session_container_tuples = self._Execute( 'SELECT version, dump_name, dump, timestamp_ms FROM json_dumps_named WHERE dump_type = ?;', ( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER, ) ).fetchall()
+                
+                self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ?;', ( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER, ) )
+                
+                for ( dump_version, dump_name, dump, object_timestamp_ms ) in session_container_tuples:
+                    
+                    try:
+                        
+                        if isinstance( dump, bytes ):
+                            
+                            dump = str( dump, 'utf-8' )
+                            
+                        
+                        serialisable_info = json.loads( dump )
+                        
+                    except Exception as e:
+                        
+                        continue
+                        
+                    
+                    if dump_version < 3:
+                        
+                        try:
+                            
+                            new_serialisable_info = ClientNetworkingSessions.NetworkSessionManagerSessionContainerTupleV1Or2ToV3( dump_version, serialisable_info )
+                            dump_version = 3
+                            
+                        except Exception as e:
+                            
+                            continue
+                            
+                        
+                    else:
+                        
+                        new_serialisable_info = serialisable_info
+                        
+                    
+                    try:
+                        
+                        dump = json.dumps( new_serialisable_info )
+                        
+                    except Exception as e:
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        dump_bytes = bytes( dump, 'utf-8' )
+                        
+                        dump_buffer = sqlite3.Binary( dump_bytes )
+                        
+                    except Exception as e:
+                        
+                        continue
+                        
+                    
+                    try:
+                        
+                        self._Execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp_ms, dump ) VALUES ( ?, ?, ?, ?, ? );', ( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER, dump_name, dump_version, object_timestamp_ms, dump_buffer ) )
+                        
+                    except Exception as e:
+                        
+                        continue
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some network data failed to update! You may have lost some site cookies! Hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         #
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
