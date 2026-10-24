@@ -2,7 +2,7 @@
 > ### SECURITY: All users on v691 or earlier should update
 > AI discovered a flaw that can cause remote code execution on object loading or hydrus network activities in the client.
 > 
-> All users on v691 or earlier should update to v692 or later. [More information here.](https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#v691_vuln) [Full Release Post](https://www.tumblr.com/hydrus/831389175230218240/version-692)
+> All users on v691 or earlier should update to v692 or later. [More information here.](https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#v691_vuln) / [Full Release Post](https://www.tumblr.com/hydrus/831389175230218240/version-692)
 
 ## Hydrus Network (Client and Server)
 
