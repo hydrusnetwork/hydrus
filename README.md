@@ -1,9 +1,9 @@
-## Hydrus Network (Client and Server)
+### SECURITY: All users on v691 or earlier should update
 
-!!! warning "SECURITY: All users on v691 or earlier should update"
-    AI discovered a flaw that can cause remote code execution on object loading or hydrus network activities in the client.
-    
-    All users on v691 or earlier should update to v692 or later. [More information here.](https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#v691_vuln)
+AI discovered a flaw that can cause remote code execution on object loading or hydrus network activities in the client.
+All users on v691 or earlier should update to v692 or later. [More information here.](https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#v691_vuln)
+
+## Hydrus Network (Client and Server)
 
 The hydrus network client is a file-management application written for internet-fluent media nerds who have large file collections. It browses with tags instead of folders, a little like a booru on your desktop. If they wish, users can easily share tags anonymously through a public server. Everything is free, no ads, and privacy is the first concern. If you have 10,000+ files and cannot find anything, hydrus might help!
 
