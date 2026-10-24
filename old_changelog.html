@@ -35,6 +35,18 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_692"><a href="#version_692">version 692</a></h2>
+                    <ul>
+                        <li><h3>security hotfix</h3></li>
+                        <li>An AI scanner has found a remote code execution bug in the hydrus client. This release fixes the issue. All users should update</li>
+                        <li>the risk occurred when importing a user-made object like a downloader, when talking to a hydrus server like the PTR, or when anything communicated with the Client API.</li>
+                        <li>The hydrus server was not vulnerable</li>
+                        <li>After investigating the 5,000+ publicly shared downloaders on the user-run repo and 27,000+ PTR update files, I did not find any use of the exploit and am confident that there was no widespread use of the flaw. This is the time to update, in case the problem becomes real in the near future.</li>
+                        <li>to help propagate the notice and make a hard split with unpatched clients, the hydrus network version has been bumped (to 21). Any client that tries to communicate with an updated server (which includes the PTR, which has just been updated) will get a message that they need to update.</li>
+                        <li>The Client API also has a version bump, up to 96</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_691"><a href="#version_691">version 691</a></h2>
                     <ul>
                         <li><h3>exe manager</h3></li>
