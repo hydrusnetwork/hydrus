@@ -291,7 +291,8 @@ _All that said, and while updating is complex and every client is different, var
 ??? note "691 vulnerability"
     At release of v691, an AI scanner discovered that hydrus had an important security flaw allowing remote code execution when loading a certain type of object from storage. Certain network and UI I/O used the vulnerable routine.
     
-    * For a client, the risk occurred when importing a user-made object like a downloader, when talking to a hydrus server like the PTR, or when anything communicated with the Client API.
+    * For a client, the risk occurred when importing a user-made object like a downloader or when talking to a hydrus server like the PTR
+    * _EDIT: I originally thought the Client API was vulnerable, but additional testing has shown it was not._
     * The server was not affected by the vulnerability.
     
     After investigating the 5,000+ publicly shared downloaders and 27,000+ PTR update files, I did not find any use of the exploit and am confident that there was no widespread use of the flaw.

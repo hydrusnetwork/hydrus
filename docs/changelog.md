@@ -12,7 +12,8 @@ title: Changelog
 ### security hotfix
 
 * An AI scanner has found a remote code execution bug in the hydrus client. This release fixes the issue. All users should update
-* the risk occurred when importing a user-made object like a downloader, when talking to a hydrus server like the PTR, or when anything communicated with the Client API.
+* the risk occurred when importing a user-made object like a downloader or when talking to a hydrus server like the PTR
+* _EDIT: I originally thought the Client API was vulnerable, but additional testing has shown it was not._
 * The hydrus server was not vulnerable
 * After investigating the 5,000+ publicly shared downloaders on the user-run repo and 27,000+ PTR update files, I did not find any use of the exploit and am confident that there was no widespread use of the flaw. This is the time to update, in case the problem becomes real in the near future.
 * to help propagate the notice and make a hard split with unpatched clients, the hydrus network version has been bumped (to 21). Any client that tries to communicate with an updated server (which includes the PTR, which has just been updated) will get a message that they need to update.
