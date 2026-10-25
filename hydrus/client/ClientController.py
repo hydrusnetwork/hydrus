@@ -592,7 +592,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CatchSignal( self, sig, frame ):
         
-        # yo just to remind here, Windows supports SIGINT (e.g. Ctrl+C from cmd) but not SIGTERM (which it fakes, whenever asked explicitly, by just insta-killing the process) 
+        # yo just to remind here, Windows supports SIGINT (e.g. Ctrl+C from cmd) but not SIGTERM (which it fakes, whenever asked explicitly, by just insta-killing the process)
         
         if self._program_is_shutting_down:
             
