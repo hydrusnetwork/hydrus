@@ -55,6 +55,7 @@ def GetServerSummaryTexts( service ):
         welcome_text_5
     )
     
+
 def GenerateEris( service ):
     
     if hasattr( service, 'UseNormieEris' ) and service.UseNormieEris():
@@ -1273,6 +1274,7 @@ class HydrusResource( Resource ):
         return NOT_DONE_YET
         
     
+
 class HydrusResourceRobotsTXT( HydrusResource ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1285,6 +1287,7 @@ Disallow: /'''
         return response_context
         
     
+
 class HydrusResourceWelcome( HydrusResource ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1296,6 +1299,7 @@ class HydrusResourceWelcome( HydrusResource ):
         return response_context
         
     
+
 class ResponseContext( object ):
     
     def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None, is_attachment = False, max_age = None ):

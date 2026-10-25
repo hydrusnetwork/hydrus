@@ -700,6 +700,7 @@ def ParseClientAPIPOSTByteArgs( args ):
     
     return parsed_request_args
     
+
 def ParseClientAPIPOSTArgs( request ):
     
     request.content.seek( 0 )
@@ -791,6 +792,7 @@ def ParseClientAPIPOSTArgs( request ):
     
     return ( parsed_request_args, total_bytes_read )
     
+
 def ParseClientAPISearchPredicates( request ) -> list[ ClientSearchPredicate.Predicate ]:
     
     default_search_values = {}

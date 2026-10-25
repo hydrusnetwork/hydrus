@@ -244,7 +244,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj_list = HydrusSerialisable.CreateFromString( payload_text, raise_error_on_future_version = True )
+                obj_list = HydrusSerialisable.CreateFromString( payload_text )
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -732,7 +732,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload_text, raise_error_on_future_version = True )
+                obj = HydrusSerialisable.CreateFromString( payload_text )
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     

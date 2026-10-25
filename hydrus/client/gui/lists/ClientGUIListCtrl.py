@@ -1701,7 +1701,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 payload = ClientSerialisable.LoadFromQtImage( qt_image )
                 
-                obj = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
+                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -1733,7 +1733,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( raw_text, raise_error_on_future_version = True )
+                obj = HydrusSerialisable.CreateFromString( raw_text )
                 
             except Exception as e:
                 
@@ -1867,7 +1867,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload, raise_error_on_future_version = True )
+                obj = HydrusSerialisable.CreateFromString( payload )
                 
                 self._ImportObject( obj )
                 
@@ -1922,7 +1922,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromNetworkBytes( payload, raise_error_on_future_version = True )
+                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
                 
                 self._ImportObject( obj )
                 

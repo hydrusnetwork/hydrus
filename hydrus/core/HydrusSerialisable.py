@@ -179,14 +179,14 @@ SERIALISABLE_TYPE_EXTERNAL_PROGRAMS_IMPORT_OPTIONS_SINGLE_ENTRY = 163
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
-def CreateFromNetworkBytes( network_bytes: bytes, raise_error_on_future_version = False ) -> typing.Any:
+def CreateFromNetworkBytes( network_bytes: bytes, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
     
     obj_string = HydrusCompression.DecompressBytesToString( network_bytes )
     
-    return CreateFromString( obj_string, raise_error_on_future_version = raise_error_on_future_version )
+    return CreateFromString( obj_string, restricted_serialisable_types = restricted_serialisable_types )
     
 
-def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = False ) -> typing.Any:
+def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
     
     if obj_tuple_or_none is None:
         
@@ -194,18 +194,18 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, raise_error_on_futur
         
     else:
         
-        return CreateFromSerialisableTuple( obj_tuple_or_none, raise_error_on_future_version = raise_error_on_future_version )
+        return CreateFromSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types = restricted_serialisable_types )
         
     
 
-def CreateFromString( obj_string: str, raise_error_on_future_version = False ) -> typing.Any:
+def CreateFromString( obj_string: str, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
     
     obj_tuple = json.loads( obj_string )
     
-    return CreateFromSerialisableTuple( obj_tuple, raise_error_on_future_version = raise_error_on_future_version )
+    return CreateFromSerialisableTuple( obj_tuple, restricted_serialisable_types = restricted_serialisable_types )
     
 
-def CreateFromSerialisableTuple( obj_tuple: tuple, raise_error_on_future_version = False ) -> typing.Any:
+def CreateFromSerialisableTuple( obj_tuple: tuple, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
     
     if len( obj_tuple ) == 3:
         
@@ -220,7 +220,7 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, raise_error_on_future_version
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]( name )
         
     
-    obj.InitialiseFromSerialisableInfo( version, serialisable_info, raise_error_on_future_version = raise_error_on_future_version )
+    obj.InitialiseFromSerialisableInfo( version, serialisable_info, restricted_serialisable_types = restricted_serialisable_types )
     
     return obj
     
@@ -331,26 +331,25 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
-    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info, raise_error_on_future_version = False ):
+    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info, restricted_serialisable_types: set[ int ] | None = None ):
+        
+        if restricted_serialisable_types is not None:
+            
+            if self.SERIALISABLE_TYPE not in restricted_serialisable_types:
+                
+                raise HydrusExceptions.SerialisationException( f'Was trying to deserialise an object with a serialisation type of {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}"), but the allowed serialisable types are: {restricted_serialisable_types}!' )
+                
+            
         
         object_is_newer = original_version > self.SERIALISABLE_VERSION
         
         if object_is_newer:
             
-            if raise_error_on_future_version:
-                
-                message = 'Unfortunately, an object of type {} could not be loaded because it was created in a client/server that uses an updated version of that object! We support up to version {}, but the object was version {}.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version )
-                message += '\n' * 2
-                message += 'Please update your client/server to import this object.'
-                
-                raise HydrusExceptions.SerialisationException( message )
-                
-            else:
-                
-                message = 'An object of type {} was created in a client/server that uses an updated version of that object! We support versions up to {}, but the object was version {}. For now, we will try to continue work, but things may break. If you know why this has occured, please correct it. If you do not, please let hydrus dev know.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version )
-                
-                HydrusData.ShowText( message )
-                
+            message = 'Unfortunately, an object of type {} could not be loaded because it was created in a client/server that uses an updated version of that object! We support up to version {}, but the object was version {}.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version )
+            message += '\n' * 2
+            message += 'Please update your client/server to import this object.'
+            
+            raise HydrusExceptions.SerialisationException( message )
             
         
         try:
@@ -373,14 +372,7 @@ class SerialisableBase( object ):
             
         except Exception as e:
             
-            if object_is_newer:
-                
-                raise HydrusExceptions.SerialisationException( 'An object of type {} was created in a client/server that uses an updated version of that object! We support versions up to {}, but the object was version {}. I tried to load it, but the initialisation failed. You probably need to update your client/server.'.format( self.SERIALISABLE_NAME, self.SERIALISABLE_VERSION, original_version ) )
-                
-            else:
-                
-                raise HydrusExceptions.SerialisationException( 'Could not initialise this object of type {}!'.format( self.SERIALISABLE_NAME ) )
-                
+            raise HydrusExceptions.SerialisationException( 'Could not initialise this object of type {}!'.format( self.SERIALISABLE_NAME ) )
             
         
     
