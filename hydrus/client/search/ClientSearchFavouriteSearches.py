@@ -58,7 +58,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_favourite_search_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         self._favourite_search_rows = []
         

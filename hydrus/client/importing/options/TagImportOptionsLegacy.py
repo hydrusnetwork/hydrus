@@ -48,7 +48,7 @@ class TagImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_filtering_import_options, serialisable_tag_import_options, self._is_default )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_filtering_import_options, serialisable_tag_import_options, self._is_default ) = serialisable_info
         

@@ -61,7 +61,7 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         return self._forced_name
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         self._forced_name = serialisable_info
         
@@ -182,7 +182,7 @@ class SingleFileMetadataExporterMediaTags( SingleFileMetadataExporterMedia, Hydr
         return self._service_key.hex()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_service_key = serialisable_info
         
@@ -274,7 +274,7 @@ class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia
         return self._timestamp_data_stub.GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_timestamp_data_stub = serialisable_info
         
@@ -356,7 +356,7 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
         return list()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         gumpf = serialisable_info
         
@@ -485,7 +485,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
         return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._nested_object_names )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._nested_object_names ) = serialisable_info
         
@@ -643,7 +643,7 @@ class SingleFileMetadataExporterTXT( SingleFileMetadataExporterSidecar, HydrusSe
         return ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator ) = serialisable_info
         

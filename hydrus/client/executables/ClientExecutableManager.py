@@ -42,7 +42,7 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_callables
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_callables = serialisable_info
         

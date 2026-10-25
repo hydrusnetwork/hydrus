@@ -44,7 +44,7 @@ class NetworkBandwidthManagerTrackerContainer( HydrusSerialisable.SerialisableBa
         return ( serialisable_network_context, serialisable_bandwidth_tracker )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_network_context, serialisable_bandwidth_tracker ) = serialisable_info
         
@@ -159,7 +159,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         return tracker_container.bandwidth_tracker
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( all_tracker_container_names, all_serialisable_rules ) = serialisable_info
         

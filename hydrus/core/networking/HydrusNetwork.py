@@ -793,7 +793,7 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
         return ( self._type, serialisable_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self._type, serialisable_data ) = serialisable_info
         
@@ -920,7 +920,7 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_account_type_key, self._title, serialisable_permissions, serialisable_bandwidth_rules, self._auto_creation_velocity, serialisable_auto_creation_history )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_account_type_key, self._title, serialisable_permissions, serialisable_bandwidth_rules, self._auto_creation_velocity, serialisable_auto_creation_history ) = serialisable_info
         
@@ -1186,7 +1186,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         for ( action, serialisable_contents_and_reasons ) in serialisable_info:
             
@@ -1343,7 +1343,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
         return ( self._content_type, serialisable_content )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         def DecodeHashes( hs ):
             
@@ -1557,7 +1557,7 @@ class ContentUpdate( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         for ( content_type, serialisable_actions_to_datas ) in serialisable_info:
             
@@ -1715,7 +1715,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
         return ( self._host, self._port, serialisable_access_key )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self._host, self._port, serialisable_access_key ) = serialisable_info
         
@@ -1898,7 +1898,7 @@ class DefinitionsUpdate( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         for ( definition_type, definitions ) in serialisable_info:
             
@@ -2029,7 +2029,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         return self._metadata[ update_index ]
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_metadata, self._next_update_due ) = serialisable_info
         
@@ -2364,7 +2364,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_petitioner_account, serialisable_petition_header, serialisable_actions_and_contents )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_petitioner_account, serialisable_petition_header, serialisable_actions_and_contents ) = serialisable_info
         
@@ -2634,7 +2634,7 @@ class PetitionHeader( HydrusSerialisable.SerialisableBase ):
         return ( self.content_type, self.status, serialisable_account_key, self.reason )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self.content_type, self.status, serialisable_account_key, self.reason ) = serialisable_info
         

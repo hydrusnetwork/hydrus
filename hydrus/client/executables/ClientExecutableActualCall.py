@@ -51,7 +51,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -139,7 +139,7 @@ class LocalProcessCallInputParameterProcessingRule(HydrusSerialisable.Serialisab
         return ( self.parameter_type, self.replacement_string, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self.parameter_type, self.replacement_string, serialisable_string_processor ) = serialisable_info
         
@@ -405,7 +405,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         (
             self._executable_path,
@@ -695,7 +695,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         pass
         
@@ -772,7 +772,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         pass
         

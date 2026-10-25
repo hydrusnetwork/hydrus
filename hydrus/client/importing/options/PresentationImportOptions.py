@@ -120,7 +120,7 @@ class PresentationImportOptions( IOC.ImportOptionsMetatype ):
         return ( serialisable_location_context, self._presentation_status, self._presentation_inbox )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_location_context, self._presentation_status, self._presentation_inbox ) = serialisable_info
         

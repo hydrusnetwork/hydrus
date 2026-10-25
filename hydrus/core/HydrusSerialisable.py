@@ -220,7 +220,7 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, restricted_serialisable_types
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]( name )
         
     
-    obj.InitialiseFromSerialisableInfo( version, serialisable_info, restricted_serialisable_types = restricted_serialisable_types )
+    obj.InitialiseFromSerialisableInfo( version, serialisable_info, restricted_serialisable_types )
     
     return obj
     
@@ -273,7 +273,7 @@ class SerialisableBase( object ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -331,7 +331,7 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
-    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info, restricted_serialisable_types: set[ int ] | None = None ):
+    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         if restricted_serialisable_types is not None:
             
@@ -368,7 +368,7 @@ class SerialisableBase( object ):
         
         try:
             
-            self._InitialiseFromSerialisableInfo( serialisable_info )
+            self._InitialiseFromSerialisableInfo( serialisable_info, restricted_serialisable_types )
             
         except Exception as e:
             
@@ -398,13 +398,13 @@ def ConvertObjectToMetaSerialisableTuple( obj ):
     return ( metatype, serialisable )
     
 
-def ConvertMetaSerialisableTupleToObject( meta_tuple ):
+def ConvertMetaSerialisableTupleToObject( meta_tuple, restricted_serialisable_types: set[ int ] | None ):
     
     ( metatype, serialisable ) = meta_tuple
     
     if metatype == META_SERIALISABLE_TYPE_HYDRUS_SERIALISABLE:
         
-        obj = CreateFromSerialisableTuple( serialisable )
+        obj = CreateFromSerialisableTuple( serialisable, restricted_serialisable_types )
         
     elif metatype == META_SERIALISABLE_TYPE_JSON_BYTES:
         
@@ -435,7 +435,7 @@ class SerialisableBaseNamed( SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -499,7 +499,7 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
         return meta_keys_and_meta_values
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         have_shown_load_error = False
         
@@ -509,14 +509,14 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
             
             try:
                 
-                key = ConvertMetaSerialisableTupleToObject( meta_key )
+                key = ConvertMetaSerialisableTupleToObject( meta_key, restricted_serialisable_types )
                 
                 if isinstance( key, list ):
                     
                     key = tuple( key )
                     
                 
-                value = ConvertMetaSerialisableTupleToObject( meta_value )
+                value = ConvertMetaSerialisableTupleToObject( meta_value, restricted_serialisable_types )
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -674,7 +674,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict[ int | bytes, V_bytes 
         return pairs
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         for ( encoded_key, encoded_value ) in serialisable_info:
             
@@ -782,7 +782,7 @@ class SerialisableList( SerialisableBase, list[ T ] ):
         return meta_tuples
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         have_shown_load_error = False
         
@@ -792,7 +792,7 @@ class SerialisableList( SerialisableBase, list[ T ] ):
             
             try:
                 
-                obj = ConvertMetaSerialisableTupleToObject( meta_tuple )
+                obj = ConvertMetaSerialisableTupleToObject( meta_tuple, restricted_serialisable_types )
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -928,7 +928,7 @@ class IdAndName( SerialisableBase ):
         return ( id_serialisable, self.name )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( id_serialisable, self.name ) = serialisable_info
         

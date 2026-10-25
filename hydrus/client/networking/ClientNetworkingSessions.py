@@ -293,7 +293,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         return ( serialisable_network_context, serialisable_cookie_tuples )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_network_context, serialisable_cookie_tuples ) = serialisable_info
         
@@ -492,7 +492,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         return network_context
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         self._session_container_names = set( serialisable_info )
         

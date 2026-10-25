@@ -28,7 +28,7 @@ class ExternalProgramsImportOptionsSingleEntry( HydrusSerialisable.SerialisableB
         return ( serialisable_id_and_name, self._do_it_on_new, self._do_it_on_already_in )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_id_and_name, self._do_it_on_new, self._do_it_on_already_in ) = serialisable_info
         
@@ -128,7 +128,7 @@ class ExternalProgramsImportOptions( IOC.ImportOptionsMetatype ):
         return serialisable_entries
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_entries = serialisable_info
         

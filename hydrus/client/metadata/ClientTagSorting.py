@@ -64,7 +64,7 @@ class TagSort( HydrusSerialisable.SerialisableBase ):
         return ( self.sort_type, self.sort_order, self.use_siblings, self.group_by )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( self.sort_type, self.sort_order, self.use_siblings, self.group_by ) = serialisable_info
         

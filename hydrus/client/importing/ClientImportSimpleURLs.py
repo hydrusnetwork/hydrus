@@ -110,7 +110,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._formula_name, self._gallery_paused, self._files_paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._formula_name, self._gallery_paused, self._files_paused ) = serialisable_info
         
@@ -1019,7 +1019,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._paused ) = serialisable_info
         

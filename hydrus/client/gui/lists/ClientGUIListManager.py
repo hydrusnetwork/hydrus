@@ -25,7 +25,7 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
         return self._column_list_types_to_statuses.GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_column_list_types_to_statuses = serialisable_info
         

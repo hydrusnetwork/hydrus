@@ -95,7 +95,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_api_permissions_objects
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         serialisable_api_permissions_objects = serialisable_info
         
@@ -304,7 +304,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         return self._permits_everything or permission in self._basic_permissions
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
         
         ( serialisable_access_key, self._permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter ) = serialisable_info
         
