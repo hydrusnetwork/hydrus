@@ -757,7 +757,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 serialisable_number_test = serialisable_value
                 
-                self._value = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_number_test )
+                self._value = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_number_test, { HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST } )
                 
             else:
                 

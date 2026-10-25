@@ -186,7 +186,7 @@ def CreateFromNetworkBytes( network_bytes: bytes, restricted_serialisable_types:
     return CreateFromString( obj_string, restricted_serialisable_types = restricted_serialisable_types )
     
 
-def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
+def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types: set[ int ] | None ) -> typing.Any:
     
     if obj_tuple_or_none is None:
         
