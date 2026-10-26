@@ -2101,6 +2101,7 @@ class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed )
         return self._formula
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA ] = SimpleDownloaderParsingFormula
 
 class ContentParser( HydrusSerialisable.SerialisableBase ):

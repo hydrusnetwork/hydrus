@@ -1449,6 +1449,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._listctrl: BetterListCtrlTreeView | None = None
         
         self._permitted_object_types = []
+        self._restricted_serialisable_types = set()
+        
         self._import_add_callable = lambda x: None
         self._custom_get_callable = None
         
@@ -1701,7 +1703,24 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 payload = ClientSerialisable.LoadFromQtImage( qt_image )
                 
-                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                    
+                except HydrusExceptions.SerialisationWhitelistException as e:
+                    
+                    message = 'The imported objects were the wrong type! This control only allows:'
+                    message += '\n' * 2
+                    message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                    message += '\n' * 2
+                    message += 'But on loading what you entered, I received this error:'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, message )
+                    
+                    return
+                    
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -1903,6 +1922,8 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportPNGs( self, paths ):
         
+        # TODO: multiple lists here and elsewhere use very similar code that could be merged. this is more important as this is an ingress of untrusted data and we want restricted_serialisable_types and such handled nicely
+        
         have_shown_load_error = False
         
         for path in paths:
@@ -1922,7 +1943,24 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                try:
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                    
+                except HydrusExceptions.SerialisationWhitelistException as e:
+                    
+                    message = 'The imported objects were the wrong type! This control only allows:'
+                    message += '\n' * 2
+                    message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                    message += '\n' * 2
+                    message += 'But on loading what you entered, I received this error:'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, message )
+                    
+                    return
+                    
                 
                 self._ImportObject( obj )
                 
@@ -1949,7 +1987,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 HydrusData.PrintException( e )
                 
-                ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'I could not understand what was encoded in "{path}"!' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', f'I could not understand what was encoded in "{path}"!' )
                 
                 return
                 
@@ -2033,6 +2071,8 @@ class BetterListCtrlPanel( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types, import_add_callable, custom_get_callable = None, and_duplicate_button = True ):
         
         self._permitted_object_types = permitted_object_types
+        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        
         self._import_add_callable = import_add_callable
         self._custom_get_callable = custom_get_callable
         

@@ -248,7 +248,11 @@ def GetNonDupeName( original_name: str, disallowed_names: set[ str ], do_casefol
 
 def GetTypeName( obj_type ):
     
-    if hasattr( obj_type, '__name__' ):
+    if hasattr( obj_type, 'SERIALISABLE_NAME' ):
+        
+        return obj_type.SERIALISABLE_NAME
+        
+    elif hasattr( obj_type, '__name__' ):
         
         return obj_type.__name__
         

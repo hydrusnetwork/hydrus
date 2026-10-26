@@ -2,6 +2,7 @@ import unittest
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -26,7 +27,7 @@ from hydrus.test import TestController as TC
 
 class TestSerialisables( unittest.TestCase ):
     
-    def _dump_and_load_and_test( self, obj, test_func ):
+    def _dump_and_load_and_test( self, obj: HydrusSerialisable.SerialisableBase, test_func, restricted_serialisable_types: set[ int ] ):
         
         serialisable_tuple = obj.GetSerialisableTuple()
         
@@ -39,6 +40,10 @@ class TestSerialisables( unittest.TestCase ):
         elif isinstance( obj, HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_type, version, serialisable_info ) = serialisable_tuple
+            
+        else:
+            
+            raise NotImplementedError()
             
         
         self.assertEqual( serialisable_type, obj.SERIALISABLE_TYPE )
@@ -68,7 +73,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertIsInstance( network_bytes, bytes )
         
-        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes )
+        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, restricted_serialisable_types )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -109,7 +114,15 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( d[ key ], value )
             
         
-        self._dump_and_load_and_test( d, test )
+        self._dump_and_load_and_test(
+            d,
+            test,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE,
+                HydrusSerialisable.SERIALISABLE_TYPE_LIST
+            }
+        )
         
         #
         
@@ -127,7 +140,131 @@ class TestSerialisables( unittest.TestCase ):
             self.assertEqual( db[ key ], value )
             
         
-        self._dump_and_load_and_test( db, test )
+        self._dump_and_load_and_test(
+            db,
+            test,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT
+            }
+        )
+        
+    
+    def test_whitelisting_simple( self ):
+        
+        obj = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT } )
+            
+        
+    
+    def test_whitelisting_list( self ):
+        
+        obj = HydrusSerialisable.SerialisableList( [ CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) ] )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+    
+    def test_whitelisting_dict( self ):
+        
+        obj = HydrusSerialisable.SerialisableDictionary( { 3 : CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) } )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        obj = HydrusSerialisable.SerialisableDictionary( { CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) : 3 } )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        obj = HydrusSerialisable.SerialisableDictionary(
+            {
+                ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ) : CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
+            }
+        )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+            
         
     
     def test_SERIALISABLE_TYPE_APPLICATION_COMMAND( self ):
@@ -150,7 +287,7 @@ class TestSerialisables( unittest.TestCase ):
         
         for ( ac, s ) in acs:
             
-            self._dump_and_load_and_test( ac, test )
+            self._dump_and_load_and_test( ac, test, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
             
             self.assertEqual( ac.ToString(), s )
             
@@ -295,9 +432,9 @@ class TestSerialisables( unittest.TestCase ):
         
         #
         
-        self._dump_and_load_and_test( duplicate_content_merge_options_delete_and_move, test )
-        self._dump_and_load_and_test( duplicate_content_merge_options_copy, test )
-        self._dump_and_load_and_test( duplicate_content_merge_options_merge, test )
+        self._dump_and_load_and_test( duplicate_content_merge_options_delete_and_move, test, { HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS } )
+        self._dump_and_load_and_test( duplicate_content_merge_options_copy, test, { HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS } )
+        self._dump_and_load_and_test( duplicate_content_merge_options_merge, test, { HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS } )
         
         #
         
@@ -458,7 +595,7 @@ class TestSerialisables( unittest.TestCase ):
         
         for ( shortcut, s ) in shortcuts:
             
-            self._dump_and_load_and_test( shortcut, test )
+            self._dump_and_load_and_test( shortcut, test, { HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
             
             if HC.PLATFORM_MACOS:
                 
@@ -483,7 +620,7 @@ class TestSerialisables( unittest.TestCase ):
         
         for shortcuts in default_shortcuts:
             
-            self._dump_and_load_and_test( shortcuts, test )
+            self._dump_and_load_and_test( shortcuts, test, { HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET } )
             
         
         command_1 = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
@@ -510,7 +647,7 @@ class TestSerialisables( unittest.TestCase ):
         shortcut_set.SetCommand( m_shortcut_2, command_2 )
         shortcut_set.SetCommand( m_shortcut_3, command_3 )
         
-        self._dump_and_load_and_test( shortcut_set, test )
+        self._dump_and_load_and_test( shortcut_set, test, { HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET } )
         
         self.assertEqual( tuple( shortcut_set.GetCommand( k_shortcut_1 )._data ), tuple( command_1._data ) )
         
@@ -538,7 +675,7 @@ class TestSerialisables( unittest.TestCase ):
         
         sub = ClientImportSubscriptions.Subscription( 'test sub' )
         
-        self._dump_and_load_and_test( sub, test )
+        self._dump_and_load_and_test( sub, test, { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION } )
         
         gug_key_and_name = ( HydrusData.GenerateKey(), 'muh test gug' )
         
@@ -590,7 +727,7 @@ class TestSerialisables( unittest.TestCase ):
         sub.PauseResume()
         self.assertEqual( sub._paused, False )
         
-        self._dump_and_load_and_test( sub, test )
+        self._dump_and_load_and_test( sub, test, { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION } )
         
     
     def test_SERIALISABLE_TYPE_TAG_FILTER( self ):
@@ -612,7 +749,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
         
@@ -623,7 +760,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), set() )
         
@@ -635,7 +772,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'series:neon genesis evangelion', 'series:kill la kill' } )
         
@@ -647,7 +784,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'series:kill la kill', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'series:kill la kill' } )
         
@@ -659,7 +796,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'smile', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile' } )
         
@@ -669,7 +806,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes' } )
         
@@ -680,7 +817,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'series:', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'series:neon genesis evangelion', 'series:kill la kill' } )
         
@@ -691,7 +828,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'series:kill la kill', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'series:kill la kill' } )
         
@@ -701,7 +838,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title' } )
         
@@ -712,7 +849,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( 'series:', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'series:neon genesis evangelion', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'smile', 'blue eyes', 'title:test title', 'series:neon genesis evangelion' } )
         
@@ -722,7 +859,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill' } )
         
@@ -733,7 +870,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( '', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'blue eyes', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( tags ), { 'title:test title', 'series:neon genesis evangelion', 'series:kill la kill', 'blue eyes' } )
         
@@ -747,7 +884,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter.SetRule( 'cool project house', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( blacklist_tags ), { 'studio:cool project house' } )
         
@@ -757,7 +894,7 @@ class TestSerialisables( unittest.TestCase ):
         
         tag_filter.SetRule( 'cool project house', HC.FILTER_BLACKLIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( blacklist_tags, apply_unnamespaced_rules_to_namespaced_tags = True ), set() )
         
@@ -768,7 +905,7 @@ class TestSerialisables( unittest.TestCase ):
         tag_filter.SetRule( 'cool project house', HC.FILTER_BLACKLIST )
         tag_filter.SetRule( 'studio:cool project house', HC.FILTER_WHITELIST )
         
-        self._dump_and_load_and_test( tag_filter, test )
+        self._dump_and_load_and_test( tag_filter, test, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
         self.assertEqual( tag_filter.Filter( blacklist_tags, apply_unnamespaced_rules_to_namespaced_tags = True ), { 'studio:cool project house' } )
         

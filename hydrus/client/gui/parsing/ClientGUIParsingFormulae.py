@@ -151,6 +151,15 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
+        self._restricted_serialisable_types = {
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+        }
+        
         self._current_formula = formula
         self._test_data_callable = test_data_callable
         
@@ -424,7 +433,16 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                    try:
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                        
+                    except HydrusExceptions.SerialisationWhitelistException as e:
+                        
+                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a parsing formula! Error:\n\n' + str( e ) )
+                        
+                        return
+                        
                     
                     self._ImportObject( obj )
                     

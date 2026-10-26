@@ -1180,7 +1180,16 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                    try:
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP } )
+                        
+                    except HydrusExceptions.SerialisationWhitelistException as e:
+                        
+                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a script! Error:\n\n' + str( e ) )
+                        
+                        return
+                        
                     
                     self._ImportObject( obj )
                     

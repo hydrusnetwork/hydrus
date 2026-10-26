@@ -456,6 +456,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         self._enabled_only_on_selection_buttons = []
         
         self._permitted_object_types = tuple()
+        self._restricted_serialisable_types = set()
         
         #
         
@@ -774,7 +775,24 @@ class AddEditDeleteListBox( QW.QWidget ):
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                        try:
+                            
+                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                            
+                        except HydrusExceptions.SerialisationWhitelistException as e:
+                            
+                            message = 'The imported objects were the wrong type! This control only allows:'
+                            message += '\n' * 2
+                            message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                            message += '\n' * 2
+                            message += 'But on loading what you entered, I received this error:'
+                            message += '\n' * 2
+                            message += str( e )
+                            
+                            ClientGUIDialogsMessage.ShowWarning( self, message )
+                            
+                            return
+                            
                         
                         self._ImportObject( obj )
                         
@@ -975,6 +993,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
+        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
         
         export_menu_template_items = []
         
@@ -1062,6 +1081,7 @@ class QueueListBox( QW.QWidget ):
         super().__init__( parent )
         
         self._permitted_object_types = tuple()
+        self._restricted_serialisable_types = set()
         
         self._listbox = BetterQListWidget( self, delete_callable = self._Delete )
         self._listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
@@ -1382,7 +1402,24 @@ class QueueListBox( QW.QWidget ):
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload )
+                        try:
+                            
+                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                            
+                        except HydrusExceptions.SerialisationWhitelistException as e:
+                            
+                            message = 'The imported objects were the wrong type! This control only allows:'
+                            message += '\n' * 2
+                            message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                            message += '\n' * 2
+                            message += 'But on loading what you entered, I received this error:'
+                            message += '\n' * 2
+                            message += str( e )
+                            
+                            ClientGUIDialogsMessage.ShowWarning( self, message )
+                            
+                            return
+                            
                         
                         self._ImportObject( obj )
                         
@@ -1544,6 +1581,7 @@ class QueueListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
+        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
         
         export_menu_template_items = []
         

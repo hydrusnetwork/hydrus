@@ -3847,7 +3847,20 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
+                
+                restricted_serialisable_types = { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE }
+                
+            elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
+                
+                restricted_serialisable_types = { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE }
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown incoming update mime!' )
+                
+            
+            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, restricted_serialisable_types )
             
         except Exception as e:
             

@@ -50,9 +50,11 @@ class DBCredentialsException( HydrusException ): pass
 class DBVersionException( HydrusException ): pass
 class FileMissingException( HydrusException ): pass
 class DirectoryMissingException( HydrusException ): pass
-class SerialisationException( HydrusException ): pass
 class NameException( HydrusException ): pass
 class QtDeadWindowException( HydrusException ): pass
+
+class SerialisationException( HydrusException ): pass
+class SerialisationWhitelistException( SerialisationException ): pass
 
 class StoppingException( HydrusException ): pass
 class DaemonShutdownException( HydrusException ): pass

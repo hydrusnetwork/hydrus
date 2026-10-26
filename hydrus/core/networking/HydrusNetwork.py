@@ -80,6 +80,7 @@ def GenerateDefaultServiceDictionary( service_type ):
     
     return dictionary
     
+
 def GenerateService( service_key, service_type, name, port, dictionary = None ):
     
     if dictionary is None:
@@ -102,6 +103,7 @@ def GenerateService( service_key, service_type, name, port, dictionary = None ):
     
     return cl( service_key, service_type, name, port, dictionary )
     
+
 def GenerateServiceFromSerialisableTuple( serialisable_info ):
     
     ( service_key_encoded, service_type, name, port, dictionary_string ) = serialisable_info
@@ -115,10 +117,19 @@ def GenerateServiceFromSerialisableTuple( serialisable_info ):
         raise HydrusExceptions.BadRequestException( 'Could not decode that service key!' )
         
     
-    dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
+    restricted_service_types = {
+        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES,
+        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER,
+        HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
+        HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
+    }
+    
+    dictionary = HydrusSerialisable.CreateFromString( dictionary_string, restricted_service_types )
     
     return GenerateService( service_key, service_type, name, port, dictionary )
     
+
 def GetPossiblePermissions( service_type ):
     
     permissions = []
@@ -644,9 +655,10 @@ class Account( object ):
             
         else:
             
-            account_type = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_account_type )
+            account_type = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_account_type, { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE } )
             
         
+        # dictionary, bandwidth tracker, any more?
         dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
         
         return Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
@@ -1946,8 +1958,8 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class Metadata( HydrusSerialisable.SerialisableBase ):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA
-    SERIALISABLE_NAME = 'Metadata'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA
+    SERIALISABLE_NAME = 'Hydrus Repository Metadata'
     SERIALISABLE_VERSION = 1
     
     def __init__( self, metadata = None, next_update_due = None ):
@@ -2316,7 +2328,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA ] = Metadata
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA ] = Metadata
 
 class Petition( HydrusSerialisable.SerialisableBase ):
     

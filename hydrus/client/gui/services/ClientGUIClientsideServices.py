@@ -747,7 +747,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             network_bytes = network_job.GetContentBytes()
             
-            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
+            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE }, False, False )
             
             account_types = list( parsed_response_args[ 'account_types' ] )
             
@@ -837,7 +837,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             network_bytes = network_job.GetContentBytes()
             
-            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
+            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, set(), False, False )
             
             registration_key = parsed_response_args[ 'registration_key' ]
             
@@ -885,7 +885,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             network_bytes = network_job.GetContentBytes()
             
-            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes )
+            parsed_response_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, set(), False, False )
             
             access_key = parsed_response_args[ 'access_key' ]
             

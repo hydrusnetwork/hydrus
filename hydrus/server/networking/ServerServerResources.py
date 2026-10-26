@@ -38,6 +38,9 @@ class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
 class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
     
     BLOCKED_WHEN_BUSY = True
+    RESTRICTED_SERIALISABLE_TYPES_ON_POST = set()
+    SERVICES_ON_POST_OK = False
+    ACCOUNT_ON_POST_OK = False
     
     def _callbackParseGETArgs( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -79,7 +82,14 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
                 
                 total_bytes_read += len( json_string )
                 
-                parsed_request_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( json_string )
+                try:
+                    
+                    parsed_request_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( json_string, self.RESTRICTED_SERIALISABLE_TYPES_ON_POST, self.ACCOUNT_ON_POST_OK, self.SERVICES_ON_POST_OK )
+                    
+                except HydrusExceptions.SerialisationWhitelistException as e:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Something went wrong with the request--looks like it included an object that did not pass the whitelist.\n\n' + str( e ) )
+                    
                 
             else:
                 
@@ -324,6 +334,7 @@ class HydrusResourceRestricted( HydrusResourceHydrusNetwork ):
             
         
     
+
 class HydrusResourceRestrictedAccount( HydrusResourceRestricted ):
     
     def _checkAccount( self, request: HydrusServerRequest.HydrusRequest ):
@@ -351,6 +362,7 @@ class HydrusResourceRestrictedAccount( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedOptions( HydrusResourceRestricted ):
     
     def _checkAccount( self, request: HydrusServerRequest.HydrusRequest ):
@@ -515,6 +527,7 @@ class HydrusResourceRestrictedAccountKeyFromContent( HydrusResourceRestrictedAcc
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModifyAccountType( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -535,6 +548,7 @@ class HydrusResourceRestrictedAccountModifyAccountType( HydrusResourceRestricted
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModifyBan( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -593,6 +607,7 @@ class HydrusResourceRestrictedAccountModifyDeleteAllContent( HydrusResourceRestr
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModifyExpires( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -630,6 +645,7 @@ class HydrusResourceRestrictedAccountModifyExpires( HydrusResourceRestrictedAcco
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModifySetMessage( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -662,6 +678,7 @@ class HydrusResourceRestrictedAccountModifySetMessage( HydrusResourceRestrictedA
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountModifyUnban( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -682,6 +699,7 @@ class HydrusResourceRestrictedAccountModifyUnban( HydrusResourceRestrictedAccoun
         return response_context
         
     
+
 class HydrusResourceRestrictedAccountOtherAccount( HydrusResourceRestrictedAccountModify ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -764,6 +782,8 @@ class HydrusResourceRestrictedAllAccounts( HydrusResourceRestrictedAccountModify
     
 class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
     
+    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE, HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT }
+    
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         if request.IsGET():
@@ -801,6 +821,7 @@ class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -817,6 +838,7 @@ class HydrusResourceRestrictedBackup( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedLockOn( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -879,6 +901,7 @@ class HydrusResourceRestrictedLockOff( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedMaintenanceRegenServiceInfo( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -895,6 +918,7 @@ class HydrusResourceRestrictedMaintenanceRegenServiceInfo( HydrusResourceRestric
         return response_context
         
     
+
 class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1150,6 +1174,8 @@ class HydrusResourceRestrictedServiceInfo( HydrusResourceRestricted ):
     
 class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
     
+    SERVICES_ON_POST_OK = True
+    
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
         request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
@@ -1193,6 +1219,8 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
     
 
 class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
+    
+    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER }
     
     def _checkAccount( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -1261,6 +1289,8 @@ class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
     
 
 class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
+    
+    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE }
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
