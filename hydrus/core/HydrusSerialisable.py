@@ -546,7 +546,9 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
-                raise
+                HydrusData.Print( 'An object in a dictionary had a type outside of the whitelist and has been discarded. Error:\n\n' + str( e ) )
+                # after thinking about it, I am going to try a discard failsafe rather than a big alert to help clear out cruft from ClientOptions and such
+                continue
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -826,7 +828,9 @@ class SerialisableList( SerialisableBase, list[ T ] ):
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
-                raise
+                HydrusData.Print( 'An object in a list had a type outside of the whitelist and has been discarded. Error:\n\n' + str( e ) )
+                # after thinking about it, I am going to try a discard failsafe rather than a big alert to help clear out cruft from ClientOptions and such
+                continue
                 
             except HydrusExceptions.SerialisationException as e:
                 
