@@ -143,7 +143,7 @@ class LocalProcessCallInputParameterProcessingRule(HydrusSerialisable.Serialisab
         
         ( self.parameter_type, self.replacement_string, serialisable_string_processor ) = serialisable_info
         
-        self.string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+        self.string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
         
     
     def GetInsertionIndex( self, executable_parameter_template: str ):
@@ -422,7 +422,13 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         
         self._executable_parameter_templates = CleanExecutableParameterTemplates( serialisable_executable_parameter_templates )
         
-        self._input_parameter_processing_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_input_parameter_processing_rules )
+        self._input_parameter_processing_rules = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_input_parameter_processing_rules,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE,
+            }
+        )
         
     
     def _TestAvailability( self ):

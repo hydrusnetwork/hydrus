@@ -56,8 +56,15 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         ) = serialisable_info
         
         self._callable_key = bytes.fromhex( serialisable_callable_key )
-        self._actual_call = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_actual_call )
-        self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser )
+        self._actual_call = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_actual_call,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL,
+                HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_FILE,
+                HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_URL,
+            }
+        )
+        self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser, { HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):

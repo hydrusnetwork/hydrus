@@ -159,9 +159,9 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             self._sync_file_modified_date_action
         ) = serialisable_info
         
-        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
+        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
-        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options )
+        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
@@ -292,7 +292,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 sync_file_modified_date_action
             ) = old_serialisable_info
             
-            sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options )
+            sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
             
             new_sync_note_import_options = sync_note_import_options.GetNoteImportOptions() # shucking the new out of the legacy
             

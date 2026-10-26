@@ -99,7 +99,14 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_api_permissions_objects = serialisable_info
         
-        api_permissions_objects: list[ APIPermissions ] = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_permissions ) for serialisable_api_permissions in serialisable_api_permissions_objects ]
+        api_permissions_objects: list[ APIPermissions ] = [
+            HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_api_permissions,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS,
+                }
+            ) for serialisable_api_permissions in serialisable_api_permissions_objects
+        ]
         
         self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
         
@@ -311,7 +318,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         self._access_key = bytes.fromhex( serialisable_access_key )
         
         self._basic_permissions = set( serialisable_basic_permissions )
-        self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_search_tag_filter )
+        self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_search_tag_filter, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):

@@ -714,7 +714,13 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_data,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                }
+            )
             
             simple_action = data_dict[ 'simple_action' ]
             simple_data = data_dict[ 'simple_data' ]
@@ -746,7 +752,12 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
         elif self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
             
-            data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_data,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                }
+            )
             
             service_key = bytes.fromhex( data_dict[ 'service_key' ] )
             content_type = data_dict[ 'content_type' ]
@@ -841,7 +852,13 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
                 
-                data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+                data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
+                    serialisable_data,
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                        HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                    }
+                )
                 
                 simple_action = data_dict[ 'simple_action' ]
                 
@@ -884,7 +901,13 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
                 
-                data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+                data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
+                    serialisable_data,
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                        HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                    }
+                )
                 
                 simple_action = data_dict[ 'simple_action' ]
                 

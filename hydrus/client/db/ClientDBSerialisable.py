@@ -281,7 +281,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 HydrusData.Print( 'Was asked to fetch named JSON object "{}", but it was malformed!'.format( hash.hex() ) )
                 
             
-            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
+            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), None ) # we trust this
             
             hashes_to_objs[ hash ] = obj
             
@@ -337,7 +337,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, version ), 'dump_type {} version {}'.format( dump_type, version ) )
                 
             
-            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ) )
+            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), None ) # we trust this
             
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER:
                 
@@ -375,7 +375,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                     
                     serialisable_info = json.loads( dump )
                     
-                    objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) ) )
+                    objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), None ) ) # we trust this
                     
                 except Exception as e:
                     
@@ -425,7 +425,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp_ms ), 'dump_type {} dump_name {} version {} timestamp_ms {}'.format( dump_type, dump_name[:10], version, object_timestamp_ms ) )
                 
             
-            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
+            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), None ) # we trust this
             
         
     

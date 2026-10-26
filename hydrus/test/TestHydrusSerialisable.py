@@ -49,7 +49,7 @@ class TestSerialisables( unittest.TestCase ):
         self.assertEqual( serialisable_type, obj.SERIALISABLE_TYPE )
         self.assertEqual( version, obj.SERIALISABLE_VERSION )
         
-        dupe_obj = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple )
+        dupe_obj = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         
