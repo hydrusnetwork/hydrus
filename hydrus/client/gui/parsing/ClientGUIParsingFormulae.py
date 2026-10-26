@@ -400,7 +400,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, self._serialisable_type_whitelist )
             
             self._ImportObject( obj )
             

@@ -740,7 +740,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, self._serialisable_type_whitelist )
             
             self._ImportObject( obj )
             
@@ -993,7 +993,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
-        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types, True )
         
         export_menu_template_items = []
         
@@ -1367,7 +1367,7 @@ class QueueListBox( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, self._serialisable_type_whitelist )
             
             self._ImportObject( obj )
             
@@ -1581,7 +1581,7 @@ class QueueListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
-        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types, True )
         
         export_menu_template_items = []
         

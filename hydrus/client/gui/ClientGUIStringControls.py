@@ -276,7 +276,14 @@ class StringProcessorWidget( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            try:
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+                
+            except HydrusExceptions.SerialisationWhitelistException as e:
+                
+                raise Exception( f'The imported object was wrong for this control!. Error:\n\n' + str( e ) )
+                
             
             self._ImportObject( obj )
             

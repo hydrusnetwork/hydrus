@@ -289,7 +289,7 @@ class EditNodes( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK } )
             
             self._ImportObject( obj )
             
@@ -299,6 +299,7 @@ class EditNodes( QW.QWidget ):
             
         
     
+
 class EditParseNodeContentLinkPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, node, referral_url = None, example_data = None ):
@@ -1147,7 +1148,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text )
+            obj = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP } )
             
             self._ImportObject( obj )
             

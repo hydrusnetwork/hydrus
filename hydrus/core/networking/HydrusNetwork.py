@@ -658,8 +658,7 @@ class Account( object ):
             account_type = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_account_type, { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE } )
             
         
-        # dictionary, bandwidth tracker, any more?
-        dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
+        dictionary = HydrusSerialisable.CreateFromString( dictionary_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER } )
         
         return Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         

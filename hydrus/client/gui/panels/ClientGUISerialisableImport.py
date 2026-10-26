@@ -232,8 +232,6 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         domain_metadatas = []
         login_scripts = []
         
-        num_misc_objects = 0
-        
         bandwidth_manager = self._network_engine.bandwidth_manager
         domain_manager = self._network_engine.domain_manager
         login_manager = self._network_engine.login_manager
@@ -242,7 +240,37 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj_list = HydrusSerialisable.CreateFromString( payload_text )
+                obj_list = HydrusSerialisable.CreateFromString(
+                    payload_text,
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                        HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
+                        HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR,
+                        HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS,
+                        HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER,
+                        HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE,
+                        HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN,
+                    }
+                )
+                
+            except HydrusExceptions.SerialisationWhitelistException as e:
+                
+                if not have_shown_load_error:
+                    
+                    message = 'Sorry, at least one of the things you added did not look like a downloader object! Error:\n\n' + str( e )
+                    
+                    if len( payloads ) > 1:
+                        
+                        message += '\n' * 2
+                        message += 'If there are more unloadable objects in this import, they will be skipped silently.'
+                        
+                    
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Serialisation Object Load Error!', message )
+                    
+                    have_shown_load_error = True
+                    
+                
+                continue
                 
             except HydrusExceptions.SerialisationException as e:
                 
@@ -272,6 +300,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 continue
                 
             
+            # if it is just one guy, wrap it in a list
             if isinstance( obj_list, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator, ClientNetworkingURLClass.URLClass, ClientParsing.PageParser, ClientNetworkingDomain.DomainMetadataPackage, ClientNetworkingLogin.LoginScriptDomain ) ):
                 
                 obj_list = HydrusSerialisable.SerialisableList( [ obj_list ] )
@@ -306,21 +335,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     login_scripts.append( obj )
                     
-                else:
-                    
-                    num_misc_objects += 1
-                    
                 
-            
-        
-        if len( gugs ) + len( url_classes ) + len( parsers ) + len( domain_metadatas ) + len( login_scripts ) == 0:
-            
-            if num_misc_objects > 0:
-                
-                ClientGUIDialogsMessage.ShowWarning( self, 'I found '+HydrusNumbers.ToHumanInt(num_misc_objects)+' misc objects in that png, but nothing downloader related.' )
-                
-            
-            return
             
         
         # url matches first
@@ -686,16 +701,19 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         win.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
         self._json_content = QW.QTextEdit( self )
+        self._json_content.setReadOnly( True )
         
         self._parse_button = ClientGUICommon.BetterButton( self, 'parse', self._ParsePayloads )
         
         self._description = QW.QTextEdit( self )
+        self._description.setReadOnly( True )
         
         self._current_json_texts = []
         
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._json_content, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._parse_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -746,7 +764,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( json_text )
+                obj = HydrusSerialisable.CreateFromString( json_text, None ) # this is a debug panel and will eat anything!
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     

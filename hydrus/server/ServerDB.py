@@ -627,7 +627,7 @@ class DB( HydrusDB.HydrusDB ):
         
         account_type = self._GetAccountType( service_id, account_type_id )
         
-        dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
+        dictionary = HydrusSerialisable.CreateFromString( dictionary_string, None ) # we trust this
         
         return HydrusNetwork.Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         
@@ -1162,7 +1162,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_key, service_type, name, port, dictionary_string ) in service_info:
             
-            dictionary = HydrusSerialisable.CreateFromString( dictionary_string )
+            dictionary = HydrusSerialisable.CreateFromString( dictionary_string, None ) # we trust this
             
             service = HydrusNetwork.GenerateService( service_key, service_type, name, port, dictionary )
             
@@ -1774,7 +1774,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( account_type_id, service_id, dump ) in data:
             
-            account_type = HydrusSerialisable.CreateFromString( dump )
+            account_type = HydrusSerialisable.CreateFromString( dump, None ) # we trust this
             
             self._service_ids_to_account_type_ids[ service_id ].add( account_type_id )
             self._account_type_ids_to_account_types[ account_type_id ] = account_type

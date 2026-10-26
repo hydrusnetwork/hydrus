@@ -707,35 +707,40 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         import_options_manager.AddFavourite(
             'no tags',
             HydrusSerialisable.CreateFromString(
-                '[143, 1, [21, 2, [[[0, 4], [2, [151, 1, []]]]]]]'
+                '[143, 1, [21, 2, [[[0, 4], [2, [151, 1, []]]]]]]',
+                None # we trust this
             )
         )
         
         import_options_manager.AddFavourite(
             'show new files',
             HydrusSerialisable.CreateFromString(
-                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 1, 0]]]]]]]'
+                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 1, 0]]]]]]]',
+                None # we trust this
             )
         )
         
         import_options_manager.AddFavourite(
             'show all files',
             HydrusSerialisable.CreateFromString(
-                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 0, 0]]]]]]]'
+                '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 0, 0]]]]]]]',
+                None # we trust this
             )
         )
         
         import_options_manager.AddFavourite(
             'example blacklist',
             HydrusSerialisable.CreateFromString(
-                '[143, 1, [21, 2, [[[0, 2], [2, [150, 1, [[44, 1, [["goblin", 1], ["orc", 1]]], []]]]]]]]'
+                '[143, 1, [21, 2, [[[0, 2], [2, [150, 1, [[44, 1, [["goblin", 1], ["orc", 1]]], []]]]]]]]',
+                None # we trust this
             )
         )
         
         import_options_manager.AddFavourite(
             'force metadata refetch',
             HydrusSerialisable.CreateFromString(
-                '[143, 1, [21, 2, [[[0, 0], [2, [145, 2, [2, 1, true, true, true]]]]]]]'
+                '[143, 1, [21, 2, [[[0, 0], [2, [145, 2, [2, 1, true, true, true]]]]]]]',
+                None # we trust this
             )
         )
         

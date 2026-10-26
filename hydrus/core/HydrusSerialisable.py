@@ -183,7 +183,7 @@ def CreateFromNetworkBytes( network_bytes: bytes, serialisable_type_whitelist: s
     
     obj_string = HydrusCompression.DecompressBytesToString( network_bytes )
     
-    return CreateFromString( obj_string, serialisable_type_whitelist = serialisable_type_whitelist )
+    return CreateFromString( obj_string, serialisable_type_whitelist )
     
 
 def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, serialisable_type_whitelist: set[ int ] ) -> typing.Any:
@@ -198,7 +198,7 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, serialisable_type_wh
         
     
 
-def CreateFromString( obj_string: str, serialisable_type_whitelist: set[ int ] | None = None ) -> typing.Any:
+def CreateFromString( obj_string: str, serialisable_type_whitelist: set[ int ] | None ) -> typing.Any:
     
     obj_tuple = json.loads( obj_string )
     
@@ -225,9 +225,14 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, serialisable_type_whitelist: 
     return obj
     
 
-def DetermineRestrictedSerialisableTypes( permitted_object_types ) -> set[ int ]:
+def DetermineRestrictedSerialisableTypes( permitted_object_types, lists_are_ok: bool ) -> set[ int ]:
     
     serialisable_type_whitelist = set()
+    
+    if lists_are_ok:
+        
+        serialisable_type_whitelist.add( SERIALISABLE_TYPE_LIST )
+        
     
     for permitted_object_type in permitted_object_types:
         
@@ -319,7 +324,7 @@ class SerialisableBase( object ):
     # this magically tells type checkers that this delivers whatever 'self' type is, subclasses whatever
     def Duplicate( self: SerialisableBaseSubclass ) -> SerialisableBaseSubclass:
         
-        return CreateFromString( self.DumpToString() )
+        return CreateFromString( self.DumpToString(), None ) # we trust ourselves
         
     
     def GetSerialisableDescription( self ):

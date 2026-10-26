@@ -61,7 +61,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertIsInstance( json_string, str )
         
-        dupe_obj = HydrusSerialisable.CreateFromString( json_string )
+        dupe_obj = HydrusSerialisable.CreateFromString( json_string, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -176,15 +176,16 @@ class TestSerialisables( unittest.TestCase ):
         
         obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
             HydrusSerialisable.CreateFromString( serialisable_string, set() )
             
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
-            
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
@@ -200,15 +201,16 @@ class TestSerialisables( unittest.TestCase ):
         
         obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
             HydrusSerialisable.CreateFromString( serialisable_string, set() )
             
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
-            
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
@@ -221,15 +223,16 @@ class TestSerialisables( unittest.TestCase ):
         
         obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
             HydrusSerialisable.CreateFromString( serialisable_string, set() )
             
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
-            
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
@@ -246,25 +249,24 @@ class TestSerialisables( unittest.TestCase ):
         
         obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
         
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
             HydrusSerialisable.CreateFromString( serialisable_string, set() )
             
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
-            
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
-            
+        self.assertTrue( len( obj_recreated ) == 0 )
         
-        with self.assertRaises( HydrusExceptions.SerialisationException ):
-            
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
-            
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
         
     
     def test_SERIALISABLE_TYPE_APPLICATION_COMMAND( self ):
