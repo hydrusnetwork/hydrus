@@ -266,7 +266,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED } )
+            self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED } if serialisable_type_whitelist is not None else None )
             
         except Exception as e:
             
@@ -275,7 +275,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED } )
+            self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED } if serialisable_type_whitelist is not None else None )
             
         except Exception as e:
             

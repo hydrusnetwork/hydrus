@@ -224,7 +224,7 @@ class PairComparatorOneFileMetadataConditional( PairComparator ):
         
         ( self._looking_at, serialisable_metadata_conditional ) = serialisable_info
         
-        self._metadata_conditional = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_conditional, { HydrusSerialisable.SERIALISABLE_TYPE_METADATA_CONDITIONAL } )
+        self._metadata_conditional = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_conditional, { HydrusSerialisable.SERIALISABLE_TYPE_METADATA_CONDITIONAL } if serialisable_type_whitelist is not None else None )
         
     
     def CanDetermineBetter( self ) -> bool:

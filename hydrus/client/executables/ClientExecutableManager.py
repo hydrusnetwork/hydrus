@@ -46,7 +46,7 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         
         serialisable_callables = serialisable_info
         
-        self._callables = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_callables )
+        self._callables = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_callables, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE } )
         
         self._RegenCache()
         

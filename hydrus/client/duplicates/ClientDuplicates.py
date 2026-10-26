@@ -159,9 +159,9 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             self._sync_file_modified_date_action
         ) = serialisable_info
         
-        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
+        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } if serialisable_type_whitelist is not None else None ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
         self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
-        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } )
+        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } if serialisable_type_whitelist is not None else None )
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):

@@ -719,7 +719,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
                     HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
-                }
+                } if serialisable_type_whitelist is not None else None
             )
             
             simple_action = data_dict[ 'simple_action' ]
@@ -756,7 +756,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 serialisable_data,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                }
+                } if serialisable_type_whitelist is not None else None
             )
             
             service_key = bytes.fromhex( data_dict[ 'service_key' ] )
