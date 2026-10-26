@@ -1,5 +1,3 @@
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -687,13 +685,18 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         
         win.setCursor( QG.QCursor( QC.Qt.CursorShape.PointingHandCursor ) )
         
-        self._description = QW.QTextEdit( self )
         self._json_content = QW.QTextEdit( self )
+        
+        self._parse_button = ClientGUICommon.BetterButton( self, 'parse', self._ParsePayloads )
+        
+        self._description = QW.QTextEdit( self )
+        
+        self._current_json_texts = []
         
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._json_content, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -723,16 +726,27 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ImportPayloads( self, payloads ):
         
-        result_texts = []
-        json_texts = []
+        self._json_texts = []
         
         for ( payload_description, payload_text ) in payloads:
             
-            json_texts.append( payload_text )
+            self._json_texts.append( payload_text )
+            
+        
+        self._json_content.setText( '\n\n'.join( self._json_texts ) )
+        
+        self._description.setText( '' )
+        
+    
+    def _ParsePayloads( self ):
+        
+        result_texts = []
+        
+        for json_text in self._json_texts:
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload_text )
+                obj = HydrusSerialisable.CreateFromString( json_text )
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     
@@ -740,12 +754,9 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 else:
                     
-                    obj = typing.cast( HydrusSerialisable.SerialisableBase, obj )
-                    
-                    # TODO: let's make a HydrusSerialisable 'DescribeYourself' or similar and have lists and dicts talk about their contents
                     result_text = f'Object Type: {obj.GetSerialisableDescription()}'
                     result_text += '\n'
-                    result_text += f'JSON: {HydrusData.ToHumanBytes( len( payload_text ) )}'
+                    result_text += f'JSON: {HydrusData.ToHumanBytes( len( json_text ) )}'
                     
                 
                 result_texts.append( result_text )
@@ -759,7 +770,6 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         ending_description_text = f'{HydrusNumbers.ToHumanInt(len( result_texts ))} items\n\n' + '\n\n'.join( result_texts )
         
         self._description.setText( ending_description_text )
-        self._json_content.setText( '\n\n'.join( json_texts ) )
         
     
     def _Paste( self ):
