@@ -44,7 +44,7 @@ class GUISessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
         return serialisable_top_notebook
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_top_notebook = serialisable_info
         
@@ -111,7 +111,7 @@ class GUISessionContainerPage( HydrusSerialisable.SerialisableBaseNamed ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -146,7 +146,7 @@ class GUISessionContainerPageNotebook( GUISessionContainerPage ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_pages = serialisable_info
         
@@ -188,7 +188,7 @@ class GUISessionContainerPageSingle( GUISessionContainerPage ):
         return self._page_data_hash.hex()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         page_data_hash_hex = serialisable_info
         
@@ -237,7 +237,7 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_page_manager, serialisable_hashes )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_page_manager, serialisable_hashes ) = serialisable_info
         

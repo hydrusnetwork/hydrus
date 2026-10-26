@@ -38,7 +38,7 @@ class HydrusResourceBusyCheck( HydrusServerResources.Resource ):
 class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
     
     BLOCKED_WHEN_BUSY = True
-    RESTRICTED_SERIALISABLE_TYPES_ON_POST = set()
+    SERIALISABLE_TYPE_WHITELIST_ON_POST = set()
     SERVICES_ON_POST_OK = False
     ACCOUNT_ON_POST_OK = False
     
@@ -84,7 +84,7 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
                 
                 try:
                     
-                    parsed_request_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( json_string, self.RESTRICTED_SERIALISABLE_TYPES_ON_POST, self.ACCOUNT_ON_POST_OK, self.SERVICES_ON_POST_OK )
+                    parsed_request_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( json_string, self.SERIALISABLE_TYPE_WHITELIST_ON_POST, self.ACCOUNT_ON_POST_OK, self.SERVICES_ON_POST_OK )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     
@@ -782,7 +782,7 @@ class HydrusResourceRestrictedAllAccounts( HydrusResourceRestrictedAccountModify
     
 class HydrusResourceRestrictedAccountTypes( HydrusResourceRestricted ):
     
-    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE, HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT }
+    SERIALISABLE_TYPE_WHITELIST_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE, HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT }
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -1220,7 +1220,7 @@ class HydrusResourceRestrictedServices( HydrusResourceRestricted ):
 
 class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
     
-    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER }
+    SERIALISABLE_TYPE_WHITELIST_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER }
     
     def _checkAccount( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -1290,7 +1290,7 @@ class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
 
 class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
     
-    RESTRICTED_SERIALISABLE_TYPES_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE }
+    SERIALISABLE_TYPE_WHITELIST_ON_POST = { HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE }
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         

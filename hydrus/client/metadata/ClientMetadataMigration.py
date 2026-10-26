@@ -66,7 +66,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_importers, serialisable_string_processor, serialisable_exporter )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = serialisable_info
         

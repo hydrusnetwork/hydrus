@@ -224,7 +224,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
         self._variables[ 'media_collect' ] = ClientMediaCollect.MediaCollect()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._page_name, self._page_type, serialisable_variables ) = serialisable_info
         

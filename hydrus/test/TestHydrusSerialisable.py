@@ -27,7 +27,7 @@ from hydrus.test import TestController as TC
 
 class TestSerialisables( unittest.TestCase ):
     
-    def _dump_and_load_and_test( self, obj: HydrusSerialisable.SerialisableBase, test_func, restricted_serialisable_types: set[ int ] ):
+    def _dump_and_load_and_test( self, obj: HydrusSerialisable.SerialisableBase, test_func, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_tuple = obj.GetSerialisableTuple()
         
@@ -73,7 +73,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertIsInstance( network_bytes, bytes )
         
-        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, restricted_serialisable_types )
+        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         

@@ -125,7 +125,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
         return ( self._name, serialisable_value_string_match, self._is_ephemeral, self._default_value, serialisable_default_value_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._name, serialisable_value_string_match, self._is_ephemeral, self._default_value, serialisable_default_value_string_processor ) = serialisable_info
         
@@ -328,7 +328,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
         self._cache_initialised = True
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             raw_domains,
@@ -805,7 +805,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             serialisable_url_class_key,

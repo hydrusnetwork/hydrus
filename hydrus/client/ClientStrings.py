@@ -85,7 +85,7 @@ class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -131,7 +131,7 @@ class StringConverter( StringProcessingStep ):
         return ( self.conversions, self.example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_conversions, self.example_string ) = serialisable_info
         
@@ -606,7 +606,7 @@ class StringJoiner( StringProcessingStep ):
         return ( self._joiner, self._join_tuple_size )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._joiner, self._join_tuple_size ) = serialisable_info
         
@@ -753,7 +753,7 @@ class StringMatch( StringProcessingStep ):
         return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string ) = serialisable_info
         
@@ -1028,7 +1028,7 @@ class StringSlicer( StringProcessingStep ):
         return ( self._index_start, self._index_end )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._index_start, self._index_end ) = serialisable_info
         
@@ -1200,7 +1200,7 @@ class StringSorter( StringProcessingStep ):
         return ( self._sort_type, self._asc, self._regex )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._sort_type, self._asc, self._regex ) = serialisable_info
         
@@ -1333,7 +1333,7 @@ class StringSplitter( StringProcessingStep ):
         return ( self._separator, self._max_splits )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._separator, self._max_splits ) = serialisable_info
         
@@ -1454,7 +1454,7 @@ class StringTagFilter( StringProcessingStep ):
         return ( serialisable_tag_filter, self._example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_tag_filter, self._example_string ) = serialisable_info
         
@@ -1573,7 +1573,7 @@ class StringProcessor( StringProcessingStep ):
         return HydrusSerialisable.SerialisableList( self._processing_steps ).GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_processing_steps = serialisable_info
         

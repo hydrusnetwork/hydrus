@@ -667,13 +667,13 @@ def GetDefaultObjectsFromPNGs( paths: list[ str ], allowed_object_types ):
     
     from hydrus.client import ClientSerialisable
     
-    restricted_serialisable_types = set()
+    serialisable_type_whitelist = set()
     
     for object_type in allowed_object_types:
         
         try:
             
-            restricted_serialisable_types.add( object_type.SERIALISABLE_TYPE )
+            serialisable_type_whitelist.add( object_type.SERIALISABLE_TYPE )
             
         except Exception as e:
             
@@ -688,7 +688,7 @@ def GetDefaultObjectsFromPNGs( paths: list[ str ], allowed_object_types ):
             
             payload = ClientSerialisable.LoadFromPNG( path )
             
-            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, restricted_serialisable_types )
+            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, serialisable_type_whitelist )
             
             if isinstance( obj, HydrusSerialisable.SerialisableList ):
                 

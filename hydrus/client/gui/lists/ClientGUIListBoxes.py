@@ -456,7 +456,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         self._enabled_only_on_selection_buttons = []
         
         self._permitted_object_types = tuple()
-        self._restricted_serialisable_types = set()
+        self._serialisable_type_whitelist = set()
         
         #
         
@@ -777,7 +777,7 @@ class AddEditDeleteListBox( QW.QWidget ):
                         
                         try:
                             
-                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
                             
                         except HydrusExceptions.SerialisationWhitelistException as e:
                             
@@ -993,7 +993,7 @@ class AddEditDeleteListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
-        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
         
         export_menu_template_items = []
         
@@ -1081,7 +1081,7 @@ class QueueListBox( QW.QWidget ):
         super().__init__( parent )
         
         self._permitted_object_types = tuple()
-        self._restricted_serialisable_types = set()
+        self._serialisable_type_whitelist = set()
         
         self._listbox = BetterQListWidget( self, delete_callable = self._Delete )
         self._listbox.setSelectionMode( QW.QAbstractItemView.SelectionMode.ExtendedSelection )
@@ -1404,7 +1404,7 @@ class QueueListBox( QW.QWidget ):
                         
                         try:
                             
-                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
                             
                         except HydrusExceptions.SerialisationWhitelistException as e:
                             
@@ -1581,7 +1581,7 @@ class QueueListBox( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types ):
         
         self._permitted_object_types = tuple( permitted_object_types )
-        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
         
         export_menu_template_items = []
         

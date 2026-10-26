@@ -31,7 +31,7 @@ class NetworkBandwidthManagerLegacy( HydrusSerialisable.SerialisableBase ):
         return ( all_serialisable_trackers, all_serialisable_rules )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( all_serialisable_trackers, all_serialisable_rules ) = serialisable_info
         

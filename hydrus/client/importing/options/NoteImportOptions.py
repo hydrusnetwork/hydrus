@@ -49,7 +49,7 @@ class NoteImportOptions( IOC.ImportOptionsMetatype ):
         return ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._get_notes, self._extend_existing_note_if_possible, self._conflict_resolution, name_whitelist, self._all_name_override, names_and_name_overrides ) = serialisable_info
         

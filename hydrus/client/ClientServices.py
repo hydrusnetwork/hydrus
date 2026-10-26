@@ -240,7 +240,7 @@ class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_service_types, serialisable_service_keys )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_service_types, serialisable_service_keys ) = serialisable_info
         
@@ -1440,7 +1440,7 @@ class ServiceRestricted( ServiceRemote ):
             
             if content_type is not None and content_type.startswith( 'application/json' ):
                 
-                method_and_commands_to_restricted_serialisable_types = {
+                method_and_commands_to_serialisable_type_whitelist = {
                     ( HC.GET, 'auto_create_account_types' ) : {
                         HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE,
                     },
@@ -1477,11 +1477,11 @@ class ServiceRestricted( ServiceRemote ):
                 
                 method_and_command = ( method, command )
                 
-                restricted_serialisable_types = method_and_commands_to_restricted_serialisable_types.get( method_and_command, set() )
+                serialisable_type_whitelist = method_and_commands_to_serialisable_type_whitelist.get( method_and_command, set() )
                 accounts_ok = method_and_command in method_and_commands_that_are_accounts_ok
                 services_ok = method_and_command in method_and_commands_that_are_services_ok
                 
-                parsed_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, restricted_serialisable_types, accounts_ok, services_ok )
+                parsed_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitelist, accounts_ok, services_ok )
                 
                 if command == 'account' and 'account' in parsed_args:
                     

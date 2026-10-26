@@ -1449,7 +1449,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._listctrl: BetterListCtrlTreeView | None = None
         
         self._permitted_object_types = []
-        self._restricted_serialisable_types = set()
+        self._serialisable_type_whitelist = set()
         
         self._import_add_callable = lambda x: None
         self._custom_get_callable = None
@@ -1705,7 +1705,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     
@@ -1922,7 +1922,7 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportPNGs( self, paths ):
         
-        # TODO: multiple lists here and elsewhere use very similar code that could be merged. this is more important as this is an ingress of untrusted data and we want restricted_serialisable_types and such handled nicely
+        # TODO: multiple lists here and elsewhere use very similar code that could be merged. this is more important as this is an ingress of untrusted data and we want serialisable_type_whitelist and such handled nicely
         
         have_shown_load_error = False
         
@@ -1945,7 +1945,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     
@@ -2071,7 +2071,7 @@ class BetterListCtrlPanel( QW.QWidget ):
     def AddImportExportButtons( self, permitted_object_types, import_add_callable, custom_get_callable = None, and_duplicate_button = True ):
         
         self._permitted_object_types = permitted_object_types
-        self._restricted_serialisable_types = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types )
         
         self._import_add_callable = import_add_callable
         self._custom_get_callable = custom_get_callable

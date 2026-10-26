@@ -151,7 +151,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         super().__init__( parent )
         
-        self._restricted_serialisable_types = {
+        self._serialisable_type_whitelist = {
             HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
             HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
             HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
@@ -435,7 +435,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._restricted_serialisable_types )
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         

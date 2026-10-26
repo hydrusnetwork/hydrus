@@ -646,7 +646,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return ( self._predicate_type, serialisable_value, self._inclusive )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._predicate_type, serialisable_value, self._inclusive ) = serialisable_info
         

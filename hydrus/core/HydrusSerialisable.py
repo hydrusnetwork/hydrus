@@ -179,14 +179,14 @@ SERIALISABLE_TYPE_EXTERNAL_PROGRAMS_IMPORT_OPTIONS_SINGLE_ENTRY = 163
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 
-def CreateFromNetworkBytes( network_bytes: bytes, restricted_serialisable_types: set[ int ] ) -> typing.Any:
+def CreateFromNetworkBytes( network_bytes: bytes, serialisable_type_whitelist: set[ int ] ) -> typing.Any:
     
     obj_string = HydrusCompression.DecompressBytesToString( network_bytes )
     
-    return CreateFromString( obj_string, restricted_serialisable_types = restricted_serialisable_types )
+    return CreateFromString( obj_string, serialisable_type_whitelist = serialisable_type_whitelist )
     
 
-def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types: set[ int ] ) -> typing.Any:
+def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, serialisable_type_whitelist: set[ int ] ) -> typing.Any:
     
     if obj_tuple_or_none is None:
         
@@ -194,18 +194,18 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, restricted_serialisa
         
     else:
         
-        return CreateFromSerialisableTuple( obj_tuple_or_none, restricted_serialisable_types = restricted_serialisable_types )
+        return CreateFromSerialisableTuple( obj_tuple_or_none, serialisable_type_whitelist = serialisable_type_whitelist )
         
     
 
-def CreateFromString( obj_string: str, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
+def CreateFromString( obj_string: str, serialisable_type_whitelist: set[ int ] | None = None ) -> typing.Any:
     
     obj_tuple = json.loads( obj_string )
     
-    return CreateFromSerialisableTuple( obj_tuple, restricted_serialisable_types = restricted_serialisable_types )
+    return CreateFromSerialisableTuple( obj_tuple, serialisable_type_whitelist = serialisable_type_whitelist )
     
 
-def CreateFromSerialisableTuple( obj_tuple: tuple, restricted_serialisable_types: set[ int ] | None = None ) -> typing.Any:
+def CreateFromSerialisableTuple( obj_tuple: tuple, serialisable_type_whitelist: set[ int ] | None = None ) -> typing.Any:
     
     if len( obj_tuple ) == 3:
         
@@ -220,20 +220,20 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, restricted_serialisable_types
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]( name )
         
     
-    obj.InitialiseFromSerialisableInfo( version, serialisable_info, restricted_serialisable_types )
+    obj.InitialiseFromSerialisableInfo( version, serialisable_info, serialisable_type_whitelist )
     
     return obj
     
 
 def DetermineRestrictedSerialisableTypes( permitted_object_types ) -> set[ int ]:
     
-    restricted_serialisable_types = set()
+    serialisable_type_whitelist = set()
     
     for permitted_object_type in permitted_object_types:
         
         try:
             
-            restricted_serialisable_types.add( permitted_object_type.SERIALISABLE_TYPE )
+            serialisable_type_whitelist.add( permitted_object_type.SERIALISABLE_TYPE )
             
         except Exception as e:
             
@@ -241,7 +241,7 @@ def DetermineRestrictedSerialisableTypes( permitted_object_types ) -> set[ int ]
             
         
     
-    return restricted_serialisable_types
+    return serialisable_type_whitelist
     
 
 def GetNoneableSerialisableTuple( obj_or_none ):
@@ -292,7 +292,7 @@ class SerialisableBase( object ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -350,13 +350,13 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
-    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
-        if restricted_serialisable_types is not None:
+        if serialisable_type_whitelist is not None:
             
-            if self.SERIALISABLE_TYPE not in restricted_serialisable_types:
+            if self.SERIALISABLE_TYPE not in serialisable_type_whitelist:
                 
-                raise HydrusExceptions.SerialisationWhitelistException( f'Was given an object with a type of {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}"), but the allowed serialisable types are: {restricted_serialisable_types}!' )
+                raise HydrusExceptions.SerialisationWhitelistException( f'Was given an object with a type of {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}"), but the allowed serialisable types are: {serialisable_type_whitelist}!' )
                 
             
         
@@ -387,7 +387,7 @@ class SerialisableBase( object ):
         
         try:
             
-            self._InitialiseFromSerialisableInfo( serialisable_info, restricted_serialisable_types )
+            self._InitialiseFromSerialisableInfo( serialisable_info, serialisable_type_whitelist )
             
         except Exception as e:
             
@@ -417,13 +417,13 @@ def ConvertObjectToMetaSerialisableTuple( obj ):
     return ( metatype, serialisable )
     
 
-def ConvertMetaSerialisableTupleToObject( meta_tuple, restricted_serialisable_types: set[ int ] | None ):
+def ConvertMetaSerialisableTupleToObject( meta_tuple, serialisable_type_whitelist: set[ int ] | None ):
     
     ( metatype, serialisable ) = meta_tuple
     
     if metatype == META_SERIALISABLE_TYPE_HYDRUS_SERIALISABLE:
         
-        obj = CreateFromSerialisableTuple( serialisable, restricted_serialisable_types )
+        obj = CreateFromSerialisableTuple( serialisable, serialisable_type_whitelist )
         
     elif metatype == META_SERIALISABLE_TYPE_JSON_BYTES:
         
@@ -454,7 +454,7 @@ class SerialisableBaseNamed( SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -518,13 +518,13 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
         return meta_keys_and_meta_values
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
-        if restricted_serialisable_types is not None:
+        if serialisable_type_whitelist is not None:
             
             # I convert normal lists to serialisable list on serialisation, so we have to implicitly allow them on deserialisation here
-            restricted_serialisable_types = set( restricted_serialisable_types )
-            restricted_serialisable_types.add( SERIALISABLE_TYPE_LIST )
+            serialisable_type_whitelist = set( serialisable_type_whitelist )
+            serialisable_type_whitelist.add( SERIALISABLE_TYPE_LIST )
             
         
         have_shown_load_error = False
@@ -535,14 +535,14 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
             
             try:
                 
-                key = ConvertMetaSerialisableTupleToObject( meta_key, restricted_serialisable_types )
+                key = ConvertMetaSerialisableTupleToObject( meta_key, serialisable_type_whitelist )
                 
                 if isinstance( key, list ):
                     
                     key = tuple( key )
                     
                 
-                value = ConvertMetaSerialisableTupleToObject( meta_value, restricted_serialisable_types )
+                value = ConvertMetaSerialisableTupleToObject( meta_value, serialisable_type_whitelist )
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
@@ -704,7 +704,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict[ int | bytes, V_bytes 
         return pairs
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         for ( encoded_key, encoded_value ) in serialisable_info:
             
@@ -812,7 +812,7 @@ class SerialisableList( SerialisableBase, list[ T ] ):
         return meta_tuples
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         have_shown_load_error = False
         
@@ -822,7 +822,7 @@ class SerialisableList( SerialisableBase, list[ T ] ):
             
             try:
                 
-                obj = ConvertMetaSerialisableTupleToObject( meta_tuple, restricted_serialisable_types )
+                obj = ConvertMetaSerialisableTupleToObject( meta_tuple, serialisable_type_whitelist )
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
@@ -962,7 +962,7 @@ class IdAndName( SerialisableBase ):
         return ( id_serialisable, self.name )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( id_serialisable, self.name ) = serialisable_info
         

@@ -135,7 +135,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_watchers, self._highlighted_watcher_url, serialisable_checker_options, serialisable_import_options_container )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_watchers, self._highlighted_watcher_url, serialisable_checker_options, serialisable_import_options_container ) = serialisable_info
         
@@ -955,7 +955,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         return self._url != ''
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._url,

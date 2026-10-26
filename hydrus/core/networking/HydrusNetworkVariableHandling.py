@@ -245,18 +245,18 @@ def ParseHydrusNetworkGETArgs( requests_args ):
     return args
     
 
-def ParseNetworkBytesToParsedHydrusArgs( network_bytes, restricted_serialisable_types: set[ int ], accounts_ok: bool, services_ok: bool ):
+def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitelist: set[ int ], accounts_ok: bool, services_ok: bool ):
     
     if len( network_bytes ) == 0:
         
         return HydrusSerialisable.SerialisableDictionary()
         
     
-    restricted_serialisable_types = set( restricted_serialisable_types )
+    serialisable_type_whitelist = set( serialisable_type_whitelist )
     
-    restricted_serialisable_types.add( HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY ) # the actual thing is a hydrus dict, so we need this regardless
+    serialisable_type_whitelist.add( HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY ) # the actual thing is a hydrus dict, so we need this regardless
     
-    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, restricted_serialisable_types )
+    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, serialisable_type_whitelist )
     
     if not isinstance( args, dict ):
         

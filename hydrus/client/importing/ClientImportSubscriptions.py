@@ -190,7 +190,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             serialisable_gug_key_and_name,
@@ -1877,7 +1877,7 @@ class SubscriptionContainer( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_subscription, serialisable_query_log_containers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_subscription, serialisable_query_log_containers ) = serialisable_info
         

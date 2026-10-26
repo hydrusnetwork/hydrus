@@ -31,7 +31,7 @@ class NetworkContextSettings( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_settings, serialisable_custom_headers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_settings, serialisable_custom_headers ) = serialisable_info
         
@@ -115,7 +115,7 @@ class NetworkContextStatus( HydrusSerialisable.SerialisableBase ):
         return serialisable_events_ms
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_events_ms = serialisable_info
         
@@ -213,7 +213,7 @@ class NetworkContextRecord( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_network_context, serialisable_status, serialisable_settings )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_network_context, serialisable_status, serialisable_settings ) = serialisable_info
         

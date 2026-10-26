@@ -52,7 +52,7 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         return serialisable_import_options
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_import_options = serialisable_info
         

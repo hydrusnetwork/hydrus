@@ -3849,18 +3849,18 @@ class DB( HydrusDB.HydrusDB ):
             
             if mime == HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS:
                 
-                restricted_serialisable_types = { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE }
+                serialisable_type_whitelist = { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE }
                 
             elif mime == HC.APPLICATION_HYDRUS_UPDATE_CONTENT:
                 
-                restricted_serialisable_types = { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE }
+                serialisable_type_whitelist = { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE }
                 
             else:
                 
                 raise NotImplementedError( 'Unknown incoming update mime!' )
                 
             
-            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, restricted_serialisable_types )
+            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, serialisable_type_whitelist )
             
         except Exception as e:
             

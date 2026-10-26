@@ -125,7 +125,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_file_seed_cache, serialisable_import_options_container, serialisable_metadata_routers, self._delete_after_success, self._paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_file_seed_cache, serialisable_import_options_container, serialisable_metadata_routers, self._delete_after_success, self._paused ) = serialisable_info
         
@@ -919,7 +919,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return did_work
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, restricted_serialisable_types: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._path,
