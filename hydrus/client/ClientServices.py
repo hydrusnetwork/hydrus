@@ -1365,6 +1365,8 @@ class ServiceRestricted( ServiceRemote ):
             
             if method == HC.GET:
                 
+                method_string = 'GET'
+                
                 query = HydrusNetworkVariableHandling.DumpToGETQuery( request_args )
                 
                 body = ''
@@ -1372,6 +1374,8 @@ class ServiceRestricted( ServiceRemote ):
                 content_type = None
                 
             elif method == HC.POST:
+                
+                method_string = 'POST'
                 
                 query = ''
                 
@@ -1386,6 +1390,10 @@ class ServiceRestricted( ServiceRemote ):
                     body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( request_args )
                     
                 
+            else:
+                
+                raise NotImplementedError( 'Unsupported http method!' )
+                
             
             if query != '':
                 
@@ -1398,16 +1406,7 @@ class ServiceRestricted( ServiceRemote ):
             
             url = self.GetBaseURL() + command_and_query
             
-            if method == HC.GET:
-                
-                method = 'GET'
-                
-            elif method == HC.POST:
-                
-                method = 'POST'
-                
-            
-            network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path, file_body_path = file_body_path )
+            network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method_string, url, body = body, temp_path = temp_path, file_body_path = file_body_path )
             
             if command not in ( 'update', 'metadata', 'file', 'thumbnail' ):
                 
@@ -1441,20 +1440,46 @@ class ServiceRestricted( ServiceRemote ):
             
             if content_type is not None and content_type.startswith( 'application/json' ):
                 
-                # TODO: flesh out a big dict for (method, command) -> this data so we have proper per-command response parse filtering
-                restricted_serialisable_types = {
-                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                    HydrusSerialisable.SERIALISABLE_TYPE_PETITION,
-                    HydrusSerialisable.SERIALISABLE_TYPE_PETITION_HEADER,
-                    HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE,
-                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
-                    HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
-                    HydrusSerialisable.SERIALISABLE_TYPE_SERVER_TO_CLIENT_CONTENT_UPDATE_PACKAGE,
-                    HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE,
-                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
+                method_and_commands_to_restricted_serialisable_types = {
+                    ( HC.GET, 'auto_create_account_types' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE,
+                    },
+                    ( HC.GET, 'account_types' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_ACCOUNT_TYPE,
+                    },
+                    ( HC.GET, 'petition' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_PETITION,
+                    },
+                    ( HC.GET, 'petitions_summary' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_PETITION_HEADER,
+                    },
+                    ( HC.GET, 'tag_filter' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER
+                    },
+                    ( HC.GET, 'immediate_update' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE,
+                        HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
+                    },
+                    ( HC.GET, 'metadata' ) : {
+                        HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
+                    }
                 }
-                accounts_ok = True
-                services_ok = True
+                
+                method_and_commands_that_are_accounts_ok = {
+                    ( HC.GET, 'account' ),
+                    ( HC.GET, 'other_account' ),
+                    ( HC.GET, 'all_accounts' ),
+                }
+                
+                method_and_commands_that_are_services_ok = {
+                    ( HC.GET, 'services' ),
+                }
+                
+                method_and_command = ( method, command )
+                
+                restricted_serialisable_types = method_and_commands_to_restricted_serialisable_types.get( method_and_command, set() )
+                accounts_ok = method_and_command in method_and_commands_that_are_accounts_ok
+                services_ok = method_and_command in method_and_commands_that_are_services_ok
                 
                 parsed_args = HydrusNetworkVariableHandling.ParseNetworkBytesToParsedHydrusArgs( network_bytes, restricted_serialisable_types, accounts_ok, services_ok )
                 
