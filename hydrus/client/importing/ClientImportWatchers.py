@@ -135,16 +135,16 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_watchers, self._highlighted_watcher_url, serialisable_checker_options, serialisable_import_options_container )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_watchers, self._highlighted_watcher_url, serialisable_checker_options, serialisable_import_options_container ) = serialisable_info
         
-        self._watchers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchers )
+        self._watchers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_WATCHER_IMPORT } )
         
         self._watcher_keys_to_watchers = { watcher.GetWatcherKey() : watcher for watcher in self._watchers }
         
-        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container )
+        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS } )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
         
     
     def _RegenerateStatus( self ):
@@ -185,7 +185,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = True
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -238,9 +238,9 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_watchers, serialisable_highlighted_watcher_key, serialisable_checker_options, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
-            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
+            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
             
             if CG.client_controller.IsBooted():
                 
@@ -955,7 +955,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         return self._url != ''
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._url,
@@ -976,13 +976,13 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             ) = serialisable_info
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
-        self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
+        self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS } )
         
-        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
         
-        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container )
+        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS } )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
         
     
     def _SerialisableChangeMade( self ):
@@ -1027,7 +1027,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1137,9 +1137,9 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             ( url, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_external_filterable_tags, serialisable_external_additional_service_keys_to_tags, serialisable_checker_options, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options, last_check_time, files_paused, checking_paused, checking_status, subject, no_work_until, no_work_until_reason, creation_time ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
-            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
+            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
             
             if CG.client_controller.IsBooted():
                 

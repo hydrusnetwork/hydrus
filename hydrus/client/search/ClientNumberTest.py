@@ -143,12 +143,12 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return ( self.operator, self.value, self.extra_value )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self.operator, self.value, self.extra_value ) = serialisable_info
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

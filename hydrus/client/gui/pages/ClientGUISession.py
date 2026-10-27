@@ -44,11 +44,11 @@ class GUISessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
         return serialisable_top_notebook
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_top_notebook = serialisable_info
         
-        self._top_notebook_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_top_notebook )
+        self._top_notebook_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_top_notebook, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_NOTEBOOK } )
         
     
     def GetHashesToPageData( self ):
@@ -111,7 +111,7 @@ class GUISessionContainerPage( HydrusSerialisable.SerialisableBaseNamed ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -146,11 +146,11 @@ class GUISessionContainerPageNotebook( GUISessionContainerPage ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_pages = serialisable_info
         
-        self._page_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pages )
+        self._page_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pages, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_SINGLE } )
         
     
     def GetPageDataHashes( self ) -> set:
@@ -163,6 +163,7 @@ class GUISessionContainerPageNotebook( GUISessionContainerPage ):
         return self._page_containers
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_NOTEBOOK ] = GUISessionContainerPageNotebook
 
 class GUISessionContainerPageSingle( GUISessionContainerPage ):
@@ -188,7 +189,7 @@ class GUISessionContainerPageSingle( GUISessionContainerPage ):
         return self._page_data_hash.hex()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         page_data_hash_hex = serialisable_info
         
@@ -237,11 +238,11 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_page_manager, serialisable_hashes )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_page_manager, serialisable_hashes ) = serialisable_info
         
-        self._page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
+        self._page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER } )
         self._hashes = [ bytes.fromhex( hash_hex ) for hash_hex in serialisable_hashes ]
         
     
@@ -255,4 +256,5 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
         return self._page_manager
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_PAGE_DATA ] = GUISessionPageData

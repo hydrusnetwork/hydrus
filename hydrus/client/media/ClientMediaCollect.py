@@ -47,16 +47,16 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
         return ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context ) = serialisable_info
         
         self.rating_service_keys = [ bytes.fromhex( serialisable_key ) for serialisable_key in serialisable_rating_service_keys ]
         
-        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
+        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT } )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

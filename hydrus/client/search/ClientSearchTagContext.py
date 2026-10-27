@@ -87,7 +87,7 @@ class TagContext( HydrusSerialisable.SerialisableBase ):
         return ( self.service_key.hex(), self.include_current_tags, self.include_pending_tags, self.display_service_key.hex() )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( encoded_service_key, self.include_current_tags, self.include_pending_tags, encoded_display_service_key ) = serialisable_info
         
@@ -95,7 +95,7 @@ class TagContext( HydrusSerialisable.SerialisableBase ):
         self.display_service_key = bytes.fromhex( encoded_display_service_key )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

@@ -125,13 +125,13 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_file_seed_cache, serialisable_import_options_container, serialisable_metadata_routers, self._delete_after_success, self._paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_file_seed_cache, serialisable_import_options_container, serialisable_metadata_routers, self._delete_after_success, self._paused ) = serialisable_info
         
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container )
-        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER } )
         
     
     def _SerialisableChangeMade( self ):
@@ -139,13 +139,13 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = HydrusTime.GetNow()
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
             ( serialisable_file_seed_cache, serialisable_options, serialisable_paths_to_tags, delete_after_success, paused ) = old_serialisable_info
             
-            file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+            file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
             
             paths_to_additional_service_keys_to_tags = { path : { bytes.fromhex( service_key ) : tags for ( service_key, tags ) in service_keys_to_tags.items() } for ( path, service_keys_to_tags ) in serialisable_paths_to_tags.items() }
             
@@ -183,7 +183,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_file_seed_cache, serialisable_options, serialisable_metadata_routers, delete_after_success, paused ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
             
             if CG.client_controller.IsBooted():
                 
@@ -919,7 +919,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return did_work
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._path,
@@ -944,13 +944,13 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._actions = dict( action_pairs )
         self._action_locations = dict( action_location_pairs )
         
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container )
-        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers )
-        self._tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER } )
+        self._tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS } ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1033,7 +1033,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( path, mimes, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = old_serialisable_info
             
-            file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
+            file_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
             
             file_import_options.GetFileFilteringImportOptions().SetAllowedSpecificFiletypes( mimes )
             
@@ -1048,7 +1048,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, period, check_regularly, serialisable_file_seed_cache, last_checked, paused, check_now, show_working_popup, publish_files_to_popup_button, publish_files_to_page ) = old_serialisable_info
             
-            tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
+            tag_service_keys_to_filename_tagging_options = dict( [ ( bytes.fromhex( encoded_service_key ), HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filename_tagging_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILENAME_TAGGING_OPTIONS } ) ) for ( encoded_service_key, serialisable_filename_tagging_options ) in serialisable_tag_service_keys_to_filename_tagging_options ] )
             
             metadata_routers = HydrusSerialisable.SerialisableList()
             
@@ -1199,8 +1199,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 publish_files_to_page
             ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options )
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
             
             if CG.client_controller.IsBooted():
                 

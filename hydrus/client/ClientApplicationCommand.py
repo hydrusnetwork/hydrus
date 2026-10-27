@@ -708,7 +708,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return ( self._command_type, serialisable_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._command_type, serialisable_data ) = serialisable_info
         
@@ -716,10 +716,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                 serialisable_data,
+                trusted,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
                     HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
-                } if serialisable_type_whitelist is not None else None
+                }
             )
             
             simple_action = data_dict[ 'simple_action' ]
@@ -754,9 +755,10 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                 serialisable_data,
+                trusted,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                } if serialisable_type_whitelist is not None else None
+                }
             )
             
             service_key = bytes.fromhex( data_dict[ 'service_key' ] )
@@ -767,7 +769,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -854,6 +856,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                     serialisable_data,
+                    trusted,
                     {
                         HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
                         HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
@@ -903,6 +906,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                     serialisable_data,
+                    trusted,
                     {
                         HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
                         HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,

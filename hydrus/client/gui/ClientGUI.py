@@ -2167,6 +2167,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
                             
                             update = HydrusSerialisable.CreateFromNetworkBytes(
                                 update_network_bytes,
+                                False,
                                 {
                                     HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
                                     HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE

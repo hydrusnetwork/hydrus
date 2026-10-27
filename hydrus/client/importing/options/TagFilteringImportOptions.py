@@ -43,7 +43,7 @@ class TagFilteringImportOptions( IOC.ImportOptionsMetatype ):
         return ( serialisable_tag_blacklist, self._tag_whitelist )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_tag_blacklist, self._tag_whitelist ) = serialisable_info
         

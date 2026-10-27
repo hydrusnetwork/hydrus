@@ -54,7 +54,7 @@ class LocationImportOptions( IOC.ImportOptionsMetatype ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             serialisable_import_destination_location_context,

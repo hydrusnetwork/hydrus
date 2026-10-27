@@ -380,7 +380,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         file_seed.SetSourceTimeIfSensible( self.source_time )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self.file_seed_type,
@@ -403,7 +403,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         ) = serialisable_info
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
-        self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
+        self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS } )
         
         # fixing a problem when updating to v8 of this object, originally I accidentally reset this to None for local path guys
         if file_seed_data_for_comparison is None:
@@ -425,7 +425,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.modified = HydrusTime.GetNow()
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -2061,7 +2061,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
         return ( self._generation_time, serialisable_statuses_to_counts, self._latest_added_time )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._generation_time, serialisable_statuses_to_counts, self._latest_added_time ) = serialisable_info
         
@@ -2725,11 +2725,11 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return has_file_seed
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         with self._lock:
             
-            self._file_seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info )
+            self._file_seeds = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_info, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED } )
             
         
     
@@ -2762,7 +2762,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._status_dirty = True
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

@@ -95,16 +95,17 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_api_permissions_objects
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_api_permissions_objects = serialisable_info
         
         api_permissions_objects: list[ APIPermissions ] = [
             HydrusSerialisable.CreateFromSerialisableTuple(
                 serialisable_api_permissions,
+                trusted,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS,
-                } if serialisable_type_whitelist is not None else None
+                }
             ) for serialisable_api_permissions in serialisable_api_permissions_objects
         ]
         
@@ -311,7 +312,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         return self._permits_everything or permission in self._basic_permissions
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_access_key, self._permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter ) = serialisable_info
         
@@ -320,13 +321,14 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         self._basic_permissions = set( serialisable_basic_permissions )
         self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_search_tag_filter,
+            trusted,
             {
                 HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER
-            } if serialisable_type_whitelist is not None else None
+            }
         )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

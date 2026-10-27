@@ -1705,7 +1705,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, self._serialisable_type_whitelist )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     
@@ -1752,7 +1752,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( raw_text, self._serialisable_type_whitelist )
+                obj = HydrusSerialisable.CreateFromString( raw_text, False, self._serialisable_type_whitelist )
                 
             except Exception as e:
                 
@@ -1886,7 +1886,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload, self._serialisable_type_whitelist )
+                obj = HydrusSerialisable.CreateFromString( payload, False, self._serialisable_type_whitelist )
                 
                 self._ImportObject( obj )
                 
@@ -1945,7 +1945,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, self._serialisable_type_whitelist )
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, self._serialisable_type_whitelist )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     

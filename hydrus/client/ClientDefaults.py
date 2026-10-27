@@ -688,7 +688,7 @@ def GetDefaultObjectsFromPNGs( paths: list[ str ], allowed_object_types ):
             
             payload = ClientSerialisable.LoadFromPNG( path )
             
-            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, serialisable_type_whitelist )
+            obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, serialisable_type_whitelist )
             
             if isinstance( obj, HydrusSerialisable.SerialisableList ):
                 

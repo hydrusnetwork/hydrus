@@ -23,6 +23,7 @@ def GenerateQueryLogContainerName() -> str:
     
     return HydrusData.GenerateKey().hex()
     
+
 class SubscriptionQueryLogContainer( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER
@@ -45,12 +46,12 @@ class SubscriptionQueryLogContainer( HydrusSerialisable.SerialisableBaseNamed ):
         return ( serialisable_gallery_seed_log, serialisable_file_seed_cache )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
         
-        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log )
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache )
+        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
         
     
     def GetFileSeedCache( self ):
@@ -239,7 +240,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._query_log_container_name,
@@ -261,12 +262,12 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             serialisable_example_gallery_seed
             ) = serialisable_info
         
-        self._file_seed_cache_status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache_status )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        self._file_seed_cache_status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache_status, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE_STATUS } )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS } )
         
         try:
             
-            self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED } if serialisable_type_whitelist is not None else None )
+            self._example_file_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_file_seed, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED } )
             
         except Exception as e:
             
@@ -275,7 +276,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED } if serialisable_type_whitelist is not None else None )
+            self._example_gallery_seed = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_example_gallery_seed, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED } )
             
         except Exception as e:
             
@@ -283,7 +284,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -353,7 +354,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
                 serialisable_example_gallery_seed
                 ) = old_serialisable_info
             
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
             
             tag_import_options = tag_import_options_legacy.GetTagImportOptions()
             

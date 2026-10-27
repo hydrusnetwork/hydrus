@@ -646,7 +646,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return ( self._predicate_type, serialisable_value, self._inclusive )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._predicate_type, serialisable_value, self._inclusive ) = serialisable_info
         
@@ -757,7 +757,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 serialisable_number_test = serialisable_value
                 
-                self._value = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_number_test, { HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST } if serialisable_type_whitelist is not None else None )
+                self._value = HydrusSerialisable.CreateFromNoneableSerialisableTuple( serialisable_number_test, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST } )
                 
             else:
                 
@@ -795,7 +795,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

@@ -51,7 +51,7 @@ def GetPasteObject( win: QW.QWidget ) -> ImportOptionsContainer.ImportOptionsCon
     
     try:
         
-        pasted_import_options_container = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        pasted_import_options_container = HydrusSerialisable.CreateFromString( raw_text, False, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
         
         if not isinstance( pasted_import_options_container, ImportOptionsContainer.ImportOptionsContainer ):
             

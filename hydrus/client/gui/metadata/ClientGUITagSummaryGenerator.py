@@ -79,7 +79,7 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         return ( background_colour_rgba, text_colour_rgba, self._namespace_info, self._separator, self._example_tags, self._show )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( background_rgba, text_rgba, self._namespace_info, self._separator, self._example_tags, self._show ) = serialisable_info
         
@@ -101,7 +101,7 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
         self._interesting_namespaces = { namespace for ( namespace, prefix, separator ) in self._namespace_info }
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

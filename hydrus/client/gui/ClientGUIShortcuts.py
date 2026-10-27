@@ -1068,12 +1068,12 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return ( self.shortcut_type, self.shortcut_key, self.shortcut_press_type, self.modifiers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self.shortcut_type, self.shortcut_key, self.shortcut_press_type, self.modifiers ) = serialisable_info
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1481,18 +1481,18 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
         return [ ( shortcut.GetSerialisableTuple(), command.GetSerialisableTuple() ) for ( shortcut, command ) in list(self._shortcuts_to_commands.items()) ]
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         for ( serialisable_shortcut, serialisable_command ) in serialisable_info:
             
-            shortcut = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_shortcut )
-            command = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_command )
+            shortcut = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_shortcut, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+            command = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_command, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
             
             self._shortcuts_to_commands[ shortcut ] = command
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

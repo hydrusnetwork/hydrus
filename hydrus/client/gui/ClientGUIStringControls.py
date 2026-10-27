@@ -278,7 +278,7 @@ class StringProcessorWidget( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+                obj = HydrusSerialisable.CreateFromString( raw_text, False, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 

@@ -513,7 +513,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
+            obj = HydrusSerialisable.CreateFromString( raw_text, False, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
             
         except Exception as e:
             

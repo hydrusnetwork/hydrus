@@ -240,7 +240,7 @@ class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_service_types, serialisable_service_keys )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_service_types, serialisable_service_keys ) = serialisable_info
         
@@ -2057,6 +2057,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         update = HydrusSerialisable.CreateFromNetworkBytes(
                             update_network_string,
+                            False,
                             {
                                 HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
                                 HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE
@@ -2348,7 +2349,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE } )
+                        content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE } )
                         
                         if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
                             

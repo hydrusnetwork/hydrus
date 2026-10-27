@@ -39,6 +39,7 @@ from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
+# noinspection PyUnresolvedReferences
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
 from hydrus.client.importing.options import ImportOptionsConstants as IOC
 from hydrus.client.importing.options import ImportOptionsContainer
@@ -1851,7 +1852,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel.AddSeparator()
         
-        self._subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
+        self._subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptions.SubscriptionContainer, ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
         
         self._subscriptions_panel.NewButtonRow()
         
@@ -1943,17 +1944,10 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AddSubscription( self, unknown_subscription ):
         
-        if isinstance( unknown_subscription, ( ClientImportSubscriptionLegacy.SubscriptionLegacy, ClientImportSubscriptions.SubscriptionContainer ) ):
+        if isinstance( unknown_subscription, ( ClientImportSubscriptions.SubscriptionContainer, ) ):
             
-            if isinstance( unknown_subscription, ClientImportSubscriptionLegacy.SubscriptionLegacy ):
-                
-                ( subscription, query_log_containers ) = ClientImportSubscriptionLegacy.ConvertLegacySubscriptionToNew( unknown_subscription )
-                
-            elif isinstance( unknown_subscription, ClientImportSubscriptions.SubscriptionContainer ):
-                
-                subscription = unknown_subscription.subscription
-                query_log_containers = unknown_subscription.query_log_containers
-                
+            subscription = unknown_subscription.subscription
+            query_log_containers = unknown_subscription.query_log_containers
             
             old_names_to_query_log_containers = { query_log_container.GetName() : query_log_container for query_log_container in query_log_containers }
             

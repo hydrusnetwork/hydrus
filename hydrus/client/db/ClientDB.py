@@ -3860,7 +3860,7 @@ class DB( HydrusDB.HydrusDB ):
                 raise NotImplementedError( 'Unknown incoming update mime!' )
                 
             
-            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, serialisable_type_whitelist )
+            HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, serialisable_type_whitelist )
             
         except Exception as e:
             

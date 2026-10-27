@@ -330,7 +330,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             serialisable_import_options_caller_types_to_default_import_options_containers,
@@ -708,6 +708,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'no tags',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 4], [2, [151, 1, []]]]]]]',
+                True,
                 None # we trust this
             )
         )
@@ -716,6 +717,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'show new files',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 1, 0]]]]]]]',
+                True,
                 None # we trust this
             )
         )
@@ -724,6 +726,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'show all files',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 0, 0]]]]]]]',
+                True,
                 None # we trust this
             )
         )
@@ -732,6 +735,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'example blacklist',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 2], [2, [150, 1, [[44, 1, [["goblin", 1], ["orc", 1]]], []]]]]]]]',
+                True,
                 None # we trust this
             )
         )
@@ -740,6 +744,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'force metadata refetch',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 0], [2, [145, 2, [2, 1, true, true, true]]]]]]]',
+                True,
                 None # we trust this
             )
         )

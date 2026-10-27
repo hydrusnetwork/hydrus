@@ -86,7 +86,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         def handle_e( serialisable_page_tuple, e ):
             
@@ -125,7 +125,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( serialisable_page_manager, serialisable_hashes ) = serialisable_page_data
                 
-                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
+                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager, trusted, set() ) # god knows
                 
                 hashes = [ bytes.fromhex( hash ) for hash in serialisable_hashes ]
                 
@@ -152,7 +152,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -160,7 +160,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( page_name, serialisable_page_manager, serialisable_hashes ) in old_serialisable_info:
                 
-                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager )
+                page_manager = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_manager, trusted, set() ) # god knows
                 
                 page_manager.SetPageName( page_name )
                 

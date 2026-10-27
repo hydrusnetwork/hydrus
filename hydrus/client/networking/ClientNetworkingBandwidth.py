@@ -44,12 +44,12 @@ class NetworkBandwidthManagerTrackerContainer( HydrusSerialisable.SerialisableBa
         return ( serialisable_network_context, serialisable_bandwidth_tracker )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_network_context, serialisable_bandwidth_tracker ) = serialisable_info
         
-        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
-        self.bandwidth_tracker = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_tracker )
+        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } )
+        self.bandwidth_tracker = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_tracker, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER } )
         
     
 
@@ -159,7 +159,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         return tracker_container.bandwidth_tracker
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( all_tracker_container_names, all_serialisable_rules ) = serialisable_info
         
@@ -167,8 +167,8 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
         
         for ( serialisable_network_context, serialisable_rules ) in all_serialisable_rules:
             
-            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
-            rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rules )
+            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } )
+            rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rules, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES } )
             
             if network_context.context_type == CC.NETWORK_CONTEXT_DOWNLOADER: # no longer use this
                 

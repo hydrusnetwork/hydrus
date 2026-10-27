@@ -31,12 +31,12 @@ class NetworkContextSettings( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_settings, serialisable_custom_headers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_settings, serialisable_custom_headers ) = serialisable_info
         
-        self._settings = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_settings )
-        self._custom_headers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_custom_headers )
+        self._settings = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_settings, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        self._custom_headers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_custom_headers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
     
     def ClearSetting( self, setting_type ):
@@ -115,11 +115,11 @@ class NetworkContextStatus( HydrusSerialisable.SerialisableBase ):
         return serialisable_events_ms
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_events_ms = serialisable_info
         
-        self._events_ms = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_events_ms )
+        self._events_ms = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_events_ms, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
     
     def CleanseOldRecords( self, time_delta_s: float ):
@@ -213,13 +213,13 @@ class NetworkContextRecord( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_network_context, serialisable_status, serialisable_settings )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_network_context, serialisable_status, serialisable_settings ) = serialisable_info
         
-        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context )
-        self.status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_status )
-        self.settings = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_settings )
+        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } )
+        self.status = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_status, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT_STATUS } )
+        self.settings = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_settings, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT_SETTINGS } )
         
     
     def IsStub( self ):

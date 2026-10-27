@@ -43,6 +43,7 @@ def ExportBrokenHashedJSONDump( db_dir, dump, dump_descriptor ):
         f.write( dump )
         
     
+
 def DealWithBrokenJSONDump( db_dir, dump, dump_object_descriptor, dump_descriptor ):
     
     HydrusData.Print( 'I am exporting a broken dump. The full object descriptor is: {}'.format( dump_object_descriptor ) )
@@ -76,6 +77,7 @@ def DealWithBrokenJSONDump( db_dir, dump, dump_object_descriptor, dump_descripto
     
     raise HydrusExceptions.SerialisationException( message )
     
+
 def GenerateBigSQLiteDumpBuffer( dump ):
     
     try:
@@ -281,7 +283,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 HydrusData.Print( 'Was asked to fetch named JSON object "{}", but it was malformed!'.format( hash.hex() ) )
                 
             
-            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), None ) # we trust this
+            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), True, { dump_type } ) # we trust this
             
             hashes_to_objs[ hash ] = obj
             
@@ -337,7 +339,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, version ), 'dump_type {} version {}'.format( dump_type, version ) )
                 
             
-            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), None ) # we trust this
+            obj = HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, version, serialisable_info ), True, { dump_type } ) # we trust this
             
             if dump_type == HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER:
                 
@@ -375,7 +377,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                     
                     serialisable_info = json.loads( dump )
                     
-                    objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), None ) ) # we trust this
+                    objs.append( HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), True,{ dump_type } ) ) # we trust this
                     
                 except Exception as e:
                     
@@ -425,7 +427,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp_ms ), 'dump_type {} dump_name {} version {} timestamp_ms {}'.format( dump_type, dump_name[:10], version, object_timestamp_ms ) )
                 
             
-            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), None ) # we trust this
+            return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ), True, { dump_type } ) # we trust this
             
         
     

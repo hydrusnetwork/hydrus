@@ -29,6 +29,8 @@ class TestSerialisables( unittest.TestCase ):
     
     def _dump_and_load_and_test( self, obj: HydrusSerialisable.SerialisableBase, test_func, serialisable_type_whitelist: set[ int ] ):
         
+        trusted = False
+        
         serialisable_tuple = obj.GetSerialisableTuple()
         
         self.assertIsInstance( serialisable_tuple, tuple )
@@ -49,7 +51,7 @@ class TestSerialisables( unittest.TestCase ):
         self.assertEqual( serialisable_type, obj.SERIALISABLE_TYPE )
         self.assertEqual( version, obj.SERIALISABLE_VERSION )
         
-        dupe_obj = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple, serialisable_type_whitelist )
+        dupe_obj = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple, trusted, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -61,7 +63,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertIsInstance( json_string, str )
         
-        dupe_obj = HydrusSerialisable.CreateFromString( json_string, serialisable_type_whitelist )
+        dupe_obj = HydrusSerialisable.CreateFromString( json_string, trusted, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -73,7 +75,7 @@ class TestSerialisables( unittest.TestCase ):
         
         self.assertIsInstance( network_bytes, bytes )
         
-        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, serialisable_type_whitelist )
+        dupe_obj = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, trusted, serialisable_type_whitelist )
         
         self.assertIsNot( obj, dupe_obj )
         
@@ -151,92 +153,128 @@ class TestSerialisables( unittest.TestCase ):
     
     def test_whitelisting_simple( self ):
         
+        trusted = False
+        
         obj = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
         
         serialisable_string = obj.DumpToString()
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
             
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT } )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT } )
             
         
     
-    def test_whitelisting_list( self ):
+    def test_whitelisting_list_untrusted( self ):
+        
+        trusted = False
         
         obj = HydrusSerialisable.SerialisableList( [ CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) ] )
         
         serialisable_string = obj.DumpToString()
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
         self.assertTrue( len( obj_recreated ) == 1 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
             
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
+            
         
         self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
             
         
     
-    def test_whitelisting_dict( self ):
+    def test_whitelisting_list_trusted( self ):
+        
+        trusted = True
+        
+        obj = HydrusSerialisable.SerialisableList( [ CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) ] )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
+            
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST } )
+        
+        self.assertTrue( len( obj_recreated ) == 0 )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+    
+    def test_whitelisting_dict_trusted( self ):
+        
+        trusted = True
         
         obj = HydrusSerialisable.SerialisableDictionary( { 3 : CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) } )
         
         serialisable_string = obj.DumpToString()
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
         self.assertTrue( len( obj_recreated ) == 1 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
             
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
         self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
             
         
         obj = HydrusSerialisable.SerialisableDictionary( { CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) : 3 } )
         
         serialisable_string = obj.DumpToString()
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
         self.assertTrue( len( obj_recreated ) == 1 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
             
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
         self.assertTrue( len( obj_recreated ) == 0 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
             
         
         obj = HydrusSerialisable.SerialisableDictionary(
@@ -247,26 +285,109 @@ class TestSerialisables( unittest.TestCase ):
         
         serialisable_string = obj.DumpToString()
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
         
         self.assertTrue( len( obj_recreated ) == 1 )
         
         with self.assertRaises( HydrusExceptions.SerialisationException ):
             
-            HydrusSerialisable.CreateFromString( serialisable_string, set() )
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
             
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
         
         self.assertTrue( len( obj_recreated ) == 0 )
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
         
         self.assertTrue( len( obj_recreated ) == 0 )
         
-        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
         
         self.assertTrue( len( obj_recreated ) == 0 )
+        
+    
+    def test_whitelisting_dict_untrusted( self ):
+        
+        trusted = False
+        
+        obj = HydrusSerialisable.SerialisableDictionary( { 3 : CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) } )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        obj = HydrusSerialisable.SerialisableDictionary( { CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE ) : 3 } )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+        
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        obj = HydrusSerialisable.SerialisableDictionary(
+            {
+                ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'a' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ) : CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_FILE )
+            }
+        )
+        
+        serialisable_string = obj.DumpToString()
+        
+        obj_recreated = HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+        
+        self.assertTrue( len( obj_recreated ) == 1 )
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, set() )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND } )
+            
+        
+        with self.assertRaises( HydrusExceptions.SerialisationException ):
+            
+            HydrusSerialisable.CreateFromString( serialisable_string, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT } )
+            
         
     
     def test_SERIALISABLE_TYPE_APPLICATION_COMMAND( self ):

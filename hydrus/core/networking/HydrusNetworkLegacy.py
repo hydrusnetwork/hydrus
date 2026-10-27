@@ -3,7 +3,7 @@ from hydrus.core.networking import HydrusNetwork
 
 def ConvertToNewAccountType( account_type_key, title, dictionary_string ) -> HydrusNetwork.AccountType:
     
-    dictionary = HydrusSerialisable.CreateFromString( dictionary_string, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES } )
+    dictionary = HydrusSerialisable.CreateFromString( dictionary_string, False, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES } )
     
     permissions = dict( dictionary[ 'permissions' ] )
     bandwidth_rules = dictionary[ 'bandwidth_rules' ]

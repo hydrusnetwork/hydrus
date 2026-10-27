@@ -51,7 +51,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -139,11 +139,11 @@ class LocalProcessCallInputParameterProcessingRule(HydrusSerialisable.Serialisab
         return ( self.parameter_type, self.replacement_string, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self.parameter_type, self.replacement_string, serialisable_string_processor ) = serialisable_info
         
-        self.string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self.string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
         
     
     def GetInsertionIndex( self, executable_parameter_template: str ):
@@ -405,7 +405,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         (
             self._executable_path,
@@ -424,6 +424,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         
         self._input_parameter_processing_rules = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_input_parameter_processing_rules,
+            trusted,
             {
                 HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                 HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_INPUT_TEMPLATE_PARAM_PROCESSING_RULE,
@@ -436,7 +437,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return shutil.which( self._executable_path ) is not None
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -701,7 +702,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         pass
         
@@ -778,7 +779,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         pass
         

@@ -242,6 +242,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 obj_list = HydrusSerialisable.CreateFromString(
                     payload_text,
+                    False,
                     {
                         HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                         HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
@@ -764,7 +765,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( json_text, None ) # this is a debug panel and will eat anything!
+                obj = HydrusSerialisable.CreateFromString( json_text, True, None ) # this is a debug panel and will eat anything!
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     

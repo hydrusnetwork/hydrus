@@ -754,7 +754,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             serialisable_tuple = json.loads( raw_text )
             
-            list_of_timestamp_data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_TIMESTAMP_DATA } )
+            list_of_timestamp_data = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tuple, False, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_TIMESTAMP_DATA } )
             
             for item in list_of_timestamp_data:
                 

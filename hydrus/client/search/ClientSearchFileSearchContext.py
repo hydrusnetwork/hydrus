@@ -661,7 +661,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
@@ -722,7 +722,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._or_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER ]
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

@@ -103,7 +103,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( sort_metatype, serialisable_sort_data, self.sort_order, serialisable_tag_context ) = serialisable_info
         
@@ -124,10 +124,10 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         self.sort_type = ( sort_metatype, sort_data )
         
-        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
+        self.tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT } )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             

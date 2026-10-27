@@ -66,16 +66,39 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_importers, serialisable_string_processor, serialisable_exporter )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = serialisable_info
         
-        self._importers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_importers )
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
-        self._exporter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_exporter )
+        self._importers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_importers,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_TXT,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_JSON,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_URLS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TIMESTAMPS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_NOTES,
+            }
+        )
+        
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._exporter = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_exporter,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_TXT,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_JSON,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_URLS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TIMESTAMPS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_TAGS,
+                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_NOTES,
+            }
+        )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -83,7 +106,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = old_serialisable_info
             
-            actually_an_importer = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_exporter )
+            actually_an_importer = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_exporter, trusted, set() ) # god knows
             
             if isinstance( actually_an_importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT ):
                 
@@ -115,7 +138,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = old_serialisable_info
             
-            string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
+            string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR )
             
             string_processing_steps = string_processor.GetProcessingSteps()
             

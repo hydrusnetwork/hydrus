@@ -25,11 +25,11 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
         return self._column_list_types_to_statuses.GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_column_list_types_to_statuses = serialisable_info
         
-        self._column_list_types_to_statuses = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_column_list_types_to_statuses )
+        self._column_list_types_to_statuses = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_column_list_types_to_statuses, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_COLUMN_LIST_STATUS } )
         
     
     def IsDirty( self ):

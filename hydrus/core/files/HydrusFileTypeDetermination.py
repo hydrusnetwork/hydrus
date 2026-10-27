@@ -119,6 +119,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
             update = HydrusSerialisable.CreateFromNetworkBytes(
                 update_network_bytes,
+                False,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
                     HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE

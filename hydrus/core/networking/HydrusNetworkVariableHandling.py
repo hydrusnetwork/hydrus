@@ -256,7 +256,7 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitel
     
     serialisable_type_whitelist.add( HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY ) # the actual thing is a hydrus dict, so we need this regardless
     
-    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, serialisable_type_whitelist )
+    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, False, serialisable_type_whitelist )
     
     if not isinstance( args, dict ):
         

@@ -364,7 +364,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         raise NotImplementedError()
         
@@ -488,7 +488,7 @@ class ParseFormulaZipper( ParseFormula ):
         return ( serialisable_formulae, self._sub_phrase, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_formulae, self._sub_phrase, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -557,7 +557,7 @@ class ParseFormulaZipper( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -668,7 +668,7 @@ class ParseFormulaContextVariable( ParseFormula ):
         return ( self._variable_name, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._variable_name, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -687,7 +687,7 @@ class ParseFormulaContextVariable( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -902,7 +902,7 @@ class ParseFormulaHTML( ParseFormula ):
         return ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -929,7 +929,7 @@ class ParseFormulaHTML( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1206,14 +1206,14 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match ) = serialisable_info
         
         self._tag_string_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_string_string_match )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1690,7 +1690,7 @@ class ParseFormulaJSON( ParseFormula ):
         return ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -1725,7 +1725,7 @@ class ParseFormulaJSON( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1888,7 +1888,7 @@ class ParseFormulaNested( ParseFormula ):
         return ( serialisable_main_formula, serialisable_sub_formula, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_main_formula, serialisable_sub_formula, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -1913,7 +1913,7 @@ class ParseFormulaNested( ParseFormula ):
         return all_sub_parsed_texts
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -1999,7 +1999,7 @@ class ParseFormulaStatic( ParseFormula ):
         return ( self._static_text, self._num_to_do, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._static_text, self._num_to_do, self._name, serialisable_string_processor ) = serialisable_info
         
@@ -2089,7 +2089,7 @@ class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed )
         return serialisable_formula
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         serialisable_formula = serialisable_info
         
@@ -2153,7 +2153,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         return ( self._name, self._content_type, serialisable_formula, serialisable_additional_info )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._name, self._content_type, serialisable_formula, serialisable_additional_info ) = serialisable_info
         
@@ -2193,7 +2193,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -2653,7 +2653,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
         
@@ -2663,7 +2663,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
@@ -2968,7 +2968,7 @@ class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_formula, self._sort_posts_by_source_time, serialisable_page_parser )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
         
         ( serialisable_formula, self._sort_posts_by_source_time, serialisable_page_parser ) = serialisable_info
         
@@ -2976,7 +2976,7 @@ class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
         self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser )
         
     
-    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
         
         if version == 1:
             
