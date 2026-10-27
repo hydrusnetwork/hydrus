@@ -230,7 +230,6 @@ class NetworkEngine( object ):
                 
                 return True
                 
-            
             elif self._pause_all_new_network_traffic:
                 
                 job.SetStatus( 'all new network traffic is paused' + HC.UNICODE_ELLIPSIS )
