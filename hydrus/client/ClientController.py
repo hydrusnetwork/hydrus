@@ -2384,6 +2384,9 @@ class Controller( HydrusController.HydrusController ):
             self.frame_splash_status.SetText( 'waiting for managers to exit' )
             
         
+        # do this early so managers that are waiting on stuff get their jobs shutdown-cancelled now
+        self.network_engine.Shutdown()
+        
         self._ShutdownManagers()
         
         if not self._doing_fast_exit:

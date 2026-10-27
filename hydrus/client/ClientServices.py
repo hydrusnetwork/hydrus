@@ -1410,11 +1410,12 @@ class ServiceRestricted( ServiceRemote ):
             
             network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method_string, url, body = body, temp_path = temp_path, file_body_path = file_body_path )
             
-            if command not in ( 'update', 'metadata', 'file', 'thumbnail' ):
+            if command not in ( 'update', 'file', 'thumbnail' ):
                 
                 network_job.OverrideBandwidth()
-                network_job.OnlyTryConnectionOnce()
                 
+            
+            network_job.OnlyTryConnectionOnce()
             
             if command in ( '', 'access_key', 'access_key_verification' ):
                 
@@ -1521,6 +1522,10 @@ class ServiceRestricted( ServiceRemote ):
                     
                     self._DealWithAccountError()
                     
+                elif isinstance( e, HydrusExceptions.ConnectionException ):
+                    
+                    self._DelayFutureRequests( 'connection problem' )
+                    
                 elif isinstance( e, HydrusExceptions.NetworkVersionException ):
                     
                     self._DealWithFundamentalNetworkError()
@@ -1530,6 +1535,10 @@ class ServiceRestricted( ServiceRemote ):
                     self._DelayFutureRequests( 'service has exceeded bandwidth', duration_s = ACCOUNT_SYNC_PERIOD )
                     
                 elif isinstance( e, HydrusExceptions.ServerException ):
+                    
+                    self._DelayFutureRequests( str( e ) )
+                    
+                else:
                     
                     self._DelayFutureRequests( str( e ) )
                     
