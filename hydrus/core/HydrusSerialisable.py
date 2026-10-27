@@ -421,6 +421,10 @@ class SerialisableBase( object ):
             
             self._InitialiseFromSerialisableInfo( serialisable_info, trusted, serialisable_type_whitelist )
             
+        except HydrusExceptions.SerialisationException as e:
+            
+            raise
+            
         except Exception as e:
             
             raise HydrusExceptions.SerialisationException( 'Could not initialise this object of type {}!'.format( self.SERIALISABLE_NAME ) ) from e

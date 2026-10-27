@@ -90,6 +90,10 @@ class HydrusResourceHydrusNetwork( HydrusServerResources.HydrusResource ):
                     
                     raise HydrusExceptions.BadRequestException( 'Something went wrong with the request--looks like it included an object that did not pass the whitelist.\n\n' + str( e ) )
                     
+                except HydrusExceptions.SerialisationException as e:
+                    
+                    raise HydrusExceptions.BadRequestException( 'Something went wrong with the request--looks like the serialised data was bad, maybe incompatible with this version.\n\n' + str( e ) )
+                    
                 
             else:
                 

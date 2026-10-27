@@ -12,7 +12,9 @@ from twisted.internet import reactor
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusStaticDir
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -495,6 +497,41 @@ class TestServer( unittest.TestCase ):
         self.assertEqual( response[ 'registration_keys' ], [ registration_key ] )
         
     
+    def _test_whitelisting_failure( self, service ):
+        
+        from hydrus.client import ClientApplicationCommand
+        
+        cac = ClientApplicationCommand.ApplicationCommand.STATICCreateSimpleCommand( ClientApplicationCommand.SIMPLE_ARCHIVE_FILE )
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            service.Request( HC.POST, 'account_types', { 'thing' : cac } )
+            
+        
+        try:
+            
+            service.Request( HC.POST, 'account_types', { 'thing' : cac } )
+            
+        except HydrusExceptions.BadRequestException as e:
+            
+            self.assertTrue( 'whitelist' in str( e ) )
+            
+        
+        with self.assertRaises( HydrusExceptions.BadRequestException ):
+            
+            service.Request( HC.POST, 'account_types', { 'account_types' : HydrusSerialisable.SerialisableList( [ cac ] ) } )
+            
+        
+        try:
+            
+            service.Request( HC.POST, 'account_types', { 'account_types' : HydrusSerialisable.SerialisableList( [ cac ] ) } )
+            
+        except HydrusExceptions.BadRequestException as e:
+            
+            self.assertTrue( 'whitelist' in str( e ) )
+            
+        
+    
     def _test_server_admin( self, service ):
         
         # init
@@ -558,6 +595,7 @@ class TestServer( unittest.TestCase ):
         
         self._test_basics( host, port )
         self._test_restricted( self._clientside_file_service )
+        self._test_whitelisting_failure( self._clientside_file_service )
         # broke since service rewrite
         #self._test_repo( self._clientside_file_service )
         #self._test_file_repo( self._clientside_file_service )
@@ -570,6 +608,7 @@ class TestServer( unittest.TestCase ):
         
         self._test_basics( host, port )
         self._test_restricted( self._clientside_tag_service )
+        self._test_whitelisting_failure( self._clientside_tag_service )
         # broke since service rewrite
         #self._test_repo( self._clientside_tag_service )
         #self._test_tag_repo( self._clientside_tag_service )
@@ -582,6 +621,7 @@ class TestServer( unittest.TestCase ):
         
         self._test_basics( host, port )
         self._test_restricted( self._clientside_admin_service )
+        self._test_whitelisting_failure( self._clientside_admin_service )
         self._test_server_admin( self._clientside_admin_service )
         
     
