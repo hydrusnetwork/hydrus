@@ -48,12 +48,12 @@ class TagImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_filtering_import_options, serialisable_tag_import_options, self._is_default )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._fetch_tags_even_if_url_recognised_and_file_already_in_db, self._fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_filtering_import_options, serialisable_tag_import_options, self._is_default ) = serialisable_info
         
-        self._tag_filtering_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filtering_import_options )
-        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options )
+        self._tag_filtering_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filtering_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTERING_IMPORT_OPTIONS } )
+        self._tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
@@ -183,9 +183,9 @@ class TagImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
             
             ( fetch_tags_even_if_url_recognised_and_file_already_in_db, fetch_tags_even_if_hash_recognised_and_file_already_in_db, serialisable_tag_blacklist, tag_whitelist, serialisable_service_keys_to_service_tag_import_options, is_default ) = old_serialisable_info
             
-            tag_blacklist = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_blacklist )
+            tag_blacklist = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_blacklist, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
             
-            service_keys_to_service_tag_import_options = { bytes.fromhex( encoded_service_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_tag_import_options ) for ( encoded_service_key, serialisable_service_tag_import_options ) in serialisable_service_keys_to_service_tag_import_options }
+            service_keys_to_service_tag_import_options = { bytes.fromhex( encoded_service_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_TAG_IMPORT_OPTIONS } ) for ( encoded_service_key, serialisable_service_tag_import_options ) in serialisable_service_keys_to_service_tag_import_options }
             
             tag_filtering_import_options = TagFilteringImportOptions.TagFilteringImportOptions( tag_blacklist = tag_blacklist, tag_whitelist = tag_whitelist )
             tag_import_options = TagImportOptions.TagImportOptions( service_keys_to_service_tag_import_options = service_keys_to_service_tag_import_options )

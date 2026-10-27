@@ -330,7 +330,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             serialisable_import_options_caller_types_to_default_import_options_containers,
@@ -338,9 +338,32 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             serialisable_names_to_favourite_import_options_containers,
         ) = serialisable_info
         
-        self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_caller_types_to_default_import_options_containers )
-        self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_class_keys_to_default_import_options_containers )
-        self._names_to_favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_names_to_favourite_import_options_containers )
+        self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_import_options_caller_types_to_default_import_options_containers,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+            }
+        )
+        
+        self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_url_class_keys_to_default_import_options_containers,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+            }
+        )
+        
+        self._names_to_favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_names_to_favourite_import_options_containers,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+            }
+        )
         
     
     def _SetDirty( self ):

@@ -96,7 +96,7 @@ class SingleFileMetadataImporterMediaNotes( SingleFileMetadataImporterMedia, Hyd
         return serialisable_string_processor
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_string_processor = serialisable_info
         
@@ -176,7 +176,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         return ( serialisable_string_processor, serialisable_service_key, self._tag_display_type )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_string_processor, serialisable_service_key, self._tag_display_type ) = serialisable_info
         
@@ -308,7 +308,7 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
         return ( serialisable_string_processor, serialisable_timestamp_data_stub )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_string_processor, serialisable_timestamp_data_stub ) = serialisable_info
         
@@ -394,7 +394,7 @@ class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, Hydr
         return serialisable_string_processor
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_string_processor = serialisable_info
         
@@ -543,7 +543,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
         return ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, serialisable_json_parsing_formula )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
     
         ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, serialisable_json_parsing_formula ) = serialisable_info
         
@@ -692,7 +692,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
         return ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
     
         ( serialisable_string_processor, self._remove_actual_filename_ext, self._suffix, serialisable_filename_string_converter, self._separator ) = serialisable_info
         

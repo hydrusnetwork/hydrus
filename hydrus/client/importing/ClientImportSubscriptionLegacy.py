@@ -17,7 +17,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         pass
         
@@ -46,7 +46,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         pass
         

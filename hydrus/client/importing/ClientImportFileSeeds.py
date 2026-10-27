@@ -380,7 +380,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         file_seed.SetSourceTimeIfSensible( self.source_time )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             self.file_seed_type,
@@ -2061,7 +2061,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
         return ( self._generation_time, serialisable_statuses_to_counts, self._latest_added_time )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._generation_time, serialisable_statuses_to_counts, self._latest_added_time ) = serialisable_info
         
@@ -2725,7 +2725,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return has_file_seed
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         with self._lock:
             

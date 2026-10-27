@@ -1139,12 +1139,12 @@ class PotentialDuplicatesSearchContext( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_file_search_context_1, serialisable_file_search_context_2, self._dupe_search_type, self._pixel_dupes_preference, self._max_hamming_distance )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_file_search_context_1, serialisable_file_search_context_2, self._dupe_search_type, self._pixel_dupes_preference, self._max_hamming_distance ) = serialisable_info
         
-        self._file_search_context_1: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_1 )
-        self._file_search_context_2: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_2 )
+        self._file_search_context_1: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_1, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } )
+        self._file_search_context_2: ClientSearchFileSearchContext.FileSearchContext = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context_2, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } )
         
     
     def GetDupeSearchType( self ) -> int:

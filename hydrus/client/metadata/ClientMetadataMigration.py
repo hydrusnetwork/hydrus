@@ -66,7 +66,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_importers, serialisable_string_processor, serialisable_exporter )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_importers, serialisable_string_processor, serialisable_exporter ) = serialisable_info
         
@@ -74,6 +74,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             serialisable_importers,
             trusted,
             {
+                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                 HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_TXT,
                 HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_JSON,
                 HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_URLS,

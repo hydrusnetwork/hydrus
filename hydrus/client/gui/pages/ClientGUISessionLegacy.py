@@ -86,7 +86,7 @@ class GUISessionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         def handle_e( serialisable_page_tuple, e ):
             

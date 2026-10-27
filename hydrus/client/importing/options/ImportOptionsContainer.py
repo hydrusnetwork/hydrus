@@ -52,11 +52,26 @@ class ImportOptionsContainer( HydrusSerialisable.SerialisableBase ):
         return serialisable_import_options
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_import_options = serialisable_info
         
-        self._import_options_types_to_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options )
+        self._import_options_types_to_import_options = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_import_options,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                HydrusSerialisable.SERIALISABLE_TYPE_EXTERNAL_PROGRAMS_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTERING_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY,
+                HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_PREFETCH_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_PRESENTATION_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS,
+                HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTERING_IMPORT_OPTIONS,
+            }
+        )
         
     
     def _SetImportOptions( self, import_options: IOC.ImportOptionsMetatype, source_label: str | None = None ):

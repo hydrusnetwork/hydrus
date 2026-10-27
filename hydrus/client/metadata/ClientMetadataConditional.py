@@ -23,7 +23,7 @@ class MetadataConditional( HydrusSerialisable.SerialisableBase ):
         return serialisable_file_search_context
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_file_search_context = serialisable_info
         

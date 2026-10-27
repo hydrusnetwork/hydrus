@@ -24,11 +24,11 @@ class NoteImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_note_import_options, self._is_default )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_note_import_options, self._is_default ) = serialisable_info
         
-        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options )
+        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):

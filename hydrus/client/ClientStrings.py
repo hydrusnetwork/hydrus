@@ -85,7 +85,7 @@ class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         raise NotImplementedError()
         
@@ -131,7 +131,7 @@ class StringConverter( StringProcessingStep ):
         return ( self.conversions, self.example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_conversions, self.example_string ) = serialisable_info
         
@@ -606,7 +606,7 @@ class StringJoiner( StringProcessingStep ):
         return ( self._joiner, self._join_tuple_size )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._joiner, self._join_tuple_size ) = serialisable_info
         
@@ -753,7 +753,7 @@ class StringMatch( StringProcessingStep ):
         return ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._match_type, self._match_value, self._min_chars, self._max_chars, self._example_string ) = serialisable_info
         
@@ -1028,7 +1028,7 @@ class StringSlicer( StringProcessingStep ):
         return ( self._index_start, self._index_end )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._index_start, self._index_end ) = serialisable_info
         
@@ -1200,7 +1200,7 @@ class StringSorter( StringProcessingStep ):
         return ( self._sort_type, self._asc, self._regex )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._sort_type, self._asc, self._regex ) = serialisable_info
         
@@ -1333,7 +1333,7 @@ class StringSplitter( StringProcessingStep ):
         return ( self._separator, self._max_splits )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._separator, self._max_splits ) = serialisable_info
         
@@ -1454,11 +1454,11 @@ class StringTagFilter( StringProcessingStep ):
         return ( serialisable_tag_filter, self._example_string )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_tag_filter, self._example_string ) = serialisable_info
         
-        self._tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter )
+        self._tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
         
     
     def ConvertAndFilter( self, tag_texts ):
@@ -1553,6 +1553,7 @@ class StringTagFilter( StringProcessingStep ):
         return result
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_TAG_FILTER ] = StringTagFilter
 
 class StringProcessor( StringProcessingStep ):
@@ -1573,11 +1574,27 @@ class StringProcessor( StringProcessingStep ):
         return HydrusSerialisable.SerialisableList( self._processing_steps ).GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_processing_steps = serialisable_info
         
-        self._processing_steps = list( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_processing_steps ) )
+        self._processing_steps = list(
+            HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_processing_steps,
+                trusted,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_JOINER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_SLICER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_SORTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_TAG_FILTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR
+                }
+            )
+        )
         
     
     def GetProcessingSteps( self ):

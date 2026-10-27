@@ -120,11 +120,11 @@ class PresentationImportOptions( IOC.ImportOptionsMetatype ):
         return ( serialisable_location_context, self._presentation_status, self._presentation_inbox )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_location_context, self._presentation_status, self._presentation_inbox ) = serialisable_info
         
-        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
+        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } )
         
     
     def _ShouldPresentGivenStatusAndInbox( self, status, inbox ):

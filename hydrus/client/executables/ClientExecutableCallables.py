@@ -46,7 +46,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             serialisable_callable_key,

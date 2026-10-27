@@ -160,7 +160,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_current_service_keys, serialisable_deleted_service_keys )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_current_service_keys, serialisable_deleted_service_keys ) = serialisable_info
         

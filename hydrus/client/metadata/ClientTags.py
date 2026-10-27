@@ -123,7 +123,7 @@ class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaul
         return [ ( service_key.hex(), list( tags ) ) for ( service_key, tags ) in self.items() ]
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         for ( service_key_hex, tags_list ) in serialisable_info:
             

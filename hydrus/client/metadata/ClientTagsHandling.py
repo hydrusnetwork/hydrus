@@ -79,7 +79,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         [
             serialisable_service_key,
@@ -97,7 +97,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
         
         self._service_key = bytes.fromhex( serialisable_service_key )
         self._write_autocomplete_tag_domain = bytes.fromhex( serialisable_write_autocomplete_tag_domain )
-        self._write_autocomplete_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_write_autocomplete_location_context )
+        self._write_autocomplete_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_write_autocomplete_location_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
@@ -677,6 +677,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             serialisable_tag_display_types_to_service_keys_to_tag_filters.append( ( tag_display_type, serialisable_service_keys_to_tag_filters ) )
             
         
+        # ok this looks crazy but the tag service key is part of the options so redundant. this squashes it down to a list that understands its own keys
         serialisable_tag_autocomplete_options = HydrusSerialisable.SerialisableList( self._tag_service_keys_to_tag_autocomplete_options.values() ).GetSerialisableTuple()
         
         serialisable_info = [
@@ -687,7 +688,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         [
             serialisable_tag_display_types_to_service_keys_to_tag_filters,
@@ -699,13 +700,24 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
             for ( serialisable_service_key, serialisable_tag_filter ) in serialisable_service_keys_to_tag_filters:
                 
                 service_key = bytes.fromhex( serialisable_service_key )
-                tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter )
+                tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } )
                 
                 self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ] = tag_filter
                 
             
         
-        self._tag_service_keys_to_tag_autocomplete_options = { tag_autocomplete_options.GetServiceKey() : tag_autocomplete_options for tag_autocomplete_options in HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_autocomplete_options ) }
+        # this looks a little crazy but read it, it makes sense
+        self._tag_service_keys_to_tag_autocomplete_options = {
+            tag_autocomplete_options.GetServiceKey() : tag_autocomplete_options
+            for tag_autocomplete_options in HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_tag_autocomplete_options,
+                trusted,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_AUTOCOMPLETE_OPTIONS
+                }
+            )
+        }
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):

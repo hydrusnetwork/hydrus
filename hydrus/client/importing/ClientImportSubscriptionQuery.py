@@ -46,7 +46,7 @@ class SubscriptionQueryLogContainer( HydrusSerialisable.SerialisableBaseNamed ):
         return ( serialisable_gallery_seed_log, serialisable_file_seed_cache )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_gallery_seed_log, serialisable_file_seed_cache ) = serialisable_info
         
@@ -240,7 +240,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             self._query_log_container_name,

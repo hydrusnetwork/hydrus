@@ -1449,11 +1449,11 @@ class Controller( HydrusController.HydrusController ):
         
         #
         
+        from hydrus.client.importing.options import ImportOptionsManager
+        
         import_options_manager = self.Read( 'serialisable', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER )
         
         if import_options_manager is None:
-            
-            from hydrus.client.importing.options import ImportOptionsManager
             
             import_options_manager = ImportOptionsManager.ImportOptionsManager.STATICGetDefaultInitialisedManager()
             

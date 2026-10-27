@@ -661,14 +661,14 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context )
-        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context )
+        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } )
+        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT } )
         
-        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple ) for pred_tuple in serialisable_predicates ]
+        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } ) for pred_tuple in serialisable_predicates ]
         
         self._InitialiseTemporaryVariables()
         

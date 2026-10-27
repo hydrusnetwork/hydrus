@@ -240,7 +240,7 @@ class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_service_types, serialisable_service_keys )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_service_types, serialisable_service_keys ) = serialisable_info
         
@@ -1205,7 +1205,9 @@ class ServiceRestricted( ServiceRemote ):
         
         ServiceRemote._LoadFromDictionary( self, dictionary )
         
-        self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ] )
+        trusted = True # in this special case, dictionary has been pre-cleared
+        
+        self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ], trusted )
         self._next_account_sync = dictionary[ 'next_account_sync' ]
         
         if 'network_sync_paused' not in dictionary:

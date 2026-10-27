@@ -708,7 +708,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return ( self._command_type, serialisable_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._command_type, serialisable_data ) = serialisable_info
         

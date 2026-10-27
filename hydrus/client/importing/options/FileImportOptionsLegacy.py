@@ -41,14 +41,14 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_prefetch_import_options, serialisable_file_filtering_import_options, serialisable_location_import_options, serialisable_presentation_import_options, self._is_default )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_prefetch_import_options, serialisable_file_filtering_import_options, serialisable_location_import_options, serialisable_presentation_import_options, self._is_default ) = serialisable_info
         
-        self._prefetch_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_prefetch_import_options )
-        self._file_filtering_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_filtering_import_options )
-        self._location_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_import_options )
-        self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
+        self._prefetch_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_prefetch_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREFETCH_IMPORT_OPTIONS } )
+        self._file_filtering_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_filtering_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTERING_IMPORT_OPTIONS } )
+        self._location_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_IMPORT_OPTIONS } )
+        self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PRESENTATION_IMPORT_OPTIONS } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
@@ -232,7 +232,7 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
             
             ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbour_spam, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
             
-            filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate )
+            filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } )
             
             mimes = list( filetype_filter_predicate.GetValue() )
             
@@ -311,7 +311,7 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
             
             ( exclude_deleted, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
             
-            filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate )
+            filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } )
             
             file_filtering_import_options = FileFilteringImportOptions.FileFilteringImportOptions()
             
@@ -337,7 +337,7 @@ class FileImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
             
             ( automatic_archive, associate_primary_urls, associate_source_urls, do_archive_on_already_in_db_files, do_import_destinations_on_already_in_db_files ) = post_import_options
             
-            import_destination_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_destination_location_context )
+            import_destination_location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_destination_location_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } )
             
             location_import_options = LocationImportOptions.LocationImportOptions()
             

@@ -147,7 +147,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             serialisable_tag_service_actions,

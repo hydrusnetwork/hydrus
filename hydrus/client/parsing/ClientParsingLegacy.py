@@ -84,12 +84,33 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return ( self._name, serialisable_formula, serialisable_children )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._name, serialisable_formula, serialisable_children ) = serialisable_info
         
-        self._formula = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_formula )
-        self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
+        self._formula = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_formula,
+            trusted,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+            }
+        )
+        
+        self._children = [
+            HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_child,
+                trusted,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER,
+                }
+            ) for serialisable_child in serialisable_children ]
         
     
     def GetParsableContentDescriptions( self ):
@@ -290,12 +311,23 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._url, self._query_type, self._file_identifier_type, serialisable_file_identifier_string_converter, self._file_identifier_arg_name, self._static_args, serialisable_children )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._url, self._query_type, self._file_identifier_type, serialisable_file_identifier_string_converter, self._file_identifier_arg_name, self._static_args, serialisable_children ) = serialisable_info
         
-        self._children = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_child ) for serialisable_child in serialisable_children ]
-        self._file_identifier_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_identifier_string_converter )
+        self._children = [
+            HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_child,
+                trusted,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER,
+                }
+            ) for serialisable_child in serialisable_children
+        ]
+        
+        self._file_identifier_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_identifier_string_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):

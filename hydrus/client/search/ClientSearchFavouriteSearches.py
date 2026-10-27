@@ -58,7 +58,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_favourite_search_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._favourite_search_rows = []
         
@@ -66,7 +66,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
             
             ( folder, name, serialisable_file_search_context, synchronised, serialisable_media_sort, serialisable_media_collect ) = serialisable_row
             
-            file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context )
+            file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } )
             
             if serialisable_media_sort is None:
                 
@@ -74,7 +74,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                media_sort = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_sort )
+                media_sort = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_sort, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT } )
                 
             
             if serialisable_media_collect is None:
@@ -83,7 +83,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                media_collect = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_collect )
+                media_collect = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_media_collect, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT } )
                 
             
             row = ( folder, name, file_search_context, synchronised, media_sort, media_collect )

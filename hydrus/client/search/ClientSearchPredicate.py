@@ -646,7 +646,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         return ( self._predicate_type, serialisable_value, self._inclusive )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._predicate_type, serialisable_value, self._inclusive ) = serialisable_info
         
@@ -672,8 +672,8 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 ( logical_operator, serialisable_service_specifier_primary, serialisable_service_specifier_secondary, rated ) = serialisable_value
                 
-                service_specifier_primary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_primary )
-                service_specifier_secondary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_secondary )
+                service_specifier_primary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_primary, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_SPECIFIER } )
+                service_specifier_secondary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_service_specifier_secondary, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_SPECIFIER } )
                 
                 self._value = ( logical_operator, service_specifier_primary, service_specifier_secondary, rated )
                 
@@ -699,7 +699,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 if rule_type in ( 'url_match', 'url_class' ):
                     
-                    rule = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rule )
+                    rule = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_rule, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS } )
                     
                 else:
                     
@@ -739,7 +739,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
                 serialisable_or_predicates = serialisable_value
                 
-                self._value = tuple( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ) )
+                self._value = tuple( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } ) )
                 
                 if CG.client_controller.IsBooted():
                     

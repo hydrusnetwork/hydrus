@@ -371,7 +371,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         return list( self._tag_slices_to_rules.items() )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._tag_slices_to_rules = dict( serialisable_info )
         

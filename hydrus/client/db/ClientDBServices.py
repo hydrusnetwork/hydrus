@@ -107,7 +107,18 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             for ( service_id, service_key, service_type, name, dictionary_string ) in all_data:
                 
-                dictionary = HydrusSerialisable.CreateFromString( dictionary_string, True, None ) # we trust this data
+                dictionary = HydrusSerialisable.CreateFromString(
+                    dictionary_string,
+                    True, # we trust this data
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
+                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                        HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
+                        HydrusSerialisable.SERIALISABLE_TYPE_CREDENTIALS,
+                        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER,
+                        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES,
+                    }
+                )
                 
                 service = ClientServices.GenerateService( service_key, service_type, name, dictionary )
                 

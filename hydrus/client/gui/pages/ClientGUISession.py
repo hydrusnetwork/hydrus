@@ -44,7 +44,7 @@ class GUISessionContainer( HydrusSerialisable.SerialisableBaseNamed ):
         return serialisable_top_notebook
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_top_notebook = serialisable_info
         
@@ -111,7 +111,7 @@ class GUISessionContainerPage( HydrusSerialisable.SerialisableBaseNamed ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         raise NotImplementedError()
         
@@ -146,11 +146,11 @@ class GUISessionContainerPageNotebook( GUISessionContainerPage ):
         return serialisable_info
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_pages = serialisable_info
         
-        self._page_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pages, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_SINGLE } )
+        self._page_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pages, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_NOTEBOOK, HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER_PAGE_SINGLE } )
         
     
     def GetPageDataHashes( self ) -> set:
@@ -189,7 +189,7 @@ class GUISessionContainerPageSingle( GUISessionContainerPage ):
         return self._page_data_hash.hex()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         page_data_hash_hex = serialisable_info
         
@@ -238,7 +238,7 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_page_manager, serialisable_hashes )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_page_manager, serialisable_hashes ) = serialisable_info
         

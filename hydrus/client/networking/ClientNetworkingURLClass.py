@@ -85,7 +85,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS_PARAMETER_FIXED_NAME
     SERIALISABLE_NAME = 'URL Class Parameter - Fixed Name'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
     def __init__( self, name = None, value_string_match = None ):
         
@@ -125,12 +125,12 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
         return ( self._name, serialisable_value_string_match, self._is_ephemeral, self._default_value, serialisable_default_value_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._name, serialisable_value_string_match, self._is_ephemeral, self._default_value, serialisable_default_value_string_processor ) = serialisable_info
         
-        self._value_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_value_string_match )
-        self._default_value_string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_default_value_string_processor )
+        self._value_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_value_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
+        self._default_value_string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_default_value_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
@@ -147,6 +147,29 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( name, serialisable_value_string_match, is_ephemeral, default_value, serialisable_default_value_string_processor )
             
             return ( 2, new_serialisable_info )
+            
+        
+        if version == 2:
+            
+            ( name, serialisable_value_string_match, is_ephemeral, default_value, serialisable_default_value_string_processor ) = old_serialisable_info
+            
+            # lol somehow this thing updated to stringconverter but expects a stringprocessor the whole time; very legacy objects here work as long as you don't try to open the guy in edit UI I guess
+            try:
+                
+                special_trusted_for_test = False
+                
+                HydrusSerialisable.CreateFromSerialisableTuple( serialisable_default_value_string_processor, special_trusted_for_test, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+                
+            except HydrusExceptions.SerialisationWhitelistException as e:
+                
+                string_processer = ClientStrings.StringProcessor()
+                
+                serialisable_default_value_string_processor = string_processer.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( name, serialisable_value_string_match, is_ephemeral, default_value, serialisable_default_value_string_processor )
+            
+            return ( 3, new_serialisable_info )
             
         
     
@@ -328,7 +351,7 @@ class URLDomainMask( HydrusSerialisable.SerialisableBase ):
         self._cache_initialised = True
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             raw_domains,
@@ -805,7 +828,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             serialisable_url_class_key,
@@ -829,14 +852,14 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         ( self._alphabetise_get_parameters, self._no_more_path_components_than_this, self._no_more_parameters_than_this, self._keep_extra_parameters_for_server, self._can_produce_multiple_files, self._should_be_associated_with_files, self._keep_fragment ) = booleans
         
-        self._url_domain_mask = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_domain_mask )
+        self._url_domain_mask = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_domain_mask, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_URL_DOMAIN_MASK } )
         self._url_class_key = bytes.fromhex( serialisable_url_class_key )
-        self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
-        self._parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters )
-        self._single_value_parameters_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_single_value_parameters_string_match )
+        self._path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
+        self._parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS_PARAMETER_FIXED_NAME } )
+        self._single_value_parameters_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_single_value_parameters_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
         self._header_overrides = dict( serialisable_header_overrides )
-        self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
-        self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter )
+        self._api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
+        self._referral_url_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_referral_url_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
         
         if self._no_more_parameters_than_this:
             
@@ -952,8 +975,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
             
-            path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components )
-            parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters )
+            path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components, trusted, set() ) # god knows
+            parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters, trusted, set() ) # god knows
             
             path_components = [ ( value, None ) for value in path_components ]
             parameters = { key : ( value, None ) for ( key, value ) in list(parameters.items()) }
@@ -1172,7 +1195,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 # we are converting from post[id] to post%5Bid%5D
                 name = ClientNetworkingFunctions.ensure_param_component_is_encoded( name )
                 
-                value_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_value_string_match )
+                value_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_value_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
                 
                 value_string_match = encode_fixed_string_match_param( value_string_match )
                 
@@ -1193,7 +1216,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             serialisable_parameters = new_parameters.GetSerialisableTuple()
             
-            path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
+            path_components = [ ( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ), default ) for ( serialisable_string_match, default ) in serialisable_path_components ]
             
             new_path_components = []
             
@@ -1258,7 +1281,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, no_more_path_components_than_this, no_more_parameters_than_this, can_produce_multiple_files, should_be_associated_with_files, keep_fragment ) = booleans
             
-            api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter )
+            api_lookup_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_api_lookup_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
             
             keep_extra_parameters_for_server = True
             

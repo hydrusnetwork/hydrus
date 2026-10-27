@@ -28,7 +28,7 @@ class ColumnListStatus( HydrusSerialisable.SerialisableBase ):
         return ( self._column_list_type, self._columns, self._sort_column_type, self._sort_asc )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._column_list_type, self._columns, self._sort_column_type, self._sort_asc ) = serialisable_info
         

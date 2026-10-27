@@ -47,7 +47,7 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
         return ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self.namespaces, serialisable_rating_service_keys, self.collect_unmatched, serialisable_tag_context ) = serialisable_info
         

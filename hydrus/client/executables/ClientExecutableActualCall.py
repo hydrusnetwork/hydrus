@@ -51,7 +51,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         raise NotImplementedError()
         
@@ -139,7 +139,7 @@ class LocalProcessCallInputParameterProcessingRule(HydrusSerialisable.Serialisab
         return ( self.parameter_type, self.replacement_string, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self.parameter_type, self.replacement_string, serialisable_string_processor ) = serialisable_info
         
@@ -405,7 +405,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         (
             self._executable_path,
@@ -702,7 +702,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         pass
         
@@ -779,7 +779,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         return tuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         pass
         

@@ -76,7 +76,7 @@ class PairComparatorOneFileHardcoded( PairComparator ):
         return ( self._looking_at, self._comparator_type )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._looking_at, self._comparator_type ) = serialisable_info
         
@@ -220,7 +220,7 @@ class PairComparatorOneFileMetadataConditional( PairComparator ):
         return ( self._looking_at, serialisable_metadata_conditional )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( self._looking_at, serialisable_metadata_conditional ) = serialisable_info
         
@@ -332,7 +332,7 @@ class PairComparatorRelativeFileInfo( PairComparator ):
         return ( serialisable_system_predicate, serialisable_number_test, self._multiplier, self._delta )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         ( serialisable_system_predicate, serialisable_number_test, self._multiplier, self._delta ) = serialisable_info
         
@@ -505,7 +505,7 @@ class PairComparatorRelativeHardcoded( PairComparator ):
         return self._hardcoded_type
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._hardcoded_type = serialisable_info
         
@@ -671,7 +671,7 @@ class PairComparatorRelativeVisualDuplicates( PairComparator ):
         return self._acceptable_confidence
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._acceptable_confidence = serialisable_info
         
@@ -771,7 +771,7 @@ class PairComparatorOR( PairComparator ):
         return self._sub_comparators.GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._sub_comparators = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_info,
@@ -875,7 +875,7 @@ class PairComparatorAND( PairComparator ):
         return self._sub_comparators.GetSerialisableTuple()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         self._sub_comparators = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_info,
@@ -983,7 +983,7 @@ class PairSelector( HydrusSerialisable.SerialisableBase ):
         return serialisable_comparators
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] | None ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         serialisable_comparators = serialisable_info
         
