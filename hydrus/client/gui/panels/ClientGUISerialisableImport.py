@@ -728,17 +728,25 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         self._json_content = QW.QTextEdit( self )
         self._json_content.setReadOnly( True )
         
-        self._parse_button = ClientGUICommon.BetterButton( self, 'parse', self._ParsePayloads )
+        self._parse_button_trusted = ClientGUICommon.BetterButton( self, 'parse trusted', self._ParsePayloadsTrusted )
+        self._parse_button_untrusted = ClientGUICommon.BetterButton( self, 'parse untrusted', self._ParsePayloadsUntrusted )
         
         self._description = QW.QTextEdit( self )
         self._description.setReadOnly( True )
         
-        self._current_json_texts = []
+        self._json_texts = []
         
+        st = ClientGUICommon.BetterStaticText( self, label = 'THIS DIALOG IS DANGEROUS!!\n\nIF A SKEEZY GUY TOLD YOU TO OPEN THIS DIALOG AND DROP HIS COOL PNG ON IT FOR AN UNTRUSTED PARSE, BACK OFF' )
+        st.setWordWrap( True )
+        st.setObjectName( 'HydrusWarning' )
+        st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._json_content, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._parse_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._parse_button_trusted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._parse_button_untrusted, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -781,7 +789,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         self._description.setText( '' )
         
     
-    def _ParsePayloads( self ):
+    def _ParsePayloads( self, trusted: bool ):
         
         result_texts = []
         
@@ -789,7 +797,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( json_text, True, None ) # this is a debug panel and will eat anything!
+                obj = HydrusSerialisable.CreateFromString( json_text, trusted, set() )
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     
@@ -813,6 +821,25 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         ending_description_text = f'{HydrusNumbers.ToHumanInt(len( result_texts ))} items\n\n' + '\n\n'.join( result_texts )
         
         self._description.setText( ending_description_text )
+        
+    
+    def _ParsePayloadsTrusted( self ):
+        
+        self._ParsePayloads( True )
+        
+    
+    def _ParsePayloadsUntrusted( self ):
+        
+        text = 'U wot m8, u r \'avin a laugh'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'dillinja', no_label = 'im not starting nothin m8' )
+        
+        if result != QW.QDialog.DialogCode.Accepted:
+            
+            return
+            
+        
+        self._ParsePayloads( False )
         
     
     def _Paste( self ):
