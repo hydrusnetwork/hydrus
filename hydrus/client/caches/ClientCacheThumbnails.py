@@ -237,6 +237,8 @@ class ThumbnailCache( object ):
             
             if locations_manager.IsLocal():
                 
+                hash = media_result.GetHash()
+                
                 summary = 'Unable to get thumbnail for file {}.'.format( hash.hex() )
                 
                 self._HandleThumbnailException( hash, e, summary )
@@ -262,6 +264,8 @@ class ThumbnailCache( object ):
                 
             except Exception as e:
                 
+                hash = media_result.GetHash()
+                
                 summary = 'The thumbnail for file {} was not loadable. An attempt to regenerate it failed.'.format( hash.hex() )
                 
                 self._HandleThumbnailException( hash, e, summary )
@@ -274,6 +278,8 @@ class ThumbnailCache( object ):
                 numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
                 
             except Exception as e:
+                
+                hash = media_result.GetHash()
                 
                 summary = 'The thumbnail for file {} was not loadable. It was regenerated, but that file would not render either. Your image libraries or hard drive connection are unreliable. Please inform the hydrus developer what has happened.'.format( hash.hex() )
                 
@@ -303,6 +309,8 @@ class ThumbnailCache( object ):
         correct_size = exactly_as_expected or rotation_exception
         
         if not correct_size:
+            
+            hash = media_result.GetHash()
             
             if locations_manager.IsLocal():
                 
