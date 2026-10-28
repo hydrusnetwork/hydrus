@@ -2231,7 +2231,7 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE } )
+                        definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE } )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         
