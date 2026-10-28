@@ -220,8 +220,6 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
         
         self._checkboxes = ClientGUICommon.BetterCheckBoxList( self )
         
-        self._checkboxes.setMinimumSize( QC.QSize( 320, 420 ) )
-        
         try:
             
             choice_tuples = sorted( choice_tuples, key = lambda c_t: HydrusText.HumanTextSortKey( c_t[0] ) )
@@ -230,6 +228,8 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
             
             pass # fugg
             
+        
+        len_longest_label = 5
         
         for ( index, ( label, data, selected ) ) in enumerate( choice_tuples ):
             
@@ -240,8 +240,20 @@ class EditSelectMultiple( ClientGUIScrolledPanels.EditPanel ):
                 self._checkboxes.Check( index )
                 
             
+            len_longest_label = max( len_longest_label, len( label ) )
+            
+
+        ( min_width, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._checkboxes, ( len_longest_label, 20 ) )
         
-        self._checkboxes.SetHeightBasedOnContents()
+        if len( choice_tuples ) <= 20:
+            
+            self._checkboxes.setMinimumWidth( min_width )
+            self._checkboxes.SetHeightBasedOnContents()
+            
+        else:
+            
+            self._checkboxes.setMinimumSize( QC.QSize( min_width, min_height ) )
+            
         
         #
         

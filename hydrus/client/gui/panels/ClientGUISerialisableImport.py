@@ -251,6 +251,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                         HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER,
                         HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE,
                         HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN,
+                        HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA,
                     }
                 )
                 
@@ -309,7 +310,20 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
                 
-                ClientGUIDialogsMessage.ShowWarning( self, 'Unfortunately, {} did not look like a package of download data! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME ) )
+                if not have_shown_load_error:
+                    
+                    message = 'Unfortunately, {} did not look like a package of download data I can ingest! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME )
+                    
+                    if len( payloads ) > 1:
+                        
+                        message += '\n' * 2
+                        message += 'If there are more unexpected objects in this import, they will be skipped silently.'
+                        
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, message )
+                    
+                    have_shown_load_error = True
+                    
                 
                 continue
                 

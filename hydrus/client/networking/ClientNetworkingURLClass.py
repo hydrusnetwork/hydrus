@@ -975,8 +975,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             ( serialisable_url_class_key, url_type, preferred_scheme, netloc, match_subdomains, keep_matched_subdomains, serialisable_path_components, serialisable_parameters, serialisable_api_lookup_converter, can_produce_multiple_files, should_be_associated_with_files, gallery_index_type, gallery_index_identifier, gallery_index_delta, example_url ) = old_serialisable_info
             
-            path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components, trusted, set() ) # god knows
-            parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters, trusted, set() ) # god knows
+            path_components = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_path_components, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
+            parameters = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parameters, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
             
             path_components = [ ( value, None ) for value in path_components ]
             parameters = { key : ( value, None ) for ( key, value ) in list(parameters.items()) }
