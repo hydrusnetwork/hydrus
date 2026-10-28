@@ -8506,7 +8506,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'UPDATE version SET version = ?;', ( current_version, ) )
         
-        versions_that_could_do_with_a_new_venv = { 670, 681 }
+        # careful; since we just incremented, this is the _current_ version we are testing
+        versions_that_could_do_with_a_new_venv = { 670, 681, 693 }
         
         if HC.RUNNING_FROM_SOURCE and HC.GOT_A_NORMAL_LOOKING_VENV and current_version in versions_that_could_do_with_a_new_venv:
             
