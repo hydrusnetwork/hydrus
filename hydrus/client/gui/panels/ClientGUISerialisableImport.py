@@ -728,15 +728,15 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         self._json_content = QW.QTextEdit( self )
         self._json_content.setReadOnly( True )
         
-        self._parse_button_trusted = ClientGUICommon.BetterButton( self, 'parse trusted', self._ParsePayloadsTrusted )
         self._parse_button_untrusted = ClientGUICommon.BetterButton( self, 'parse untrusted', self._ParsePayloadsUntrusted )
+        self._parse_button_trusted = ClientGUICommon.BetterButton( self, 'parse trusted', self._ParsePayloadsTrusted )
         
         self._description = QW.QTextEdit( self )
         self._description.setReadOnly( True )
         
         self._json_texts = []
         
-        st = ClientGUICommon.BetterStaticText( self, label = 'THIS DIALOG IS DANGEROUS!!\n\nIF A SKEEZY GUY TOLD YOU TO OPEN THIS DIALOG AND DROP HIS COOL PNG ON IT FOR AN UNTRUSTED PARSE, BACK OFF' )
+        st = ClientGUICommon.BetterStaticText( self, label = 'THIS DIALOG IS DANGEROUS!!\n\nIF A SKEEZY GUY TOLD YOU TO OPEN THIS DIALOG AND DROP HIS COOL PNG ON IT FOR A TRUSTED PARSE, BACK OFF' )
         st.setWordWrap( True )
         st.setObjectName( 'HydrusWarning' )
         st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
@@ -745,8 +745,8 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
         QP.AddToLayout( vbox, self._paste_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._json_content, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._parse_button_trusted, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._parse_button_untrusted, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._parse_button_trusted, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -825,12 +825,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ParsePayloadsTrusted( self ):
         
-        self._ParsePayloads( True )
-        
-    
-    def _ParsePayloadsUntrusted( self ):
-        
-        text = 'U wot m8, u r \'avin a laugh'
+        text = 'u wot m8, u r \'avin a laugh'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'dillinja', no_label = 'im not starting nothin m8' )
         
@@ -838,6 +833,11 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
             
             return
             
+        
+        self._ParsePayloads( True )
+        
+    
+    def _ParsePayloadsUntrusted( self ):
         
         self._ParsePayloads( False )
         
