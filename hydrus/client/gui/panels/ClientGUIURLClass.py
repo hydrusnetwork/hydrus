@@ -181,9 +181,9 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         self._value_string_match.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the encoded value of the key=value pair matches this, the URL Class matches!' ) )
         
         self._is_ephemeral = QW.QCheckBox( self )
-        tt = 'THIS IS ADVANCED, DO NOT SET IF YOU ARE UNSURE! If this parameter is a one-time token or similar needed for the server request but not something you want to keep or use to compare, you can define it here.'
+        tt = 'THIS IS ADVANCED, DO NOT SET IF YOU ARE UNSURE! If this parameter is a one-time token or similar needed for the server request but not something you want to keep or use to compare, set that here.'
         tt += '\n' * 2
-        tt += 'These tokens are also allowed _en masse_ in the main URL Class by setting "allow extra parameters for server", BUT if you need a whitelist, you will want to define them here. Also, if you need to pass this token on to an API/redirect converter, you have to define it here!'
+        tt += 'These tokens are also allowed without needing to define them in the main URL Class panel by setting "allow extra parameters for server", BUT if you need a whitelist so only certain are kept, you will want to define them here. Also, if you need to pass this token on to an API/redirect converter, you have to define it here!'
         self._is_ephemeral.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
@@ -197,6 +197,9 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         tt += '\n' * 2
         tt += 'You can apply the parsing system\'s normal String Processor steps to your fixed default value here. For instance, you could append/replace the default value with random hex or today\'s date. This is obviously super advanced, so be careful.'
         self._default_value_string_processor.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        
+        self._default_value_post_string_processing = QW.QLineEdit( self )
+        self._default_value_post_string_processing.setReadOnly( True )
         
         #
         
@@ -219,6 +222,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'default value: ', self._pretty_default_value ) )
         rows.append( ( 'default value, %-encoded: ', self._default_value ) )
         rows.append( ( 'default value string processor: ', self._default_value_string_processor ) )
+        rows.append( ( 'default value after processing: ', self._default_value_post_string_processing ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows, expand_single_widgets = True )
         
@@ -235,16 +239,17 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pretty_default_value.valueChanged.connect( self._PrettyDefaultValueChanged )
         self._default_value.valueChanged.connect( self._DefaultValueChanged )
         
-        self._is_ephemeral.clicked.connect( self._UpdateProcessorEnabled )
+        self._default_value_string_processor.valueChanged.connect( self._DefaultValueStringProcessorChanged )
+        
         self._pretty_default_value.valueChanged.connect( self._UpdateProcessorEnabled )
         self._default_value.valueChanged.connect( self._UpdateProcessorEnabled )
         
     
     def _UpdateProcessorEnabled( self ):
         
-        we_out_here = self._is_ephemeral.isChecked() and self._default_value.GetValue() is not None
+        self._default_value_string_processor.setEnabled( self._default_value.GetValue() is not None )
         
-        self._default_value_string_processor.setEnabled( we_out_here )
+        self._DefaultValueStringProcessorChanged()
         
     
     def _DefaultValueChanged( self ):
@@ -258,6 +263,29 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pretty_default_value.SetValue( pretty_default_value )
         
         self._pretty_default_value.blockSignals( False )
+        
+    
+    def _DefaultValueStringProcessorChanged( self ):
+        
+        default_value = self._default_value.GetValue()
+        
+        if default_value is None:
+            
+            self._default_value_post_string_processing.setText( '' )
+            
+        else:
+            
+            try:
+                
+                default_value_post_string_processing = self.GetValue().GetDefaultValue( with_processing = True )
+                
+            except Exception as e:
+                
+                default_value_post_string_processing = str( e )
+                
+            
+            self._default_value_post_string_processing.setText( default_value_post_string_processing )
+            
         
     
     def _GetTestData( self ) -> ClientParsing.ParsingTestData:
@@ -289,7 +317,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         default_value = self._default_value.GetValue()
         parameter.SetDefaultValue( default_value )
         
-        if is_ephemeral and default_value is not None:
+        if default_value is not None:
             
             default_value_string_processor = self._default_value_string_processor.GetValue()
             parameter.SetDefaultValueStringProcessor( default_value_string_processor )
