@@ -245,6 +245,7 @@ class PageManager( HydrusSerialisable.SerialisableBase ):
                     HydrusSerialisable.SERIALISABLE_TYPE_MULTIPLE_WATCHER_IMPORT,
                     HydrusSerialisable.SERIALISABLE_TYPE_URLS_IMPORT,
                     HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT, # probably cruft
                 }
             )
         )
