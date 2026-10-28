@@ -7,6 +7,82 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 693](https://github.com/hydrusnetwork/hydrus/releases/tag/v693)
+
+### security
+
+* if you missed it, AI discovered an important security flaw in hydrus last week. if you are running v691 or earlier you should update to v692 or later, such as today's release. check here for more details: https://github.com/hydrusnetwork/hydrus/releases/tag/v692
+* I am now starting a project of improving the rigour of hydrus I/O security to shrink the attack surface and reduce the potential severity of future discoveries like this. today's release brings a top-to-bottom overhaul of deserialisation security with a whitelist applied to all untrusted ingresses
+* when the hydrus server takes a POST request, it now applies a whitelist of which serialisable objects it is willing to load, based on the request type. if there is extra stuff, it does 400 Bad Request
+* conversely, when a client receives responses from the hydrus server, it now equally whitelists the serialised response and throws an error if anything doesn't match the whitelist
+* in the client UI, when you paste a bitmap or drop a png onto a list that knows how to import/export, it now applies a similar whitelist before loading; if it is expecting URL Classes, it will recognise anything that _isn't_ an URL class before it tries to load anything and cancel out
+* if an object load _is_ from a trusted source (e.g. you are loading your options object from the database), the whitelist does not apply strictly but the log will write about anything that violates it. we'll see how much cruft we have hanging around from old forgotten things. if you get some messages like `An object of type 26 ("Serialisable List") loaded when the expected serialisable types are: {127}! You can probably ignore this, but if there are a bunch of these, hydev would like to know.`, please pass them on
+* the hydrus serialisation system will no longer deserialise an object that comes from a future version of the client, under any circumstances. we had a hacky path here previously to permit some 'run the client on old software and see if it muddles through the errors' situations, but I would rather be KISS on this question going forward
+
+### misc
+
+* fixed an issue introduced in v689 that was causing increments of 0.5s of wasted CPU work when the trash was cleared for old files. some users have reported unusual freezes that come and go; please let me know how things feel now. thanks to the reporting user who found this with AI
+* hydrus services now take longer breaks (about four hours) when there are connection problems, and similarly when there is any generic problem. previously, a couple of request paths would not generate a delay and they'd try again ~fifteen minutes later. I've also made hydrus requests cancel earlier in all situations--a couple of slow maintenance paths would run the normal cancel/retry system, but this stuff is mostly hidden from UI and it wasn't helping to have quick retry
+* removed some ancient two year old server update code that would no longer be fired anyway because of the bitrot guard
+* improved shutdown code to more promptly cancel ongoing network jobs. if a manager (e.g. 'synchronise repositories' manager) is waiting on a network job to clear but there's a connection retry etc... holding things up, this is now insta-cancelled and shutdown no longer waits
+* the url class parameter edit panel now makes the default-value string processor available when the 'ephemeral token' checkbox is not set on. there is also a textbox to show the output of the string processing on the current example text
+
+### boring security worklist
+
+* added an object type whitelist to all deserialisation code and a trusted/untrusted environment bool; if untrusted (e.g. pasting from clipboard, receiving from a server, POST request to server), the whitelist is adhered to strictly and exceptions raised on violations; if trusted (e.g. loading from local database store), we load whatever comes and accept-but-log legacy cruft that exceeds the whitelist
+* converted default object loading to use the whitelist in all cases (just a couple calls)
+* converted 'noneable' object loading to use the whitelist in all cases (just three calls)
+* converted 'networkbytes' object loading to use the whitelist in all cases (15 calls)
+* converted 'fromstring' object loading to use the whitelist in all cases (48 calls)
+* converted the core 'serialisabletuple' object loading to use the whitelist in all cases (~295 calls aieeeee)
+* propagated the trusted/untrusted environment to the serialisable update routines too
+* updated serverside POST request processing to obey whitelists particular to each command
+* updated client 'Service' request response parsing to obey a similar per-command whitelist
+* the 'what is this?' debug panel now separates the payload ingestion from actual deserialisation, showing a preview of the json content before you parse it. there are also two buttons, for trusted and untrusted parse
+* added unit tests for the new deserialisation whitelisting
+* added a unit test for the new future-object deserialisation error
+* added unit tests for the serverside whitelisting
+* misc cleanup all around here
+
+### more boring cleanup
+
+* removed the legacy subscription object and migration code and import support in the subs dialog. the transition was years ago, so we can drop it
+* similarly removed the legacy bandwidth manager object and migration code
+* amongst the type filtering work this week, discovered that legacy url classes could (harmlessly) insert the incorrect sort of string conversion tool in their parameter definitions, and fixed it
+* Lain now skips erroneous import object reports more efficiently. previously she would give an error window for each unexpected object; now only simple page parsing formulae are even parsed and she'll just give one error and silently skip over them after that
+* the checkbox list that Lain provides, and the same list used across the program, now makes a better expandable layout when it has more than 20 items in it. previously it janked out and wouldn't grow vertically properly
+* extended some lists that accept import/export of hydrus serialisable objects to forgive objects in the same class and give a nicer error. 'import url class' list will eat gugs, ngugs, and such, and say 'hey, not them m8' rather than going nuts. you can drop a bunch of mixed downloader objects on one of these sub-dialogs and it'll pull what it can
+* fixed some thumbnail error handling and 'file report mode' reporting, which missed something in the transition from hashes to media_results
+
+### future build
+
+* This release commits the changes tested with the recent future test build that I did after making v691 last week, which went well
+* the summary for this update is: most python libraries are brought up to latest, and ffmpeg, and the builder, pyinstaller, too
+* there are no special instructions for the update. update as normal
+* since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week. this is particularly important in the current rapid-update climate
+* The changes are--
+* python updates--
+* `PySide6` moved from `6.10.3` to `6.11.2`
+* `opencv-python-headless` moved from `4.13.0.92` to `4.14.0.94`
+* `pillow-heif` moved from `1.4.0` to `1.8.1`
+* `cbor` moved from `6.1.3` to `6.1.5`
+* `chardet` moved from `7.4.3` to `7.7.0`
+* `cryptography` moved from `49.0.0` to `50.0.2`
+* `lxml` from `6.1.1` to `6.1.3`
+* `numpy` moved from `2.4.6` to `2.5.4`
+* `pyopenssl` moved from `26.3.0` to `26.4.0`
+* new library--
+* `curl_cffi` is now included by default, to help testing in built environments, at `0.16.3`
+* build--
+* `pyinstaller` moved from `6.18` to `6.22.3`
+* test versions--
+* `PySide6` moved from `6.11.1` to `6.12.0`
+* misc--
+* ffmpeg updated from `8.1.2` to `9.0.2` on Windows
+* ffmpeg updated from `2026-06-30` to `2026-10-21` on Linux
+* updated the tldextract domain list from `2026-07-15` to `2026-10-20`
+* updated github actions in workflow scripts to latest stable versions
+
 ## [Version 692](https://github.com/hydrusnetwork/hydrus/releases/tag/v692)
 
 ### security hotfix
@@ -348,55 +424,3 @@ title: Changelog
 * added a 'OS launch URL' hardcoded launch call in the same way
 * improved the hydrus subprocess 'this process has timed out' detection system. in doing exe manager work this week, I realised it was waiting after a kill fallback in a blocking way and only reporting the timeout after the final (indefinite) reap went through
 * improved some subprocess error formatting
-
-## [Version 683](https://github.com/hydrusnetwork/hydrus/releases/tag/v683)
-
-### file metadata
-
-* I am ready to roll out the new file metadata flags. on update, you will be given a yes/no dialog asking if you want to schedule a big file metadata regen on pretty much all your images. I recommend all users click yes, but if you want to handle it yourself, you can click no, no worries
-* it will schedule 'has xmp', 'has iptc', 'has software-source', and new 'has human-readable' flag inspection for all your jpegs and some other image formats depending on the type
-* recall you can look at the maintenance progress under `database->file maintenance->manage scheduled jobs` and tweak the file maintenance background work velocity under `options->maintenance and processing`. as a general principle, I do not recommend you try to hurry huge work; just let it do its thing
-* XMP, IPTC, and software/source values are now stripped of leading/trailing whitespace
-* empty XMP, IPTC, and software/source values/list-items are now skipped
-
-### duplicates auto-resolution
-
-* I have added two new hardcoded comparators: "A has same or better metadata flags to B" and "A has ICC Profile if B does". the auto-suggested rules now use these, and the help talks about them, so we do away with the old and awkward and ugly 'both have same x OR B doesn't' formulation. also added some unit tests for this
-* the metadata comparator tests each of EXIF, XMP, IPTC, software/source, and human-readable flags
-* enthusiastic users of auto-resolution may like to swap over to the new comparators once these new flags populate so they can cover more situations
-* if an auto-resolution rule thinks it wants to do search or resolution work but there is no actual pair in the queue, the database now auto-triggers some maintenance to safely temp-pause the rule, regenerate the cached (and miscounted) numbers, and continue. it makes a popup if this happens
-* auto-resolution rules now stop work quickly when paused during a busy work cycle
-* the maintenance jobs that regen auto-resolution rules numbers and clear all potential duplicate pairs generally now trigger a proper, full reload of any list of auto-resolution rules in UI. previously, these guys needed an explicit refresh button click to catch up
-
-### more UI features
-
-* a user has submitted more UI improvements!
-* the media viewer's 'always on top' transition should now be flickerless for Windows
-* further, we now have a tentative 'always on top (while playing)' option. the always-on-top transition in Linux is still flickery, and if you have mpv up it causes a buzzy-noise crash, so I patched it to simply not happen in this situation, and if you are on Linux, the 'eye' menu in the media viewer has a 'THIS MAY BE BUGGY/CRASHY' warning
-* the new treeview test has several updates: double-clicking on treeview empty tab area opens the new page picker, treeview rows now use alternating colours, some bugs are fixed, the layout signaling is less janky, some code is cleaned, menu code is simplified, and there are several new user-controllable options (row height, indentation, alternating line colours)
-* extra note from hydev: if you have been playing with the treeview, hit up the new cog icon menu and look at the in-menu 'tree row dimensions' sliders and give them a spin. absolute space magic
-
-### audio files with embedded images
-
-* the QtMediaPlayer will now show an embedded image if an audio file has one. I pulled this off with some slightly funky tech, so let me know how it goes IRL
-* the default mpv.conf now has a `audio-display=embedded-first` line (thanks to a user, for this) that shows embedded images for audio files. if you never tweaked your mpv.conf, you might like to hit up `options->media playback` and reset back to the default mpv conf there (just hit the 'browse' button and it should start you in the static/mpv-conf dir)
-
-### misc
-
-* added a link to https://github.com/asadtoast/aether in the Client API help; this is an Android app with a bunch of features, including archive/delete and duplicate filtering
-* fixed an issue that was stopping adding potential duplicate pair relationships to files not already registered in the duplicates system. this broke hydrus video duplicate detector and similar tools. sorry for the trouble--I was too keen last week with the valid pair filtering! (issue #2076)
-* the 'external programs' options page is moved to 'default programs'
-
-### executable manager
-
-* the work on this system continues to go well. I fleshed out my previous skeleton, so most of the spinning wheels are connectable now
-* advanced users will see a new 'external programs (TESTING)' options page. this has the first UI available. edit panel isn't ready yet, but you can load the defaults and see what I'm going for
-* wrote out defaults for common OS file launchers and 'open file in web browser' commands
-* I added 'open multiple files externally' tech in prep for finally actually doing this from thumbnail menu
-* next step is to finish the edit panel for this first local call and start a test for advanced users. I'd like to get an early version of this working pretty soon, and get 'open externally' working on it and migrated over, and then I'll add new tech and pipelines to the live system; stuff like tag suggestions
-
-### boring stuff
-
-* added info to the 'help my db is broke' help page regarding `.clone` crashing/halting, the `.backup` command, and a very clever trick a user discovered regarding editing the `sqlite_schema` table to skip cloning a known-malformed table
-* the Docker package is updated to `Alpine 3.24` and should have improved HEIF support
-* skipped 'software/source' inspection when examining importing pdfs (this was silently failing, previously, because it was trying to load them as images)

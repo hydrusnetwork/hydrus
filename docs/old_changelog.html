@@ -35,6 +35,75 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_693"><a href="#version_693">version 693</a></h2>
+                    <ul>
+                        <li><h3>security</h3></li>
+                        <li>if you missed it, AI discovered an important security flaw in hydrus last week. if you are running v691 or earlier you should update to v692 or later, such as today's release. check here for more details: https://github.com/hydrusnetwork/hydrus/releases/tag/v692</li>
+                        <li>I am now starting a project of improving the rigour of hydrus I/O security to shrink the attack surface and reduce the potential severity of future discoveries like this. today's release brings a top-to-bottom overhaul of deserialisation security with a whitelist applied to all untrusted ingresses</li>
+                        <li>when the hydrus server takes a POST request, it now applies a whitelist of which serialisable objects it is willing to load, based on the request type. if there is extra stuff, it does 400 Bad Request</li>
+                        <li>conversely, when a client receives responses from the hydrus server, it now equally whitelists the serialised response and throws an error if anything doesn't match the whitelist</li>
+                        <li>in the client UI, when you paste a bitmap or drop a png onto a list that knows how to import/export, it now applies a similar whitelist before loading; if it is expecting URL Classes, it will recognise anything that _isn't_ an URL class before it tries to load anything and cancel out</li>
+                        <li>if an object load _is_ from a trusted source (e.g. you are loading your options object from the database), the whitelist does not apply strictly but the log will write about anything that violates it. we'll see how much cruft we have hanging around from old forgotten things. if you get some messages like `An object of type 26 ("Serialisable List") loaded when the expected serialisable types are: {127}! You can probably ignore this, but if there are a bunch of these, hydev would like to know.`, please pass them on</li>
+                        <li>the hydrus serialisation system will no longer deserialise an object that comes from a future version of the client, under any circumstances. we had a hacky path here previously to permit some 'run the client on old software and see if it muddles through the errors' situations, but I would rather be KISS on this question going forward</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an issue introduced in v689 that was causing increments of 0.5s of wasted CPU work when the trash was cleared for old files. some users have reported unusual freezes that come and go; please let me know how things feel now. thanks to the reporting user who found this with AI</li>
+                        <li>hydrus services now take longer breaks (about four hours) when there are connection problems, and similarly when there is any generic problem. previously, a couple of request paths would not generate a delay and they'd try again ~fifteen minutes later. I've also made hydrus requests cancel earlier in all situations--a couple of slow maintenance paths would run the normal cancel/retry system, but this stuff is mostly hidden from UI and it wasn't helping to have quick retry</li>
+                        <li>removed some ancient two year old server update code that would no longer be fired anyway because of the bitrot guard</li>
+                        <li>improved shutdown code to more promptly cancel ongoing network jobs. if a manager (e.g. 'synchronise repositories' manager) is waiting on a network job to clear but there's a connection retry etc... holding things up, this is now insta-cancelled and shutdown no longer waits</li>
+                        <li>the url class parameter edit panel now makes the default-value string processor available when the 'ephemeral token' checkbox is not set on. there is also a textbox to show the output of the string processing on the current example text</li>
+                        <li><h3>boring security worklist</h3></li>
+                        <li>added an object type whitelist to all deserialisation code and a trusted/untrusted environment bool; if untrusted (e.g. pasting from clipboard, receiving from a server, POST request to server), the whitelist is adhered to strictly and exceptions raised on violations; if trusted (e.g. loading from local database store), we load whatever comes and accept-but-log legacy cruft that exceeds the whitelist</li>
+                        <li>converted default object loading to use the whitelist in all cases (just a couple calls)</li>
+                        <li>converted 'noneable' object loading to use the whitelist in all cases (just three calls)</li>
+                        <li>converted 'networkbytes' object loading to use the whitelist in all cases (15 calls)</li>
+                        <li>converted 'fromstring' object loading to use the whitelist in all cases (48 calls)</li>
+                        <li>converted the core 'serialisabletuple' object loading to use the whitelist in all cases (~295 calls aieeeee)</li>
+                        <li>propagated the trusted/untrusted environment to the serialisable update routines too</li>
+                        <li>updated serverside POST request processing to obey whitelists particular to each command</li>
+                        <li>updated client 'Service' request response parsing to obey a similar per-command whitelist</li>
+                        <li>the 'what is this?' debug panel now separates the payload ingestion from actual deserialisation, showing a preview of the json content before you parse it. there are also two buttons, for trusted and untrusted parse</li>
+                        <li>added unit tests for the new deserialisation whitelisting</li>
+                        <li>added a unit test for the new future-object deserialisation error</li>
+                        <li>added unit tests for the serverside whitelisting</li>
+                        <li>misc cleanup all around here</li>
+                        <li><h3>more boring cleanup</h3></li>
+                        <li>removed the legacy subscription object and migration code and import support in the subs dialog. the transition was years ago, so we can drop it</li>
+                        <li>similarly removed the legacy bandwidth manager object and migration code</li>
+                        <li>amongst the type filtering work this week, discovered that legacy url classes could (harmlessly) insert the incorrect sort of string conversion tool in their parameter definitions, and fixed it</li>
+                        <li>Lain now skips erroneous import object reports more efficiently. previously she would give an error window for each unexpected object; now only simple page parsing formulae are even parsed and she'll just give one error and silently skip over them after that</li>
+                        <li>the checkbox list that Lain provides, and the same list used across the program, now makes a better expandable layout when it has more than 20 items in it. previously it janked out and wouldn't grow vertically properly</li>
+                        <li>extended some lists that accept import/export of hydrus serialisable objects to forgive objects in the same class and give a nicer error. 'import url class' list will eat gugs, ngugs, and such, and say 'hey, not them m8' rather than going nuts. you can drop a bunch of mixed downloader objects on one of these sub-dialogs and it'll pull what it can</li>
+                        <li>fixed some thumbnail error handling and 'file report mode' reporting, which missed something in the transition from hashes to media_results</li>
+                        <li><h3>future build</h3></li>
+                        <li>This release commits the changes tested with the recent future test build that I did after making v691 last week, which went well</li>
+                        <li>the summary for this update is: most python libraries are brought up to latest, and ffmpeg, and the builder, pyinstaller, too</li>
+                        <li>there are no special instructions for the update. update as normal</li>
+                        <li>since library versions have been bumped, users who run from source will be encouraged to rebuild their venv on update this week. this is particularly important in the current rapid-update climate</li>
+                        <li>The changes are--</li>
+                        <li>python updates--</li>
+                        <li>`PySide6` moved from `6.10.3` to `6.11.2`</li>
+                        <li>`opencv-python-headless` moved from `4.13.0.92` to `4.14.0.94`</li>
+                        <li>`pillow-heif` moved from `1.4.0` to `1.8.1`</li>
+                        <li>`cbor` moved from `6.1.3` to `6.1.5`</li>
+                        <li>`chardet` moved from `7.4.3` to `7.7.0`</li>
+                        <li>`cryptography` moved from `49.0.0` to `50.0.2`</li>
+                        <li>`lxml` from `6.1.1` to `6.1.3`</li>
+                        <li>`numpy` moved from `2.4.6` to `2.5.4`</li>
+                        <li>`pyopenssl` moved from `26.3.0` to `26.4.0`</li>
+                        <li>new library--</li>
+                        <li>`curl_cffi` is now included by default, to help testing in built environments, at `0.16.3`</li>
+                        <li>build--</li>
+                        <li>`pyinstaller` moved from `6.18` to `6.22.3`</li>
+                        <li>test versions--</li>
+                        <li>`PySide6` moved from `6.11.1` to `6.12.0`</li>
+                        <li>misc--</li>
+                        <li>ffmpeg updated from `8.1.2` to `9.0.2` on Windows</li>
+                        <li>ffmpeg updated from `2026-06-30` to `2026-10-21` on Linux</li>
+                        <li>updated the tldextract domain list from `2026-07-15` to `2026-10-20`</li>
+                        <li>updated github actions in workflow scripts to latest stable versions</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_692"><a href="#version_692">version 692</a></h2>
                     <ul>
                         <li><h3>security hotfix</h3></li>
