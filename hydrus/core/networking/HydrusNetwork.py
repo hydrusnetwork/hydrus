@@ -734,6 +734,7 @@ class Account( object ):
         dictionary[ 'message' ] = message
         dictionary[ 'message_created' ] = message_created
         
+        # make a copy of the internal guys
         dictionary = dictionary.Duplicate()
         
         return ( account_key, account_type, created, expires, dictionary )

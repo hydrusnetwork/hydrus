@@ -198,14 +198,14 @@ def CreateFromNoneableSerialisableTuple( obj_tuple_or_none, trusted: bool, seria
         
     
 
-def CreateFromString( obj_string: str, trusted: bool, serialisable_type_whitelist: set[ int ] ) -> typing.Any:
+def CreateFromString( obj_string: str, trusted: bool, serialisable_type_whitelist: set[ int ], log_trusted_whitelist_violations = True ) -> typing.Any:
     
     obj_tuple = json.loads( obj_string )
     
-    return CreateFromSerialisableTuple( obj_tuple, trusted, serialisable_type_whitelist )
+    return CreateFromSerialisableTuple( obj_tuple, trusted, serialisable_type_whitelist, log_trusted_whitelist_violations = log_trusted_whitelist_violations )
     
 
-def CreateFromSerialisableTuple( obj_tuple: tuple, trusted: bool, serialisable_type_whitelist: set[ int ] ) -> typing.Any:
+def CreateFromSerialisableTuple( obj_tuple: tuple, trusted: bool, serialisable_type_whitelist: set[ int ], log_trusted_whitelist_violations = True ) -> typing.Any:
     """
     Deserialise a serialised tuple into a HydrusSerialisable object. send a whitelist of 'set()' if you aren't sure--that means it'll only ever work on local, trusted loads
     :param obj_tuple: 3- or 4- tuple 
@@ -236,7 +236,7 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, trusted: bool, serialisable_t
         obj = SERIALISABLE_TYPES_TO_OBJECT_TYPES[ serialisable_type ]( name )
         
     
-    obj.InitialiseFromSerialisableInfo( version, serialisable_info, trusted, serialisable_type_whitelist )
+    obj.InitialiseFromSerialisableInfo( version, serialisable_info, trusted, serialisable_type_whitelist, log_trusted_whitelist_violations = log_trusted_whitelist_violations )
     
     return obj
     
@@ -300,8 +300,6 @@ def ObjectVersionIsFromTheFuture( obj_tuple ):
 
 SerialisableBaseSubclass = typing.TypeVar( 'SerialisableBaseSubclass', bound = 'SerialisableBase' )
 
-SERIALISABLE_LOG_WARNINGS_ARE_OK = True
-
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
@@ -342,7 +340,8 @@ class SerialisableBase( object ):
     # this magically tells type checkers that this delivers whatever 'self' type is, subclasses whatever
     def Duplicate( self: SerialisableBaseSubclass ) -> SerialisableBaseSubclass:
         
-        return CreateFromString( self.DumpToString(), True, set() ) # we trust ourselves
+        # logspam hack because lists and dicts don't know what they should hold
+        return CreateFromString( self.DumpToString(), True, { self.SERIALISABLE_TYPE }, log_trusted_whitelist_violations = False ) # we trust ourselves
         
     
     def GetSerialisableDescription( self ):
@@ -373,7 +372,7 @@ class SerialisableBase( object ):
         return ( self.SERIALISABLE_TYPE, self.SERIALISABLE_VERSION, serialisable_info )
         
     
-    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def InitialiseFromSerialisableInfo( self, original_version, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ], log_trusted_whitelist_violations = True ):
         
         if serialisable_type_whitelist is not None:
             
@@ -381,7 +380,7 @@ class SerialisableBase( object ):
                 
                 if trusted:
                     
-                    if SERIALISABLE_LOG_WARNINGS_ARE_OK:
+                    if log_trusted_whitelist_violations:
                         
                         HydrusData.Print( f'An object of type {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}") loaded when the expected serialisable types are: {serialisable_type_whitelist}! You can probably ignore this, but if there are a bunch of these, hydev would like to know.' )
                         
