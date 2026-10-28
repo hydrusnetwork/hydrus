@@ -268,28 +268,30 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ], doing_
         
         requirements_dict[ 'opencv-python-headless' ] = '==5.0.0.93'
         requirements_dict[ 'numpy' ] = '==2.4.6'
-        
-    
+
+    # it is fine to triple comment out this block when not in use
+    '''
     # Future libraries
     print()
     
     if doing_interactive_install:
         
         print('Future Libraries')
-        print('There is a test for curl_cffi. Want to try it?')
+        print('There is a test for my-cool-lib. Want to try it?')
         future = get_user_choice('Future libraries (y/n)', ('y', 'n'), 'n')
         
     else:
         
-        print( 'Selecting to install curl_cffi test.' )
+        print( 'Selecting to install my-cool-lib test.' )
         
         future = 'y'
         
     
     if future == 'y':
         
-        requirements_dict[ 'curl-cffi' ] = '==0.15.0'
+        pass # for example: requirements_dict[ 'my-cool-lib' ] = '==0.20.0'
         
+    '''
     
     # Dev mode
     print()
