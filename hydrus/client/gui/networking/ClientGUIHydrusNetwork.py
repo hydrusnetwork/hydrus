@@ -1,4 +1,5 @@
 import collections.abc
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -349,7 +350,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        account_type = data
+        account_type = typing.cast( HydrusNetwork.AccountType, data )
         
         if account_type.IsNullAccount():
             

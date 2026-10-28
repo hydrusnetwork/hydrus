@@ -342,7 +342,7 @@ class SerialisableBase( object ):
     # this magically tells type checkers that this delivers whatever 'self' type is, subclasses whatever
     def Duplicate( self: SerialisableBaseSubclass ) -> SerialisableBaseSubclass:
         
-        return CreateFromString( self.DumpToString(), True, None ) # we trust ourselves
+        return CreateFromString( self.DumpToString(), True, set() ) # we trust ourselves
         
     
     def GetSerialisableDescription( self ):

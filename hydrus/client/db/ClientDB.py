@@ -1660,7 +1660,7 @@ class DB( HydrusDB.HydrusDB ):
         self.modules_media_results.ForceRefreshFileInfoManagers( hash_ids_to_hashes )
         
     
-    def _GetBonedStats( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext = None, job_status = None ):
+    def _GetBonedStats( self, file_search_context: ClientSearchFileSearchContext.FileSearchContext | None = None, job_status = None ):
         
         if job_status is None:
             
@@ -1987,7 +1987,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
     
-    def _GetFileHistory( self, num_steps: int, file_search_context: ClientSearchFileSearchContext.FileSearchContext = None, job_status = None ):
+    def _GetFileHistory( self, num_steps: int, file_search_context: ClientSearchFileSearchContext.FileSearchContext | None = None, job_status = None ):
         
         # TODO: clean this up. it is a mess cribbed from the boned work, and I'm piping similar nonsense down to the db tables
         # don't supply deleted timestamps for 'all files deleted' and all that gubbins, it is a mess
