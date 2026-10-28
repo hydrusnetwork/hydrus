@@ -184,7 +184,7 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ], doing_
         
     elif qt == 't':
         
-        requirements_dict[ 'pyside6' ] = '==6.11.1'
+        requirements_dict[ 'pyside6' ] = '==6.12.0'
         requirements_dict[ 'qtpy' ] = '==2.4.3'
         
     elif qt == 'q':
@@ -260,7 +260,7 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ], doing_
         
     
     if opencv == 'o':
-
+        
         requirements_dict['opencv-python-headless'] = '==4.8.1.78'
         requirements_dict[ 'numpy' ] = '<=2.3.1'
         
@@ -268,28 +268,30 @@ def process_advanced_options( requirements_dict: dict[ str, str | None ], doing_
         
         requirements_dict[ 'opencv-python-headless' ] = '==5.0.0.93'
         requirements_dict[ 'numpy' ] = '==2.4.6'
-        
-    
+
+    # it is fine to triple comment out this block when not in use
+    '''
     # Future libraries
     print()
     
     if doing_interactive_install:
         
         print('Future Libraries')
-        print('There is a test for curl_cffi. Want to try it?')
+        print('There is a test for my-cool-lib. Want to try it?')
         future = get_user_choice('Future libraries (y/n)', ('y', 'n'), 'n')
         
     else:
         
-        print( 'Selecting to install curl_cffi test.' )
+        print( 'Selecting to install my-cool-lib test.' )
         
         future = 'y'
         
     
     if future == 'y':
         
-        requirements_dict[ 'curl-cffi' ] = '==0.15.0'
+        pass # for example: requirements_dict[ 'my-cool-lib' ] = '==0.20.0'
         
+    '''
     
     # Dev mode
     print()
@@ -408,19 +410,20 @@ def main():
         
         requirements_dict = {
             'beautifulsoup4' : '<=4.15.0',
-            'cbor2' : '<=6.1.3',
-            'chardet' : '<=7.4.3',
-            'cryptography' : '<=49.0.0',
+            'cbor2' : '<=6.1.5',
+            'chardet' : '<=7.7.0',
+            'cryptography' : '<=50.0.2',
+            'curl_cffi' : '<=0.16.3',
             'html5lib' : '<=1.1',
-            'lxml' : '<=6.1.1',
+            'lxml' : '<=6.1.3',
             'lz4' : '<=4.4.5',
             'olefile' : '<=0.47',
             'pillow' : '<=13.0.0',
-            'pillow-heif' : '<=1.4.0',
+            'pillow-heif' : '<=1.8.1',
             'pillow-jxl-plugin' : '<=1.3.8',
             'psutil' : '<=7.2.2',
             'pympler' : '<=1.1',
-            'pyopenssl' : '<=26.3.0',
+            'pyopenssl' : '<=26.4.0',
             'pysocks' : '<=1.7.1',
             'python-dateutil' : '<=2.9.0.post0',
             'pyyaml' : '<=6.0.3',
@@ -429,12 +432,12 @@ def main():
             'show-in-file-manager' : '<=1.1.6',
             'twisted[http2,tls]' : '<=26.4.0',
             'mpv' : '==1.0.8',
-            'opencv-python-headless' : '==4.13.0.92',
-            'numpy' : '<=2.4.6',
+            'opencv-python-headless' : '==4.14.0.94',
+            'numpy' : '<=2.5.4',
             'dateparser' : '==1.4.0',
             'tldextract' : '==5.3.1',
             'requests' : '==2.34.2',
-            'pyside6' : '==6.10.3',
+            'pyside6' : '==6.11.2',
             'qtpy' : '==2.4.3',
         }
         

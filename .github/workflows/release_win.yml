@@ -10,7 +10,7 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           path: hydrus
       -
@@ -21,7 +21,7 @@ jobs:
           echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
       -
         name: Setup Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.13'
           architecture: x64
@@ -31,7 +31,7 @@ jobs:
           cd hydrus
           python3 -m pip install .
           python3 -m pip install pefile
-          python3 -m pip install pyinstaller==6.18.0
+          python3 -m pip install pyinstaller==6.22.3
           python3 -m pip install mkdocs-material==9.7.7
           cd ..
       - 
@@ -46,7 +46,7 @@ jobs:
       -
         name: Download and Extract FFmpeg
         run: |
-          Invoke-WebRequest -Uri "https://github.com/GyanD/codexffmpeg/releases/download/8.1.2/ffmpeg-8.1.2-full_build.7z" -OutFile "ffmpeg-release-full.7z"
+          Invoke-WebRequest -Uri "https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-full_build.7z" -OutFile "ffmpeg-release-full.7z"
           7z e ffmpeg-release-full.7z -ohydrus/bin "**/bin/ffmpeg.exe"
       -
         name: Build Hydrus
@@ -65,7 +65,7 @@ jobs:
           7z a -tzip -mm=Deflate -mx=5 Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip .\dist\*
       -
         name: Upload Files
-        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
