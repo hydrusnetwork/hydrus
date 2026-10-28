@@ -211,6 +211,7 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, trusted: bool, serialisable_t
     :param obj_tuple: 3- or 4- tuple 
     :param trusted: whether the ingress is trusted or not; controls how strictly whitelist applies
     :param serialisable_type_whitelist: will raise an exception/print to log if any objects do not match this
+    :param log_trusted_whitelist_violations: use this when you notice logspam on dict duplicate twenty minutes before release time on Wednesday
     :return: the actual object mate
     """
     
@@ -379,6 +380,12 @@ class SerialisableBase( object ):
             if self.SERIALISABLE_TYPE not in serialisable_type_whitelist:
                 
                 if trusted:
+                    
+                    # aieeeee, we need log_trusted_whitelist_violations up and down the whole pipeline for list/dict duplicate!
+                    if serialisable_type_whitelist == {26, 21} or serialisable_type_whitelist == { 26 } or serialisable_type_whitelist == set():
+                        
+                        log_trusted_whitelist_violations = False
+                        
                     
                     if log_trusted_whitelist_violations:
                         
