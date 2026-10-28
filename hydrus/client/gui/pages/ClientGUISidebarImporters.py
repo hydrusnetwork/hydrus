@@ -2623,8 +2623,10 @@ class SidebarImporterSimpleDownloader( SidebarImporter ):
             
             control = ClientGUIListBoxes.AddEditDeleteListBoxUniqueNamedObjects( panel, height_num_chars, data_to_pretty_callable, add_callable, edit_callable )
             
+            from hydrus.client.gui.panels import ClientGUISerialisableImport
+            
             control.AddSeparator()
-            control.AddImportExportButtons( ( ClientParsing.SimpleDownloaderParsingFormula, ) )
+            control.AddImportExportButtons( ( ClientParsing.SimpleDownloaderParsingFormula, ), ClientGUISerialisableImport.forgivable_object_types_in_downloader_system )
             control.AddSeparator()
             control.AddDefaultsButton( ClientDefaults.GetDefaultSimpleDownloaderFormulae )
             

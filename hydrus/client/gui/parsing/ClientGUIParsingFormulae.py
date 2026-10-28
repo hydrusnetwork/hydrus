@@ -439,7 +439,7 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         
-                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a parsing formula! Error:\n\n' + str( e ) )
+                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a parsing formula! It looked like a {e.wrong_object_name}!' )
                         
                         return
                         
@@ -1474,7 +1474,7 @@ class EditZipperFormulaPanel( EditSpecificFormulaPanel ):
         
         self._formulae = ClientGUIListBoxes.QueueListBox( edit_panel, 6, self._ConvertFormulaToListString, add_callable = self._Add, edit_callable = self._Edit )
         
-        self._formulae.AddImportExportButtons( ( ClientParsing.ParseFormula, ) )
+        self._formulae.AddImportExportButtons( ( ClientParsing.ParseFormula, ), tuple() )
         
         self._sub_phrase = QW.QLineEdit( edit_panel )
         

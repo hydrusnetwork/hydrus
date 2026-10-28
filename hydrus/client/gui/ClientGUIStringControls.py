@@ -282,7 +282,7 @@ class StringProcessorWidget( QW.QWidget ):
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
-                raise Exception( f'The imported object was wrong for this control!. Error:\n\n' + str( e ) )
+                raise Exception( f'The imported object was wrong for this control! I was expecting a String Processor, but this was a {e.wrong_object_name}!' )
                 
             
             self._ImportObject( obj )

@@ -2181,7 +2181,20 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._controls_panel = ClientGUICommon.StaticBox( self, 'processing steps' )
         
         self._processing_steps = ClientGUIListBoxes.QueueListBox( self, 8, self._ConvertDataToListBoxString, add_callable = self._Add, edit_callable = self._Edit )
-        self._processing_steps.AddImportExportButtons( ( ClientStrings.StringProcessingStep, ) )
+        self._processing_steps.AddImportExportButtons(
+            (
+                ClientStrings.StringProcessingStep,
+                ClientStrings.StringConverter,
+                ClientStrings.StringJoiner,
+                ClientStrings.StringMatch,
+                ClientStrings.StringProcessor,
+                ClientStrings.StringSlicer,
+                ClientStrings.StringSorter,
+                ClientStrings.StringSplitter,
+                ClientStrings.StringTagFilter,
+            ),
+            tuple()
+        )
         
         #
         

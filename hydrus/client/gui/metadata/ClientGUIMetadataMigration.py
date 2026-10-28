@@ -317,7 +317,7 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         
         self.setMinimumWidth( width )
         
-        self.AddImportExportButtons( ( ClientMetadataMigration.SingleFileMetadataRouter, ) )
+        self.AddImportExportButtons( ( ClientMetadataMigration.SingleFileMetadataRouter, ), tuple() )
         
         #
         

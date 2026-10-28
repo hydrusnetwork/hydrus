@@ -74,7 +74,7 @@ class EditDuplicatesAutoResolutionRulesPanel( ClientGUIScrolledPanels.EditPanel 
         self._duplicates_auto_resolution_rules_panel.AddButton( 'add', self._Add )
         self._duplicates_auto_resolution_rules_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._duplicates_auto_resolution_rules_panel.AddDeleteButton()
-        self._duplicates_auto_resolution_rules_panel.AddImportExportButtons( ( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, ), self._ImportRule )
+        self._duplicates_auto_resolution_rules_panel.AddImportExportButtons( ( ClientDuplicatesAutoResolution.DuplicatesAutoResolutionRule, ), tuple(), self._ImportRule )
         
         #
         
@@ -728,7 +728,7 @@ class EditComparatorList( ClientGUIListBoxes.AddEditDeleteListBox ):
         
         super().__init__( parent, 8, self._PairComparatorToPretty, self._AddComparator, self._EditComparator )
         
-        self.AddImportExportButtons( ( ClientDuplicatesAutoResolutionComparators.PairComparator, ) )
+        self.AddImportExportButtons( ( ClientDuplicatesAutoResolutionComparators.PairComparator, ), tuple() )
         
     
     def _AddComparator( self ):

@@ -32,6 +32,16 @@ from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
 from hydrus.client.parsing import ClientParsing
 
+forgivable_object_types_in_downloader_system = {
+    ClientNetworkingGUG.GalleryURLGenerator,
+    ClientNetworkingGUG.NestedGalleryURLGenerator,
+    ClientNetworkingURLClass.URLClass,
+    ClientParsing.PageParser,
+    ClientNetworkingDomain.DomainMetadataPackage,
+    ClientNetworkingLogin.LoginScriptDomain,
+    ClientParsing.SimpleDownloaderParsingFormula,
+}
+
 def IngestClipboard():
     
     if CG.client_controller.ClipboardHasImage():
@@ -259,7 +269,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if not have_shown_load_error:
                     
-                    message = 'Sorry, at least one of the things you added did not look like a downloader object! Error:\n\n' + str( e )
+                    message = f'Sorry, at least one of the things you added did not look like a downloader object! It looked like a {e.wrong_object_name}!'
                     
                     if len( payloads ) > 1:
                         

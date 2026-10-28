@@ -82,7 +82,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts_panel.SetListCtrl( self._shortcuts )
         
-        self._shortcuts_panel.AddImportExportButtons( ( ClientGUIShortcuts.ShortcutSet, ), self._AddShortcutSet, custom_get_callable = self._GetSelectedShortcutSet, and_duplicate_button = False )
+        self._shortcuts_panel.AddImportExportButtons( ( ClientGUIShortcuts.ShortcutSet, ), tuple(), self._AddShortcutSet, custom_get_callable = self._GetSelectedShortcutSet, and_duplicate_button = False )
         
         tt = 'Click this to replicate the current selection of commands with "incremented" shortcuts. If you want to create a list of "set rating to 1, 2, 3" or "set tag" commands, use this.'
         

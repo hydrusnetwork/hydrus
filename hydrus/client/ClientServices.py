@@ -2233,11 +2233,6 @@ class ServiceRepository( ServiceRestricted ):
                         
                         definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE } )
                         
-                        if not isinstance( definition_update, HydrusNetwork.DefinitionsUpdate ):
-                            
-                            raise HydrusExceptions.SerialisationWhitelistException()
-                            
-                        
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         
                         CG.client_controller.WriteSynchronous( 'schedule_repository_update_file_maintenance', self._service_key, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
@@ -2361,11 +2356,6 @@ class ServiceRepository( ServiceRestricted ):
                     try:
                         
                         content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE } )
-                        
-                        if not isinstance( content_update, HydrusNetwork.ContentUpdate ):
-                            
-                            raise HydrusExceptions.SerialisationWhitelistException()
-                            
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         

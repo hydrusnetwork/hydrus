@@ -622,11 +622,13 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
+        from hydrus.client.gui.panels import ClientGUISerialisableImport
+        
         self._gug_list_ctrl_panel.AddButton( 'add', self._AddNewGUG )
         self._gug_list_ctrl_panel.AddButton( 'edit', self._EditGUG, enabled_only_on_single_selection = True )
         self._gug_list_ctrl_panel.AddDeleteButton()
         self._gug_list_ctrl_panel.AddSeparator()
-        self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.GalleryURLGenerator, ), self._AddGUG )
+        self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.GalleryURLGenerator, ), ClientGUISerialisableImport.forgivable_object_types_in_downloader_system, self._AddGUG )
         
         #
         
@@ -642,7 +644,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._ngug_list_ctrl_panel.AddButton( 'edit', self._EditNGUG, enabled_only_on_single_selection = True )
         self._ngug_list_ctrl_panel.AddDeleteButton()
         self._ngug_list_ctrl_panel.AddSeparator()
-        self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.NestedGalleryURLGenerator, ), self._AddNGUG )
+        self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.NestedGalleryURLGenerator, ), ClientGUISerialisableImport.forgivable_object_types_in_downloader_system, self._AddNGUG )
         
         #
         

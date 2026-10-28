@@ -1448,7 +1448,8 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._listctrl: BetterListCtrlTreeView | None = None
         
-        self._permitted_object_types = []
+        self._permitted_object_types = tuple()
+        self._forgivable_object_types = tuple()
         self._serialisable_type_whitelist = set()
         
         self._import_add_callable = lambda x: None
@@ -1713,9 +1714,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                     message += '\n' * 2
                     message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
                     message += '\n' * 2
-                    message += 'But on loading what you entered, I received this error:'
-                    message += '\n' * 2
-                    message += str( e )
+                    message += f'But what you entered seemed to be a {e.wrong_object_name}!'
                     
                     ClientGUIDialogsMessage.ShowWarning( self, message )
                     
@@ -1953,9 +1952,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                     message += '\n' * 2
                     message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
                     message += '\n' * 2
-                    message += 'But on loading what you entered, I received this error:'
-                    message += '\n' * 2
-                    message += str( e )
+                    message += f'But what you entered seemed to be a {e.wrong_object_name}!'
                     
                     ClientGUIDialogsMessage.ShowWarning( self, message )
                     
@@ -2068,10 +2065,11 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_check_func = enabled_check_func, enabled_only_on_selection = enabled_only_on_selection )
         
     
-    def AddImportExportButtons( self, permitted_object_types, import_add_callable, custom_get_callable = None, and_duplicate_button = True ):
+    def AddImportExportButtons( self, permitted_object_types, forgivable_object_types, import_add_callable, custom_get_callable = None, and_duplicate_button = True ):
         
         self._permitted_object_types = permitted_object_types
-        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( self._permitted_object_types, True )
+        self._forgivable_object_types = forgivable_object_types
+        self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( set( self._permitted_object_types ).union( self._forgivable_object_types ), True )
         
         self._import_add_callable = import_add_callable
         self._custom_get_callable = custom_get_callable

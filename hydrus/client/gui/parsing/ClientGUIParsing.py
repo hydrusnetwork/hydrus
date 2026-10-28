@@ -1036,7 +1036,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         content_parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         content_parsers_panel.AddDeleteButton()
         content_parsers_panel.AddSeparator()
-        content_parsers_panel.AddImportExportButtons( ( ClientParsing.ContentParser, ), self._AddContentParser )
+        content_parsers_panel.AddImportExportButtons( ( ClientParsing.ContentParser, ), tuple(), self._AddContentParser )
         
         #
         
@@ -1258,8 +1258,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         subsidiary_page_parsers_panel.AddSeparator()
         
         subsidiary_page_parsers_panel.AddImportExportButtons(
-            permitted_object_types = ( ClientParsing.SubsidiaryPageParser, ),
-            import_add_callable = self._ImportAddSubsidiaryPageParser
+            ( ClientParsing.SubsidiaryPageParser, ),
+            tuple(),
+            self._ImportAddSubsidiaryPageParser
         )
         
         #
@@ -1710,7 +1711,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         parsers_panel.AddDeleteButton()
         parsers_panel.AddSeparator()
-        parsers_panel.AddImportExportButtons( ( ClientParsing.PageParser, ), self._AddParser )
+        parsers_panel.AddImportExportButtons( ( ClientParsing.PageParser, ), tuple(), self._AddParser )
         
         #
         

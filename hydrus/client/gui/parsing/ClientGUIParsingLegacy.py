@@ -1187,7 +1187,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         
-                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a script! Error:\n\n' + str( e ) )
+                        ClientGUIDialogsMessage.ShowWarning( self, f'That was not a script! It looked like a {e.wrong_object_name}!' )
                         
                         return
                         

@@ -1651,7 +1651,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         external_calls_list_panel.AddButton( 'edit', self._EditCallable, enabled_only_on_single_selection = True )
         external_calls_list_panel.AddDeleteButton()
         external_calls_list_panel.AddSeparator()
-        external_calls_list_panel.AddImportExportButtons( ( ClientExecutableCallables.ClientExecutableCallable, ), self._AddCallableViaImport )
+        external_calls_list_panel.AddImportExportButtons( ( ClientExecutableCallables.ClientExecutableCallable, ), tuple(), self._AddCallableViaImport )
         external_calls_list_panel.AddDefaultsButton( self._GetDefaultCallables, self._AddCallableFullyFormed )
         
         #

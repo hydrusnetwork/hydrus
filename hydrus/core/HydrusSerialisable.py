@@ -221,6 +221,7 @@ def CreateFromSerialisableTuple( obj_tuple: tuple, trusted: bool, serialisable_t
     # - similarly make a dict call that handles things a little different
     # maybe take the whitelist out of the _InitialiseFrom... calls, since but for list/dict we only need 'trusted'
     # thus maybe we do the type scanning in here, and for list/dict we have a custom loading routine
+    # when we have 'CreateList...' and friends, have a param there that says just to exclude stuff out the whitelist rather than erroring out. I can use that nicely in listctrl 'forgivable object' gubbins
     
     if len( obj_tuple ) == 3:
         
@@ -387,7 +388,7 @@ class SerialisableBase( object ):
                     
                 else:
                     
-                    raise HydrusExceptions.SerialisationWhitelistException( f'Was given an object with a type of {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}"), but the allowed serialisable types are: {serialisable_type_whitelist}!' )
+                    raise HydrusExceptions.SerialisationWhitelistException( f'Was given an object with a type of {self.SERIALISABLE_TYPE} ("{self.SERIALISABLE_NAME}"), but the allowed serialisable types are: {serialisable_type_whitelist}!', self.SERIALISABLE_NAME )
                     
                 
             

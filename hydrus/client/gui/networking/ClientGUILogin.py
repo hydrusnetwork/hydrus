@@ -1989,7 +1989,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         login_scripts_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         login_scripts_panel.AddDeleteButton()
         login_scripts_panel.AddSeparator()
-        login_scripts_panel.AddImportExportButtons( ( ClientNetworkingLogin.LoginScriptDomain, ), self._AddLoginScript )
+        login_scripts_panel.AddImportExportButtons( ( ClientNetworkingLogin.LoginScriptDomain, ), tuple(), self._AddLoginScript )
         
         #
         

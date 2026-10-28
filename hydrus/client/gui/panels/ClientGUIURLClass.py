@@ -1441,11 +1441,13 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
+        from hydrus.client.gui.panels import ClientGUISerialisableImport
+        
         self._list_ctrl_panel.AddButton( 'add', self._Add )
         self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddSeparator()
-        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingURLClass.URLClass, ), self._AddURLClass )
+        self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingURLClass.URLClass, ), ClientGUISerialisableImport.forgivable_object_types_in_downloader_system, self._AddURLClass )
         
         #
         

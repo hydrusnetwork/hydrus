@@ -1852,7 +1852,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel.AddSeparator()
         
-        self._subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptions.SubscriptionContainer, ), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
+        self._subscriptions_panel.AddImportExportButtons( ( ClientImportSubscriptions.SubscriptionContainer, ), tuple(), self._AddSubscription, custom_get_callable = self._GetSelectedSubsAsExportableContainers )
         
         self._subscriptions_panel.NewButtonRow()
         
