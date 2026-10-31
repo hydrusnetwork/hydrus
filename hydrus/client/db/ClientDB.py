@@ -8377,6 +8377,8 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
+                from hydrus.client.importing.options import ImportOptionsManager
+                
                 import_options_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_MANAGER )
                 
                 from hydrus.client.importing.options import ImportOptionsConstants as IOC
