@@ -78,7 +78,7 @@ def ClearExpiredCookies( ambiguous_session ):
     EnsureSessionCookiesAreSynced( ambiguous_session, cookies )
     
 
-def ConvertCookieToTuple( cookie: http.cookiejar.Cookie ):
+def ConvertCookieToTuple( cookie: http.cookiejar.Cookie ) -> tuple[ str, str | None, str, str, int | None ]:
     
     name = cookie.name
     value = cookie.value
@@ -89,16 +89,13 @@ def ConvertCookieToTuple( cookie: http.cookiejar.Cookie ):
     return ( name, value, domain, path, expires )
     
 
-def ConvertRequestsCookieJarToSerialisable( cookie_jar: requests.sessions.RequestsCookieJar ):
+def ConvertRequestsCookieJarToSerialisable( cookie_jar: requests.sessions.RequestsCookieJar ) -> list[ tuple[ str, str | None, str, str, int | None ] ]:
     
     serialisable_cookie_tuples = []
     
     try:
         
-        for cookie in list( cookie_jar ):
-            
-            cookie = typing.cast( object, cookie )
-            cookie = typing.cast( http.cookiejar.Cookie, cookie )
+        for cookie in GetCookiesFromRequestsCookieJar( cookie_jar ):
             
             serialisable_cookie_tuples.append( ConvertCookieToTuple( cookie ) )
             
@@ -110,6 +107,20 @@ def ConvertRequestsCookieJarToSerialisable( cookie_jar: requests.sessions.Reques
         
     
     return serialisable_cookie_tuples
+    
+
+def ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookie_tuples: list[ tuple[ str, str | None, str, str, int | None ] ] ) -> requests.sessions.RequestsCookieJar:
+    
+    cookie_jar = requests.sessions.RequestsCookieJar()
+    
+    for ( name, value, domain, path, expires ) in serialisable_cookie_tuples:
+        
+        cookie = CreateCookie( name, value, domain, path, expires )
+        
+        cookie_jar.set_cookie( cookie )
+        
+    
+    return cookie_jar
     
 
 def CreateCookie( name, value, domain, path, expires ) -> http.cookiejar.Cookie:
@@ -140,6 +151,24 @@ def EnsureSessionCookiesAreSynced( ambiguous_session, requests_cookies: requests
         
         ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( ambiguous_session, requests_cookies )
         
+    
+
+def GetCookiesFromRequestsCookieJar( cookie_jar: requests.sessions.RequestsCookieJar ) -> list[ http.cookiejar.Cookie ]:
+    
+    # a linter thinks cookie_jar gives up strs on iter; it does not
+    # we force it here
+    
+    cookies_list = []
+    
+    for cookie in cookie_jar:
+        
+        cookie = typing.cast( object, cookie )
+        cookie = typing.cast( http.cookiejar.Cookie, cookie )
+        
+        cookies_list.append( cookie )
+        
+    
+    return cookies_list
     
 
 def GetRequestsSessionCookieJar( ambiguous_session ) -> requests.sessions.RequestsCookieJar:
@@ -303,14 +332,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         try:
             
-            cookie_jar = requests.sessions.RequestsCookieJar()
-            
-            for ( name, value, domain, path, expires ) in serialisable_cookie_tuples:
-                
-                cookie = CreateCookie( name, value, domain, path, expires )
-                
-                cookie_jar.set_cookie( cookie )
-                
+            cookie_jar = self.ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookie_tuples )
             
             if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
                 
@@ -321,12 +343,12 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                 self.session.cookies = cookie_jar
                 
             
-            ClearExpiredCookies( self.session )
-            
         except Exception as e:
             
             HydrusData.Print( "Could not load and set cookies for session {}".format( self.network_context ) )
             
+        
+        ClearExpiredCookies( self.session )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):

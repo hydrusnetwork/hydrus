@@ -1,3 +1,4 @@
+import requests
 import time
 import unittest
 
@@ -17,6 +18,7 @@ from hydrus.client import ClientServices
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingCurlCFFI
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingGUG
@@ -26,6 +28,13 @@ from hydrus.client.networking import ClientNetworkingSessions
 from hydrus.client.networking import ClientNetworkingURLClass
 
 from hydrus.test import TestController
+
+# do a little tldextract cache init
+
+from hydrus.client.networking import ClientNetworkingDomainTLDExtract
+
+ClientNetworkingDomainTLDExtract.TLDExtractor.instance().extract( 'example.com' )
+
 
 # some gumpf
 GOOD_RESPONSE = bytes( range( 256 ) )
@@ -71,6 +80,7 @@ def catch_hydrus_ok( url, request ):
     
     return response( 200, GOOD_RESPONSE, { 'Server' : HC.service_string_lookup[ HC.TAG_REPOSITORY ] + '/' + str( HC.NETWORK_VERSION ) }, 'OK' )
     
+
 class TestBandwidthManager( unittest.TestCase ):
     
     def test_can_start( self ):
@@ -1133,6 +1143,119 @@ class TestURLClasses( unittest.TestCase ):
         self.assertTrue( url_class.Matches( good_url ) )
         
     
+
+class TestSessionGubbins( unittest.TestCase ):
+    
+    def test_cookies_requests( self ):
+        
+        requests_session = requests.Session()
+        
+        self.assertEqual( len( requests_session.cookies ), 0 )
+        
+        cookie_name = 'my_cookie'
+        cookie_value = 'abcd'
+        cookie_domain = '.example.com'
+        cookie_path = '/'
+        cookie_expires = HydrusTime.GetNow() + ( 30 * 86400 )
+        
+        ClientNetworkingSessions.AddCookieToSession( requests_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
+        
+        self.assertEqual( len( requests_session.cookies ), 1 )
+        
+        expires_name = 'old_cookie'
+        expires_value = 'efgh'
+        expires_domain = '.example.com'
+        expires_path = '/'
+        expires_expires = HydrusTime.GetNow() - ( 30 * 86400 )
+        
+        ClientNetworkingSessions.AddCookieToSession( requests_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
+        
+        # we won't test expires count; some maintenance thing may clear it early and we don't really care about storage positive
+        
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( requests_session )
+        
+        serialisable_cookies = ClientNetworkingSessions.ConvertRequestsCookieJarToSerialisable( cookie_jar )
+        
+        new_cookie_jar = ClientNetworkingSessions.ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookies )
+        
+        new_cookie_jar.clear_expired_cookies()
+        
+        self.assertEqual( len( new_cookie_jar ), 1 )
+        
+        new_cookies = ClientNetworkingSessions.GetCookiesFromRequestsCookieJar( new_cookie_jar )
+        
+        new_cookie = new_cookies[0]
+        
+        self.assertEqual( new_cookie.name, cookie_name )
+        self.assertEqual( new_cookie.value, cookie_value )
+        self.assertEqual( new_cookie.domain, cookie_domain )
+        self.assertEqual( new_cookie.path, cookie_path )
+        self.assertEqual( new_cookie.expires, cookie_expires )
+        
+    
+    def test_cookies_curl_cffi( self ):
+        
+        if not ClientNetworkingCurlCFFI.CURL_CFFI_OK:
+            
+            print( 'No curl_cffi, skipping testing.' )
+            
+            return
+            
+        
+        curl_cffi_session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( 'chrome' )
+        
+        cookie_jar = ClientNetworkingCurlCFFI.GetRequestsCookiesFromCurlCFFISession( curl_cffi_session )
+        
+        self.assertEqual( len( cookie_jar ), 0 )
+        
+        cookie_name = 'my_cookie'
+        cookie_value = 'abcd'
+        cookie_domain = '.example.com'
+        cookie_path = '/'
+        cookie_expires = HydrusTime.GetNow() + ( 30 * 86400 )
+        
+        ClientNetworkingSessions.AddCookieToSession( curl_cffi_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
+        
+        cookie_jar = ClientNetworkingCurlCFFI.GetRequestsCookiesFromCurlCFFISession( curl_cffi_session )
+        
+        self.assertEqual( len( cookie_jar ), 1 )
+        
+        expires_name = 'old_cookie'
+        expires_value = 'efgh'
+        expires_domain = '.example.com'
+        expires_path = '/'
+        expires_expires = HydrusTime.GetNow() - ( 30 * 86400 )
+        
+        ClientNetworkingSessions.AddCookieToSession( curl_cffi_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
+        
+        # we won't test expires count; some maintenance thing may clear it early and we don't really care about storage positive
+        
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( curl_cffi_session )
+        
+        serialisable_cookies = ClientNetworkingSessions.ConvertRequestsCookieJarToSerialisable( cookie_jar )
+        
+        new_cookie_jar = ClientNetworkingSessions.ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookies )
+        
+        new_cookie_jar.clear_expired_cookies()
+        
+        new_curl_cffi_session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( 'chrome' )
+        
+        ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( new_curl_cffi_session, new_cookie_jar )
+        
+        new_cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( curl_cffi_session )
+        
+        self.assertEqual( len( new_cookie_jar ), 1 )
+        
+        new_cookies = ClientNetworkingSessions.GetCookiesFromRequestsCookieJar( new_cookie_jar )
+        
+        new_cookie = new_cookies[0]
+        
+        self.assertEqual( new_cookie.name, cookie_name )
+        self.assertEqual( new_cookie.value, cookie_value )
+        self.assertEqual( new_cookie.domain, cookie_domain )
+        self.assertEqual( new_cookie.path, cookie_path )
+        self.assertEqual( new_cookie.expires, cookie_expires )
+        
 
 class TestNetworkingEngine( unittest.TestCase ):
     
