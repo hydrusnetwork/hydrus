@@ -363,7 +363,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         try:
             
-            cookie_jar = self.ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookie_tuples )
+            cookie_jar = ConvertSerialisableCookiesToRequestsCookieJar( serialisable_cookie_tuples )
             
             if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
                 
