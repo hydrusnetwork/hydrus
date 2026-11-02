@@ -1110,7 +1110,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         session = engine.session_manager.GetSession( network_context )
         
-        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
         search_domain = network_context.context_data
         
@@ -1118,7 +1118,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                cookie = ClientNetworkingFunctions.GetCookie( cookies, search_domain, cookie_name_string_match )
+                cookie = ClientNetworkingSessions.GetCookie( cookie_jar, search_domain, cookie_name_string_match )
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -1255,7 +1255,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         session = engine.session_manager.GetSession( network_context )
         
-        cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
         
         search_domain = network_context.context_data
         
@@ -1266,7 +1266,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                cookie = ClientNetworkingFunctions.GetCookie( cookies, search_domain, cookie_name_string_match )
+                cookie = ClientNetworkingSessions.GetCookie( cookie_jar, search_domain, cookie_name_string_match )
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -1457,11 +1457,39 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         return 'Login OK!'
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN ] = LoginScriptDomain
 
 LOGIN_PARAMETER_TYPE_PARAMETER = 0
 LOGIN_PARAMETER_TYPE_COOKIE = 1
 LOGIN_PARAMETER_TYPE_HEADER = 2
+
+def session_to_cookie_strings( ambiguous_session ):
+    
+    cookie_strings = set()
+    
+    cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( ambiguous_session )
+    
+    for cookie in ClientNetworkingSessions.GetCookiesFromRequestsCookieJar( cookie_jar ):
+        
+        expiry = cookie.expires
+        
+        if expiry is None:
+            
+            pretty_expiry = 'session'
+            
+        else:
+            
+            pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
+            
+        
+        s = cookie.name + f'{cookie.name}: {cookie.value} | {cookie.domain} | {pretty_expiry}'
+        
+        cookie_strings.add( s )
+        
+    
+    return cookie_strings
+    
 
 class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
     
@@ -1575,34 +1603,6 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
     
     def Start( self, engine, domain, given_credentials, temp_variables, referral_url = None, network_job_presentation_context_factory = None, test_result_callable = None ):
         
-        def session_to_cookie_strings( sess ):
-            
-            cookie_strings = set()
-            
-            for cookie in sess.cookies:
-                
-                s = cookie.name + ': ' + cookie.value + ' | ' + cookie.domain + ' | '
-                
-                expiry = cookie.expires
-                
-                if expiry is None:
-                    
-                    expiry = -1
-                    pretty_expiry = 'session'
-                    
-                else:
-                    
-                    pretty_expiry = HydrusTime.TimestampToPrettyExpires( expiry )
-                    
-                
-                s += pretty_expiry
-                
-                cookie_strings.add( s )
-                
-            
-            return cookie_strings
-            
-        
         url = 'Did not make a url.'
         test_result_body = None
         downloaded_text = 'Did not download data.'
@@ -1664,6 +1664,10 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 body = query_dict
                 test_result_body = ClientNetworkingFunctions.ConvertQueryDictToText( query_dict, single_value_parameters )
                 
+            else:
+                
+                raise Exception( f'Unknown method {self._method}!' )
+                
             
             url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
             
@@ -1696,13 +1700,13 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             
             session = network_job.GetSession()
             
-            cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
+            cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( session )
             
             for ( cookie_name_string_match, string_match ) in list(self._required_cookies_info.items()):
                 
                 try:
                     
-                    cookie = ClientNetworkingFunctions.GetCookie( cookies, domain, cookie_name_string_match )
+                    cookie = ClientNetworkingSessions.GetCookie( cookie_jar, domain, cookie_name_string_match )
                     
                 except HydrusExceptions.DataMissing as e:
                     
@@ -1784,5 +1788,6 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, self._required_cookies_info, self._content_parsers )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_STEP ] = LoginStep
 

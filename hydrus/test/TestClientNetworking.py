@@ -1150,7 +1150,9 @@ class TestSessionGubbins( unittest.TestCase ):
         
         requests_session = requests.Session()
         
-        self.assertEqual( len( requests_session.cookies ), 0 )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( requests_session )
+        
+        self.assertEqual( len( cookie_jar ), 0 )
         
         cookie_name = 'my_cookie'
         cookie_value = 'abcd'
@@ -1160,7 +1162,9 @@ class TestSessionGubbins( unittest.TestCase ):
         
         ClientNetworkingSessions.AddCookieToSession( requests_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
         
-        self.assertEqual( len( requests_session.cookies ), 1 )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( requests_session )
+        
+        self.assertEqual( len( cookie_jar ), 1 )
         
         expires_name = 'old_cookie'
         expires_value = 'efgh'
@@ -1204,7 +1208,7 @@ class TestSessionGubbins( unittest.TestCase ):
         
         curl_cffi_session = ClientNetworkingCurlCFFI.CreateCurlCFFISession( 'chrome' )
         
-        cookie_jar = ClientNetworkingCurlCFFI.GetRequestsCookiesFromCurlCFFISession( curl_cffi_session )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( curl_cffi_session )
         
         self.assertEqual( len( cookie_jar ), 0 )
         
@@ -1216,7 +1220,7 @@ class TestSessionGubbins( unittest.TestCase ):
         
         ClientNetworkingSessions.AddCookieToSession( curl_cffi_session, cookie_name, cookie_value, cookie_domain, cookie_path, cookie_expires )
         
-        cookie_jar = ClientNetworkingCurlCFFI.GetRequestsCookiesFromCurlCFFISession( curl_cffi_session )
+        cookie_jar = ClientNetworkingSessions.GetRequestsSessionCookieJar( curl_cffi_session )
         
         self.assertEqual( len( cookie_jar ), 1 )
         

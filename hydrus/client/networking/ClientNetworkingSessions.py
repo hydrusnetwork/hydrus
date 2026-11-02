@@ -5,11 +5,13 @@ import threading
 import typing
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientStrings
 from hydrus.client.networking import ClientNetworkingCurlCFFI
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -151,6 +153,35 @@ def EnsureSessionCookiesAreSynced( ambiguous_session, requests_cookies: requests
         
         ClientNetworkingCurlCFFI.SetCURLCFFISessionCookiesWithRequestsCookieJar( ambiguous_session, requests_cookies )
         
+    
+
+def CookieDomainMatches( cookie: http.cookiejar.Cookie, search_domain: str ):
+    
+    cookie_domain = cookie.domain
+    
+    # blah.com is viewable by blah.com
+    matches_exactly = cookie_domain == search_domain
+    
+    # .blah.com is viewable by blah.com
+    matches_dot = cookie_domain == '.' + search_domain
+    
+    # .blah.com applies to subdomain.blah.com, blah.com does not
+    valid_subdomain = cookie_domain.startswith( '.' ) and search_domain.endswith( cookie_domain )
+    
+    return matches_exactly or matches_dot or valid_subdomain
+    
+
+def GetCookie( cookie_jar: requests.sessions.RequestsCookieJar, search_domain: str, cookie_name_string_match: ClientStrings.StringMatch ):
+    
+    for cookie in GetCookiesFromRequestsCookieJar( cookie_jar ):
+        
+        if CookieDomainMatches( cookie, search_domain ) and cookie_name_string_match.Matches( cookie.name ):
+            
+            return cookie
+            
+        
+    
+    raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToString() + '" not found for domain ' + search_domain + '!' )
     
 
 def GetCookiesFromRequestsCookieJar( cookie_jar: requests.sessions.RequestsCookieJar ) -> list[ http.cookiejar.Cookie ]:

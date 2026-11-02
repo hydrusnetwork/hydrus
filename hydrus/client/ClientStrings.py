@@ -778,7 +778,7 @@ class StringMatch( StringProcessingStep ):
         return False
         
     
-    def Matches( self, text ):
+    def Matches( self, text ) -> bool:
         
         try:
             

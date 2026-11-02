@@ -97,16 +97,16 @@ def GetBrowserNames() -> list[ str ]:
 
 def GetRequestsCookiesFromCurlCFFISession( curl_cffi_session: "curl_cffi.requests.Session" ) -> requests.sessions.RequestsCookieJar:
     
-    requests_session = requests.Session()
+    requests_cookie_jar = requests.sessions.RequestsCookieJar()
     
     jar = typing.cast( http.cookiejar.CookieJar, curl_cffi_session.cookies.jar )
     
     for cookie in jar:
         
-        requests_session.cookies.set_cookie( cookie )
+        requests_cookie_jar.set_cookie( cookie )
         
     
-    return requests_session.cookies
+    return requests_cookie_jar
     
 
 def SetCURLCFFISessionCookiesWithRequestsCookieJar( curl_cffi_session: "curl_cffi.requests.Session", cookies: requests.sessions.RequestsCookieJar ):

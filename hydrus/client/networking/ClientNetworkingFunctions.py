@@ -384,35 +384,6 @@ def ConvertURLToHumanString( url: str ) -> str:
     return pretty_url
     
 
-def CookieDomainMatches( cookie, search_domain ):
-    
-    cookie_domain = cookie.domain
-    
-    # blah.com is viewable by blah.com
-    matches_exactly = cookie_domain == search_domain
-    
-    # .blah.com is viewable by blah.com
-    matches_dot = cookie_domain == '.' + search_domain
-    
-    # .blah.com applies to subdomain.blah.com, blah.com does not
-    valid_subdomain = cookie_domain.startswith( '.' ) and search_domain.endswith( cookie_domain )
-    
-    return matches_exactly or matches_dot or valid_subdomain
-    
-
-def GetCookie( cookies, search_domain, cookie_name_string_match ):
-    
-    for cookie in cookies:
-        
-        if CookieDomainMatches( cookie, search_domain ) and cookie_name_string_match.Matches( cookie.name ):
-            
-            return cookie
-            
-        
-    
-    raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToString() + '" not found for domain ' + search_domain + '!' )
-    
-
 def GetSearchURLs( url ):
     
     search_urls = set()
