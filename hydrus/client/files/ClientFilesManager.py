@@ -272,6 +272,8 @@ class ClientFilesManager( object ):
             
             try:
                 
+                CG.client_controller.frame_splash_status.SetSubtext( 'client files - creating file folders' )
+                
                 dirs_to_test = set()
                 
                 for subfolder in self._GetAllSubfolders():
@@ -860,7 +862,21 @@ class ClientFilesManager( object ):
     
     def _RepopulateMissingLocationsReference( self ):
         
-        self._missing_subfolders = { subfolder for subfolders in self._prefixes_to_client_files_subfolders.values() for subfolder in subfolders if not subfolder.PathExists( lazy_check_ok = True ) }
+        self._missing_subfolders = set()
+        
+        all_subfolders = HydrusLists.MassExtend( self._prefixes_to_client_files_subfolders.values() )
+        
+        num_subfolders = len( all_subfolders )
+        
+        for ( i, subfolder ) in enumerate( all_subfolders ):
+            
+            CG.client_controller.frame_splash_status.SetSubtext( f'client files - checking {HydrusNumbers.ValueRangeToPrettyString(i,num_subfolders)}' )
+            
+            if not subfolder.PathExists( lazy_check_ok = True ):
+                
+                self._missing_subfolders.add( subfolder )
+                
+            
         
     
     def _WaitOnWakeup( self ):
