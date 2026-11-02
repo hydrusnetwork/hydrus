@@ -2384,8 +2384,15 @@ class Controller( HydrusController.HydrusController ):
             self.frame_splash_status.SetText( 'waiting for managers to exit' )
             
         
-        # do this early so managers that are waiting on stuff get their jobs shutdown-cancelled now
-        self.network_engine.Shutdown()
+        try:
+            
+            # do this early so managers that are waiting on stuff get their jobs shutdown-cancelled now
+            self.network_engine.Shutdown()
+            
+        except AttributeError: # early exit, network never created
+            
+            pass
+            
         
         self._ShutdownManagers()
         
@@ -2552,9 +2559,16 @@ class Controller( HydrusController.HydrusController ):
             
             self._is_booted = True
             
-        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ProgramShutdownException ) as e:
+        except ( HydrusExceptions.DBCredentialsException, HydrusExceptions.ProgramShutdownException, HydrusExceptions.DaemonShutdownException ) as e:
             
-            HydrusData.Print( e )
+            if isinstance( e, HydrusExceptions.DBCredentialsException ):
+                
+                HydrusData.Print( f'DB Credentials issue during bootup: {e}' )
+                
+            elif isinstance( e, ( HydrusExceptions.ProgramShutdownException, HydrusExceptions.DaemonShutdownException ) ):
+                
+                HydrusData.Print( f'Program shutdown during bootup: {e}' )
+                
             
             self.CleanRunningFile()
             

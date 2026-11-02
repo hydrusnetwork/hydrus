@@ -373,28 +373,37 @@ class Controller( HydrusController.HydrusController ):
     
     def Run( self ):
         
-        self.RecordRunningStart()
-        
-        HydrusData.Print( 'Initialising db' + HC.UNICODE_ELLIPSIS )
-        
-        self.InitModel()
-        
-        HydrusData.Print( 'Initialising workers' + HC.UNICODE_ELLIPSIS )
-        
-        self.InitView()
-        
-        HydrusData.Print( 'Server is running. Press Ctrl+C to quit.' )
-        
         try:
             
-            while not HG.model_shutdown and not self._shutdown:
-                
-                time.sleep( 1 )
-                
+            self.RecordRunningStart()
             
-        except KeyboardInterrupt:
+            HydrusData.Print( 'Initialising db' + HC.UNICODE_ELLIPSIS )
             
-            HydrusData.Print( 'Received a keyboard interrupt' + HC.UNICODE_ELLIPSIS )
+            self.InitModel()
+            
+            HydrusData.Print( 'Initialising workers' + HC.UNICODE_ELLIPSIS )
+            
+            self.InitView()
+            
+            HydrusData.Print( 'Server is running. Press Ctrl+C to quit.' )
+            
+        except ( HydrusExceptions.ProgramShutdownException, HydrusExceptions.DaemonShutdownException ) as e:
+            
+            HydrusData.Print( f'Shutdown during bootup: {e}' )
+            
+        else:
+            
+            try:
+                
+                while not HG.model_shutdown and not self._shutdown:
+                    
+                    time.sleep( 1 )
+                    
+                
+            except KeyboardInterrupt:
+                
+                HydrusData.Print( 'Received a keyboard interrupt' + HC.UNICODE_ELLIPSIS )
+                
             
         
         HydrusData.Print( 'Shutting down controller' + HC.UNICODE_ELLIPSIS )
