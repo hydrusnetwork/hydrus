@@ -8500,6 +8500,29 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 693:
+            
+            try:
+                
+                from hydrus.client import ClientOptions
+                
+                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                
+                # making this test real across the board
+                new_options.SetBoolean( 'do_new_hide_terminal_subprocess_tech_on_windows', True )
+                
+                self.modules_serialisable.SetJSONDump( new_options )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your options failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         #
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

@@ -1615,7 +1615,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         st.setWordWrap( True )
         
         self._do_new_hide_terminal_subprocess_tech_on_windows = QW.QCheckBox( self )
-        tt = 'Hey, if you are an advanced Windows user, please try checking this, saving the options dialog, and then A) importing some video files and B) doing an "open externally" call that uses a specific executable process call to a graphical program, not the default OS launch option. Let me know if everything works or if you get ffmpeg terminal popups appearing over and over.'
+        tt = 'Hey, if you are a Windows user and you get a command window popup every time you import a file, do an "open externally" command, or any other external exe call, please try unchecking this. Let me know the details please!.'
         self._do_new_hide_terminal_subprocess_tech_on_windows.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         external_calls_panel = ClientGUICommon.StaticBox( self, 'external calls' )
@@ -1686,7 +1686,7 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             rows = []
             
-            rows.append( ( 'TEST: Use new "hide terminal" tech on Windows:', self._do_new_hide_terminal_subprocess_tech_on_windows ) )
+            rows.append( ( 'Use new "hide terminal" tech on Windows:', self._do_new_hide_terminal_subprocess_tech_on_windows ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
