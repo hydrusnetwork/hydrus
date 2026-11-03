@@ -105,20 +105,22 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
             
             all_data = self._Execute( 'SELECT service_id, service_key, service_type, name, dictionary_string FROM services;' ).fetchall()
             
+            deserialisation_context = HydrusSerialisable.DeserialisationContext( 
+                True, # we trust this data
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CREDENTIALS,
+                    HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES,
+                }
+            )
+            
             for ( service_id, service_key, service_type, name, dictionary_string ) in all_data:
                 
-                dictionary = HydrusSerialisable.CreateFromString(
-                    dictionary_string,
-                    True, # we trust this data
-                    {
-                        HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
-                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                        HydrusSerialisable.SERIALISABLE_TYPE_HYDRUS_REPOSITORY_METADATA,
-                        HydrusSerialisable.SERIALISABLE_TYPE_CREDENTIALS,
-                        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_TRACKER,
-                        HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES,
-                    }
-                )
+                dictionary = HydrusSerialisable.CreateFromString( dictionary_string, deserialisation_context )
                 
                 service = ClientServices.GenerateService( service_key, service_type, name, dictionary )
                 

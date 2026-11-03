@@ -289,7 +289,16 @@ class EditNodes( QW.QWidget ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text, False, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK } )
+            deserialisation_context = HydrusSerialisable.DeserialisationContext(
+                False,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_NODE_CONTENT_LINK
+                }
+            )
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text, deserialisation_context )
             
             self._ImportObject( obj )
             
@@ -1148,7 +1157,15 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text, False, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP } )
+            deserialisation_context = HydrusSerialisable.DeserialisationContext( 
+                False,
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
+                }
+            )
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text, deserialisation_context )
             
             self._ImportObject( obj )
             
@@ -1183,7 +1200,15 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP } )
+                        deserialisation_context = HydrusSerialisable.DeserialisationContext( 
+                            False,
+                            {
+                                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP
+                            }
+                        )
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, deserialisation_context )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         

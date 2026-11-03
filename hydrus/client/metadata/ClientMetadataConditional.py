@@ -23,11 +23,11 @@ class MetadataConditional( HydrusSerialisable.SerialisableBase ):
         return serialisable_file_search_context
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         serialisable_file_search_context = serialisable_info
         
-        self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } )
+        self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } ) )
         
     
     def GetFileSearchContext( self ) -> ClientSearchFileSearchContext.FileSearchContext:

@@ -101,7 +101,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
         return ( self.filter_type, serialisable_filter_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self.filter_type, serialisable_filter_data ) = serialisable_info
         

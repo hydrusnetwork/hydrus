@@ -246,24 +246,25 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         domain_manager = self._network_engine.domain_manager
         login_manager = self._network_engine.login_manager
         
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( 
+            False,
+            {
+                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
+                HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR,
+                HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS,
+                HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER,
+                HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE,
+                HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN,
+                HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA,
+            }
+        )
+        
         for ( payload_description, payload_text ) in payloads:
             
             try:
                 
-                obj_list = HydrusSerialisable.CreateFromString(
-                    payload_text,
-                    False,
-                    {
-                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                        HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
-                        HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR,
-                        HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER,
-                        HydrusSerialisable.SERIALISABLE_TYPE_DOMAIN_METADATA_PACKAGE,
-                        HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN,
-                        HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA,
-                    }
-                )
+                obj_list = HydrusSerialisable.CreateFromString( payload_text, deserialisation_context )
                 
             except HydrusExceptions.SerialisationWhitelistException as e:
                 
@@ -793,11 +794,14 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         
         result_texts = []
         
+        # special case obviously; we just don't know what is coming
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( trusted, set(), log_trusted_whitelist_violations = False )
+        
         for json_text in self._json_texts:
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( json_text, trusted, set() )
+                obj = HydrusSerialisable.CreateFromString( json_text, deserialisation_context )
                 
                 if not isinstance( obj, HydrusSerialisable.SerialisableBase ):
                     

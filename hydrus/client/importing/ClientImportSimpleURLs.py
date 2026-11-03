@@ -110,15 +110,28 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._formula_name, self._gallery_paused, self._files_paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._formula_name, self._gallery_paused, self._files_paused ) = serialisable_info
         
-        self._pending_jobs = [ ( url, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_simple_downloader_formula, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA } ) ) for ( url, serialisable_simple_downloader_formula ) in serialisable_pending_jobs ]
+        self._pending_jobs = [
+            (
+                url,
+                HydrusSerialisable.CreateFromSerialisableTuple(
+                    serialisable_simple_downloader_formula,
+                    deserialisation_context.DuplicateForNewWhitelist(
+                        {
+                            HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA
+                        }
+                    )
+                )
+            )
+            for ( url, serialisable_simple_downloader_formula ) in serialisable_pending_jobs
+        ]
         
-        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } )
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } ) )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } ) )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } ) )
         
     
     def _NetworkJobFactory( self, *args, **kwargs ):
@@ -154,7 +167,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = HydrusTime.GetNow()
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -209,7 +222,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             ( pending_jobs, serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, formula_name, queue_paused, files_paused ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } ) )
             
             if CG.client_controller.IsBooted():
                 
@@ -1019,13 +1032,13 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._paused )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_import_options_container, self._paused ) = serialisable_info
         
-        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } )
-        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        self._gallery_seed_log = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gallery_seed_log, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_SEED_LOG } ) )
+        self._file_seed_cache = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_seed_cache, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED_CACHE } ) )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } ) )
         
     
     def _NetworkJobFactory( self, *args, **kwargs ):
@@ -1040,7 +1053,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         self._last_serialisable_change_timestamp = HydrusTime.GetNow()
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -1086,9 +1099,9 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gallery_seed_log, serialisable_file_seed_cache, serialisable_file_import_options, serialisable_tag_import_options, serialisable_note_import_options, paused ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
-            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } ) )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) )
+            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) )
             
             if CG.client_controller.IsBooted():
                 

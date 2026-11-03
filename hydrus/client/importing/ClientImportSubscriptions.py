@@ -190,7 +190,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         (
             serialisable_gug_key_and_name,
@@ -213,9 +213,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         ( serialisable_gug_key, gug_name ) = serialisable_gug_key_and_name
         
         self._gug_key_and_name = ( bytes.fromhex( serialisable_gug_key ), gug_name )
-        self._query_headers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER } ) for serialisable_query in serialisable_query_headers ]
-        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS } )
-        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        self._query_headers = [ HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_HEADER } ) ) for serialisable_query in serialisable_query_headers ]
+        self._checker_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_checker_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS } ) )
+        self._import_options_container = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_import_options_container, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } ) )
         
     
     def _NoDelays( self ):
@@ -827,7 +827,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -944,9 +944,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 merge_query_publish_events
             ) = old_serialisable_info
             
-            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } )
-            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
-            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
+            file_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY } ) )
+            tag_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) )
+            note_import_options_legacy = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) )
             
             if CG.client_controller.IsBooted():
                 
@@ -1877,12 +1877,21 @@ class SubscriptionContainer( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_subscription, serialisable_query_log_containers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_subscription, serialisable_query_log_containers ) = serialisable_info
         
-        self.subscription = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_subscription, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION } )
-        self.query_log_containers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_query_log_containers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER } )
+        self.subscription = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_subscription, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION } ) )
+        
+        self.query_log_containers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_query_log_containers,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER
+                }
+            )
+        )
         
     
 

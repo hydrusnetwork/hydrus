@@ -330,7 +330,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         (
             serialisable_import_options_caller_types_to_default_import_options_containers,
@@ -340,29 +340,32 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
         
         self._import_options_caller_types_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_import_options_caller_types_to_default_import_options_containers,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+                }
+            )
         )
         
         self._url_class_keys_to_default_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_url_class_keys_to_default_import_options_containers,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+                }
+            )
         )
         
         self._names_to_favourite_import_options_containers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_names_to_favourite_import_options_containers,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER,
+                }
+            )
         )
         
     
@@ -727,12 +730,14 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
     @staticmethod
     def STATICPopulateManagerWithDefaultFavourites( import_options_manager: "ImportOptionsManager" ):
         
+        # we trust these strings, hydev trust
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( True, { HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_OPTIONS_CONTAINER } )
+        
         import_options_manager.AddFavourite(
             'no tags',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 4], [2, [151, 1, []]]]]]]',
-                True,
-                None # we trust this
+                deserialisation_context
             )
         )
         
@@ -740,8 +745,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'show new files',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 1, 0]]]]]]]',
-                True,
-                None # we trust this
+                deserialisation_context
             )
         )
         
@@ -749,8 +753,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'show all files',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 6], [2, [108, 2, [[103, 1, [["616c6c206c6f63616c206d65646961"], []]], 0, 0]]]]]]]',
-                True,
-                None # we trust this
+                deserialisation_context
             )
         )
         
@@ -758,8 +761,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'example blacklist',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 2], [2, [150, 1, [[44, 1, [["goblin", 1], ["orc", 1]]], []]]]]]]]',
-                True,
-                None # we trust this
+                deserialisation_context
             )
         )
         
@@ -767,8 +769,7 @@ class ImportOptionsManager( HydrusSerialisable.SerialisableBase ):
             'force metadata refetch',
             HydrusSerialisable.CreateFromString(
                 '[143, 1, [21, 2, [[[0, 0], [2, [145, 2, [2, 1, true, true, true]]]]]]]',
-                True,
-                None # we trust this
+                deserialisation_context
             )
         )
         

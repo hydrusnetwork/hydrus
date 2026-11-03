@@ -104,7 +104,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
         return list( self._rules )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         # tuples converted to lists via json
         
@@ -352,7 +352,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
         return dicts_flat
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         counters = [ collections.Counter( dict( flat_dict ) ) for flat_dict in serialisable_info ]
         

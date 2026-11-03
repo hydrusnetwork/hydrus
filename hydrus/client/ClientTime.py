@@ -232,7 +232,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
         return ( self.timestamp_type, serialisable_location, self.timestamp_ms )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self.timestamp_type, serialisable_location, self.timestamp_ms ) = serialisable_info
         
@@ -248,7 +248,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             

@@ -987,31 +987,32 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'default_export_files_metadata_routers' ] = HydrusSerialisable.SerialisableList()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         # blood alcohol content: sufficient
         loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_info,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT,
-                HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER,
-                HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT,
-                HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT,
-                HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS,
-                HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY,
-                HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR,
-                HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
-                HydrusSerialisable.SERIALISABLE_TYPE_TAG_SORT,
-                HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT,
-                HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE,
-                HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER,
-                HydrusSerialisable.SERIALISABLE_TYPE_ID_AND_NAME,
-                HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA,
-                HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_COLLECT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CHECKER_OPTIONS,
+                    HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS_LEGACY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_SUMMARY_GENERATOR,
+                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_TAG_SORT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER,
+                    HydrusSerialisable.SERIALISABLE_TYPE_ID_AND_NAME,
+                    HydrusSerialisable.SERIALISABLE_TYPE_SIMPLE_DOWNLOADER_PARSE_FORMULA,
+                    HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS,
+                }
+            )
         )
         
         for ( key, value ) in loaded_dictionary.items():
@@ -1027,11 +1028,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'media_view' in loaded_dictionary:
                 
@@ -1112,7 +1113,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
                 return p
                 
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'client_files_locations_ideal_weights' in loaded_dictionary:
                 
@@ -1145,7 +1146,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         if version == 3:
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'media_view' in loaded_dictionary:
                 
@@ -1180,7 +1181,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             serialisable_dictionary = old_serialisable_info
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'key_list' in loaded_dictionary and 'default_neighbouring_txt_tag_service_keys' in loaded_dictionary[ 'key_list' ]:
                 
@@ -1212,7 +1213,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             serialisable_dictionary = old_serialisable_info
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'default_tag_sort' in loaded_dictionary:
                 
@@ -1235,7 +1236,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         if version == 6:
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             if 'media_view' in loaded_dictionary:
                 
@@ -1262,7 +1263,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         if version == 7:
             
-            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, trusted, set() ) # god knows
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( old_serialisable_info, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             
             # web browser conversion
             

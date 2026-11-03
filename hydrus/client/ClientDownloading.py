@@ -62,7 +62,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
         return ( self._site_type, self._additional_info )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._site_type, self._additional_info ) = serialisable_info
         

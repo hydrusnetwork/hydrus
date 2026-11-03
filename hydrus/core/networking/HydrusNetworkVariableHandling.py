@@ -247,8 +247,6 @@ def ParseHydrusNetworkGETArgs( requests_args ):
 
 def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitelist: set[ int ], accounts_ok: bool, services_ok: bool ):
     
-    trusted = False
-    
     if len( network_bytes ) == 0:
         
         return HydrusSerialisable.SerialisableDictionary()
@@ -257,8 +255,11 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitel
     serialisable_type_whitelist = set( serialisable_type_whitelist )
     
     serialisable_type_whitelist.add( HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY ) # the actual thing is a hydrus dict, so we need this regardless
+    serialisable_type_whitelist.add( HydrusSerialisable.SERIALISABLE_TYPE_LIST ) # and lists turn up regularly as well
     
-    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, trusted, serialisable_type_whitelist )
+    deserialisation_context = HydrusSerialisable.DeserialisationContext( False, serialisable_type_whitelist )
+    
+    args = HydrusSerialisable.CreateFromNetworkBytes( network_bytes, deserialisation_context )
     
     if not isinstance( args, dict ):
         
@@ -294,14 +295,14 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitel
         
         if 'account' in args:
             
-            args[ 'account' ] = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( args[ 'account' ], trusted )
+            args[ 'account' ] = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( args[ 'account' ], deserialisation_context )
             
         
         if 'accounts' in args:
             
             account_tuples = args[ 'accounts' ]
             
-            args[ 'accounts' ] = [ HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( account_tuple, trusted ) for account_tuple in account_tuples ]
+            args[ 'accounts' ] = [ HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( account_tuple, deserialisation_context ) for account_tuple in account_tuples ]
             
         
     
@@ -316,7 +317,7 @@ def ParseNetworkBytesToParsedHydrusArgs( network_bytes, serialisable_type_whitel
             
             service_tuples = args[ 'services' ]
             
-            args[ 'services' ] = [ HydrusNetwork.GenerateServiceFromSerialisableTuple( service_tuple, trusted ) for service_tuple in service_tuples ]
+            args[ 'services' ] = [ HydrusNetwork.GenerateServiceFromSerialisableTuple( service_tuple, deserialisation_context ) for service_tuple in service_tuples ]
             
         
     

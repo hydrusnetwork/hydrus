@@ -229,11 +229,19 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_login_scripts, serialisable_domains_to_login_info )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_login_scripts, serialisable_domains_to_login_info ) = serialisable_info
         
-        self._login_scripts = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_login_scripts, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN } )
+        self._login_scripts = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_login_scripts,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_SCRIPT_DOMAIN
+                }
+            )
+        )
         
         self._domains_to_login_info = {}
         
@@ -823,11 +831,11 @@ class LoginCredentialDefinition( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._credential_type, serialisable_string_match )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._credential_type, serialisable_string_match ) = serialisable_info
         
-        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
+        self._string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
         
     
     def GetStringMatch( self ):
@@ -1069,26 +1077,53 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         return ( serialisable_login_script_key, serialisable_required_cookies, serialisable_credential_definitions, serialisable_login_steps, self._example_domains_info )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_login_script_key, serialisable_required_cookies, serialisable_credential_definitions, serialisable_login_steps, self._example_domains_info ) = serialisable_info
         
         self._login_script_key = bytes.fromhex( serialisable_login_script_key )
-        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-        self._credential_definitions = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_credential_definitions, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_CREDENTIAL_DEFINITION } )
-        self._login_steps = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_login_steps, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_STEP } )
+        
+        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_required_cookies,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
+                }
+            )
+        )
+        
+        self._credential_definitions = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_credential_definitions,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_CREDENTIAL_DEFINITION
+                }
+            )
+        )
+        
+        self._login_steps = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_login_steps,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_LOGIN_STEP
+                }
+            )
+        )
         
         # convert lists to tups for listctrl data hashing
         self._example_domains_info = [ tuple( list_of_info ) for list_of_info in self._example_domains_info ]
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
             ( serialisable_login_script_key, serialisable_required_cookies, serialisable_credential_definitions, serialisable_login_steps, example_domains_info ) = old_serialisable_info
             
-            old_required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, trusted, set() ) # god knows
+            old_required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             new_required_cookies_info = HydrusSerialisable.SerialisableDictionary()
             
             for ( name, value_string_match ) in list(old_required_cookies_info.items()):
@@ -1540,23 +1575,40 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, serialisable_required_cookies, serialisable_content_parsers )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._scheme, self._method, self._subdomain, self._path, self._required_credentials, self._static_args, self._temp_args, serialisable_required_cookies, serialisable_content_parsers ) = serialisable_info
         
         self._CleanseSubdomainAndPath()
         
-        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY, HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-        self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_content_parsers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER } )
+        self._required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_required_cookies,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                    HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH
+                }
+            )
+        )
+        
+        self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_content_parsers,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER
+                }
+            )
+        )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
             ( scheme, method, subdomain, path, required_credentials, static_args, temp_args, serialisable_required_cookies, serialisable_content_parsers ) = old_serialisable_info
             
-            old_required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, trusted, set() ) # god knows
+            old_required_cookies_info = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_required_cookies, HydrusSerialisable.GenerateDeserialisationContextForGodKnowsUpdates( deserialisation_context ) )
             new_required_cookies_info = HydrusSerialisable.SerialisableDictionary()
             
             for ( name, value_string_match ) in list(old_required_cookies_info.items()):

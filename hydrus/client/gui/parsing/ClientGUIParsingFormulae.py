@@ -400,7 +400,9 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            obj = HydrusSerialisable.CreateFromString( raw_text, False, self._serialisable_type_whitelist )
+            deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+            
+            obj = HydrusSerialisable.CreateFromString( raw_text, deserialisation_context )
             
             self._ImportObject( obj )
             
@@ -435,7 +437,9 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     try:
                         
-                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, self._serialisable_type_whitelist )
+                        deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+                        
+                        obj = HydrusSerialisable.CreateFromNetworkBytes( payload, deserialisation_context )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         

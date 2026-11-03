@@ -69,7 +69,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return ( self.context_type, serialisable_context_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self.context_type, serialisable_context_data ) = serialisable_info
         
@@ -90,7 +90,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             

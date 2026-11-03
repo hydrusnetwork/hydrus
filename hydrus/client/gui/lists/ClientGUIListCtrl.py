@@ -1733,7 +1733,9 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, self._serialisable_type_whitelist )
+                    deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, deserialisation_context )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     
@@ -1778,7 +1780,9 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( raw_text, False, self._serialisable_type_whitelist )
+                deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+                
+                obj = HydrusSerialisable.CreateFromString( raw_text, deserialisation_context )
                 
             except Exception as e:
                 
@@ -1912,7 +1916,9 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                obj = HydrusSerialisable.CreateFromString( payload, False, self._serialisable_type_whitelist )
+                deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+                
+                obj = HydrusSerialisable.CreateFromString( payload, deserialisation_context )
                 
                 self._ImportObject( obj )
                 
@@ -1971,7 +1977,9 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 try:
                     
-                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, False, self._serialisable_type_whitelist )
+                    deserialisation_context = HydrusSerialisable.DeserialisationContext( False, self._serialisable_type_whitelist )
+                    
+                    obj = HydrusSerialisable.CreateFromNetworkBytes( payload, deserialisation_context )
                     
                 except HydrusExceptions.SerialisationWhitelistException as e:
                     

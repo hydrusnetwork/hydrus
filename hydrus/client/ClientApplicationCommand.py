@@ -708,7 +708,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return ( self._command_type, serialisable_data )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._command_type, serialisable_data ) = serialisable_info
         
@@ -716,11 +716,12 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
             data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                 serialisable_data,
-                trusted,
-                {
-                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                    HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
-                }
+                deserialisation_context.DuplicateForNewWhitelist(
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                        HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                    }
+                )
             )
             
             simple_action = data_dict[ 'simple_action' ]
@@ -753,13 +754,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
         elif self._command_type == APPLICATION_COMMAND_TYPE_INTERACTIVE_CONTENT:
             
-            data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
-                serialisable_data,
-                trusted,
-                {
-                    HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                }
-            )
+            data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY } ) )
             
             service_key = bytes.fromhex( data_dict[ 'service_key' ] )
             content_type = data_dict[ 'content_type' ]
@@ -769,7 +764,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -856,11 +851,12 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                     serialisable_data,
-                    trusted,
-                    {
-                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                        HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
-                    }
+                    deserialisation_context.DuplicateForNewWhitelist(
+                        {
+                            HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                            HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                        }
+                    )
                 )
                 
                 simple_action = data_dict[ 'simple_action' ]
@@ -906,11 +902,12 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 data_dict = HydrusSerialisable.CreateFromSerialisableTuple(
                     serialisable_data,
-                    trusted,
-                    {
-                        HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
-                        HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
-                    }
+                    deserialisation_context.DuplicateForNewWhitelist(
+                        {
+                            HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                            HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
+                        }
+                    )
                 )
                 
                 simple_action = data_dict[ 'simple_action' ]

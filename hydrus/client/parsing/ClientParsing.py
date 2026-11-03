@@ -364,7 +364,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         raise NotImplementedError()
         
@@ -488,25 +488,26 @@ class ParseFormulaZipper( ParseFormula ):
         return ( serialisable_formulae, self._sub_phrase, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_formulae, self._sub_phrase, self._name, serialisable_string_processor ) = serialisable_info
         
         self._formulae = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_formulae,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
@@ -570,14 +571,14 @@ class ParseFormulaZipper( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
             ( serialisable_formulae, sub_phrase, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
             
-            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
             
             processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
             
@@ -681,11 +682,11 @@ class ParseFormulaContextVariable( ParseFormula ):
         return ( self._variable_name, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._variable_name, self._name, serialisable_string_processor ) = serialisable_info
         
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
@@ -700,14 +701,14 @@ class ParseFormulaContextVariable( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
             ( variable_name, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
             
-            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
             
             processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
             
@@ -915,13 +916,21 @@ class ParseFormulaHTML( ParseFormula ):
         return ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_tag_rules, self._content_to_fetch, self._attribute_to_fetch, self._name, serialisable_string_processor ) = serialisable_info
         
-        self._tag_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_rules, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML } )
+        self._tag_rules = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_tag_rules,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_RULE_HTML
+                }
+            )
+        )
         
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
@@ -942,7 +951,7 @@ class ParseFormulaHTML( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -1056,8 +1065,8 @@ class ParseFormulaHTML( ParseFormula ):
             
             ( serialisable_new_tag_rules, content_to_fetch, attribute_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
             
-            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
             
             processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
             
@@ -1219,14 +1228,14 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
         return ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._rule_type, self._tag_name, self._tag_attributes, self._tag_index, self._tag_depth, self._should_test_tag_string, serialisable_tag_string_string_match ) = serialisable_info
         
-        self._tag_string_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_string_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
+        self._tag_string_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_string_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -1703,12 +1712,12 @@ class ParseFormulaJSON( ParseFormula ):
         return ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_parse_rules, self._content_to_fetch, self._name, serialisable_string_processor ) = serialisable_info
         
-        self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) ) if parse_rule_type in ( JSON_PARSE_RULE_TYPE_DICT_KEY, JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS ) else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._parse_rules = [ ( parse_rule_type, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parse_rule, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) ) ) if parse_rule_type in ( JSON_PARSE_RULE_TYPE_DICT_KEY, JSON_PARSE_RULE_TYPE_TEST_STRING_ITEMS ) else ( parse_rule_type, serialisable_parse_rule ) for ( parse_rule_type, serialisable_parse_rule ) in serialisable_parse_rules ]
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
@@ -1738,7 +1747,7 @@ class ParseFormulaJSON( ParseFormula ):
         return raw_texts
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -1775,8 +1784,8 @@ class ParseFormulaJSON( ParseFormula ):
             
             ( serialisable_parse_rules, content_to_fetch, serialisable_string_match, serialisable_string_converter ) = old_serialisable_info
             
-            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
-            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } )
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
+            string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
             
             processing_steps = [ processing_step for processing_step in ( string_match, string_converter ) if processing_step.MakesChanges() ]
             
@@ -1901,37 +1910,39 @@ class ParseFormulaNested( ParseFormula ):
         return ( serialisable_main_formula, serialisable_sub_formula, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_main_formula, serialisable_sub_formula, self._name, serialisable_string_processor ) = serialisable_info
         
         self._main_formula = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_main_formula,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
         self._sub_formula = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_sub_formula,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text: str, collapse_newlines: bool ):
@@ -1950,7 +1961,7 @@ class ParseFormulaNested( ParseFormula ):
         return all_sub_parsed_texts
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -2036,11 +2047,11 @@ class ParseFormulaStatic( ParseFormula ):
         return ( self._static_text, self._num_to_do, self._name, serialisable_string_processor )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._static_text, self._num_to_do, self._name, serialisable_string_processor ) = serialisable_info
         
-        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
+        self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } ) )
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
@@ -2126,21 +2137,22 @@ class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed )
         return serialisable_formula
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         serialisable_formula = serialisable_info
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_formula,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
     
@@ -2201,7 +2213,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         return ( self._name, self._content_type, serialisable_formula, serialisable_additional_info )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._name, self._content_type, serialisable_formula, serialisable_additional_info ) = serialisable_info
         
@@ -2209,7 +2221,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             
             ( veto_if_matches_found, serialisable_string_match ) = serialisable_additional_info
             
-            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } )
+            string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_match, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_MATCH } ) )
             
             self._additional_info = ( veto_if_matches_found, string_match )
             
@@ -2240,19 +2252,20 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_formula,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -2353,15 +2366,16 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 
                 formula = HydrusSerialisable.CreateFromSerialisableTuple(
                     serialisable_formula,
-                    trusted,
-                    {
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                        HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-                    }
+                    deserialisation_context.DuplicateForNewWhitelist(
+                        {
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                        }
+                    )
                 )
                 
                 string_processor = formula.GetStringProcessor()
@@ -2723,40 +2737,36 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
         
         self._parser_key = bytes.fromhex( serialisable_parser_key )
         
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple(
-            serialisable_string_converter,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
-            }
-        )
+        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
         
         self._subsidiary_page_parsers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_subsidiary_page_parsers,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                HydrusSerialisable.SERIALISABLE_TYPE_SUBSIDIARY_PAGE_PARSER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_SUBSIDIARY_PAGE_PARSER,
+                }
+            )
         )
         
         self._content_parsers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_content_parsers,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_PARSER,
+                }
+            )
         )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -2779,24 +2789,20 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
                 (
                     HydrusSerialisable.CreateFromSerialisableTuple(
                         serialisable_formula,
-                        trusted,
-                        {
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                            HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-                        }
+                        deserialisation_context.DuplicateForNewWhitelist(
+                            {
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                            }
+                        )
                     ),
-                    HydrusSerialisable.CreateFromSerialisableTuple(
-                        serialisable_page_parser,
-                        trusted,
-                        {
-                            HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
-                        }
-                    )
-                ) for ( serialisable_formula, serialisable_page_parser ) in serialisable_subsidiary_page_parsers
+                    HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER } ) )
+                )
+                for ( serialisable_formula, serialisable_page_parser ) in serialisable_subsidiary_page_parsers
             ]
             
             subsidiary_page_parsers = HydrusSerialisable.SerialisableList( [ SubsidiaryPageParser( formula = formula, page_parser = page_parser ) for ( formula, page_parser ) in old_subsidiary_page_parsers ] )
@@ -3083,27 +3089,28 @@ class SubsidiaryPageParser( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_formula, self._sort_posts_by_source_time, serialisable_page_parser )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_formula, self._sort_posts_by_source_time, serialisable_page_parser ) = serialisable_info
         
         self._formula = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_formula,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
-                HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
-            }
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_JSON,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_CONTEXT_VARIABLE,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_HTML,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_NESTED,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_STATIC,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PARSE_FORMULA_ZIPPER,
+                }
+            )
         )
         
-        self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER } )
+        self._page_parser = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_page_parser, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER } ) )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             

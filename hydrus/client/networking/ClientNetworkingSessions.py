@@ -353,11 +353,11 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         return ( serialisable_network_context, serialisable_cookie_tuples )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_network_context, serialisable_cookie_tuples ) = serialisable_info
         
-        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } )
+        self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } ) )
         
         self.session = self._CreateEmptySession()
         
@@ -382,7 +382,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         ClearExpiredCookies( self.session )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -545,7 +545,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         return network_context
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         self._session_container_names = set( serialisable_info )
         

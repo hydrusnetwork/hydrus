@@ -627,7 +627,9 @@ class DB( HydrusDB.HydrusDB ):
         
         account_type = self._GetAccountType( service_id, account_type_id )
         
-        dictionary = HydrusSerialisable.CreateFromString( dictionary_string, True, set() ) # we trust this
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( True, set(), log_trusted_whitelist_violations = False ) # we trust this and don't care what it has
+        
+        dictionary = HydrusSerialisable.CreateFromString( dictionary_string, deserialisation_context )
         
         return HydrusNetwork.Account.GenerateAccountFromTuple( ( account_key, account_type, created, expires, dictionary ) )
         
@@ -1160,10 +1162,11 @@ class DB( HydrusDB.HydrusDB ):
         
         service_info = self._Execute( 'SELECT service_key, service_type, name, port, dictionary_string FROM services WHERE service_type IN ' + HydrusLists.SplayListForDB( limited_types ) + ';' ).fetchall()
         
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( True, set(), log_trusted_whitelist_violations = False ) # we trust this and don't care what it has
+        
         for ( service_key, service_type, name, port, dictionary_string ) in service_info:
             
-            dictionary = HydrusSerialisable.CreateFromString( dictionary_string, True, set() ) # we trust this
-            
+            dictionary = HydrusSerialisable.CreateFromString( dictionary_string, deserialisation_context )
             service = HydrusNetwork.GenerateService( service_key, service_type, name, port, dictionary )
             
             services.append( service )
@@ -1772,9 +1775,11 @@ class DB( HydrusDB.HydrusDB ):
         
         data = self._Execute( 'SELECT account_type_id, service_id, dump FROM account_types;' ).fetchall()
         
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( True, set(), log_trusted_whitelist_violations = False ) # we trust this and don't care what it has
+        
         for ( account_type_id, service_id, dump ) in data:
             
-            account_type = HydrusSerialisable.CreateFromString( dump, True, set() ) # we trust this
+            account_type = HydrusSerialisable.CreateFromString( dump, deserialisation_context )
             
             self._service_ids_to_account_type_ids[ service_id ].add( account_type_id )
             self._account_type_ids_to_account_types[ account_type_id ] = account_type

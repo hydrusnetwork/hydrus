@@ -661,14 +661,14 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_location_context, self._tag_context.GetSerialisableTuple(), self._search_type, serialisable_predicates, self._search_complete )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_location_context, serialisable_tag_context, self._search_type, serialisable_predicates, self._search_complete ) = serialisable_info
         
-        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } )
-        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT } )
+        self._location_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_location_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_LOCATION_CONTEXT } ) )
+        self._tag_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_CONTEXT } ) )
         
-        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } ) for pred_tuple in serialisable_predicates ]
+        self._predicates = [ HydrusSerialisable.CreateFromSerialisableTuple( pred_tuple, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } ) ) for pred_tuple in serialisable_predicates ]
         
         self._InitialiseTemporaryVariables()
         
@@ -722,7 +722,7 @@ class FileSearchContext( HydrusSerialisable.SerialisableBase ):
         self._or_predicates = [ predicate for predicate in self._predicates if predicate.GetType() == ClientSearchPredicate.PREDICATE_TYPE_OR_CONTAINER ]
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             

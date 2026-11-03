@@ -48,7 +48,7 @@ class FileFilteringImportOptions( IOC.ImportOptionsMetatype ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( 
             self._exclude_deleted,
@@ -61,7 +61,7 @@ class FileFilteringImportOptions( IOC.ImportOptionsMetatype ):
             self._max_resolution,
         ) = serialisable_info
         
-        self._filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } )
+        self._filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE } ) )
         
     
     def AllowsDecompressionBombs( self ):

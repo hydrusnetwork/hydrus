@@ -28,11 +28,11 @@ class ExternalProgramsImportOptionsSingleEntry( HydrusSerialisable.SerialisableB
         return ( serialisable_id_and_name, self._do_it_on_new, self._do_it_on_already_in )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_id_and_name, self._do_it_on_new, self._do_it_on_already_in ) = serialisable_info
         
-        self._id_and_name = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_id_and_name, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_ID_AND_NAME } )
+        self._id_and_name = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_id_and_name, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_ID_AND_NAME } ) )
         
     
     def DoItOnAlreadyIn( self ) -> bool:
@@ -128,11 +128,19 @@ class ExternalProgramsImportOptions( IOC.ImportOptionsMetatype ):
         return serialisable_entries
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         serialisable_entries = serialisable_info
         
-        self._entries = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_entries, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_EXTERNAL_PROGRAMS_IMPORT_OPTIONS_SINGLE_ENTRY } )
+        self._entries = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_entries,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_EXTERNAL_PROGRAMS_IMPORT_OPTIONS_SINGLE_ENTRY
+                }
+            )
+        )
         
     
     def GetEntries( self ) -> list[ ExternalProgramsImportOptionsSingleEntry ]:

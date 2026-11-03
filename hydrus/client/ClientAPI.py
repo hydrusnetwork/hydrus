@@ -95,18 +95,18 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         return serialisable_api_permissions_objects
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         serialisable_api_permissions_objects = serialisable_info
+        
+        new_deserialisation_context = deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS } )
         
         api_permissions_objects: list[ APIPermissions ] = [
             HydrusSerialisable.CreateFromSerialisableTuple(
                 serialisable_api_permissions,
-                trusted,
-                {
-                    HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_API_PERMISSIONS,
-                }
-            ) for serialisable_api_permissions in serialisable_api_permissions_objects
+                new_deserialisation_context
+            )
+            for serialisable_api_permissions in serialisable_api_permissions_objects
         ]
         
         self._access_keys_to_permissions = { api_permissions.GetAccessKey() : api_permissions for api_permissions in api_permissions_objects }
@@ -312,23 +312,18 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         return self._permits_everything or permission in self._basic_permissions
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_access_key, self._permits_everything, serialisable_basic_permissions, serialisable_search_tag_filter ) = serialisable_info
         
         self._access_key = bytes.fromhex( serialisable_access_key )
         
         self._basic_permissions = set( serialisable_basic_permissions )
-        self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple(
-            serialisable_search_tag_filter,
-            trusted,
-            {
-                HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER
-            }
-        )
+        
+        self._search_tag_filter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_search_tag_filter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } ) )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             

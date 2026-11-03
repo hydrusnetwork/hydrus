@@ -324,40 +324,65 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         raise HydrusExceptions.URLClassException( 'Could not find a parser for ' + parser_url_class.GetName() + ' URL Class!' )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_gugs, serialisable_gug_keys_to_display, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_default_note_import_options_tuple, serialisable_parsers, serialisable_network_contexts_to_custom_header_dicts ) = serialisable_info
         
-        self._gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR, HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR } )
+        self._gugs = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_gugs,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
+                    HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR
+                }
+            )
+        )
         
         self._gug_keys_to_display = { bytes.fromhex( serialisable_gug_key ) for serialisable_gug_key in serialisable_gug_keys_to_display }
         
-        self._url_classes = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_classes, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS } )
+        self._url_classes = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_url_classes,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
+                }
+            )
+        )
         
         self._url_class_keys_to_display = { bytes.fromhex( serialisable_url_class_key ) for serialisable_url_class_key in serialisable_url_class_keys_to_display }
-        self._url_class_keys_to_parser_keys = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_class_keys_to_parser_keys, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT } )
+        self._url_class_keys_to_parser_keys = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_class_keys_to_parser_keys, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_BYTES_DICT } ) )
         
         ( serialisable_file_post_default_tag_import_options, serialisable_watchable_default_tag_import_options, serialisable_url_class_keys_to_default_tag_import_options ) = serialisable_default_tag_import_options_tuple
         
-        self._file_post_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
-        self._watchable_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } )
+        self._file_post_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_tag_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) )
+        self._watchable_default_tag_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_tag_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) )
         
-        self._url_class_keys_to_default_tag_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) for ( serialisable_url_class_key, serialisable_tag_import_options ) in serialisable_url_class_keys_to_default_tag_import_options }
+        self._url_class_keys_to_default_tag_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_IMPORT_OPTIONS_LEGACY } ) ) for ( serialisable_url_class_key, serialisable_tag_import_options ) in serialisable_url_class_keys_to_default_tag_import_options }
         
         ( serialisable_file_post_default_note_import_options, serialisable_watchable_default_note_import_options, serialisable_url_class_keys_to_default_note_import_options ) = serialisable_default_note_import_options_tuple
         
-        self._file_post_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
-        self._watchable_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
+        self._file_post_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_post_default_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) )
+        self._watchable_default_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_watchable_default_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) )
         
-        self._url_class_keys_to_default_note_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) for ( serialisable_url_class_key, serialisable_note_import_options ) in serialisable_url_class_keys_to_default_note_import_options }
+        self._url_class_keys_to_default_note_import_options = { bytes.fromhex( serialisable_url_class_key ) : HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) ) for ( serialisable_url_class_key, serialisable_note_import_options ) in serialisable_url_class_keys_to_default_note_import_options }
         
-        self._parsers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_parsers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER } )
+        self._parsers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_parsers,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_PAGE_PARSER
+                }
+            )
+        )
         
         self._network_contexts_to_custom_header_dicts = collections.defaultdict( dict )
         
         for ( serialisable_network_context, custom_header_dict_items ) in serialisable_network_contexts_to_custom_header_dicts:
             
-            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } )
+            network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } ) )
             custom_header_dict = dict( custom_header_dict_items )
             
             self._network_contexts_to_custom_header_dicts[ network_context ] = custom_header_dict
@@ -400,13 +425,21 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = True
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
             ( serialisable_url_classes, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            url_classes = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_classes, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS } )
+            url_classes = HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_url_classes,
+                deserialisation_context.DuplicateForNewWhitelist(
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                        HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
+                    }
+                )
+            )
             
             url_class_names_to_display = {}
             url_class_names_to_page_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
@@ -452,7 +485,15 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             url_class_keys_to_parser_keys = HydrusSerialisable.SerialisableBytesDictionary()
             
-            url_classes = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_url_classes, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS } )
+            url_classes = HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_url_classes,
+                deserialisation_context.DuplicateForNewWhitelist(
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                        HydrusSerialisable.SERIALISABLE_TYPE_URL_CLASS
+                    }
+                )
+            )
             
             for url_class in url_classes:
                 
@@ -516,7 +557,16 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( serialisable_gugs, serialisable_url_classes, serialisable_url_class_keys_to_display, serialisable_url_class_keys_to_parser_keys, serialisable_default_tag_import_options_tuple, serialisable_parsing_parsers, serialisable_network_contexts_to_custom_header_dicts ) = old_serialisable_info
             
-            gugs = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_gugs, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR, HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR } )
+            gugs = HydrusSerialisable.CreateFromSerialisableTuple(
+                serialisable_gugs,
+                deserialisation_context.DuplicateForNewWhitelist(
+                    {
+                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                        HydrusSerialisable.SERIALISABLE_TYPE_GALLERY_URL_GENERATOR,
+                        HydrusSerialisable.SERIALISABLE_TYPE_NESTED_GALLERY_URL_GENERATOR
+                    }
+                )
+            )
             
             gug_keys_to_display = [ gug.GetGUGKey() for gug in gugs if 'ugoira' not in gug.GetName() ]
             
@@ -2202,7 +2252,7 @@ class DomainMetadataPackage( HydrusSerialisable.SerialisableBase ):
         return ( self._domain, self._headers_list, serialisable_bandwidth_rules )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( self._domain, self._headers_list, serialisable_bandwidth_rules ) = serialisable_info
         
@@ -2212,7 +2262,7 @@ class DomainMetadataPackage( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            self._bandwidth_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_rules, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES } )
+            self._bandwidth_rules = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_bandwidth_rules, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_BANDWIDTH_RULES } ) )
             
         
     

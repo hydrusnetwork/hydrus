@@ -240,7 +240,7 @@ class ServiceSpecifier( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_service_types, serialisable_service_keys )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_service_types, serialisable_service_keys ) = serialisable_info
         
@@ -1205,9 +1205,10 @@ class ServiceRestricted( ServiceRemote ):
         
         ServiceRemote._LoadFromDictionary( self, dictionary )
         
-        trusted = True # in this special case, dictionary has been pre-cleared
+        # in this special case, dictionary has been pre-cleared
+        deserialisation_context = HydrusSerialisable.DeserialisationContext( True, set() )
         
-        self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ], trusted )
+        self._account = HydrusNetwork.Account.GenerateAccountFromSerialisableTuple( dictionary[ 'account' ], deserialisation_context )
         self._next_account_sync = dictionary[ 'next_account_sync' ]
         
         if 'network_sync_paused' not in dictionary:
@@ -2066,14 +2067,15 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        update = HydrusSerialisable.CreateFromNetworkBytes(
-                            update_network_string,
+                        deserialisation_context = HydrusSerialisable.DeserialisationContext(
                             False,
                             {
                                 HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
                                 HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE
                             }
                         )
+                        
+                        update = HydrusSerialisable.CreateFromNetworkBytes( update_network_string, deserialisation_context )
                         
                     except Exception as e:
                         
@@ -2231,7 +2233,9 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE } )
+                        deserialisation_context = HydrusSerialisable.DeserialisationContext( False, { HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE } )
+                        
+                        definition_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, deserialisation_context )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         
@@ -2355,7 +2359,9 @@ class ServiceRepository( ServiceRestricted ):
                     
                     try:
                         
-                        content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, False, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE } )
+                        deserialisation_context = HydrusSerialisable.DeserialisationContext( False, { HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE } )
+                        
+                        content_update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, deserialisation_context )
                         
                     except HydrusExceptions.SerialisationWhitelistException as e:
                         

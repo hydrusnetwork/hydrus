@@ -147,7 +147,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         (
             serialisable_tag_service_actions,
@@ -159,12 +159,31 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             self._sync_file_modified_date_action
         ) = serialisable_info
         
-        self._tag_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action, HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } ) ) for ( serialisable_service_key, action, serialisable_tag_filter ) in serialisable_tag_service_actions ]
-        self._rating_service_actions = [ ( bytes.fromhex( serialisable_service_key ), action ) for ( serialisable_service_key, action ) in serialisable_rating_service_actions ]
-        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } )
+        # TODO: This feels like a mess mate, how about some naturally serialisable objects?
+        
+        self._tag_service_actions = [
+            (
+                bytes.fromhex( serialisable_service_key ),
+                action,
+                HydrusSerialisable.CreateFromSerialisableTuple( serialisable_tag_filter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_TAG_FILTER } ) )
+            )
+            for ( serialisable_service_key, action, serialisable_tag_filter )
+            in serialisable_tag_service_actions
+        ]
+        
+        self._rating_service_actions = [
+            (
+                bytes.fromhex( serialisable_service_key ),
+                action
+            )
+            for ( serialisable_service_key, action )
+            in serialisable_rating_service_actions
+        ]
+        
+        self._sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } ) )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
@@ -292,7 +311,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 sync_file_modified_date_action
             ) = old_serialisable_info
             
-            sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } )
+            sync_note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_sync_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS_LEGACY } ) )
             
             new_sync_note_import_options = sync_note_import_options.GetNoteImportOptions() # shucking the new out of the legacy
             

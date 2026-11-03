@@ -117,14 +117,15 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         try:
             
-            update = HydrusSerialisable.CreateFromNetworkBytes(
-                update_network_bytes,
+            deserialisation_context = HydrusSerialisable.DeserialisationContext( 
                 False,
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_CONTENT_UPDATE,
                     HydrusSerialisable.SERIALISABLE_TYPE_DEFINITIONS_UPDATE
                 }
             )
+            
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes, deserialisation_context )
             
             if isinstance( update, HydrusNetwork.ContentUpdate ):
                 

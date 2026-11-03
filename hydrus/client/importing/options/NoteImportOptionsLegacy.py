@@ -24,14 +24,14 @@ class NoteImportOptionsLegacy( HydrusSerialisable.SerialisableBase ):
         return ( serialisable_note_import_options, self._is_default )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         ( serialisable_note_import_options, self._is_default ) = serialisable_info
         
-        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } )
+        self._note_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_note_import_options, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NOTE_IMPORT_OPTIONS } ) )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         # this is a little silly, but we want to be clean with the migration so we'll hop skip and jump as we did with files and tags to get rid of 'is default'
         

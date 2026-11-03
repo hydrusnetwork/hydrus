@@ -398,7 +398,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         )
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         (
             self._path,
@@ -423,11 +423,20 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             self._delete_from_client_after_export = False
             
         
-        self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } )
-        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_metadata_routers, trusted, { HydrusSerialisable.SERIALISABLE_TYPE_LIST, HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER } )
+        self._file_search_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_file_search_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEARCH_CONTEXT } ) )
+        
+        self._metadata_routers = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_metadata_routers,
+            deserialisation_context.DuplicateForNewWhitelist(
+                {
+                    HydrusSerialisable.SERIALISABLE_TYPE_LIST,
+                    HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_ROUTER
+                }
+            )
+        )
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
         if version == 1:
             
