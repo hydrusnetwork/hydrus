@@ -4534,14 +4534,14 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self.modules_content_updates.ProcessContentUpdatePackage( content_update_package )
                     
-                    still_work_to_do = True
-                    
                 else:
                     
                     self._DeleteServiceInfo( CC.TRASH_SERVICE_KEY, [ HC.SERVICE_INFO_TOTAL_SIZE ] )
                     
                 
                 if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                    
+                    still_work_to_do = True
                     
                     return still_work_to_do
                     
@@ -4554,7 +4554,7 @@ class DB( HydrusDB.HydrusDB ):
             
             hashes = self._GetTrashHashes( limit = 1, minimum_age = max_age )
             
-            if len( hashes ) > 0:
+            while len( hashes ) > 0:
                 
                 content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes )
                 
@@ -4562,9 +4562,17 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_content_updates.ProcessContentUpdatePackage( content_update_package )
                 
-                still_work_to_do = True
+                old_hashes = set( hashes )
+                hashes = self._GetTrashHashes( limit = 1, minimum_age = max_age )
+                
+                if old_hashes == set( hashes ):
+                    
+                    raise Exception( f'The trash maintenance system seems to have failed to delete a to-be-physically-deleted file. You likely have gaps or confusions in your file store. Please let hydev know about this. The hash involved is: {old_hashes}' )
+                    
                 
                 if HydrusTime.TimeHasPassedFloat( time_to_stop ):
+                    
+                    still_work_to_do = True
                     
                     return still_work_to_do
                     
