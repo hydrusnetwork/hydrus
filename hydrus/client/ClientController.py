@@ -2738,6 +2738,14 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def WakeMainloops( self ):
+        
+        for manager in self._managers_with_mainloops:
+            
+            manager.Wake()
+            
+        
+    
     def WaitUntilViewFree( self ):
         
         self.WaitUntilModelFree()

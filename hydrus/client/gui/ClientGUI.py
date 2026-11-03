@@ -3625,6 +3625,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         threads_menu = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuItem( threads_menu, 'review threads', 'Show current threads and what they are doing.', self._ReviewThreads )
+        ClientGUIMenus.AppendMenuItem( threads_menu, 'wake mainloops', 'Wake everyone up.', self._controller.WakeMainloops )
         ClientGUIMenus.AppendMenuItem( threads_menu, 'review subprocesses', 'Show current subprocesses and what they are doing.', self._ReviewSubprocesses )
         ClientGUIMenus.AppendMenuItem( threads_menu, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
         
