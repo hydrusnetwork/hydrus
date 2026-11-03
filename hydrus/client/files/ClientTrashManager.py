@@ -13,9 +13,9 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         super().__init__( controller, 15 )
         
-        self._last_file_deleted_time = 0
+        self._last_file_non_physically_deleted_time = 0
         
-        self._controller.sub( self, 'NotifyFileDeleted', 'notify_file_deleted' )
+        self._controller.sub( self, 'NotifyFileNonPhysicallyDeleted', 'notify_file_non_physically_deleted' )
         
     
     def _DoSingleLoop( self ):
@@ -44,12 +44,16 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         with self._lock:
             
-            # any file delete, not just trashed. this is KISS and careful
-            if not HydrusTime.TimeHasPassedFloat( self._last_file_deleted_time + 60 ):
+            # TODO: This is cool but needs to be migrated to the mainloop so we can get better feedback on it in review mainloops UI
+            # 'deferring work x seconds since most recent (label) event' kind of thing
+            # any file delete, not just trashed, but NOT a physical delete lol otherwise we block ourselves. this is KISS and careful
+            safe_time_to_action_recent_deletes = self._last_file_non_physically_deleted_time + 60
+            
+            if not HydrusTime.TimeHasPassedFloat( safe_time_to_action_recent_deletes ):
                 
                 able_to_work = False
                 
-                wait_period = 30
+                wait_period = max( HydrusTime.TimeUntil( safe_time_to_action_recent_deletes ) + 1, 5 )
                 
             
         
@@ -103,11 +107,11 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'trash maintenance'
         
     
-    def NotifyFileDeleted( self ):
+    def NotifyFileNonPhysicallyDeleted( self ):
         
         with self._lock:
             
-            self._last_file_deleted_time = HydrusTime.GetNowFloat()
+            self._last_file_non_physically_deleted_time = HydrusTime.GetNowFloat()
             
         
     

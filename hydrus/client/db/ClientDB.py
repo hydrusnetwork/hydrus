@@ -4547,6 +4547,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
+            
         
         if HC.options[ 'trash_max_age' ] is not None:
             

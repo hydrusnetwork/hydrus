@@ -620,9 +620,9 @@ class ClientDBContentUpdates( ClientDBModule.ClientDBModule ):
                                     self.DeleteFiles( service_id, hash_ids )
                                     
                                 
-                                if action == HC.CONTENT_UPDATE_DELETE:
+                                if action == HC.CONTENT_UPDATE_DELETE and service_id not in ( self.modules_services.trash_service_id, self.modules_services.hydrus_local_file_storage_service_id ):
                                     
-                                    self._cursor_transaction_wrapper.pub_after_job( 'notify_file_deleted' )
+                                    self._cursor_transaction_wrapper.pub_after_job( 'notify_file_non_physically_deleted' )
                                     
                                 
                             elif action == HC.CONTENT_UPDATE_UNDELETE:
