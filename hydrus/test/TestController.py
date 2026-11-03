@@ -473,7 +473,7 @@ class Controller( object ):
         return QC.QThread.currentThread() == self.main_qt_thread
         
     
-    def CallBlockingToQt( self, win, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+    def CallBlockingToQt( self, win, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
             
@@ -550,7 +550,7 @@ class Controller( object ):
             
         
     
-    def CallBlockingToQtTLW( self, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+    def CallBlockingToQtTLW( self, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         main_tlw = self.GetMainTLW()
         

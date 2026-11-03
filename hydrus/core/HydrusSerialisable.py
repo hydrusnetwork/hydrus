@@ -301,6 +301,8 @@ def ObjectVersionIsFromTheFuture( obj_tuple ):
 
 SerialisableBaseSubclass = typing.TypeVar( 'SerialisableBaseSubclass', bound = 'SerialisableBase' )
 
+SI = typing.TypeVar( 'SI' )
+
 class SerialisableBase( object ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BASE
@@ -309,19 +311,19 @@ class SerialisableBase( object ):
     
     # don't make an __eq__ here without more testing and research, it messes a bunch of things up in sets and hashing and stuff
     
-    def _GetSerialisableInfo( self ):
+    def _GetSerialisableInfo( self ) -> SI:
         
         raise NotImplementedError()
         
     
-    def _InitialiseFromSerialisableInfo( self, serialisable_info: object, trusted: bool, serialisable_type_whitelist: set[ int ] ):
+    def _InitialiseFromSerialisableInfo( self, serialisable_info: SI, trusted: bool, serialisable_type_whitelist: set[ int ] ):
         
         raise NotImplementedError()
         
     
-    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ):
+    def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, trusted: bool ) -> tuple[ int, object ]:
         
-        return old_serialisable_info
+        return ( version, old_serialisable_info )
         
     
     def DumpToNetworkBytes( self ):

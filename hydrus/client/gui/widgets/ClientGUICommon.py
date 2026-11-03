@@ -224,11 +224,17 @@ def WrapInText( control, parent, text, object_name = None ):
     
     return hbox
     
+
+def EMPTY_TT_CALLABLE( s: str ):
+    
+    pass
+    
+
 class ShortcutAwareToolTipMixin( object ):
     
     def __init__( self, *args, **kwargs ):
         
-        self._tt_callable = None
+        self._tt_callable = EMPTY_TT_CALLABLE
         
         self._tt = ''
         self._simple_shortcut_command = None
@@ -243,7 +249,7 @@ class ShortcutAwareToolTipMixin( object ):
     
     def _RefreshToolTip( self ):
         
-        if self._tt_callable is None or self._simple_shortcut_command is None:
+        if self._tt_callable is EMPTY_TT_CALLABLE or self._simple_shortcut_command is None:
             
             return
             
@@ -301,7 +307,7 @@ class ShortcutAwareToolTipMixin( object ):
             
         
     
-    def SetToolTipCallable( self, c ):
+    def SetToolTipCallable( self, c: collections.abc.Callable[ [ str ], None ] ):
         
         self._tt_callable = c
         

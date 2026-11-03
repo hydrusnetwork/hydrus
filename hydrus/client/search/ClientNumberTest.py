@@ -392,7 +392,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return actually_zero or less_than_one or less_than_or_equal_to_zero
         
     
-    def ToString( self, absolute_number_renderer: collections.abc.Callable | None = None, replacement_value_string: str | None = None, alternate_operator_lookup: dict[ int, str ] | None = None ) -> str:
+    def ToString( self, absolute_number_renderer: collections.abc.Callable[ [ float | int ], str ] | None = None, replacement_value_string: str | None = None, alternate_operator_lookup: dict[ int, str ] | None = None ) -> str:
         
         # TODO: instead of 'alternate operator lookup' and friends, when we move to the NumberTestValue we can just ask that guy to do ToString or whatever
         # it can also inform operator strings to use

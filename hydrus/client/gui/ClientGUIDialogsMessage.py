@@ -10,7 +10,7 @@ from hydrus.client import ClientGlobals as CG
 # This holds common calls for the various QMessageBox dialogs
 # a thread can call these safely and they'll block
 
-def ShowDialog( dialog_call: collections.abc.Callable, win: QW.QWidget | None, title: str, message: str ):
+def ShowDialog( dialog_call: collections.abc.Callable[ [ QW.QWidget | None, str, str ], None ], win: QW.QWidget | None, title: str, message: str ):
     
     if not isinstance( message, str ):
         
@@ -44,16 +44,19 @@ def ShowCritical( win: QW.QWidget | None, title: str, message: str ):
     
     HydrusData.DebugPrint( title )
     HydrusData.DebugPrint( message )
-    
+
+    # noinspection bad-argument-type
     ShowDialog( QW.QMessageBox.critical, win, title, message )
     
 
 def ShowInformation( win: QW.QWidget | None, message: str ):
     
+    # noinspection bad-argument-type
     ShowDialog( QW.QMessageBox.information, win, 'Information', message )
     
 
 def ShowWarning( win: QW.QWidget | None, message: str ):
     
+    # noinspection bad-argument-type
     ShowDialog( QW.QMessageBox.warning, win, 'Warning', message )
     

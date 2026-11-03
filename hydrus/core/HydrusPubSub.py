@@ -116,11 +116,11 @@ class HydrusPubSub( object ):
                         
                         summary = 'Profiling pubsub: {}'.format( topic )
                         
-                        for ( obj, callable ) in callable_tuples:
+                        for ( obj, the_call ) in callable_tuples:
                             
                             try:
                                 
-                                HydrusProfiling.Profile( summary, HydrusData.Call( callable, *args, **kwargs ), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
+                                HydrusProfiling.Profile( summary, HydrusData.Call( the_call, *args, **kwargs ), min_duration_ms = HG.pubsub_profile_min_job_time_ms )
                                 
                             except HydrusExceptions.ProgramShutdownException:
                                 
@@ -130,11 +130,11 @@ class HydrusPubSub( object ):
                         
                     else:
                         
-                        for ( obj, callable ) in callable_tuples:
+                        for ( obj, the_call ) in callable_tuples:
                             
                             try:
                                 
-                                callable( *args, **kwargs )
+                                the_call( *args, **kwargs )
                                 
                             except HydrusExceptions.ProgramShutdownException:
                                 

@@ -5,7 +5,6 @@
 # and we are, of course, now many years later
 # so, if I just got hit by a bus and you are wondering what the hell is going on here, that's what's going on here
 
-import collections.abc
 import typing
 
 from qtpy import QtCore as QC
@@ -238,17 +237,6 @@ def AdjustOpacity( image: QG.QImage, opacity_factor ):
     painter.drawImage( 0, 0, image )
     
     return new_image
-    
-
-def AddShortcut( widget, modifier, key, func: collections.abc.Callable, *args ):
-    
-    shortcut = QW.QShortcut( widget )
-    
-    shortcut.setKey( ToKeySequence( modifier, key ) )
-    
-    shortcut.setContext( QC.Qt.ShortcutContext.WidgetWithChildrenShortcut )
-    
-    shortcut.activated.connect( lambda: func( *args ) )
     
 
 def CenterOnWindow( parent, window ):

@@ -1,4 +1,5 @@
 import bisect
+import collections.abc
 import queue
 import random
 import threading
@@ -936,7 +937,7 @@ class SchedulableJob( object ):
     
     PRETTY_CLASS_NAME = 'job base'
     
-    def __init__( self, controller: "HG.HydrusController.HydrusController", scheduler: JobScheduler, initial_delay, work_callable ):
+    def __init__( self, controller: "HG.HydrusController.HydrusController", scheduler: JobScheduler, initial_delay, work_callable: collections.abc.Callable[ [], None ] ):
         
         super().__init__()
         

@@ -1439,7 +1439,7 @@ class MediaContainer( QW.QWidget ):
         self.setSizePolicy( QW.QSizePolicy.Policy.Fixed, QW.QSizePolicy.Policy.Fixed )
         
         self._media = None
-        self._deferred_set_media_call: HydrusData.Call | None = None
+        self._deferred_set_media_call: HydrusData.Call = HydrusData.EMPTY_CALL
         self._show_action = CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW
         self._start_paused = False
         self._start_with_embed = False
@@ -1812,15 +1812,12 @@ class MediaContainer( QW.QWidget ):
     
     def _NotifyMPVInitialised( self ):
         
-        if self._deferred_set_media_call is not None:
+        if self.isVisible():
             
-            if self.isVisible():
-                
-                self._deferred_set_media_call()
-                
+            self._deferred_set_media_call()
             
-            self._deferred_set_media_call = None
-            
+        
+        self._deferred_set_media_call = HydrusData.EMPTY_CALL
         
     
     def _SetZoom( self, zoom: float, move_delta = None ):

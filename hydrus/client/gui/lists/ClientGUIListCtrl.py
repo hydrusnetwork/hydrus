@@ -44,7 +44,14 @@ def SafeNoneStr( value ):
 # note that this AbstractItemModel can support nested folder stuff, with some work. we'd prob want to move to a data storage system that actuall was a tree, rather than this indices-to-data stuff
 class HydrusListItemModel( QC.QAbstractItemModel ):
     
-    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_display_tuple_func: collections.abc.Callable, data_to_sort_tuple_func: collections.abc.Callable, column_types_to_name_overrides = None ):
+    def __init__(
+        self,
+        parent: QW.QWidget,
+        column_list_type: int,
+        data_to_display_tuple_func: collections.abc.Callable[ [ object ], tuple[ int ] ],
+        data_to_sort_tuple_func: collections.abc.Callable[ [ object ], tuple[ object ] ],
+        column_types_to_name_overrides = None
+    ):
         
         super().__init__( parent )
         
@@ -506,6 +513,16 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
     
 
+def EMPTY_COPY_ROWS_CALLABLE() -> list[ str ]:
+    
+    return []
+    
+
+def EMPTY_ROWS_MENU_CALLABLE() -> QW.QMenu:
+    
+    raise HydrusExceptions.DataMissing( 'This should never be called!' )
+    
+
 class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()
@@ -548,9 +565,9 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self._has_done_deletes = False
         self._can_delete_callback = can_delete_callback
         
-        self._copy_rows_callable = None
+        self._copy_rows_callable: collections.abc.Callable[ [], list[ str ] ] = EMPTY_COPY_ROWS_CALLABLE
         
-        self._rows_menu_callable = None
+        self._rows_menu_callable: collections.abc.Callable[ [], QW.QMenu ] = EMPTY_ROWS_MENU_CALLABLE
         
         # DO NOT REARRANGE BRO
         # This sets header data, so we can now do header-section-sizing gubbins
@@ -822,7 +839,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def _ShowRowsMenu( self ):
         
-        if self._rows_menu_callable is None:
+        if self._rows_menu_callable is EMPTY_ROWS_MENU_CALLABLE:
             
             return
             
@@ -873,7 +890,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.updateGeometry()
         
     
-    def AddRowsMenuCallable( self, menu_callable ):
+    def AddRowsMenuCallable( self, menu_callable: collections.abc.Callable[ [], QW.QMenu ] ):
         
         self._rows_menu_callable = menu_callable
         
@@ -927,7 +944,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         elif ClientGUIShortcuts.KeyPressEventIsACopy( event ):
             
-            if self._copy_rows_callable is not None:
+            if self._copy_rows_callable is not EMPTY_COPY_ROWS_CALLABLE:
                 
                 copyable_texts = self._copy_rows_callable()
                 
@@ -1343,7 +1360,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def SetCopyRowsCallable( self, copy_rows_callable ):
+    def SetCopyRowsCallable( self, copy_rows_callable: collections.abc.Callable[ [], list[ str ] ] ):
         
         self._copy_rows_callable = copy_rows_callable
         
@@ -1436,6 +1453,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
     
 
+def EMPTY_CUSTOM_GET_CALLABLE() -> HydrusSerialisable.SerialisableBase | None:
+    
+    return None
+    
+
 class BetterListCtrlPanel( QW.QWidget ):
     
     def __init__( self, parent ):
@@ -1453,7 +1475,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         self._serialisable_type_whitelist = set()
         
         self._import_add_callable = lambda x: None
-        self._custom_get_callable = None
+        self._custom_get_callable: collections.abc.Callable[ [], HydrusSerialisable.SerialisableBase | None ] = EMPTY_CUSTOM_GET_CALLABLE
         
         self._button_infos = []
         
@@ -1649,7 +1671,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         to_export = HydrusSerialisable.SerialisableList()
         
-        if self._custom_get_callable is None:
+        if self._custom_get_callable is EMPTY_CUSTOM_GET_CALLABLE:
             
             for obj in self._listctrl.GetData( only_selected = True ):
                 
@@ -1658,7 +1680,12 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         else:
             
-            to_export.append( self._custom_get_callable() )
+            custom_get_result = self._custom_get_callable()
+            
+            if custom_get_result is not None:
+                
+                to_export.append( custom_get_result )
+                
             
         
         if len( to_export ) == 0:
@@ -2065,14 +2092,29 @@ class BetterListCtrlPanel( QW.QWidget ):
         self.AddButton( 'delete', self._listctrl.ProcessDeleteAction, enabled_check_func = enabled_check_func, enabled_only_on_selection = enabled_only_on_selection )
         
     
-    def AddImportExportButtons( self, permitted_object_types, forgivable_object_types, import_add_callable, custom_get_callable = None, and_duplicate_button = True ):
+    def AddImportExportButtons(
+        self,
+        permitted_object_types,
+        forgivable_object_types,
+        import_add_callable,
+        custom_get_callable: collections.abc.Callable[ [], HydrusSerialisable.SerialisableBase | None ] | None = None,
+        and_duplicate_button = True
+    ):
         
         self._permitted_object_types = permitted_object_types
         self._forgivable_object_types = forgivable_object_types
         self._serialisable_type_whitelist = HydrusSerialisable.DetermineRestrictedSerialisableTypes( set( self._permitted_object_types ).union( self._forgivable_object_types ), True )
         
         self._import_add_callable = import_add_callable
-        self._custom_get_callable = custom_get_callable
+        
+        if custom_get_callable is None:
+            
+            self._custom_get_callable = EMPTY_CUSTOM_GET_CALLABLE
+            
+        else:
+            
+            self._custom_get_callable = custom_get_callable
+            
         
         export_menu_template_items = []
         
@@ -2080,7 +2122,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to json file', 'Serialise the selected data and export to a json file.', self._ExportToJSON ) )
         export_menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'to png file', 'Serialise the selected data and encode it to an image file you can easily share with other hydrus users.', self._ExportToPNG ) )
         
-        if self._custom_get_callable is None:
+        if self._custom_get_callable is EMPTY_CUSTOM_GET_CALLABLE:
             
             all_objs_are_named = False not in ( issubclass( o, HydrusSerialisable.SerialisableBaseNamed ) for o in self._permitted_object_types )
             

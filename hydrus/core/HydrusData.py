@@ -556,3 +556,10 @@ class Call( object ):
         self._label = label
         
     
+
+def do_nothing():
+    
+    pass
+    
+
+EMPTY_CALL = Call( do_nothing )

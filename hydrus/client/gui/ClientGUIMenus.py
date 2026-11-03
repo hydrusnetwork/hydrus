@@ -146,7 +146,7 @@ def AppendMenuSlider(
     return slider_menu_item
     
 
-def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.MenuRole = None, **kwargs ):
+def AppendMenuItem( menu, label, description, menu_callable: collections.abc.Callable[ [], typing.Any ], *args, role: QW.QAction.MenuRole | None = None, **kwargs ):
     
     menu_item = QW.QAction( menu )
     
@@ -159,7 +159,7 @@ def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.
     
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, callable, *args, **kwargs )
+    BindMenuItem( menu_item, menu_callable, *args, **kwargs )
     
     return menu_item
     
@@ -415,7 +415,7 @@ def SetMenuTitle( menu: QW.QMenu, label: str ):
     menu.setTitle( label )
     
 
-def SpamItems( menu: QW.QMenu, labels_descriptions_and_calls: collections.abc.Collection[ tuple[ str, str, collections.abc.Callable ] ], max_allowed: int ):
+def SpamItems( menu: QW.QMenu, labels_descriptions_and_calls: collections.abc.Collection[ tuple[ str, str, collections.abc.Callable[ [], typing.Any ] ] ], max_allowed: int ):
     
     if len( labels_descriptions_and_calls ) > max_allowed:
         

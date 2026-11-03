@@ -1175,7 +1175,7 @@ class QLocator(QC.QObject):
         self.currentJobs = {}
         self.jobIDCounter = 0
         
-        self.iconPathFactory = None
+        self.iconPathFactory: collections.abc.Callable[ [ str ], str ] | None = None
         
     
     def addProvider( self, provider ) -> None:
@@ -1204,8 +1204,10 @@ class QLocator(QC.QObject):
             
             raise Exception( 'No way to determine icons for the Locator!' )
             
-        
-        return self.iconPathFactory( filename ) 
+        else:
+            
+            return self.iconPathFactory( filename )
+            
         
     
     def getResult(self, jobID: int):

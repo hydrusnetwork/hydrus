@@ -12,13 +12,18 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui.widgets import ClientGUICommon
 
+def EMPTY_VISIBLE_CALLABLE() -> bool:
+    
+    return True
+    
+
 class MenuTemplateItem( object ):
     
     def __init__( self, title: str | collections.abc.Callable[ [], str ], description: str | collections.abc.Callable[ [], str ] ):
         
         self.title = title
         self.description = description
-        self._visible_callable = None
+        self._visible_callable: collections.abc.Callable[ [], bool ] = EMPTY_VISIBLE_CALLABLE
         
     
     def GetDescription( self ) -> str:
@@ -45,9 +50,9 @@ class MenuTemplateItem( object ):
             
         
     
-    def IsVisible( self ):
+    def IsVisible( self ) -> bool:
         
-        if self._visible_callable is not None:
+        if self._visible_callable is not EMPTY_VISIBLE_CALLABLE:
             
             try:
                 

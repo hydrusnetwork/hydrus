@@ -1,3 +1,4 @@
+import collections.abc
 import hashlib
 import os
 import signal
@@ -448,7 +449,7 @@ class Controller( HydrusController.HydrusController ):
         ClientGUIDialogsMessage.ShowInformation( self.gui, message )
         
     
-    def CallBlockingToQt( self, win, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+    def CallBlockingToQt( self, win, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         def qt_code( job_status: ClientThreading.JobStatus ):
             
@@ -508,7 +509,9 @@ class Controller( HydrusController.HydrusController ):
             
             result = job_status.GetIfHasVariable( 'result' )
             
-            return result
+            result_cast = typing.cast( callable_R, result )
+            
+            return result_cast
             
         
         if job_status.HadError():
@@ -521,10 +524,11 @@ class Controller( HydrusController.HydrusController ):
         raise Exception( 'Somehow this blocking Qt job finished without a result or error!' )
         
     
-    def CallBlockingToQtFireAndForgetNoResponse( self, win, func, *args, **kwargs ) -> None:
+    def CallBlockingToQtFireAndForgetNoResponse( self, win, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> None:
         
         try:
             
+            # noinspection bad-argument-type
             self.CallBlockingToQt( win, func, *args, **kwargs )
             
         except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.ProgramShutdownException ):
@@ -533,24 +537,24 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def CallBlockingToQtTLW( self, func: typing.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
+    def CallBlockingToQtTLW( self, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> callable_R:
         
         main_tlw = self.GetMainTLW()
         
         if main_tlw is None:
             
             raise HydrusExceptions.ProgramShutdownException( 'Could not find a TLW! I think the program is shutting down or has not yet created a splash!' )
-            
-        
+
+        # noinspection bad-argument-type
         return self.CallBlockingToQt( main_tlw, func, *args, **kwargs )
         
     
-    def CallAfterQtSafe( self, qobject: QC.QObject, func, *args, **kwargs ) -> None:
+    def CallAfterQtSafe( self, qobject: QC.QObject, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> None:
         
         ClientGUICallAfter.CallAfter( self.call_after_catcher, qobject, func, *args, **kwargs )
         
     
-    def CallLaterQtSafe( self, window, initial_delay, label, func, *args, **kwargs ) -> ClientThreading.QtAwareJob:
+    def CallLaterQtSafe( self, window, initial_delay, label, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> ClientThreading.QtAwareJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         
@@ -570,7 +574,7 @@ class Controller( HydrusController.HydrusController ):
         return job
         
     
-    def CallRepeatingQtSafe( self, window, initial_delay, period, label, func, *args, **kwargs ) -> ClientThreading.QtAwareRepeatingJob:
+    def CallRepeatingQtSafe( self, window, initial_delay, period, label, func: collections.abc.Callable[ callable_P, callable_R ], *args: callable_P.args, **kwargs: callable_P.kwargs ) -> ClientThreading.QtAwareRepeatingJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( period )
         

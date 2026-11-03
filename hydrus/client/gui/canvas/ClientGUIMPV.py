@@ -1,7 +1,9 @@
+import collections.abc
 import locale
 import os
 import threading
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -1746,7 +1748,9 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             try:
                 
-                load_f( self._player.handle, mpv_config_path.encode( 'utf-8' ) ) # pylint: disable=E1102
+                load_f_cast = typing.cast( collections.abc.Callable, load_f )
+                
+                load_f_cast( self._player.handle, mpv_config_path.encode( 'utf-8' ) )
                 
             except mpv.ShutdownError:
                 

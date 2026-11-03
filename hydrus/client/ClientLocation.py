@@ -194,7 +194,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FixMissingServices( self, services_exist_func: collections.abc.Callable ) -> bool:
+    def FixMissingServices( self, services_exist_func: collections.abc.Callable[ [ collections.abc.Collection[ bytes ] ], collections.abc.Collection[ bytes ] ] ) -> bool:
         
         prev_len = len( self.current_service_keys ) + len( self.deleted_service_keys )
         
@@ -276,7 +276,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return len( self.current_service_keys ) + len( self.deleted_service_keys ) == 1
         
     
-    def LimitToServiceTypes( self, service_type_func: collections.abc.Callable, service_types ):
+    def LimitToServiceTypes( self, service_type_func: collections.abc.Callable[ [ bytes ], int ], service_types: collections.abc.Collection[ int ] ):
         
         self.current_service_keys = frozenset( ( service_key for service_key in self.current_service_keys if service_type_func( service_key ) in service_types ) )
         
