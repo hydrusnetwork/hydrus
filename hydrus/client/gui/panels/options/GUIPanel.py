@@ -43,7 +43,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._use_qt_locale_for_human_int.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._not_make_child_frames_qt_tool = QW.QCheckBox( self._misc_panel )
-        tt = 'By default, small non-dialog windows like "services->review" are supposed to have no taskbar entry, stay on top of their parent window nicely, and still look good. If you have issues, try checking this to set them back to the old non-tool mode.'
+        tt = 'By default, small non-dialog windows like "services->review" are supposed to have no taskbar entry, stay on top of their parent window nicely, and still look good. This is achieved by setting a certain flag. If you have issues with this such as unusual close buttons or flickering/layout issues, try checking this to set them back to the old non-tool mode.'
         self._not_make_child_frames_qt_tool.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._force_enter_on_radio_buttons_to_do_dialog_ok = QW.QCheckBox( self._misc_panel )
@@ -175,7 +175,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Put the options search bar at the: ', self._options_search_bar_top_of_window ) )
         rows.append( ( 'TEST: Use your locale for integer rendering: ', self._use_qt_locale_for_human_int ) )
         rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
-        rows.append( ( 'BUGFIX: Set child windows as non-tool flagged: ', self._not_make_child_frames_qt_tool ) )
+        rows.append( ( '(WINDOWS, USUALLY) BUGFIX: Set child windows as non-tool flagged: ', self._not_make_child_frames_qt_tool ) )
         rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
         rows.append( ( 'ANTI-CRASH BUGFIX: Use Qt file/directory selection dialogs, rather than OS native: ', self._use_qt_file_dialogs ) )
         
