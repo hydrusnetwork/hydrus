@@ -93,7 +93,7 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes, no_temp_needed = False ):
         
     
 
-def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook = None ):
+def ReadFromCancellableCursor( cursor, largest_group_size, cancelled_hook: collections.abc.Callable[ [], bool ] | None = None ):
     
     if cancelled_hook is None:
         
@@ -424,7 +424,7 @@ class DBBase( object ):
         return self._c.execute( query, *query_args )
         
     
-    def _ExecuteCancellable( self, query, query_args, cancelled_hook: collections.abc.Callable[ [], bool ] ):
+    def _ExecuteCancellable( self, query, query_args, cancelled_hook: collections.abc.Callable[ [], bool ] | None ):
         
         if cancelled_hook is not None and cancelled_hook():
             
