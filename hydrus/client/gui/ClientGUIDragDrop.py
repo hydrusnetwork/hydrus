@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import typing
 
@@ -7,6 +8,8 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
@@ -369,21 +372,7 @@ class FileDropTarget( QC.QObject ):
                 
                 if len( urls ) > 0:
                     
-                    for url in urls:
-                        
-                        # https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
-                        # data:image/png;base64,(data)
-                        # so what I prob have to do here is parse the file, decode from base64 or whatever, and then write to a fresh temp location and call self._filenames_callable
-                        # but I need to figure out a way to reproduce this on my own. Chrome is supposed to do it on image DnD, but didn't for me
-                        if url.startswith( 'data:' ) or len( url ) > 8 * 1024:
-                            
-                            HydrusData.ShowText( 'This drag and drop was in the unsupported \'Data URL\' format. hydev would like to know more about this so he can fix it.' )
-                            
-                            continue
-                            
-                        
-                        CG.client_controller.CallAfterQtSafe( self, self._url_callable, url ) # callafter to terminate dnd event now
-                        
+                    CG.client_controller.CallAfterQtSafe( self, self.ProcessURLs, urls ) # callafter to terminate dnd event now
                     
                 
             
@@ -414,4 +403,71 @@ class FileDropTarget( QC.QObject ):
             
         
     
-    # setting OnDragOver to return copy gives Linux trouble with page tab drops with shift held down
+    def ProcessURLs( self, urls: collections.abc.Collection[ str ] ):
+        
+        if self._url_callable is None:
+            
+            return
+            
+        
+        from hydrus.client.networking import ClientNetworkingFunctions
+        
+        urls_that_look_good = []
+        error_texts_seen = []
+        
+        for url in urls:
+            
+            # https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/Data_URIs
+            # data:image/png;base64,(data)
+            # so what I prob have to do here is parse the file, decode from base64 or whatever, and then write to a fresh temp location and call self._filenames_callable
+            # but I need to figure out a way to reproduce this on my own. Chrome is supposed to do it on image DnD, but didn't for me
+            if url.startswith( 'data:' ) or len( url ) > 8 * 1024:
+                
+                HydrusData.ShowText( 'This drag and drop was in the unsupported \'Data URL\' format. hydev would like to know more about this so he can fix it.' )
+                
+                continue
+                
+            
+            try:
+                
+                ClientNetworkingFunctions.CheckLooksLikeAFullURL( url )
+                
+            except HydrusExceptions.URLClassException as e:
+                
+                error_texts_seen.append( str( e ) )
+                
+            else:
+                
+                urls_that_look_good.append( url )
+                
+            
+        
+        if len( urls_that_look_good ) > 0:
+            
+            for url in urls_that_look_good:
+                
+                self._url_callable( url )
+                
+            
+            if len( error_texts_seen ) > 0:
+                
+                message = 'Got a parse error on an add-url Drag-and-Drop! One or more URLs _did_ parse ok, so this is probably some additional metadata that you can ignore. In any case, here are the details:'
+                message += '\n\n'
+                message += '\n'.join( HydrusLists.DedupeList( error_texts_seen ) )
+                
+                HydrusData.Print( message )
+                
+            
+        else:
+            
+            if len( error_texts_seen ) > 0:
+                
+                message = 'Hey, I got a parse error on what you just dropped onto the client! Nothing you dropped looked like an URL. Here are the details:'
+                message += '\n\n'
+                message += '\n'.join( HydrusLists.DedupeList( error_texts_seen ) )
+                
+                HydrusData.ShowText( message )
+                
+            
+        
+    
