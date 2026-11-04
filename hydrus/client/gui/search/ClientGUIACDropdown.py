@@ -1672,14 +1672,11 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
             tag_service_key = self._service_key
             tags_to_child_predicates_cache = dict( self._tags_to_child_predicates_cache )
             
-            if location_context.IsOneDomain():
+            search_location_context = location_context
+            
+            if tag_service_key == CC.COMBINED_TAG_SERVICE_KEY and search_location_context.IsAllKnownFiles():
                 
-                search_location_context = location_context
-                
-            else:
-                
-                # let's not blat the db on some crazy multi-domain just for this un-numbered list
-                search_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_TAG_SERVICE_KEY )
+                search_location_context = ClientLocation.LocationContext()
                 
             
             tag_context = ClientSearchTagContext.TagContext( service_key = tag_service_key )

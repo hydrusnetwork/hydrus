@@ -1325,7 +1325,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         for leaf in file_search_context_branch.IterateLeaves():
             
-            domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_deleted_file_service_id
+            domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_file_service_id
             
             for group_of_tag_ids in HydrusLists.SplitIteratorIntoChunks( tag_ids, 1000 ):
                 
