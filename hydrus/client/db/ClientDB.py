@@ -8517,7 +8517,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 from hydrus.client import ClientOptions
                 
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
+                new_options: ClientOptions.ClientOptions = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
                 
                 # making this test real across the board
                 new_options.SetBoolean( 'do_new_hide_terminal_subprocess_tech_on_windows', True )

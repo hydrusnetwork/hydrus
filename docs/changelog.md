@@ -7,6 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 694](https://github.com/hydrusnetwork/hydrus/releases/tag/v694)
+
+### misc
+
+* added 'confirm add-undelete tags' to the cog icon on 'manage tags'. if you have been annoyed at the 'confirm your action' popups in the new manage tags dialog when you type in a tag that was previously deleted, please uncheck this and let me know how it feels
+* added 'allowed actions for taglist double-click:' to this menu too. if you don't ever want to see a 'clear deletion record' option, or whatever, you can now turn things on and off here too
+* fixed the 'clear trash' routine to delete more than one old file per run. this was the lagging logic patched last week, now improved back to what it was originally intended to do
+* also made the clear 'trash routine' wait on 'a file was recently deleted' safety delay more intelligently (it doesn't work if a file was deleted in the past sixty seconds, as a grace period for undeletes of accidental giant deletes), and, lmao, it no longer sends this signal itself when it works (blocking itself a bunch when there's a lot of work to do)
+* when you drag-and-drop URLs on the client, and the application source bundles non-URL data in the 'urls' metadata slot (we have evidence of one less-used browser putting the browser tab text in with the url), the hydrus drag-and-drop catcher now filters the urls from the non-urls nicely. if any urls were in there, it silently prints info to the log; if nothing was an url, it puts it in a popup for you to see
+* fixed some login cookie handling when using the `curl_cffi` test. there is more work to do with the curl_cffi test, so please bear with me
+* I fixed some issues with the 'children' tab of tag autocomplete, which looks up children of tag parents in the associated taglist, when the file domain is set to multiple file domains or 'all known files'
+
+### exe manager
+
+* the new Windows 'hide terminal' tech test is now default ON for all users. the test appeared to go fine, so I am making it real. you shouldn't notice any difference, but if you are a Windows user and you suddenly get command line popups every time you import a file or do 'open externally', hit up `options->external programs` to switch it off, and let me know!
+
+### v693a hotfix
+
+* I did a hotfix on Saturday to address some update stuff--
+* in the 'future build' integration, the pyproject.toml accidentally did not get the intended `pyopenssl`, `numpy`, or `pyside6` updates, meaning the builds missed out. it was just a copy/paste transcription failure by me. this is fixed and I'll make a script to do this automatically in future
+* fixed a bitrot issue with the v687-to-v688 update code
+* fixed a typo in deserialisation when updating older metadata routers from v2 to v3 (would hit old import/export folders with sidecars that hadn't been edited in about 18 months)
+* as a side thing here, I now have a nicer test in my weekly build workflow that tests my older db updates better. I'm going to keep an older db and test current code to catch bitrot issues like the above. unfortunately, my best rich test db is currently v693, so I'm going to pin it at that version and let it get older every week until it is 50 weeks old and we have full coverage of all the updates I try to support. so, going forward I guarantee I will test anything after v693 every week
+* I've made a plan for a serialisable update manager too and will be working on that in the future. we'll fix these legacy objects sitting around on the db for years without a resave
+
+### security
+
+* I continued the recent security work. my deserialisation pipeline now has a single clean deserialisation context to hold the various trust information. it is easier to pass this through each stage, and this thing will be easier to extend in future
+* in doing this, I was able to remove a hack that was suppressing some trusted whitelist warning logging, so whitelist warning logging is now true positive in a couple of places it was false negative before. I already fixed a couple small instances of this, although tbh I was surprised that we had so little report of legacy cruft in the local store; it was mostly just a couple of legacy 'current file service is this' on older page objects
+* also generically cleaned some deserialisation unit tests and special deserialisation situations
+* there's more I want to do here, including what I hope will be a big deserialisation typedef solution, so I'll keep pushing
+
+### boring stuff
+
+* added `help->debug->threads and processes->wake mainloops` for various debug testing
+* cleared out the 12 or so 'calling non-callable' linting issues with nicer typedefs and some stub callable juggling
+* cleaned up all Callable type definitions across the program and updated some old deprecated typing stuff
+* fixed some error handling for malformed objects in page session load--it was not recovering properly and raising a new error
+* added unit tests for the new cookie serialisation and deserialisation for requests
+* added unit tests for the new cookie serialisation and deserialisation for curl_cffi
+* fixed an issue with the 'networking' unit test suite when it was run on its own; `tldextract` was not initialised properly in this case, and when it tried to load its suffix list from disk to init its cache inside the first test, the mock http wrapper gonked the load
+
 ## [Version 693](https://github.com/hydrusnetwork/hydrus/releases/tag/v693)
 
 ### security
@@ -382,45 +424,3 @@ title: Changelog
 
 * did some MainLoop Daemon refactoring, just getting over a hump to move some responsibility to the superclass
 * moved to nicer ui-cleanup calls in a bunch of my async code
-
-## [Version 684](https://github.com/hydrusnetwork/hydrus/releases/tag/v684)
-
-### misc
-
-* every thumb/viewer media menu now has 'show detailed embedded file metadata' in the top-row flyout; this is the same window that opens with the media viewer top hover, to which I've been adding EXIF and stuff
-* there's a new shortcut command to spawn this window under the 'media' set, `open detailed embedded file metadata window`
-* I finally got around to figuring out and adding a `Force that hitting Enter/Return on radio button lists triggers a dialog ok` checkbox to `options->gui`. On Windows, an Enter/Return on a radio button list triggers a dialog ok, but on other OSes, it does not. it is one of those platform policy things and Qt is being good and obeying. this casually annoyed me for years, particularly when doing advanced file delete dialogs where rather than a simple yes/no it has a couple of radio button lists, and since moving to Linux full time I finally got my finger out and figured it out. it is default off so I don't mess with anyone's muscle memory etc.., but if this was annoying you, try it out
-* added `TEST: Set tool flag to child windows` to `options->gui`. this test sets a different flag and hopefully improves some window behaviour--specifically, stuff like "review services" should stay on top of the parent, not get a taskbar/alt+tab entry, but still look ok. let me know how it goes, and if no problems, I'll set everyone to it
-* I gave the 'my auto-resolution rule says it has x pairs to search/resolve but it cannot clear them' issue another push. thanks to a user, we figured out an interesting orphaned pair situation. I fixed the logical hole in the maintenance code and updated the new error handling to A) indefinitely pause a rule that hits this, to stop pause/error loops, and B) run the full orphan-clearing maintenance code rather than just the re-count job
-* noneable string widgets now blank their placeholder text when set to none
-* test result text boxes in exe manager and parsing UI now have monospaced font
-
-### hash-search
-
-* system:hash gets a logical makeover. this thing has always been a bit of a mess as it tried to navigate prefixes like `sha256:abcd...`. I have made it simpler
-* the edit dialog now lets you type or paste whatever, with no instant auto-correct. there are now two buttons underneath, `clean up text and guess hash type` and `clean up text and guess hash type (remove bad lines)`, which do the parsing on demand. the first button moans about any errors at all; the second removes errors, so if you want to post a mix of garbage and have hydrus filter it, go ahead
-* the ok button is plugged into this tech too and, as the parsing is also improved, gives richer errors. if you hit ok and the hashes are fine but the hash type seems wrong, it now gives you a special error text
-* hydrus hash parsing now recognises and removes an `0x` prefix from a hash
-* hydrus hash parsing is now much better about case insensitivity. `MD5:AbCD...` is fine
-* hydrus hash parsing now has an error state for hashes with a non-even number of hex characters
-* hydrus hash parsing no longer attempts to hex filter an incoming line; if a hash includes a non-hex character, this now goes in a new error bucket for reporting
-
-### notes quality of life
-
-* added a 'when you middle-click to copy a note hover, only copy the text (not the title)' setting to `options->notes`
-* added that and the 'put cursor at the end' checkboxes to the cog icon button in the edit notes panel
-* added a 'link' icon button to notes that sucks up all the URLs from the current note text. it isn't perfect, but covers all normal 'http...' situations using a `https?://[^\s<>"\']+` regex
-* in a new test, when you do this 'copy URLs in the note' job, it fires off a '3 URLs!' tooltip micro-notification for feedback. give it a go, let me know how it feels, and I think I'll spam this all over the place
-
-### exe manager
-
-* finished off the core edit UI for my exe manager, which still only advanced users can see under `options->external programs`. you can edit everything, and there's a fullly functional test panel that reports return code and stdout/stderr on failures. it isn't perfect, but I'm happy with it as a first step. I will again ask advanced users to check it out, with these instructions: look at the defaults, pick a call that you should have, and then edit it and put in a sensible file path or URL in the test panel and try it! Let me know if you have any errors and where I need to add help text!
-* the defaults button now asks if you want all the default calls or just those for your platform
-* many many other improvements and finishings-off here, and a touch of misc new subprocess tech
-
-### boring exe manager stuff
-
-* rewangled the 'windows startfile' hardcoded launch call to be a platform-agnostic 'OS launch file'
-* added a 'OS launch URL' hardcoded launch call in the same way
-* improved the hydrus subprocess 'this process has timed out' detection system. in doing exe manager work this week, I realised it was waiting after a kill fallback in a blocking way and only reporting the timeout after the final (indefinite) reap went through
-* improved some subprocess error formatting
