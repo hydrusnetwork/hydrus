@@ -719,6 +719,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 deserialisation_context.DuplicateForNewWhitelist(
                     {
                         HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                        HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                         HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
                     }
                 )
@@ -854,6 +855,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     deserialisation_context.DuplicateForNewWhitelist(
                         {
                             HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                            HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                             HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
                         }
                     )
@@ -905,6 +907,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     deserialisation_context.DuplicateForNewWhitelist(
                         {
                             HydrusSerialisable.SERIALISABLE_TYPE_DICTIONARY,
+                            HydrusSerialisable.SERIALISABLE_TYPE_LIST,
                             HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER,
                         }
                     )

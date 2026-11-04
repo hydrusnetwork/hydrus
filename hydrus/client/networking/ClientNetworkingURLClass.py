@@ -158,7 +158,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
                 
                 special_trusted_for_test = False
                 
-                special_deserialisation_context = HydrusSerialisable.DeserialisationContext( special_trusted_for_test, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR }, log_trusted_whitelist_violations = False)
+                special_deserialisation_context = HydrusSerialisable.DeserialisationContext( special_trusted_for_test, { HydrusSerialisable.SERIALISABLE_TYPE_STRING_PROCESSOR } )
                 
                 HydrusSerialisable.CreateFromSerialisableTuple( serialisable_default_value_string_processor, special_deserialisation_context )
                 
