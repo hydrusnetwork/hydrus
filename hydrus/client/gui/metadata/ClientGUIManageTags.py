@@ -58,98 +58,50 @@ def flip_actions( allowed_actions: list[ int ], actions_to_flip ):
     return allowed_actions
     
 
-def flip_paste_delete_petition():
+def flip_allowed_actions_delete_petition( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
     
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    CG.client_controller.new_options.SetIntegerList( options_name, allowed_actions )
     
 
-def value_paste_delete_petition():
+def value_allowed_actions_delete_petition( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     return HC.CONTENT_UPDATE_DELETE in allowed_actions
     
 
-def flip_paste_rescind():
+def flip_allowed_actions_rescind( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ] )
     
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    CG.client_controller.new_options.SetIntegerList( options_name, allowed_actions )
     
 
-def value_paste_rescind():
+def value_allowed_actions_rescind( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     return HC.CONTENT_UPDATE_RESCIND_PEND in allowed_actions
     
 
-def flip_paste_clear_deletion_record():
+def flip_allowed_actions_clear_deletion_record( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ] )
     
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_paste', allowed_actions )
+    CG.client_controller.new_options.SetIntegerList( options_name, allowed_actions )
     
 
-def value_paste_clear_deletion_record():
+def value_allowed_actions_clear_deletion_record( options_name ):
     
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_paste' )
-    
-    return HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD in allowed_actions
-    
-
-def flip_entry_delete_petition():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
-    
-    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
-    
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
-    
-
-def value_entry_delete_petition():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
-    
-    return HC.CONTENT_UPDATE_DELETE in allowed_actions
-    
-
-def flip_entry_rescind():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
-    
-    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_RESCIND_PEND, HC.CONTENT_UPDATE_RESCIND_PETITION ] )
-    
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
-    
-
-def value_entry_rescind():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
-    
-    return HC.CONTENT_UPDATE_RESCIND_PEND in allowed_actions
-    
-
-def flip_entry_clear_deletion_record():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
-    
-    allowed_actions = flip_actions( allowed_actions, [ HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ] )
-    
-    CG.client_controller.new_options.SetIntegerList( 'manage_tags_allowed_actions_ac_entry', allowed_actions )
-    
-
-def value_entry_clear_deletion_record():
-    
-    allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_ac_entry' )
+    allowed_actions = CG.client_controller.new_options.GetIntegerList( options_name )
     
     return HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD in allowed_actions
     
@@ -528,45 +480,47 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             menu_template_items = []
             
-            submenu_template_items = []
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'add/pend is always allowed', 'This menu only configures which remove actions are permitted.' ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_delete_petition, value_paste_delete_petition )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'delete/petition', 'If you paste a tag and it already exists, do you want to delete/petition it?', check_manager ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_rescind, value_paste_rescind )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'rescind pend/petition (only tag repositories)', 'If you paste a tag and it is pending or petitioned, do you want the option to undo that?', check_manager ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_paste_clear_deletion_record, value_paste_clear_deletion_record )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'clear deletion record (only local tag services)', 'If you paste a tag and it is deleted, do you want the option to clear it out completely?', check_manager ) )
-            
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'allowed actions for autocomplete paste button:', submenu_template_items ) )
-            
-            submenu_template_items = []
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'add/pend is always allowed', 'This menu only configures which remove actions are permitted.' ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_delete_petition, value_entry_delete_petition )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'delete/petition', 'If you type a tag and it already exists, do you want to delete/petition it?', check_manager ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_rescind, value_entry_rescind )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'rescind pend/petition (only tag repositories)', 'If you type a tag and it is pending or petitioned, do you want the option to undo that?', check_manager ) )
-            
-            check_manager = ClientGUICommon.CheckboxManagerCalls( flip_entry_clear_deletion_record, value_entry_clear_deletion_record )
-            
-            submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'clear deletion record (only local tag services)', 'If you type a tag and it is deleted, do you want the option to clear it out completely?', check_manager ) )
-            
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( 'allowed actions for autocomplete regular input', submenu_template_items ) )
+            for ( submenu_label, options_name ) in [
+                ( 'allowed actions for taglist double-click:', 'manage_tags_allowed_actions_list_activation' ),
+                ( 'allowed actions for autocomplete paste button:', 'manage_tags_allowed_actions_ac_paste' ),
+                ( 'allowed actions for autocomplete regular input:', 'manage_tags_allowed_actions_ac_entry' ),
+            ]:
+                
+                submenu_template_items = []
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemLabel( 'add/pend is always allowed', 'This menu only configures which remove actions are permitted.' ) )
+                
+                check_manager = ClientGUICommon.CheckboxManagerCalls(
+                    HydrusData.Call( flip_allowed_actions_delete_petition, options_name ),
+                    HydrusData.Call( value_allowed_actions_delete_petition, options_name )
+                )
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'delete/petition', 'If you paste a tag and it already exists, do you want to delete/petition it?', check_manager ) )
+                
+                check_manager = ClientGUICommon.CheckboxManagerCalls(
+                    HydrusData.Call( flip_allowed_actions_rescind, options_name ),
+                    HydrusData.Call( value_allowed_actions_rescind, options_name )
+                )
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'rescind pend/petition (only tag repositories)', 'If you paste a tag and it is pending or petitioned, do you want the option to undo that?', check_manager ) )
+                
+                check_manager = ClientGUICommon.CheckboxManagerCalls(
+                    HydrusData.Call( flip_allowed_actions_clear_deletion_record, options_name ),
+                    HydrusData.Call( value_allowed_actions_clear_deletion_record, options_name )
+                )
+                
+                submenu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'clear deletion record (only local tag services)', 'If you paste a tag and it is deleted, do you want the option to clear it out completely?', check_manager ) )
+                
+                menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSubmenu( submenu_label, submenu_template_items ) )
+                
             
             check_manager = ClientGUICommon.CheckboxManagerOptions( 'yes_no_on_remove_on_manage_tags' )
             
-            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'confirm remove/petition tags', 'If checked, any delete or petition action will force the action choice dialog to appear even if there is only one valid action (the delete/petition).', check_manager ) )
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'confirm delete/petition tags', 'If checked, any delete or petition action will force the action choice dialog to appear even if there is only one valid action (the delete/petition).', check_manager ) )
+            
+            check_manager = ClientGUICommon.CheckboxManagerOptions( 'yes_no_on_undelete_on_manage_tags' )
+            
+            menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCheck( 'confirm add-undelete tags', 'If checked, any add action of something already deleted will force the action choice dialog to appear even if there is only one valid action (the add-undelete).', check_manager ) )
             
             menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemSeparator() )
             
@@ -933,9 +887,12 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     message += 'The "add" action involves an undelete of previously deleted tags; please consider if that is correct.'
                     
                 
-                options_say_present_to_user = we_are_considering_a_remove and CG.client_controller.new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' )
+                options_say_present_to_user_a = we_are_considering_a_remove and CG.client_controller.new_options.GetBoolean( 'yes_no_on_remove_on_manage_tags' )
+                options_say_present_to_user_b = we_are_considering_an_undelete and CG.client_controller.new_options.GetBoolean( 'yes_no_on_undelete_on_manage_tags' )
                 
-                allow_insta_one_item_select = not ( we_are_considering_an_undelete or we_are_otherwise_looking_at_something_unrecoverable or options_say_present_to_user )
+                options_say_present_to_user = options_say_present_to_user_a or options_say_present_to_user_b
+                
+                allow_insta_one_item_select = not ( we_are_otherwise_looking_at_something_unrecoverable or options_say_present_to_user )
                 
                 ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message, allow_insta_one_item_select = allow_insta_one_item_select )
                 
@@ -1313,6 +1270,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def AddTagsFromSuggested( self, tags ):
             
+            # the delete stuff here is likely to rarely/never fire because suggested tags are typically pre-filtered
+            
             allowed_actions = [
                 HC.CONTENT_UPDATE_ADD,
                 HC.CONTENT_UPDATE_PEND,
@@ -1320,7 +1279,6 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 HC.CONTENT_UPDATE_PETITION,
                 HC.CONTENT_UPDATE_RESCIND_PEND,
                 HC.CONTENT_UPDATE_RESCIND_PETITION,
-                HC.CONTENT_UPDATE_UNDELETE
             ]
             
             self._EnterTags( tags, allowed_actions )
@@ -1338,16 +1296,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def EnterTagsFromListActivation( self, tags ):
             
-            allowed_actions = [
-                HC.CONTENT_UPDATE_ADD,
-                HC.CONTENT_UPDATE_PEND,
-                HC.CONTENT_UPDATE_DELETE,
-                HC.CONTENT_UPDATE_PETITION,
-                HC.CONTENT_UPDATE_RESCIND_PEND,
-                HC.CONTENT_UPDATE_RESCIND_PETITION,
-                HC.CONTENT_UPDATE_UNDELETE,
-                HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD
-            ]
+            allowed_actions = CG.client_controller.new_options.GetIntegerList( 'manage_tags_allowed_actions_list_activation' )
             
             self._EnterTags( tags, allowed_actions )
             
