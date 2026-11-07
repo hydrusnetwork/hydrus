@@ -870,7 +870,7 @@ class ClientFilesManager( object ):
         
         for ( i, subfolder ) in enumerate( all_subfolders ):
             
-            CG.client_controller.frame_splash_status.SetSubtext( f'client files - checking {HydrusNumbers.ValueRangeToPrettyString(i,num_subfolders)}' )
+            CG.client_controller.frame_splash_status.SetSubtext( f'client files - initialising {HydrusNumbers.ValueRangeToPrettyString(i,num_subfolders)}' )
             
             if not subfolder.PathExists( lazy_check_ok = True ):
                 
