@@ -5,6 +5,7 @@ import struct
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageOpening
@@ -224,9 +225,23 @@ def GetFrameDurationsMSPILAnimation( path, human_file_description = None ):
         
         assumed_num_frames = -1
         
-        if hasattr( pil_image, 'n_frames' ):
+        sentinel = object()
+        
+        try:
             
-            assumed_num_frames = pil_image.n_frames
+            # don't do hasattr--it calls the @property lol and raises the error!
+            assumed_num_frames_or_sentinel = getattr( pil_image, 'n_frames', sentinel )
+            
+        except IndexError:
+            
+            HydrusData.Print( f'The file "{path}" has a crazy n_frames situation and Pillow could not add them up.' )
+            
+            assumed_num_frames_or_sentinel = sentinel
+            
+        
+        if assumed_num_frames_or_sentinel is not sentinel:
+            
+            assumed_num_frames = assumed_num_frames_or_sentinel
             
         
         assumed_num_frames_is_sensible = assumed_num_frames > 0
