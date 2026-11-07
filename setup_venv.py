@@ -57,7 +57,7 @@ def check_python_version():
         
     elif sys.version_info >= ( 3, 15 ):
         
-        print( 'You have a version of python newer than hydev tests with. You will definitely need the advanced install; I do not know if it can work!' )
+        print( 'WARNING: Python 3.15+ is probably not going to work! You likely need to figure out a solution with 3.13 or 3.14 (check out pyenv, if you are unsure) and then run this script with that older python!' )
         
     elif sys.version_info >= ( 3, 14 ):
         
