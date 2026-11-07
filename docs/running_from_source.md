@@ -58,7 +58,7 @@ There are now setup scripts that make this easy. You do not need any python expe
     python --version
     ```
     
-    If you get some nice python version information, you have python. Hydrus should be fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+    If you get some nice python version information, you have python. Hydrus should be fine with Python 3.10-3.14. If you are on 3.15+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
     
     If you don't have python, we need to get it. Try 3.13 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
     
@@ -98,7 +98,7 @@ There are now setup scripts that make this easy. You do not need any python expe
     
     Fedora will be `dnf`. If you need help for your special situation, ask a chatbot.
     
-    You should already have a fairly new python. Hydrus is fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    You should already have a fairly new python. Hydrus is fine with Python 3.10-3.14. If you are on 3.15+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
@@ -135,7 +135,7 @@ There are now setup scripts that make this easy. You do not need any python expe
     brew install git
     ```
     
-    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.13. If you are on 3.14+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
+    You should already have a fairly new python. Hydrus should be fine with Python 3.10-3.14. If you are on 3.15+, that may be ok, but select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on something older, try the same thing, but with the '(o)lder' options (but I can't promise it will work!). You can find out what version you have just by opening a new terminal and typing `python3` or `python`.
     
     You are going to need `pip` and `venv`. These are often bundled with a python install, but not always with a system python. Open a terminal and try these two lines:
     
