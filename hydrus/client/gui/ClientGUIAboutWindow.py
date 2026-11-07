@@ -42,7 +42,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     import os
     import PIL
     import sqlite3
-    import ssl
     import sys
     import typing
     
@@ -84,7 +83,6 @@ def ShowAboutWindow( win: QW.QWidget ):
     library_version_lines.append( 'python: {}'.format( v ) )
     library_version_lines.append( 'FFMPEG: {}'.format( HydrusFFMPEG.GetFFMPEGVersion() ) )
     library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
-    library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
     
     import numpy
     
