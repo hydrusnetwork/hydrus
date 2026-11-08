@@ -59,7 +59,7 @@ def check_python_version():
         
     elif sys.version_info >= ( 3, 15 ):
         
-        print( 'WARNING: Python 3.15+ is advanced and may not work! It would be best to figure out a solution with 3.13 or 3.14 (check out pyenv, if you are unsure) and then run this script with that older python! If you want to go ahead and try with 3.15, note that you need the advanced/test install and there will be no JXL support.' )
+        print( 'WARNING: Python 3.15+ is advanced and may not work! It would be best to figure out a solution with 3.13 or 3.14 (check out pyenv, if you are unsure) and then run this script with that older python! If you want to go ahead and try with 3.15, note that you need the advanced/test install and there will be no LZ4 or JXL support.' )
         print()
         
         global WE_ARE_3_15
