@@ -627,15 +627,15 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._main_vbox = QP.VBoxLayout()
         
-        self.setLayout( self._main_vbox )
-        
         self._vertical_splitter = QW.QSplitter( QC.Qt.Orientation.Horizontal, self )
         self._vertical_splitter.splitterMoved.connect( self._SaveMainVboxSplitterPosition )
         
         QP.AddToLayout( self._main_vbox, self._vertical_splitter, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self.setCentralWidget( QW.QWidget() )
-        self.centralWidget().setLayout( self._main_vbox )
+        self._my_central_widget = QW.QWidget( self )
+        self._my_central_widget.setLayout( self._main_vbox )
+        
+        self.setCentralWidget( self._my_central_widget )
         
         self._RebuildMainFrameLayout() # add widgets to the main vbox according to user settings
         
