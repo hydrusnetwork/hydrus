@@ -42,7 +42,7 @@ def print_banner():
     print(banner)
     
 
-JXL_OK = True
+WE_ARE_3_15 = False
 
 def check_python_version():
     
@@ -62,10 +62,9 @@ def check_python_version():
         print( 'WARNING: Python 3.15+ is advanced and may not work! It would be best to figure out a solution with 3.13 or 3.14 (check out pyenv, if you are unsure) and then run this script with that older python! If you want to go ahead and try with 3.15, note that you need the advanced/test install and there will be no JXL support.' )
         print()
         
-        global JXL_OK
+        global WE_ARE_3_15
         
-        # no wheel as of 2026-11
-        JXL_OK = False
+        WE_ARE_3_15 = True
         
     elif sys.version_info >= ( 3, 14 ):
         
@@ -426,7 +425,6 @@ def main():
             'curl_cffi' : '<=0.16.3',
             'html5lib' : '<=1.1',
             'lxml' : '<=6.1.3',
-            'lz4' : '<=4.4.5',
             'olefile' : '<=0.47',
             'pillow' : '<=13.0.0',
             'pillow-heif' : '<=1.8.1',
@@ -450,9 +448,11 @@ def main():
             'qtpy' : '==2.4.3',
         }
         
-        if JXL_OK:
+        # no wheels for these yet 2026-11
+        if not WE_ARE_3_15:
             
             requirements_dict[ 'pillow-jxl-plugin' ] = '<=1.3.8'
+            requirements_dict[ 'lz4' ] = '<=4.4.5'
             
         
         if sys.platform == 'win32':
