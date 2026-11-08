@@ -45,7 +45,7 @@ jobs:
       -
         name: Download and Extract FFmpeg
         run: |
-          curl -L -o ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-23-13-04/ffmpeg-N-127957-g935f29eaae-linux64-gpl.tar.xz"
+          curl -L -o ffmpeg.tar.xz "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-N-128227-g4811625b5f-linux64-gpl.tar.xz"
           tar -xv --file ffmpeg.tar.xz --wildcards --strip-components=2 --directory hydrus/bin '*/bin/ffmpeg'
           chmod +x hydrus/bin/ffmpeg
       -
