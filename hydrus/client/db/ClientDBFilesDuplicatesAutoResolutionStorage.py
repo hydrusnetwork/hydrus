@@ -538,14 +538,16 @@ class ClientDBFilesDuplicatesAutoResolutionStorage( ClientDBModule.ClientDBModul
         
         if limit is None:
             
-            result = self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id );' ).fetchall()
+            raw_rows = self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id );' ).fetchall()
             
         else:
             
-            result = self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id ) LIMIT ?;', ( limit, ) ).fetchall()
+            raw_rows = self._Execute( f'SELECT smaller_media_id, larger_media_id, distance FROM {table_name} CROSS JOIN potential_duplicate_pairs USING ( smaller_media_id, larger_media_id ) LIMIT ?;', ( limit, ) ).fetchall()
             
         
-        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( result )
+        washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_rows )
+        
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( washed_rows )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> list[ tuple[ str, str ] ]:

@@ -383,9 +383,11 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
             
         
-        potential_duplicate_pairs_fragmentary_search.AddHits( matching_pairs_and_distances )
+        washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( matching_pairs_and_distances )
         
-        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( matching_pairs_and_distances )
+        potential_duplicate_pairs_fragmentary_search.AddHits( washed_rows )
+        
+        return ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( washed_rows )
         
     
     def GetPotentialDuplicateMediaResultPairsAndDistances( self, potential_duplicate_pairs_fragmentary_search: ClientPotentialDuplicatesSearchContext.PotentialDuplicatePairsFragmentarySearch ) -> ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances:
@@ -413,7 +415,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             rows = rows[ : no_more_than ]
             
         
-        pairs = [ ( smaller_media_id, larger_media_id ) for ( smaller_media_id, larger_media_id, distance ) in rows ]
+        pairs = [ ( row.smaller_media_id, row.larger_media_id ) for row in rows ]
         
         all_media_ids = { media_id for pair in pairs for media_id in pair }
         
@@ -474,7 +476,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
                 row = random.choice( rows )
                 
-                master_media_id = row[0]
+                master_media_id = row.smaller_media_id
                 
                 break
                 

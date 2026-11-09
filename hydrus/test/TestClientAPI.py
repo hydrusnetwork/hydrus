@@ -5806,7 +5806,7 @@ class TestClientAPI( unittest.TestCase ):
             
         
         test_potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances(
-            [ ( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in test_mr_pairs_and_distances ]
+            [ ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in test_mr_pairs_and_distances ]
         )
         
         test_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( test_mr_pairs_and_distances )
@@ -6143,11 +6143,11 @@ class TestClientAPI( unittest.TestCase ):
             
         
         test_potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances(
-            [ ( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in test_mr_pairs_and_distances ]
+            [ ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in test_mr_pairs_and_distances ]
         )
         
         group_test_potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances(
-            [ ( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in group_test_mr_pairs_and_distances ]
+            [ ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance( mr_1.GetFileInfoManager().hash_id, mr_2.GetFileInfoManager().hash_id, distance ) for ( mr_1, mr_2, distance ) in group_test_mr_pairs_and_distances ]
         )
         
         test_potential_duplicate_media_result_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateMediaResultPairsAndDistances( group_test_mr_pairs_and_distances )

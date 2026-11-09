@@ -13,6 +13,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.duplicates import ClientDuplicates
+from hydrus.client.duplicates import ClientPotentialDuplicatesSearchContext
 
 class ClientDBFilesDuplicatesStorage( ClientDBModule.ClientDBModule ):
     
@@ -27,6 +28,24 @@ class ClientDBFilesDuplicatesStorage( ClientDBModule.ClientDBModule ):
         
         self.modules_files_storage = modules_files_storage
         self.modules_hashes_local_cache = modules_hashes_local_cache
+        
+        self._potential_id_pairs_and_distances_dict_lookup_cache: dict[ ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance, ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance ] = dict()
+        
+    
+    def _GeneratePotentialIdAndDistanceNamedTuple( self, smaller_media_id: int, larger_media_id: int, distance: int ) -> ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance:
+        
+        # here we are washing through our cache to ensure that we are using the same object every time and not duplicating this data over and over
+        # this is the only place we ever call this guy, so good stuff
+        # TODO: we want some memory management here at some point; but note that namedtuple won't work in a weakref tracker and maybe we don't want 2 million dudes getting weakref tracked
+        # since the duplicates updates guy currently tracks the location contexts to potential dupe id things, maybe we'll just move that guy to here and consult that for valid rows, or indeed follow the PAIRS_UPDATE_ stuff and do it synced
+        search_object = ClientPotentialDuplicatesSearchContext.PotentialIdPairAndDistance( smaller_media_id, larger_media_id, distance )
+        
+        if search_object not in self._potential_id_pairs_and_distances_dict_lookup_cache:
+            
+            self._potential_id_pairs_and_distances_dict_lookup_cache[ search_object ] = search_object
+            
+        
+        return self._potential_id_pairs_and_distances_dict_lookup_cache[ search_object ]
         
     
     def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int ) -> list[ int ]:
@@ -226,7 +245,7 @@ class ClientDBFilesDuplicatesStorage( ClientDBModule.ClientDBModule ):
         return allowed_hash_ids.difference( all_non_king_hash_ids )
         
     
-    def FilterMediaIdPairs( self, location_context: ClientLocation.LocationContext, media_id_pairs ):
+    def FilterMediaIdPairs( self, location_context: ClientLocation.LocationContext, media_id_pairs: collections.abc.Collection[ tuple[ int, int ] ] ) -> list[ tuple[ int, int ] ]:
         
         if len( media_id_pairs ) == 0:
             
@@ -261,6 +280,11 @@ class ClientDBFilesDuplicatesStorage( ClientDBModule.ClientDBModule ):
         existing_pairs = set( self._Execute( f'SELECT smaller_media_id, larger_media_id FROM {potential_pair_ids_table_name} CROSS JOIN potential_duplicate_pairs ON ( {potential_pair_ids_table_name}.smaller_media_id = potential_duplicate_pairs.smaller_media_id AND {potential_pair_ids_table_name}.larger_media_id = potential_duplicate_pairs.larger_media_id );' ) )
         
         return existing_pairs
+        
+    
+    def GeneratePotentialDuplicateIdAndDistances( self, potential_pair_ids_and_distances: collections.abc.Collection[ tuple[ int, int, int ] ] ):
+        
+        return [ self._GeneratePotentialIdAndDistanceNamedTuple( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in potential_pair_ids_and_distances ]
         
     
     def GetAlternatesGroupId( self, media_id, do_not_create = False ):

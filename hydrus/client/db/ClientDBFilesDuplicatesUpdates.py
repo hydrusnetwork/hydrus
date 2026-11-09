@@ -178,7 +178,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
         return dupe_hash_ids
         
     
-    def _AddRowsToRowCacheAndAutoResolutionRules( self, rows: collections.abc.Collection[ tuple[ int, int, int ] ], only_for_this_file_service_key: bytes | None = None ):
+    def _AddRawRowsToRowCacheAndAutoResolutionRules( self, rows: collections.abc.Collection[ tuple[ int, int, int ] ], only_for_this_file_service_key: bytes | None = None ):
         
         auto_resolution_location_contexts = set( self.modules_files_duplicates_auto_resolution_storage.GetAllRuleLocationContexts() )
         
@@ -211,13 +211,18 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             
             if location_context in self._location_contexts_to_potential_duplicate_id_pairs_and_distances:
                 
-                filtered_rows = [ ( smaller_media_id, larger_media_id, pairs_to_distances[ ( smaller_media_id, larger_media_id ) ] ) for ( smaller_media_id, larger_media_id ) in filtered_pairs ]
+                raw_filtered_rows = [
+                    ( smaller_media_id, larger_media_id, pairs_to_distances[ ( smaller_media_id, larger_media_id ) ] )
+                    for ( smaller_media_id, larger_media_id ) in filtered_pairs
+                ]
+                
+                washed_filtered_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_filtered_rows )
                 
                 potential_duplicate_id_pairs_and_distances = self._location_contexts_to_potential_duplicate_id_pairs_and_distances[ location_context ]
                 
-                potential_duplicate_id_pairs_and_distances.AddRows( filtered_rows )
+                potential_duplicate_id_pairs_and_distances.AddRows( washed_filtered_rows )
                 
-                self._cursor_transaction_wrapper.pub_after_job( 'potential_duplicate_pairs_update', ClientPotentialDuplicatesSearchContext.PAIRS_UPDATE_ADD_ROWS, location_context, filtered_rows )
+                self._cursor_transaction_wrapper.pub_after_job( 'potential_duplicate_pairs_update', ClientPotentialDuplicatesSearchContext.PAIRS_UPDATE_ADD_ROWS, location_context, washed_filtered_rows )
                 
             
             if location_context in auto_resolution_location_contexts:
@@ -331,7 +336,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             
             self._ExecuteMany( 'INSERT OR IGNORE INTO potential_duplicate_pairs ( smaller_media_id, larger_media_id, distance ) VALUES ( ?, ?, ? );', inserts )
             
-            self._AddRowsToRowCacheAndAutoResolutionRules( inserts )
+            self._AddRawRowsToRowCacheAndAutoResolutionRules( inserts )
             
         
     
@@ -577,7 +582,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             
             if location_context.IsAllKnownFiles():
                 
-                rows = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
+                raw_rows = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
                 
             else:
                 
@@ -595,7 +600,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
                     
                     query = f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join};'
                     
-                    rows = self._Execute( query ).fetchall()
+                    raw_rows = self._Execute( query ).fetchall()
                     
                 else:
                     
@@ -622,11 +627,13 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
                     
                     all_potential_duplicate_id_pairs_and_distances = self.GetPotentialDuplicateIdPairsAndDistances( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ) )
                     
-                    rows = [ ( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in all_potential_duplicate_id_pairs_and_distances.IterateRows() if smaller_media_id in good_media_ids and larger_media_id in good_media_ids ]
+                    raw_rows = [ ( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in all_potential_duplicate_id_pairs_and_distances.IterateRows() if smaller_media_id in good_media_ids and larger_media_id in good_media_ids ]
                     
                 
             
-            potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( rows )
+            washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_rows )
+            
+            potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( washed_rows )
             
             self._location_contexts_to_potential_duplicate_id_pairs_and_distances[ location_context ] = potential_duplicate_id_pairs_and_distances
             
@@ -669,7 +676,7 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
             return
             
         
-        self._AddRowsToRowCacheAndAutoResolutionRules( rows, only_for_this_file_service_key = only_for_this_file_service_key )
+        self._AddRawRowsToRowCacheAndAutoResolutionRules( rows, only_for_this_file_service_key = only_for_this_file_service_key )
         
     
     def NotifyFilesEnteringCombinedLocalFileDomains( self, hash_ids ):
