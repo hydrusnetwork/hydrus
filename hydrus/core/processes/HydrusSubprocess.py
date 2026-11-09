@@ -506,6 +506,8 @@ class SubprocessContext( object ):
         self._new_chunk_desired = threading.Event()
         self._chunk_queue = queue.Queue()
         
+        self._closed = False
+        
         self.SENTINEL = None
         
         self._timeout = timeout
@@ -531,14 +533,14 @@ class SubprocessContext( object ):
                     return
                     
                 
-                if self.process.returncode is not None:
+                if self._closed or self.process.returncode is not None:
                     
                     return
                     
                 
                 if not self._chunk_queue.empty():
                     
-                    self._new_chunk_desired.wait( 1.0 )
+                    self._new_chunk_desired.wait()
                     
                     self._new_chunk_desired.clear()
                     
@@ -587,11 +589,18 @@ class SubprocessContext( object ):
     
     def CloseProcess( self ):
         
+        self._closed = True
+        self._new_chunk_desired.set()
+        
         self.process.poll()
         
         if self.process.returncode is None:
             
-            TerminateAndReapProcess( self.process )
+            return TerminateAndReapProcess( self.process )
+            
+        else:
+            
+            return ( 'no stdout', 'no stderr' )
             
         
     
@@ -613,7 +622,7 @@ class SubprocessContextReader( SubprocessContext ):
             
         except queue.Empty:
             
-            ( stdout, stderr ) = TerminateAndReapProcess( self.process )
+            ( stdout, stderr ) = self.CloseProcess()
             
             ReportTimeoutError( self._cmd, self._timeout, stdout, stderr )
             
@@ -643,7 +652,7 @@ class SubprocessContextStreamer( SubprocessContext ):
                 
             except queue.Empty:
                 
-                ( stdout, stderr ) = TerminateAndReapProcess( self.process )
+                ( stdout, stderr ) = self.CloseProcess()
                 
                 ReportTimeoutError( self._cmd, self._timeout, stdout, stderr )
                 
