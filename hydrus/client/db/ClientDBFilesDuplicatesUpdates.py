@@ -584,6 +584,8 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
                 
                 raw_rows = self._Execute( 'SELECT smaller_media_id, larger_media_id, distance FROM potential_duplicate_pairs;' ).fetchall()
                 
+                washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_rows )
+                
             else:
                 
                 db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
@@ -601,6 +603,8 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
                     query = f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join};'
                     
                     raw_rows = self._Execute( query ).fetchall()
+                    
+                    washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_rows )
                     
                 else:
                     
@@ -627,11 +631,9 @@ class ClientDBFilesDuplicatesUpdates( ClientDBModule.ClientDBModule ):
                     
                     all_potential_duplicate_id_pairs_and_distances = self.GetPotentialDuplicateIdPairsAndDistances( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ) )
                     
-                    raw_rows = [ ( smaller_media_id, larger_media_id, distance ) for ( smaller_media_id, larger_media_id, distance ) in all_potential_duplicate_id_pairs_and_distances.IterateRows() if smaller_media_id in good_media_ids and larger_media_id in good_media_ids ]
+                    washed_rows = [ row for row in all_potential_duplicate_id_pairs_and_distances.IterateRows() if row.smaller_media_id in good_media_ids and row.larger_media_id in good_media_ids ]
                     
                 
-            
-            washed_rows = self.modules_files_duplicates_storage.GeneratePotentialDuplicateIdAndDistances( raw_rows )
             
             potential_duplicate_id_pairs_and_distances = ClientPotentialDuplicatesSearchContext.PotentialDuplicateIdPairsAndDistances( washed_rows )
             
