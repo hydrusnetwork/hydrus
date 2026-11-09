@@ -31,7 +31,6 @@ If you would like to try hydrus, I _**strongly**_ recommend you check out the **
 * [discord](https://discord.gg/wPHPCUZ)
 * [tumblr](https://hydrus.tumblr.com)
 * [x](https://x.com/hydrusnetwork)
-* [patreon](https://www.patreon.com/hydrus_dev)
 * [user-run repository and wiki (including user-made downloaders)](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 * [more links and contact info](contact.md)
 

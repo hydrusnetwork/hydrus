@@ -32,7 +32,6 @@ That said:
 *   [tumblr](https://hydrus.tumblr.com)
 *   [x](https://x.com/hydrusnetwork)
 *   [8chan.moe /t/ (Hydrus Network General)](https://8chan.moe/t/catalog.html)
-*   [patreon](https://www.patreon.com/hydrus_dev)
 *   [user-run repository and wiki (including user-made downloaders)](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 
 If you need it, [here's](assets/hydev_key/Hydrus%20Network%20Developer_76249F053212133C_public.asc) my public GPG key.

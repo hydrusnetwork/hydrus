@@ -35,7 +35,6 @@ The help is also included in every release.
 * [discord](https://discord.gg/wPHPCUZ)
 * [tumblr](https://hydrus.tumblr.com/)
 * [x](https://x.com/hydrusnetwork)
-* [patreon](https://www.patreon.com/hydrus_dev)
 * [user-run repository and wiki](https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts)
 
 ## Attribution

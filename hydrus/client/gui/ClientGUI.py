@@ -3530,7 +3530,6 @@ ATTACH "client.mappings.db" as external_mappings;'''
         ClientGUIMenus.AppendMenuIconItem( links, 'x', 'Open hydrus dev\'s X account, where he makes general progress updates and emergency notifications.', CC.global_icons().x, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://x.com/hydrusnetwork' )
         ClientGUIMenus.AppendMenuIconItem( links, 'tumblr', 'Open hydrus dev\'s tumblr, where he makes release posts and other status updates.', CC.global_icons().tumblr, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://hydrus.tumblr.com/' )
         ClientGUIMenus.AppendMenuIconItem( links, 'discord', 'Open a discord channel where many hydrus users congregate. Hydrus dev visits regularly.', CC.global_icons().discord, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://discord.gg/wPHPCUZ' )
-        ClientGUIMenus.AppendMenuIconItem( links, 'patreon', 'Open hydrus dev\'s patreon, which lets you support development.', CC.global_icons().patreon, ClientGUIExecutableActions.OpenExternallyURLDefault, self, 'https://www.patreon.com/hydrus_dev' )
         
         ClientGUIMenus.AppendMenu( menu, links, 'links' )
         

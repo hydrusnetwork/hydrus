@@ -828,7 +828,6 @@ class GlobalIcons( object ):
         self.x = self._GetSVGOrPNGPathIcon( 'x' )
         self.tumblr = self._GetSVGOrPNGPathIcon( 'tumblr' )
         self.discord = self._GetSVGOrPNGPathIcon( 'discord' )
-        self.patreon = self._GetSVGOrPNGPathIcon( 'patreon' )
         
         # svgs I've done:
         

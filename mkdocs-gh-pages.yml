@@ -50,7 +50,6 @@ plugins:
         'help/reducing_lag.md': 'reducing_lag.md'
         'help/running_from_source.md': 'running_from_source.md'
         'help/server.md': 'server.md'
-        'help/support.md': 'support.md'
         'help/wine.md': 'wine.md'
 
 theme:

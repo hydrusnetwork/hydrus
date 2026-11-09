@@ -80,7 +80,6 @@ nav:
     - faq.md
     - privacy.md
     - contact.md
-    - support.md
     - changelog.md
     - about_docs.md
 
@@ -140,8 +139,6 @@ extra:
       link: mailto:hydrus.admin@gmail.com
     - icon: fontawesome/solid/envelope
       link: https://discord.gg/wPHPCUZ
-    - icon: fontawesome/brands/patreon
-      link: https://www.patreon.com/hydrus_dev
 
 extra_css:
   - assets/stylesheets/extra.css
