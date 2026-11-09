@@ -235,7 +235,7 @@ class HydrusController( object ):
             
         
     
-    def CallLater( self, initial_delay, func, *args, **kwargs ) -> HydrusThreading.SingleJob:
+    def CallLater( self, initial_delay: float, func, *args, **kwargs ) -> HydrusThreading.SingleJob:
         
         job_scheduler = self._GetAppropriateJobScheduler( initial_delay )
         

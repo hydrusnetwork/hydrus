@@ -41,6 +41,7 @@ def ClearOutDeadThreads() -> None:
             
         
     
+
 def GetThreadInfo( thread = None ):
     
     global NEXT_THREAD_CLEAROUT
@@ -71,6 +72,7 @@ def GetThreadInfo( thread = None ):
         return THREADS_TO_THREAD_INFO[ thread ]
         
     
+
 def IsThreadShuttingDown() -> bool:
     
     if HG.controller.DoingFastExit():
@@ -667,6 +669,8 @@ class JobScheduler( threading.Thread ):
         
         self._waiting = []
         
+        self._shutdown = False
+        
         self._waiting_lock = threading.Lock()
         
         self._new_job_arrived = threading.Event()
@@ -693,7 +697,7 @@ class JobScheduler( threading.Thread ):
             
             if len( self._waiting ) == 0:
                 
-                return 0.2
+                return 1.0
                 
             
             next_job = self._waiting[0]
@@ -725,6 +729,30 @@ class JobScheduler( threading.Thread ):
             return True
             
         
+    
+    def _PopDueJob( self ) -> "SchedulableJob | None":
+        
+        with self._waiting_lock:
+            
+            if len( self._waiting ) == 0:
+                
+                return None
+                
+            
+            next_job = self._waiting[0]
+            
+            if next_job.IsDue():
+                
+                return self._waiting.pop( 0 )
+                
+            else:
+                
+                # front is not due, so nor is the rest of the list
+                return None
+                
+            
+        
+    
     
     def _SortWaiting( self ):
         
@@ -789,7 +817,30 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def AddJob( self, job ) -> None:
+    def _WorkJob( self, job: "SchedulableJob" ):
+        
+        if job.IsCancelled():
+            
+            return
+            
+        
+        if job.SlotOK():
+            
+            # important this happens outside of the waiting lock lmao!
+            job.StartWork()
+            
+        else:
+            
+            # delay is automatically set by SlotOK
+            
+            with self._waiting_lock:
+                
+                bisect.insort( self._waiting, job )
+                
+            
+        
+    
+    def AddJob( self, job: "SchedulableJob" ) -> None:
         
         with self._waiting_lock:
             
@@ -851,7 +902,7 @@ class JobScheduler( threading.Thread ):
     
     def shutdown( self ) -> None:
         
-        ShutdownThread( self )
+        self._shutdown = True
         
         self._new_job_arrived.set()
         
@@ -867,9 +918,11 @@ class JobScheduler( threading.Thread ):
             
             try:
                 
-                while self._NoWorkToStart():
+                possible_next_job = self._PopDueJob()
+                
+                if possible_next_job is None:
                     
-                    if IsThreadShuttingDown():
+                    if self._shutdown or HG.model_shutdown:
                         
                         return
                         
@@ -900,8 +953,10 @@ class JobScheduler( threading.Thread ):
                     
                     self._new_job_arrived.clear()
                     
-                
-                self._StartWork()
+                else:
+                    
+                    self._WorkJob( possible_next_job )
+                    
                 
             except HydrusExceptions.DaemonShutdownException:
                 
@@ -956,6 +1011,8 @@ class SchedulableJob( object ):
         self._currently_working = threading.Event()
         self._actual_work_started = threading.Event()
         self._is_cancelled = threading.Event()
+        
+        self._times_slot_denied = 0
         
     
     def __lt__( self, other ): # for the scheduler to do bisect.insort noice
@@ -1066,11 +1123,15 @@ class SchedulableJob( object ):
             
             if HG.controller.AcquireThreadSlot( self._thread_slot_type ):
                 
+                self._times_slot_denied = 0
+                
                 return True
                 
             else:
                 
-                self._next_work_time = HydrusTime.GetNowFloat() + 10 + random.random()
+                self._times_slot_denied += 1
+                
+                self._next_work_time = HydrusTime.GetNowFloat() + 10 + min( 170, self._times_slot_denied )
                 
                 return False
                 

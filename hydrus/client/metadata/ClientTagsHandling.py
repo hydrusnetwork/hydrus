@@ -370,22 +370,95 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._controller.sub( self, 'NotifyNewDisplayData', 'notify_new_tag_display_application' )
         
     
-    def _GetRestTime( self, service_key, expected_work_period, actual_work_period ):
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
         
-        rest_ratio = None
+        still_work_to_do = False
         
-        with self._lock:
+        self._controller.WaitUntilViewFree()
+        
+        if self._WorkPermitted() and self._WorkToDo():
             
-            if service_key in self._go_faster:
+            still_work_to_do = True
+            
+            try:
                 
-                if service_key in self._service_keys_to_needs_work and not self._service_keys_to_needs_work[ service_key ]:
+                service_key = self._GetServiceKeyToWorkOn()
+                
+            except HydrusExceptions.NotFoundException:
+                
+                still_work_to_do = False
+                
+                return still_work_to_do
+                
+            
+            this_service_key_still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, desired_work_period )
+            
+            with self._lock:
+                
+                self._service_keys_to_needs_work[ service_key ] = this_service_key_still_needs_work
+                
+                if not this_service_key_still_needs_work:
                     
                     self._go_faster.discard( service_key )
                     
                 
-                rest_ratio = CG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) / 100
+            
+            self._last_loop_work_period = desired_work_period
+            
+        
+        if self._new_data_event.is_set():
+            
+            time.sleep( 1 )
+            
+            self._last_last_new_data_event_time = self._last_new_data_event_time
+            self._last_new_data_event_time = HydrusTime.GetNow()
+            
+            self._service_keys_to_needs_work = {}
+            
+            self._new_data_event.clear()
+            
+        
+        return still_work_to_do
+        
+    
+    def _GetDesiredWorkPeriod( self ):
+        
+        with self._lock:
+            
+            # TODO: reinstitute accelerating time here with a new object
+            # ok, this previously did a thing where it remembered the last last work time and accelerated the work time up to 30s
+            # we should convert all this work/rest ratio thing, which we use all over the place, into an object we get a context around or something similar and unify it all
+            # and then we can do clever stuff like accelerating code in one location!
+            
+            if len( self._go_faster ) > 0:
+                
+                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) )
                 
             
+        
+        if self._controller.CurrentlyIdle():
+            
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) )
+            
+        else:
+            
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) )
+            
+        
+    
+    def _GetWaitPeriod( self, expected_work_period, actual_work_period, still_work_to_do ):
+        
+        if not still_work_to_do:
+            
+            return 10.0
+            
+        
+        if len( self._go_faster ) > 0:
+            
+            return 0.1
+            
+        
+        rest_ratio = None
         
         if rest_ratio is None:
             
@@ -423,31 +496,6 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         ( service_key, ) = random.sample( service_keys_that_need_work, 1 )
         
         return service_key
-        
-    
-    def _GetWorkPeriod( self, service_key ):
-        
-        with self._lock:
-            
-            # TODO: reinstitute accelerating time here with a new object
-            # ok, this previously did a thing where it remembered the last last work time and accelerated the work time up to 30s
-            # we should convert all this work/rest ratio thing, which we use all over the place, into an object we get a context around or something similar and unify it all
-            # and then we can do clever stuff like accelerating code in one location!
-            
-            if service_key in self._go_faster:
-                
-                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) )
-                
-            
-        
-        if self._controller.CurrentlyIdle():
-            
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) )
-            
-        else:
-            
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) )
-            
         
     
     def _WorkPermitted( self ):
@@ -538,81 +586,6 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     def GetName( self ) -> str:
         
         return 'tag display sync'
-        
-    
-    def _DoSingleLoop( self ) -> bool:
-        
-        still_work_to_do = False
-        
-        with self._lock:
-            
-            self._CheckShutdown()
-            
-        
-        self._controller.WaitUntilViewFree()
-        
-        if self._WorkPermitted() and self._WorkToDo():
-            
-            try:
-                
-                service_key = self._GetServiceKeyToWorkOn()
-                
-            except HydrusExceptions.NotFoundException:
-                
-                still_work_to_do = False
-                
-                return still_work_to_do
-                
-            
-            expected_work_period = self._GetWorkPeriod( service_key )
-            
-            start_time = HydrusTime.GetNowPrecise()
-            
-            still_needs_work = self._controller.WriteSynchronous( 'sync_tag_display_maintenance', service_key, expected_work_period )
-            
-            finish_time = HydrusTime.GetNowPrecise()
-            
-            actual_work_period = finish_time - start_time
-            
-            self._service_keys_to_needs_work[ service_key ] = still_needs_work
-            
-            wait_time = self._GetRestTime( service_key, expected_work_period, actual_work_period )
-            
-            self._last_loop_work_period = expected_work_period
-            
-            wake_event = self._wake_from_work_sleep_event
-            
-            still_work_to_do = True
-            
-        else:
-            
-            wake_event = self._wake_from_idle_sleep_event
-            wait_time = 10
-            
-        
-        with self._lock:
-            
-            self._CheckShutdown()
-            
-        
-        wake_event.wait( wait_time )
-        
-        self._wake_from_work_sleep_event.clear()
-        self._wake_from_idle_sleep_event.clear()
-        
-        if self._new_data_event.is_set():
-            
-            time.sleep( 1 )
-            
-            self._last_last_new_data_event_time = self._last_new_data_event_time
-            self._last_new_data_event_time = HydrusTime.GetNow()
-            
-            self._service_keys_to_needs_work = {}
-            
-            self._new_data_event.clear()
-            
-        
-        return still_work_to_do
         
     
     def NotifyNewDisplayData( self ):

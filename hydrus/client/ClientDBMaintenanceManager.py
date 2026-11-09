@@ -8,6 +8,8 @@ from hydrus.client import ClientGlobals as CG
 
 class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
     
+    FORCED_WAIT_PERIOD = 0.25
+    
     def __init__( self, controller: "CG.ClientController.Controller" ):
         
         super().__init__( controller, 15 )
@@ -48,6 +50,25 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
+    def _GetDesiredWorkPeriod( self ) -> float:
+        
+        with self._lock:
+            
+            if self._is_working_hard:
+                
+                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) )
+                
+            elif CG.client_controller.CurrentlyIdle():
+                
+                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) )
+                
+            else:
+                
+                return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) )
+                
+            
+        
+    
     def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
         
         if not still_work_to_do:
@@ -71,22 +92,6 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         reasonable_work_period = min( 5 * expected_work_period, actual_work_period )
         
         return reasonable_work_period * rest_ratio
-        
-    
-    def _GetWorkPeriod( self ):
-        
-        if self._is_working_hard:
-            
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) )
-            
-        elif CG.client_controller.CurrentlyIdle():
-            
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) )
-            
-        else:
-            
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) )
-            
         
     
     def FlipWorkingHard( self ):
@@ -114,28 +119,20 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _DoSingleLoop( self ) -> bool:
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
         
         still_work_to_do = False
-        
-        with self._lock:
-            
-            self._CheckShutdown()
-            
         
         self._controller.WaitUntilViewFree()
         
         with self._lock:
             
             able_to_work = self._AbleToDoBackgroundMaintenance()
-            expected_work_period = self._GetWorkPeriod()
             
         
         if able_to_work:
             
-            time_to_stop = HydrusTime.GetNowFloat() + expected_work_period
-            
-            start_time = HydrusTime.GetNowFloat()
+            time_to_stop = HydrusTime.GetNowFloat() + desired_work_period
             
             try:
                 
@@ -158,42 +155,6 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
                 
             
-            actual_work_period = HydrusTime.GetNowFloat() - start_time
-            
-            with self._lock:
-                
-                wait_period = self._GetWaitPeriod( expected_work_period, actual_work_period, still_work_to_do )
-                
-            
-            if still_work_to_do:
-                
-                wake_event = self._wake_from_work_sleep_event
-                
-            else:
-                
-                wake_event = self._wake_from_idle_sleep_event
-                
-            
-        else:
-            
-            wake_event = self._wake_from_idle_sleep_event
-            wait_period = 600
-            
-        
-        FORCED_WAIT_PERIOD = 0.25
-        
-        if wait_period > FORCED_WAIT_PERIOD:
-            
-            # forced wait when lots going on
-            time.sleep( FORCED_WAIT_PERIOD )
-            
-            wait_period -= FORCED_WAIT_PERIOD
-            
-        
-        wake_event.wait( wait_period )
-        
-        self._wake_from_work_sleep_event.clear()
-        self._wake_from_idle_sleep_event.clear()
         
         return still_work_to_do
         

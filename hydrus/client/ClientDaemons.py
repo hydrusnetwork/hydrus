@@ -1,4 +1,5 @@
 import threading
+import time
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -42,6 +43,8 @@ def DAEMONCheckExportFolders():
 
 class ManagerWithMainLoop( object ):
     
+    FORCED_WAIT_PERIOD = 0.05
+    
     def __init__( self, controller: "CG.ClientController.Controller", pre_loop_wait_time: int ):
         
         # TODO: move work_time/rest_time into this superclass
@@ -65,8 +68,8 @@ class ManagerWithMainLoop( object ):
         
         self._lock = threading.Lock()
         
-        self._wake_from_work_sleep_event = threading.Event()
-        self._wake_from_idle_sleep_event = threading.Event()
+        self._i_am_working_or_expecting_to_work = False
+        self._wake_event = threading.Event()
         self._shutdown = False
         self._mainloop_is_finished = False
         self._serious_error_encountered = False
@@ -103,9 +106,26 @@ class ManagerWithMainLoop( object ):
         pass
         
     
-    def _DoSingleLoop( self ) -> bool:
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
         
         raise NotImplementedError()
+        
+    
+    def _GetDesiredWorkPeriod( self ) -> float:
+        
+        raise NotImplementedError()
+        
+    
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ) -> float:
+        
+        if still_work_to_do:
+            
+            return 3.0
+            
+        else:
+            
+            return 600.0
+            
         
     
     def DoPreMainLoopWait( self ):
@@ -123,9 +143,11 @@ class ManagerWithMainLoop( object ):
                 self._CheckShutdown()
                 
             
-            self._wake_from_idle_sleep_event.wait( 1 )
+            time.sleep( 1 )
             
-            if self._wake_from_idle_sleep_event.is_set():
+            if self._wake_event.is_set():
+                
+                self._wake_event.clear()
                 
                 break
                 
@@ -145,7 +167,62 @@ class ManagerWithMainLoop( object ):
             
             while True:
                 
-                still_work_to_do = self._DoSingleLoop()
+                with self._lock:
+                    
+                    self._CheckShutdown()
+                    
+                
+                #
+                
+                desired_work_period = self._GetDesiredWorkPeriod()
+                
+                start_time = HydrusTime.GetNowFloat()
+                
+                self._i_am_working_or_expecting_to_work = True
+                
+                #
+                
+                still_work_to_do = self._DoSingleLoop( desired_work_period )
+                
+                #
+                
+                self._i_am_working_or_expecting_to_work = still_work_to_do
+                
+                actual_work_period = HydrusTime.GetNowFloat() - start_time
+                
+                wait_period = self._GetWaitPeriod( desired_work_period, actual_work_period, still_work_to_do )
+                
+                #
+                
+                if wait_period > 1.0:
+                    
+                    with self._lock:
+                        
+                        self._CheckShutdown()
+                        
+                    
+                
+                #
+                
+                if self.FORCED_WAIT_PERIOD > 0.0:
+                    
+                    time.sleep( self.FORCED_WAIT_PERIOD )
+                    
+                    wait_period = max( 0.1, wait_period - self.FORCED_WAIT_PERIOD )
+                    
+                
+                if wait_period < 1.0:
+                    
+                    time.sleep( wait_period )
+                    
+                else:
+                    
+                    CG.client_controller.CallLater( wait_period, self.Wake )
+                    
+                    self._wake_event.wait()
+                    
+                
+                self._wake_event.clear()
                 
             
             # ok I moved from DoMainLoop to DoSingleLoop. now we can pull common parts out no here
@@ -154,8 +231,6 @@ class ManagerWithMainLoop( object ):
             # can work?
             # still work to do = do work()
             # if shutting down, dump out
-            # get a wait period( still work to do )
-            # do a wait
             
         except HydrusExceptions.DaemonShutdownException:
             
@@ -207,12 +282,14 @@ class ManagerWithMainLoop( object ):
     
     def Wake( self ):
         
-        self._wake_from_work_sleep_event.set()
-        self._wake_from_idle_sleep_event.set()
+        self._wake_event.set()
         
     
     def WakeIfNotWorking( self ):
         
-        self._wake_from_idle_sleep_event.set()
+        if not self._i_am_working_or_expecting_to_work:
+            
+            self._wake_event.set()
+            
         
     

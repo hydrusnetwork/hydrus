@@ -1,5 +1,3 @@
-import time
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTime
 
@@ -8,6 +6,8 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientDaemons
 
 class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
+    
+    FORCED_WAIT_PERIOD = 0.25
     
     def __init__( self, controller: "CG.ClientController.Controller" ):
         
@@ -18,15 +18,39 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._controller.sub( self, 'NotifyFileNonPhysicallyDeleted', 'notify_file_non_physically_deleted' )
         
     
-    def _DoSingleLoop( self ) -> bool:
+    def _GetDesiredWorkPeriod( self ) -> float:
         
-        still_work_to_do = False
-        wait_period = 600
+        return 0.5
+        
+    
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ) -> float:
+        
+        if not still_work_to_do:
+            
+            return 600.0
+            
+        
+        wait_period = 0.5
         
         with self._lock:
             
-            self._CheckShutdown()
+            # TODO: This is cool but needs to be migrated to the mainloop so we can get better feedback on it in review mainloops UI
+            # 'deferring work x seconds since most recent (label) event' kind of thing
+            # any file delete, not just trashed, but NOT a physical delete lol otherwise we block ourselves. this is KISS and careful
+            safe_time_to_action_recent_deletes = self._last_file_non_physically_deleted_time + 60
             
+            if not HydrusTime.TimeHasPassedFloat( safe_time_to_action_recent_deletes ):
+                
+                wait_period = max( HydrusTime.TimeUntil( safe_time_to_action_recent_deletes ) + 1, 5 )
+                
+            
+        
+        return wait_period
+        
+    
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
+        
+        still_work_to_do = False
         
         controller = CG.client_controller
         
@@ -53,53 +77,12 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 able_to_work = False
                 
-                wait_period = max( HydrusTime.TimeUntil( safe_time_to_action_recent_deletes ) + 1, 5 )
-                
             
-        
-        expected_work_period = 0.5
         
         if able_to_work:
             
-            start_time = HydrusTime.GetNowFloat()
+            still_work_to_do = controller.WriteSynchronous( 'maintain_trash', desired_work_period )
             
-            still_work_to_do = controller.WriteSynchronous( 'maintain_trash', expected_work_period )
-            
-            actual_work_period = HydrusTime.GetNowFloat() - start_time
-            
-            if still_work_to_do:
-                
-                wait_period = 0.5
-                
-            
-            if still_work_to_do:
-                
-                wake_event = self._wake_from_work_sleep_event
-                
-            else:
-                
-                wake_event = self._wake_from_idle_sleep_event
-                
-            
-        else:
-            
-            wake_event = self._wake_from_idle_sleep_event
-            
-        
-        FORCED_WAIT_PERIOD = 0.25
-        
-        if wait_period > FORCED_WAIT_PERIOD:
-            
-            # forced wait when lots going on
-            time.sleep( FORCED_WAIT_PERIOD )
-            
-            wait_period -= FORCED_WAIT_PERIOD
-            
-        
-        wake_event.wait( wait_period )
-        
-        self._wake_from_work_sleep_event.clear()
-        self._wake_from_idle_sleep_event.clear()
         
         return still_work_to_do
         

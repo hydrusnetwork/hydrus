@@ -479,6 +479,23 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
+    def _GetDesiredWorkPeriod( self ) -> float:
+        
+        return 10.0
+        
+    
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ) -> float:
+        
+        if still_work_to_do:
+            
+            return 0.5
+            
+        else:
+            
+            return 600.0
+            
+        
+    
     def _HasEXIF( self, media_result ):
         
         hash = media_result.GetHash()
@@ -1385,9 +1402,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'file maintenance'
         
     
-    def _DoSingleLoop( self ) -> bool:
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
         
-        # TODO: locking on CheckShutdown is lax, let's be good and smooth it all out
+        # TODO: This 'wait on maintenance' stuff is a pain. the bandwidth stuff is fun but let's just move to desired work time and pauses m8
         
         def wait_on_maintenance():
             
@@ -1420,17 +1437,11 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         still_work_to_do = False
         
-        self._CheckShutdown()
-        
-        did_work = False
-        
         with self._maintenance_lock:
             
             hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
             
             if len( hashes_to_job_types ) > 0:
-                
-                did_work = True
                 
                 job_status = ClientThreading.JobStatus()
                 
@@ -1470,8 +1481,6 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                         self._controller.pub( 'notify_files_maintenance_done' )
                         
                     
-                    self._CheckShutdown()
-                    
                 finally:
                     
                     self._controller.pub( 'notify_files_maintenance_done' )
@@ -1480,22 +1489,6 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 still_work_to_do = True
                 
             
-        
-        if did_work:
-            
-            wake_event = self._wake_from_work_sleep_event
-            wait_time = 0.5
-            
-        else:
-            
-            wake_event = self._wake_from_idle_sleep_event
-            wait_time = 600
-            
-        
-        wake_event.wait( wait_time )
-        
-        self._wake_from_work_sleep_event.clear()
-        self._wake_from_idle_sleep_event.clear()
         
         return still_work_to_do
         

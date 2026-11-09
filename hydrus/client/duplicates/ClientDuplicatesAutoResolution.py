@@ -1270,6 +1270,8 @@ def GetDefaultRuleSuggestionsNearPerfectFiletypePairs() -> list[ DuplicatesAutoR
 
 class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
     
+    FORCED_WAIT_PERIOD = 0.1
+    
     def __init__( self, controller: "CG.ClientController.Controller" ):
         """
         This guy is the mainloop daemon that runs all this gubbins.
@@ -1326,18 +1328,14 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
-    def _DoSingleLoop( self ) -> bool:
+    def _DoSingleLoop( self, desired_work_period: float ) -> bool:
         
         with self._lock:
-            
-            self._CheckShutdown()
             
             able_to_work = self._AbleToWork()
             
         
         still_work_to_do = False
-        
-        expected_work_period = self._GetWorkPeriod()
         
         if able_to_work:
             
@@ -1345,11 +1343,9 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
             
             with self._edit_work_lock:
                 
-                start_time = HydrusTime.GetNowFloat()
-                
                 try:
                     
-                    still_work_to_do = self._WorkRules( expected_work_period )
+                    still_work_to_do = self._WorkRules( desired_work_period )
                     
                 except HydrusExceptions.DataMissing as e:
                     
@@ -1371,44 +1367,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
                     HydrusData.ShowText( message )
                     
                 
-                actual_work_period = HydrusTime.GetNowFloat() - start_time
-                
             
-            with self._lock:
-                
-                wait_time = self._GetRestTime( expected_work_period, actual_work_period, still_work_to_do )
-                
-            
-            if still_work_to_do:
-                
-                wake_event = self._wake_from_work_sleep_event
-                
-            else:
-                
-                wake_event = self._wake_from_idle_sleep_event
-                
-            
-        else:
-            
-            wait_time = 10
-            
-            wake_event = self._wake_from_idle_sleep_event
-            
-        
-        FORCED_WAIT_PERIOD = 0.1
-        
-        if wait_time > FORCED_WAIT_PERIOD:
-            
-            # forced wait when lots going on
-            time.sleep( FORCED_WAIT_PERIOD )
-            
-            wait_time -= FORCED_WAIT_PERIOD
-            
-        
-        wake_event.wait( wait_time )
-        
-        self._wake_from_work_sleep_event.clear()
-        self._wake_from_idle_sleep_event.clear()
         
         return still_work_to_do
         
@@ -1434,30 +1393,21 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return rules
         
     
-    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
+    def _GetDesiredWorkPeriod( self ) -> float:
         
         if len( self._working_hard_rules ) > 0:
             
-            return 0.1
+            return 0.5
             
         
-        if not still_work_to_do:
+        if self._controller.CurrentlyIdle():
             
-            return 600
-            
-        
-        if CG.client_controller.CurrentlyIdle():
-            
-            rest_ratio = 1
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_idle' ) )
             
         else:
             
-            rest_ratio = 5
+            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_active' ) )
             
-        
-        reasonable_work_period = min( 20 * expected_work_period, actual_work_period )
-        
-        return reasonable_work_period * rest_ratio
         
     
     def _GetRestTime( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
@@ -1486,21 +1436,30 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return reasonable_work_period * rest_ratio
         
     
-    def _GetWorkPeriod( self ):
+    def _GetWaitPeriod( self, expected_work_period: float, actual_work_period: float, still_work_to_do: bool ):
+        
+        if not still_work_to_do:
+            
+            return 600
+            
         
         if len( self._working_hard_rules ) > 0:
             
-            return 0.5
+            return 0.1
             
         
-        if self._controller.CurrentlyIdle():
+        if CG.client_controller.CurrentlyIdle():
             
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_idle' ) )
+            rest_ratio = 1
             
         else:
             
-            return HydrusTime.SecondiseMSFloat( CG.client_controller.new_options.GetInteger( 'duplicates_auto_resolution_work_time_ms_active' ) )
+            rest_ratio = 5
             
+        
+        reasonable_work_period = min( 20 * expected_work_period, actual_work_period )
+        
+        return reasonable_work_period * rest_ratio
         
     
     def _WorkRules( self, allowed_work_period: float ):
