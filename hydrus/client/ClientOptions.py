@@ -681,6 +681,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_limit_history_results' : 10,
             'command_palette_limit_favourite_searches_results' : None,
             'treeview_alignment' : None,
+            'threshold_for_dropping_seekbar_media_to_bottom' : 20,
         }
         
         #
@@ -1802,7 +1803,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetNoneableInteger( self, name ):
+    def GetNoneableInteger( self, name: str ) -> int | None:
         
         with self._lock:
             
@@ -2414,7 +2415,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetNoneableInteger( self, name, value ):
+    def SetNoneableInteger( self, name: str, value: int | None ):
         
         with self._lock:
             

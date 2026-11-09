@@ -76,6 +76,9 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._media_viewer_recenter_media_on_window_resize = QW.QCheckBox( zoom_panel )
         self._media_viewer_recenter_media_on_window_resize.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, when you resize the media viewer window, the media inside it will stay exactly as it is with respect to location and size. This is useful if you want to resize the window while zoomed-in to look at details. While checked, media will re-center and zoom itself as normal whenever a media viewer window is resized.' ) )
         
+        self._threshold_for_dropping_seekbar_media_to_bottom = ClientGUICommon.NoneableSpinCtrl( zoom_panel, 20, none_phrase = 'do not do this', min = 1, max = 1080, unit = 'pixels' )
+        self._threshold_for_dropping_seekbar_media_to_bottom.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a media has a seekbar and touches the width of the media viewer but has a little gap between the tops and bottoms, then sometimes, particularly in fullscreen, you can click at the bottom of the screen and not hit the scanbar because of the tiny 2 pixel gap. This will adjust the "center" position of such media down a bit so the seekbar hits the bottom.' ) )
+        
         #
         
         animations_panel = ClientGUICommon.StaticBox( self, 'video/animations' )
@@ -231,6 +234,8 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._preview_default_zoom_type_override.SetValue( self._new_options.GetInteger( 'preview_default_zoom_type_override' ) )
         self._media_viewer_recenter_media_on_window_resize.setChecked( self._new_options.GetBoolean( 'media_viewer_recenter_media_on_window_resize' ) )
         
+        self._threshold_for_dropping_seekbar_media_to_bottom.SetValue( self._new_options.GetNoneableInteger( 'threshold_for_dropping_seekbar_media_to_bottom' ) )
+        
         self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
         self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
         self._do_icc_profile_normalisation.setChecked( self._new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
@@ -265,6 +270,7 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Media Viewer default zoom:', self._media_viewer_default_zoom_type_override ) )
         rows.append( ( 'Preview Viewer default zoom:', self._preview_default_zoom_type_override ) )
         rows.append( ( 'Re-center media on window resize:', self._media_viewer_recenter_media_on_window_resize ) )
+        rows.append( ( 'When "centering", drop seekbar-having media to the bottom edge if the gap is within:', self._threshold_for_dropping_seekbar_media_to_bottom ) )
         
         gridbox = ClientGUICommon.WrapInGrid( zoom_panel, rows )
         
@@ -682,6 +688,8 @@ class MediaPlaybackPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._new_options.SetInteger( 'media_viewer_default_zoom_type_override', self._media_viewer_default_zoom_type_override.GetValue() )
         self._new_options.SetInteger( 'preview_default_zoom_type_override', self._preview_default_zoom_type_override.GetValue() )
         self._new_options.SetBoolean( 'media_viewer_recenter_media_on_window_resize', self._media_viewer_recenter_media_on_window_resize.isChecked() )
+        
+        self._new_options.SetNoneableInteger( 'threshold_for_dropping_seekbar_media_to_bottom', self._threshold_for_dropping_seekbar_media_to_bottom.GetValue() )
         
         self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
         self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )

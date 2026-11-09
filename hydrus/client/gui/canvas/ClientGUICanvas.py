@@ -778,7 +778,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     self._last_geometry = window_geom
                     
                 
-            
             else:
                 
                 media_container_size = self._media_container.size()

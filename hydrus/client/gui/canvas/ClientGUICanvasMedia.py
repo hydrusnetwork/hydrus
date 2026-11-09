@@ -2600,6 +2600,19 @@ class MediaContainer( QW.QWidget ):
         x = ( canvas_size.width() - ideal_size.width() ) // 2
         y = ( canvas_size.height() - ideal_size.height() ) // 2
         
+        threshold_for_dropping_seekbar_media_to_bottom = CG.client_controller.new_options.GetNoneableInteger( 'threshold_for_dropping_seekbar_media_to_bottom' )
+        
+        if ShouldHaveAnimationBar( self._media, self._show_action ) and threshold_for_dropping_seekbar_media_to_bottom is not None:
+            
+            we_are_touching_the_horizontal_edges = x == 0
+            we_are_close_to_the_top_and_thus_bottom = y < threshold_for_dropping_seekbar_media_to_bottom
+            
+            if we_are_touching_the_horizontal_edges and we_are_close_to_the_top_and_thus_bottom:
+                
+                y = canvas_size.height() - ideal_size.height()
+                
+            
+        
         ideal_pos =  QC.QPoint( x, y )
         
         if ideal_pos != self.pos():
