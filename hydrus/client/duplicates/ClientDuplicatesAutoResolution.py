@@ -1326,7 +1326,7 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         return True
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
         
         with self._lock:
             
@@ -1409,6 +1409,8 @@ class DuplicatesAutoResolutionManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def _FilterToWorkingHardRules( self, rules: collections.abc.Collection[ DuplicatesAutoResolutionRule ] ):

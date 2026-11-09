@@ -1487,19 +1487,23 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
         self._controller.sub( self, 'NotifyImportFoldersHaveChanged', 'notify_new_import_folders' )
         
     
-    def _DoWork( self ):
+    def _DoWork( self ) -> bool:
+        
+        still_work_to_do = False
         
         if self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
             
-            return
+            return still_work_to_do
             
         
         name = self._GetImportFolderNameThatIsDue()
         
         if name is None:
             
-            return
+            return still_work_to_do
             
+        
+        still_work_to_do = True
         
         try:
             
@@ -1516,7 +1520,9 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
                         del self._import_folder_names_to_next_work_time_cache[ name ]
                         
                     
-                    return
+                    still_work_to_do = False
+                    
+                    return still_work_to_do
                     
                 
             else:
@@ -1543,6 +1549,8 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
                 self._import_folder_names_to_next_work_time_cache[ name ] = max( next_work_time, HydrusTime.GetNow() + 180 )
                 
             
+        
+        return still_work_to_do
         
     
     def _GetImportFolderNameThatIsDue( self ):
@@ -1603,7 +1611,9 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
         return 'import folders'
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
+        
+        still_work_to_do = False
         
         self._CheckShutdown()
         
@@ -1613,7 +1623,7 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
             
             HG.import_folders_running = True
             
-            self._DoWork()
+            still_work_to_do = self._DoWork()
             
         except Exception as e:
             
@@ -1626,8 +1636,6 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
             message += str( e )
             
             HydrusData.ShowText( message )
-            
-            return
             
         finally:
             
@@ -1643,6 +1651,8 @@ class ImportFoldersManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def NotifyImportFoldersHaveChanged( self ):

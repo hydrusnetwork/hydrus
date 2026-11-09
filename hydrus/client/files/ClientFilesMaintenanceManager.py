@@ -1385,7 +1385,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'file maintenance'
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
         
         # TODO: locking on CheckShutdown is lax, let's be good and smooth it all out
         
@@ -1417,6 +1417,8 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 return False
                 
             
+        
+        still_work_to_do = False
         
         self._CheckShutdown()
         
@@ -1475,6 +1477,8 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     self._controller.pub( 'notify_files_maintenance_done' )
                     
                 
+                still_work_to_do = True
+                
             
         
         if did_work:
@@ -1492,6 +1496,8 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def NotifyNewOptions( self ):

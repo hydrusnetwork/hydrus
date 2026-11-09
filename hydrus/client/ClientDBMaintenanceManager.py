@@ -114,7 +114,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
         
         still_work_to_do = False
         
@@ -194,5 +194,7 @@ class DatabaseMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     

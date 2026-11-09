@@ -2108,7 +2108,9 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
+        
+        still_work_to_do = False
         
         with self._lock:
             
@@ -2124,6 +2126,8 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 self._names_to_running_subscription_info[ subscription.GetName() ] = ( job, subscription )
                 
+                still_work_to_do = True
+                
             
             self._ClearFinishedSubscriptions()
             
@@ -2136,6 +2140,8 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def _DoPostMainLoopShutdown( self ):

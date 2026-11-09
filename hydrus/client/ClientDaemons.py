@@ -103,7 +103,7 @@ class ManagerWithMainLoop( object ):
         pass
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
         
         raise NotImplementedError()
         
@@ -145,7 +145,7 @@ class ManagerWithMainLoop( object ):
             
             while True:
                 
-                self._DoSingleLoop()
+                still_work_to_do = self._DoSingleLoop()
                 
             
             # ok I moved from DoMainLoop to DoSingleLoop. now we can pull common parts out no here

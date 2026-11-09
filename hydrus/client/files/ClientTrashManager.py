@@ -18,7 +18,7 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         self._controller.sub( self, 'NotifyFileNonPhysicallyDeleted', 'notify_file_non_physically_deleted' )
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
         
         still_work_to_do = False
         wait_period = 600
@@ -100,6 +100,8 @@ class TrashMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def GetName( self ) -> str:

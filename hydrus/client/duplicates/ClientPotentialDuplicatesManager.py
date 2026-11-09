@@ -74,7 +74,9 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         CG.client_controller.sub( self, 'WakeIfNotWorking', 'notify_file_potential_search_reset' )
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
+        
+        still_work_to_do = False
         
         with self._lock:
             
@@ -89,7 +91,11 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             
             still_maintenance_work_to_do = CG.client_controller.WriteSynchronous( 'maintain_similar_files_tree', work_period = expected_work_period )
             
-            if not still_maintenance_work_to_do:
+            if still_maintenance_work_to_do:
+                
+                still_work_to_do = True
+                
+            else:
                 
                 self._need_to_rebalance_tree.clear()
                 
@@ -112,6 +118,11 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
             search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
             ( still_search_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, work_period = expected_work_period )
+            
+            if still_search_work_to_do:
+                
+                still_work_to_do = True
+                
             
             total_time_took = HydrusTime.GetNowPrecise() - start_time
             
@@ -164,6 +175,8 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         
         self._wake_from_work_sleep_event.clear()
         self._wake_from_idle_sleep_event.clear()
+        
+        return still_work_to_do
         
     
     def _GetRestTime( self, expected_work_period, actual_work_period ):

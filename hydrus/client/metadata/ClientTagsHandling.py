@@ -540,7 +540,9 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         return 'tag display sync'
         
     
-    def _DoSingleLoop( self ):
+    def _DoSingleLoop( self ) -> bool:
+        
+        still_work_to_do = False
         
         with self._lock:
             
@@ -557,11 +559,9 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
             except HydrusExceptions.NotFoundException:
                 
-                # oh, there's actually no work to do
+                still_work_to_do = False
                 
-                time.sleep( 1 )
-                
-                return
+                return still_work_to_do
                 
             
             expected_work_period = self._GetWorkPeriod( service_key )
@@ -581,6 +581,8 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             self._last_loop_work_period = expected_work_period
             
             wake_event = self._wake_from_work_sleep_event
+            
+            still_work_to_do = True
             
         else:
             
@@ -609,6 +611,8 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             
             self._new_data_event.clear()
             
+        
+        return still_work_to_do
         
     
     def NotifyNewDisplayData( self ):
