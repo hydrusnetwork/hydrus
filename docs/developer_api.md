@@ -3942,6 +3942,33 @@ Response:
 :   200 with no content. If the page key is not found, this will 404.
     
 
+### **POST `/manage_pages/close_page`** { id="manage_pages_close_page" }
+
+_Close a page in the main GUI. Closing a page of pages also closes the pages it contains._
+
+This will cloase the page immediately, even if imports are in progress.
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `page_key`: (the page key for the page you wish to close)
+
+```json title="Example request body"
+{
+  "page_key" : "af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"
+}
+```
+
+Response:
+:   200 with no content on success. The top-level pages notebook returns 400. If the page key is not found, this will 404.
+
+
 ### **POST `/manage_pages/refresh_page`** { id="manage_pages_refresh_page" }
 
 _Refresh a page in the main GUI. Like hitting F5 in the client, this obviously makes file search pages perform their search again, but for other page types it will force the currently in-view files to be re-sorted._

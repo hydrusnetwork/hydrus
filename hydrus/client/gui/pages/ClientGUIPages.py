@@ -2622,9 +2622,9 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
             
         
     
-    def ClosePage( self, index ):
+    def ClosePage( self, index, polite = True ):
         
-        self._ClosePage( index )
+        return self._ClosePage( index, polite = polite )
         
     
     def DuplicatePage( self, index ):
