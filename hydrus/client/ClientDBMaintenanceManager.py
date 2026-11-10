@@ -1,5 +1,3 @@
-import time
-
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
