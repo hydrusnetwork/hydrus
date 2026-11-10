@@ -24,6 +24,8 @@ from hydrus.client.networking.api import ClientLocalServerCore
 from hydrus.client.networking.api import ClientLocalServerResources
 from hydrus.client.search import ClientSearchFileSearchContext
 from hydrus.client.search import ClientSearchTagContext
+from hydrus.client.files.images import ClientImageHandling
+
 
 class HydrusResourceClientAPIRestrictedGetFiles( ClientLocalServerResources.HydrusResourceClientAPIRestricted ):
     
@@ -274,13 +276,28 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                     raise HydrusExceptions.BadRequestException( 'Height must be greater than 0!' )
                     
                 
-                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ) )
+                forced_interpolation = None
+                
+                if 'interpolation' in request.parsed_request_args:
+                    
+                    interpolation_arg = request.parsed_request_args.GetValue( 'interpolation', int )
+                    
+                    if interpolation_arg not in ClientImageHandling.cv_interpolation_enum_lookup:
+                        
+                        raise HydrusExceptions.BadRequestException( 'Invalid resize interpolation!' )
+                        
+                    
+                    forced_interpolation = ClientImageHandling.cv_interpolation_enum_lookup[ interpolation_arg ]
+                    
+                
+                numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ), forced_interpolation = forced_interpolation )
                 
             
             if 'render_quality' in request.parsed_request_args:
                 
                 quality = request.parsed_request_args.GetValue( 'render_quality', int )
                 
+            
             else:
                 
                 if format == HC.IMAGE_PNG:
