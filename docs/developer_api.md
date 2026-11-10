@@ -2755,7 +2755,7 @@ Arguments :
     The accepted values for Ugoiras are:
     
     *   `23` for APNG (`quality` does nothing for this format)
-    *   `83` for animated WEBP (`quality` sets WEBP quality 1 to 100, 101 to 200 set lossless output with `value - 100` being compression level)
+    *   `83` for animated WEBP (`quality` sets WEBP quality 0 to 100, 101 to 200 set lossless output with `value - 100` being compression level)
     
     The accepted values for `interpolation` are:
     
