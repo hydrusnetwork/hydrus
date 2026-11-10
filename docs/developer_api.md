@@ -2761,9 +2761,9 @@ Arguments :
     
     *   `0`: nearest neighbour (cv2 `INTER_NEAREST`)
     *   `1`: bilinear interpolation (cv2 `INTER_LINEAR`)
-    *   `2`: pixel area resampling (cv2 `INTER_AREA`)
+    *   `2`: pixel area resampling (cv2 `INTER_AREA`), default for downscales
     *   `3`: bicubic interpolation (cv2 `INTER_CUBIC`)
-    *   `4`: 8x8 Lanczos interpolation (cv2 `INTER_LANCZOS4`)
+    *   `4`: 8x8 Lanczos interpolation (cv2 `INTER_LANCZOS4`), default for upscales
 
 The file you request must be a still image file that Hydrus can render (this includes PSD files) or a Ugoira file. This request uses the client image cache for images.
 
