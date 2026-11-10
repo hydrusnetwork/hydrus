@@ -332,6 +332,10 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                 
                 quality = request.parsed_request_args.GetValue( 'render_quality', int )
                 
+                # clamp quality to 1-200 or Pillow will throw an error.
+                quality = max( 1, min( quality, 200 ) )
+                    
+                
             else:
                 
                 quality = 80 # compress_level has no effect for APNG so we don't use quality in that case.
