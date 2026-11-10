@@ -260,17 +260,17 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        gug_names = set()
+        gug_names_set: set[ str ] = set()
         
         for obj in export_object:
             
             if isinstance( obj, ( ClientNetworkingGUG.GalleryURLGenerator, ClientNetworkingGUG.NestedGalleryURLGenerator ) ):
                 
-                gug_names.add( obj.GetName() )
+                gug_names_set.add( obj.GetName() )
                 
             
         
-        gug_names = sorted( gug_names )
+        gug_names = sorted( gug_names_set )
         
         num_gugs = len( gug_names )
         
@@ -441,6 +441,10 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             elif isinstance( gug, ClientNetworkingGUG.NestedGalleryURLGenerator ):
                 
                 example_urls = gug.GetExampleURLs()
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown gug type!' )
                 
             
             for example_url in example_urls:
@@ -831,8 +835,6 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        vbox = QP.VBoxLayout()
-        
         rows = []
         
         rows.append( ( 'name or description (optional): ', self._name ) )
@@ -993,6 +995,10 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
             additional_info = temp_variable_name
             
+        else:
+            
+            raise NotImplementedError( 'Unknown content type!' )
+            
         
         content_parser = ClientParsing.ContentParser( name = name, content_type = content_type, formula = formula, additional_info = additional_info )
         
@@ -1147,43 +1153,187 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
     
 
-class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
+# TODO: Clean all this getter mess with Qt update signals
+# I'm pulling this guy out to decouple parsing ui code for external executables and not being clean about it
+# also figure out the pageparser vs subsidiary page parser distinction nicer. just make a subclass of this guy tbh
+class EditPageParserTestPanel( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, parser: ClientParsing.PageParser, formula = None, sort_posts_by_source_time = None, test_data = None ):
+    def __init__( self, parent: QW.QWidget, get_page_parser, get_string_converter, get_page_parser_or_subsidiary_page_parser, formula, get_example_urls, test_data = None ):
+        
+        super().__init__( parent, 'test' )
+        
+        self._get_example_urls = get_example_urls
+        
+        test_url_fetch_panel = ClientGUICommon.StaticBox( self, 'fetch test data from url' )
+        
+        self._test_url = QW.QLineEdit( test_url_fetch_panel )
+        self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
+        self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
+        self._test_network_job_control = ClientGUINetworkJobControl.NetworkJobControl( test_url_fetch_panel )
+        
+        if formula is None:
+            
+            self._test_panel = ClientGUIParsingTest.TestPanelPageParser( self, get_page_parser, get_string_converter, test_data = test_data )
+            
+        else:
+            
+            self._test_panel = ClientGUIParsingTest.TestPanelPageParserSubsidiary( self, get_page_parser, get_string_converter, get_page_parser_or_subsidiary_page_parser, test_data = test_data )
+            
+            self._test_panel.SetCollapseNewlines( False )
+            
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'url: ', self._test_url ) )
+        rows.append( ( 'referral url (optional): ', self._test_referral_url ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( test_url_fetch_panel, rows )
+        
+        test_url_fetch_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        test_url_fetch_panel.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
+        test_url_fetch_panel.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.Add( test_url_fetch_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        if formula is not None:
+            
+            test_url_fetch_panel.hide()
+            
+        
+    
+    def _FetchExampleData( self ):
+        
+        def wait_and_do_it( network_job ):
+            
+            def qt_tidy_up( example_data, example_bytes, error ):
+                
+                example_parsing_context = self._test_panel.GetExampleParsingContext()
+                
+                example_parsing_context[ 'url' ] = url
+                example_parsing_context[ 'post_index' ] = '0'
+                
+                self._test_panel.SetExampleParsingContext( example_parsing_context )
+                
+                self._test_panel.SetExampleData( example_data, example_bytes = example_bytes )
+                
+                self._test_network_job_control.ClearNetworkJob()
+                
+                if error is not None:
+                    
+                    self._test_network_job_control.SetError( error )
+                    
+                
+            
+            example_bytes = None
+            error = None
+            
+            try:
+                
+                network_job.WaitUntilDone()
+                
+                example_data = network_job.GetContentText()
+                
+                example_bytes = network_job.GetContentBytes()
+                
+            except HydrusExceptions.CancelledException:
+                
+                example_data = 'fetch cancelled'
+                
+            except Exception as e:
+                
+                error = traceback.format_exc()
+                
+                try:
+                    
+                    stuff_read = network_job.GetContentText()
+                    
+                except Exception as e_no_content:
+                    
+                    stuff_read = 'no response'
+                    
+                
+                example_data = 'fetch failed: {}'.format( e ) + '\n' * 2 + stuff_read
+                
+            
+            CG.client_controller.CallAfterQtSafe( self, qt_tidy_up, example_data, example_bytes, error )
+            
+        
+        raw_url = self._test_url.text().strip()
+        
+        if raw_url == '':
+            
+            example_urls = self._get_example_urls.GetData()
+            
+            if len( example_urls ) > 0:
+                
+                self._test_url.setText( example_urls[0] )
+                
+            
+            return
+            
+        
+        url = ClientNetworkingFunctions.EnsureURLIsEncoded( raw_url )
+        referral_url = self._test_referral_url.text()
+        
+        if referral_url == '':
+            
+            referral_url = None
+            
+        
+        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url, referral_url = referral_url )
+        
+        network_job.OnlyTryConnectionOnce()
+        
+        self._test_network_job_control.ClearError()
+        self._test_network_job_control.SetNetworkJob( network_job )
+        
+        network_job.OverrideBandwidth()
+        
+        CG.client_controller.network_engine.AddJob( network_job )
+        
+        CG.client_controller.CallToThread( wait_and_do_it, network_job )
+        
+    
+    def GetExampleParsingContext( self ):
+        
+        return self._test_panel.GetExampleParsingContext()
+        
+    
+    def GetTestData( self ):
+        
+        return self._test_panel.GetTestData()
+        
+    
+    def GetTestDataForChild( self ):
+        
+        return self._test_panel.GetTestDataForChild()
+        
+    
+    def SetExampleURL( self, url ):
+        
+        self._test_url.setText( url )
+        
+    
+
+# TODO: More decoupling cleanup to do here; particularly the testdata stuff. move it all to Qt signals and clean up the underlying objects
+class EditPageParserPanel( QW.QTabWidget ):
+    
+    def __init__( self, parent: QW.QWidget, parser: ClientParsing.PageParser, get_test_data, get_test_data_for_children, get_example_parsing_context, formula = None, sort_posts_by_source_time = None ):
         
         self._original_parser = parser
         
+        self._get_test_data = get_test_data
+        self._get_test_data_for_children = get_test_data_for_children
+        self._get_example_parsing_context = get_example_parsing_context
+        
         super().__init__( parent )
         
-        if test_data is None:
-            
-            example_parsing_context = parser.GetExampleParsingContext()
-            example_data = ''
-            
-            test_data = ClientParsing.ParsingTestData( example_parsing_context, ( example_data, ) )
-            
-        
         #
         
-        menu_template_items = []
-        
-        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS )
-        
-        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
-        
-        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
-        
-        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
-        
-        #
-        
-        edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
-        
-        edit_notebook = QW.QTabWidget( edit_panel )
-        
-        #
-        
-        main_panel = QW.QWidget( edit_notebook )
+        main_panel = QW.QWidget( self )
         
         self._name = QW.QLineEdit( main_panel )
         
@@ -1201,28 +1351,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        test_panel = ClientGUICommon.StaticBox( self, 'test' )
-        
-        test_url_fetch_panel = ClientGUICommon.StaticBox( test_panel, 'fetch test data from url' )
-        
-        self._test_url = QW.QLineEdit( test_url_fetch_panel )
-        self._test_referral_url = QW.QLineEdit( test_url_fetch_panel )
-        self._fetch_example_data = ClientGUICommon.BetterButton( test_url_fetch_panel, 'fetch test data from url', self._FetchExampleData )
-        self._test_network_job_control = ClientGUINetworkJobControl.NetworkJobControl( test_url_fetch_panel )
-        
-        if formula is None:
-            
-            self._test_panel = ClientGUIParsingTest.TestPanelPageParser( test_panel, self._GetPageParser, self._string_converter.GetValue, test_data = test_data )
-            
-        else:
-            
-            self._test_panel = ClientGUIParsingTest.TestPanelPageParserSubsidiary( test_panel, self._GetPageParser, self._string_converter.GetValue, self.GetValue, test_data = test_data )
-            
-            self._test_panel.SetCollapseNewlines( False )
-            
-        
-        #
-        
         example_urls_panel = ClientGUICommon.StaticBox( main_panel, 'example urls' )
         
         self._example_urls = ClientGUIListBoxes.AddEditDeleteListBox( example_urls_panel, 6, str, self._AddExampleURL, self._EditExampleURL )
@@ -1231,15 +1359,15 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        formula_panel = QW.QWidget( edit_notebook )
+        formula_panel = QW.QWidget( self )
         
-        self._formula = ClientGUIParsingFormulae.EditFormulaPanel( formula_panel, formula, self._test_panel.GetTestData )
+        self._formula = ClientGUIParsingFormulae.EditFormulaPanel( formula_panel, formula, self._get_test_data)
         
         self._formula.SetCollapseNewlines( False )
         
         #
         
-        subsidiary_page_parsers_notebook_panel = QW.QWidget( edit_notebook )
+        subsidiary_page_parsers_notebook_panel = QW.QWidget( self )
         
         #
         
@@ -1265,26 +1393,19 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        content_parsers_panel = QW.QWidget( edit_notebook )
+        content_parsers_panel = QW.QWidget( self )
         
         #
         
         permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_HTTP_HEADERS, HC.CONTENT_TYPE_VETO ]
         
-        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._test_panel.GetTestDataForChild, permitted_content_types )
+        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._get_test_data_for_children, permitted_content_types )
         
         #
         
         name = parser.GetName()
         
         ( subsidiary_page_parsers, content_parsers ) = parser.GetContentParsers()
-        
-        example_urls = parser.GetExampleURLs( encoded = False )
-        
-        if len( example_urls ) > 0:
-            
-            self._test_url.setText( example_urls[0] )
-            
         
         self._name.setText( name )
         
@@ -1299,7 +1420,11 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._content_parsers.AddDatas( content_parsers )
         
+        example_urls = parser.GetExampleURLs( encoded = False )
+        
         self._example_urls.AddDatas( example_urls )
+        
+        #
         
         #
         
@@ -1363,27 +1488,6 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        rows = []
-        
-        rows.append( ( 'url: ', self._test_url ) )
-        rows.append( ( 'referral url (optional): ', self._test_referral_url ) )
-        
-        gridbox = ClientGUICommon.WrapInGrid( test_url_fetch_panel, rows )
-        
-        test_url_fetch_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        test_url_fetch_panel.Add( self._fetch_example_data, CC.FLAGS_EXPAND_PERPENDICULAR )
-        test_url_fetch_panel.Add( self._test_network_job_control, CC.FLAGS_EXPAND_PERPENDICULAR )
-        
-        test_panel.Add( test_url_fetch_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-        test_panel.Add( self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        if formula is not None:
-            
-            test_url_fetch_panel.hide()
-            
-        
-        #
-        
         if formula is None:
             
             formula_panel.setVisible( False )
@@ -1391,29 +1495,13 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             example_urls_panel.hide()
-            edit_notebook.addTab( formula_panel, 'separation formula' )
+            self.addTab( formula_panel, 'separation formula' )
             
         
-        edit_notebook.addTab( main_panel, 'main' )
-        edit_notebook.setCurrentWidget( main_panel )
-        edit_notebook.addTab( subsidiary_page_parsers_notebook_panel, 'subsidiary page parsers' )
-        edit_notebook.addTab( content_parsers_panel, 'content parsers' )
-        
-        edit_panel.Add( edit_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.widget().setLayout( vbox )
+        self.addTab( main_panel, 'main' )
+        self.setCurrentWidget( main_panel )
+        self.addTab( subsidiary_page_parsers_notebook_panel, 'subsidiary page parsers' )
+        self.addTab( content_parsers_panel, 'content parsers' )
         
     
     def _AddExampleURL( self ):
@@ -1429,7 +1517,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditSubsidiaryPageParserPanel( dlg, subsidiary_page_parser, test_data = self._test_panel.GetTestDataForChild() )
+            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_children() )
             
             dlg.SetPanel( panel )
             
@@ -1486,7 +1574,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditSubsidiaryPageParserPanel( dlg, subsidiary_page_parser, test_data = self._test_panel.GetTestDataForChild() )
+            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_children() )
             
             dlg.SetPanel( panel )
             
@@ -1499,100 +1587,22 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _FetchExampleData( self ):
+    def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
         
-        def wait_and_do_it( network_job ):
-            
-            def qt_tidy_up( example_data, example_bytes, error ):
-                
-                example_parsing_context = self._test_panel.GetExampleParsingContext()
-                
-                example_parsing_context[ 'url' ] = url
-                example_parsing_context[ 'post_index' ] = '0'
-                
-                self._test_panel.SetExampleParsingContext( example_parsing_context )
-                
-                self._test_panel.SetExampleData( example_data, example_bytes = example_bytes )
-                
-                self._test_network_job_control.ClearNetworkJob()
-                
-                if error is not None:
-                    
-                    self._test_network_job_control.SetError( error )
-                    
-                
-            
-            example_bytes = None
-            error = None
-            
-            try:
-                
-                network_job.WaitUntilDone()
-                
-                example_data = network_job.GetContentText()
-                
-                example_bytes = network_job.GetContentBytes()
-                
-            except HydrusExceptions.CancelledException:
-                
-                example_data = 'fetch cancelled'
-                
-            except Exception as e:
-                
-                error = traceback.format_exc()
-                
-                try:
-                    
-                    stuff_read = network_job.GetContentText()
-                    
-                except Exception as e:
-                    
-                    stuff_read = 'no response'
-                    
-                
-                example_data = 'fetch failed: {}'.format( e ) + '\n' * 2 + stuff_read
-                
-            
-            CG.client_controller.CallAfterQtSafe( self, qt_tidy_up, example_data, example_bytes, error )
-            
-        
-        raw_url = self._test_url.text().strip()
-        
-        if raw_url == '':
-            
-            example_urls = self._example_urls.GetData()
-            
-            if len( example_urls ) > 0:
-                
-                self._test_url.setText( example_urls[0] )
-                
-            
-            return
-            
-        
-        url = ClientNetworkingFunctions.EnsureURLIsEncoded( raw_url )
-        referral_url = self._test_referral_url.text()
-        
-        if referral_url == '':
-            
-            referral_url = None
-            
-        
-        network_job = ClientNetworkingJobs.NetworkJob( 'GET', url, referral_url = referral_url )
-        
-        network_job.OnlyTryConnectionOnce()
-        
-        self._test_network_job_control.ClearError()
-        self._test_network_job_control.SetNetworkJob( network_job )
-        
-        network_job.OverrideBandwidth()
-        
-        CG.client_controller.network_engine.AddJob( network_job )
-        
-        CG.client_controller.CallToThread( wait_and_do_it, network_job )
+        self._subsidiary_page_parsers.AddData( subsidiary_page_parser, select_sort_and_scroll = True )
         
     
-    def _GetPageParser( self ):
+    def GetExampleURLs( self ):
+        
+        return self._example_urls.GetData()
+        
+    
+    def GetFormula( self ):
+        
+        return self._formula.GetValue()
+        
+    
+    def GetPageParser( self ):
         
         name = self._name.text()
         
@@ -1606,21 +1616,16 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_urls = self._example_urls.GetData()
         
-        example_parsing_context = self._test_panel.GetExampleParsingContext()
+        example_parsing_context = self._get_example_parsing_context()
         
         page_parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
         
         return page_parser
         
     
-    def _ImportAddSubsidiaryPageParser( self, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser ):
+    def GetPreParseStringConverter( self ):
         
-        self._subsidiary_page_parsers.AddData( subsidiary_page_parser, select_sort_and_scroll = True )
-        
-    
-    def GetFormula( self ):
-        
-        return self._formula.GetValue()
+        return self._string_converter.GetValue()
         
     
     def GetSortPostsBySourceTime( self ):
@@ -1630,7 +1635,97 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        page_parser = self._GetPageParser()
+        page_parser = self.GetPageParser()
+        
+        return page_parser
+        
+    
+
+class EditPageParserAndTestPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    # TODO: rework all this to nice Qt signals and a proper decoupling and refactor this mess of a file to multiple places
+    def __init__( self, parent, parser: ClientParsing.PageParser, formula = None, sort_posts_by_source_time = None, test_data = None ):
+        
+        self._original_parser = parser
+        
+        super().__init__( parent )
+        
+        if test_data is None:
+            
+            example_parsing_context = parser.GetExampleParsingContext()
+            example_data = ''
+            
+            test_data = ClientParsing.ParsingTestData( example_parsing_context, ( example_data, ) )
+            
+        
+        #
+        
+        menu_template_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsDocumentation.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS )
+        
+        menu_template_items.append( ClientGUIMenuButton.MenuTemplateItemCall( 'open the page parser help', 'Open the help page for page parsers in your web browser.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuIconButton( self, CC.global_icons().help, menu_template_items )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
+        
+        #
+        
+        edit_panel_staticbox = ClientGUICommon.StaticBox( self, 'edit' )
+        
+        self._edit_panel = EditPageParserPanel( edit_panel_staticbox, parser, self.GetTestData, self.GetTestDataForChild, self.GetExampleParsingContext, formula = formula, sort_posts_by_source_time = sort_posts_by_source_time )
+        
+        #
+        
+        self._test_panel = EditPageParserTestPanel( self, self._edit_panel.GetPageParser, self._edit_panel.GetPreParseStringConverter, self.GetValue, formula, self._edit_panel.GetExampleURLs, test_data = test_data )
+        
+        #
+        
+        example_urls = parser.GetExampleURLs( encoded = False )
+        
+        if len( example_urls ) > 0:
+            
+            self._test_panel.SetExampleURL( example_urls[0] )
+            
+        
+        #
+        
+        edit_panel_staticbox.Add( self._edit_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, edit_panel_staticbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetTestData( self ):
+        
+        return self._test_panel.GetTestData()
+        
+    
+    def GetTestDataForChild( self ):
+        
+        return self._test_panel.GetTestDataForChild()
+        
+    
+    def GetExampleParsingContext( self ):
+        
+        return self._test_panel.GetExampleParsingContext()
+        
+    
+    def GetValue( self ):
+        
+        page_parser = self._edit_panel.GetPageParser()
         
         return page_parser
         
@@ -1638,7 +1733,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
     def UserIsOKToCancel( self ):
         
         original_parser = self._original_parser.Duplicate()
-        current_parser = self._GetPageParser()
+        current_parser = self._edit_panel.GetPageParser()
         
         original_parser.NullifyTestData()
         current_parser.NullifyTestData()
@@ -1660,7 +1755,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
 
-class EditSubsidiaryPageParserPanel( EditPageParserPanel ):
+class EditSubsidiaryPageParserAndTestPanel( EditPageParserAndTestPanel ):
     
     def __init__( self, parent: QW.QWidget, subsidiary_page_parser: ClientParsing.SubsidiaryPageParser, test_data = None ):
         
@@ -1679,9 +1774,9 @@ class EditSubsidiaryPageParserPanel( EditPageParserPanel ):
     
     def GetValue( self ):
         
-        page_parser = self._GetPageParser()
-        formula = self.GetFormula()
-        sort_posts_by_source_time = self.GetSortPostsBySourceTime()
+        page_parser = self._edit_panel.GetPageParser()
+        formula = self._edit_panel.GetFormula()
+        sort_posts_by_source_time = self._edit_panel.GetSortPostsBySourceTime()
         
         subsidiary_page_parser = ClientParsing.SubsidiaryPageParser(
             formula = formula,
@@ -1732,7 +1827,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg_edit:
             
-            panel = EditPageParserPanel( dlg_edit, new_parser )
+            panel = EditPageParserAndTestPanel( dlg_edit, new_parser )
             
             dlg_edit.SetPanel( panel )
             
@@ -1802,7 +1897,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditPageParserPanel( dlg, parser )
+            panel = EditPageParserAndTestPanel( dlg, parser )
             
             dlg.SetPanel( panel )
             
