@@ -566,7 +566,7 @@ zoom_string_lookup = {
     ZOOM_NEAREST : 'nearest neighbour',
     ZOOM_LINEAR : 'bilinear interpolation',
     ZOOM_AREA : 'pixel area resampling',
-    ZOOM_CUBIC : '4x4 bilinear interpolation',
+    ZOOM_CUBIC : 'bicubic interpolation',
     ZOOM_LANCZOS4 : '8x8 Lanczos interpolation'
 }
 
