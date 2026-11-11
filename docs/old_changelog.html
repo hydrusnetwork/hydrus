@@ -35,6 +35,51 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_695"><a href="#version_695">version 695</a></h2>
+                    <ul>
+                        <li><h3>seekbar</h3></li>
+                        <li>to relieve the 'oh my click did something else because I didn't notice the tiny gap below the seekbar in fullscreen mode' issue, if the current media has a seekbar and it is wide but not quite tall enough for the window--think a vid like 1920x1078 in fullscreen--hydrus now drops that media the couple pixels down so the seekbar is flush with the bottom edge whenever 'centering' that media. you can change the pixel gap threshold for this (default 20) or turn it off entirely, under `options-&gt;media playback`</li>
+                        <li>this 'move down' mode should work well in UI scales larger than 100%, but you will still sometimes get videos with a little gap at the bottom when the height of the media matches the height of the window; there are no easy and excellent technical solutions for this right now, but if you want me to add an option to always drop it a virtual pixel and thus always leave a little gap at the _top_, I can do it</li>
+                        <li>fixed an issue where in fullscreen borderless in some UI scales, the seekbar does not pop up to full size if the mouse is at the bottom of the screen</li>
+                        <li>UI scales greater than 100% should draw the border around the scanbar a little better. not perfect yet</li>
+                        <li><h3>more memory-efficient duplicate work</h3></li>
+                        <li>a user did some great memory and CPU profiling on larger potential duplicate pair filtering and found bloat due to massed primitive object duplication. I have worked on this and potential duplicate filtering should now use at least 67% less memory, and in complicated situations 90%+</li>
+                        <li>specifically, the core search atom of this system is now completely deduplicated in all cases, so any new search is pointing to the same memory store, and only containers need be recreated</li>
+                        <li>further, I reworked a rich index used to search these guys at the object level to now use these new objects, compressing used data a bit more, particularly in search spaces of millions of rows</li>
+                        <li>when you do hit large search spaces, I _think_ this compressed tech will also save a bunch of CPU when updating and re-initialising searches. let me know how it goes</li>
+                        <li>also fixed a bug in 'group mode' potential duplicate pair search that wasted a little CPU and in very very rare cases might deliver a pair with a file outside the group</li>
+                        <li>also, the 'clear search context' signal, which happens when a user purges all potential dupes from the db, is better about clearing out data here</li>
+                        <li><h3>exe manager</h3></li>
+                        <li>the new and still-under-testing 'get metadata for a single file' job type under `options-&gt;external programs` now shows a 'result parsing' box with the same basic UI as in 'manage parsers'. write up a json or html parser for whatever you are getting back on stdout or stderr, and the newly updated test panel will show your raw and parsed output!</li>
+                        <li>next step here is to migrate the legacy 'file lookup scripts' tag suggestions box to be a 'go ask external thing for tag suggestions' guy, and then you'll be able to pipe whatever ai model or script you can think of that eats a file reference and generates tags right into 'manage tags'</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed some crazy, probably truncated animated gifs that were raising errors when Pillow tried to iterate through their num_frames</li>
+                        <li><h3>patreon</h3></li>
+                        <li>nothing bad is happening, but my personal situation is changing a little and I will be closing my Patreon page later this month. the links and pages in the help are removed today to prep for this</li>
+                        <li>I expect to keep working on hydrus just like normal, with regular schedule</li>
+                        <li>thank you to everyone who supported over the years. I really appreciate it!</li>
+                        <li><h3>environment stuff</h3></li>
+                        <li>for advanced source users, the setup_venv.py now tentatively supports python 3.15, with the proviso that you need to select advanced/test on everything and you will not get lz4 (some memory savings) or jxl (the filetype) support yet</li>
+                        <li>removed the 'openssl' version line from `help-&gt;about`. this wraps the system version, not anything the python venv actually controls, and isn't particularly helpful. the old-date-despite-being-updated is sometimes confusing/worrying for users, too. EDIT: ironically, we ended up looking at openssl versions despite it being non-python this week when we went through some dll fun. I'll bring this back, and other versions we can see, in a new about tab</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>fixed a double-layout-set on the main gui that was raising a warning in PyQt6</li>
+                        <li>a routine that streams blocks of data from external executable calls (for ffmpeg video rendering and silent audio checks) now does a CPU-efficient sleep (this continues some CPU-thrashing code cleanup work I started a few months ago)</li>
+                        <li>the fast event processor 'job schedulers' are optimised a little and have less per-loop overhead</li>
+                        <li>when thread slots are saturated (this happens in the downloader system when there are lots of downloaders waiting to work) downloader jobs now back off on reattempts, slowly moving from 10 second to 180 second waits</li>
+                        <li>I wrenched the parser edit ui's edit and test panels apart--very ugly decoupling, and there is more to do--so I could embed the edit UI in the executable callable panel</li>
+                        <li>the edit parser panel now has a nicer Qt update signal on any changes</li>
+                        <li>a bunch of list handling tools (mass unions, iterator reshapers, some auto-throttling chunkers) have nice type hints, so all callers know the shape of what they are getting back based on what they are giving</li>
+                        <li>bit of misc linting</li>
+                        <li><h3>boring mainloop refactoring</h3></li>
+                        <li>I did a KISS and merge pass on my manager daemons, such as the things that run file maintenance, sibling/parent calc, and subscriptions. a bunch of timing/waiting code is more solid, but I may need to revisit this to check on some edge cases, particularly around a remaining ugly knot of when new jobs come in while a daemon is cleaning up what it thinks is the final job. I'll keep pushing on this</li>
+                        <li>the parent class of mainloops now handles the pausing between loops; every subclass now receives desired work period and returns 'still work to do' status, and the parent makes waiting decisions based on this, in a unified way</li>
+                        <li>forced wait times are also now handled by the parent class</li>
+                        <li>the separate idle/work waits are merged and wakes are handled instead by current work state logic</li>
+                        <li>the top mainloop now handles most 'check if shutting down' calls</li>
+                        <li>all nine mainloop managers now do CPU-efficient sleeps when not working, which should reduce some thrashing in busy clients</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_694"><a href="#version_694">version 694</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

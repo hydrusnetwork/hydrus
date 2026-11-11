@@ -7,6 +7,64 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 695](https://github.com/hydrusnetwork/hydrus/releases/tag/v695)
+
+### seekbar
+
+* to relieve the 'oh my click did something else because I didn't notice the tiny gap below the seekbar in fullscreen mode' issue, if the current media has a seekbar and it is wide but not quite tall enough for the window--think a vid like 1920x1078 in fullscreen--hydrus now drops that media the couple pixels down so the seekbar is flush with the bottom edge whenever 'centering' that media. you can change the pixel gap threshold for this (default 20) or turn it off entirely, under `options->media playback`
+* this 'move down' mode should work well in UI scales larger than 100%, but you will still sometimes get videos with a little gap at the bottom when the height of the media matches the height of the window; there are no easy and excellent technical solutions for this right now, but if you want me to add an option to always drop it a virtual pixel and thus always leave a little gap at the _top_, I can do it
+* fixed an issue where in fullscreen borderless in some UI scales, the seekbar does not pop up to full size if the mouse is at the bottom of the screen
+* UI scales greater than 100% should draw the border around the scanbar a little better. not perfect yet
+
+### more memory-efficient duplicate work
+
+* a user did some great memory and CPU profiling on larger potential duplicate pair filtering and found bloat due to massed primitive object duplication. I have worked on this and potential duplicate filtering should now use at least 67% less memory, and in complicated situations 90%+
+* specifically, the core search atom of this system is now completely deduplicated in all cases, so any new search is pointing to the same memory store, and only containers need be recreated
+* further, I reworked a rich index used to search these guys at the object level to now use these new objects, compressing used data a bit more, particularly in search spaces of millions of rows
+* when you do hit large search spaces, I _think_ this compressed tech will also save a bunch of CPU when updating and re-initialising searches. let me know how it goes
+* also fixed a bug in 'group mode' potential duplicate pair search that wasted a little CPU and in very very rare cases might deliver a pair with a file outside the group
+* also, the 'clear search context' signal, which happens when a user purges all potential dupes from the db, is better about clearing out data here
+
+### exe manager
+
+* the new and still-under-testing 'get metadata for a single file' job type under `options->external programs` now shows a 'result parsing' box with the same basic UI as in 'manage parsers'. write up a json or html parser for whatever you are getting back on stdout or stderr, and the newly updated test panel will show your raw and parsed output!
+* next step here is to migrate the legacy 'file lookup scripts' tag suggestions box to be a 'go ask external thing for tag suggestions' guy, and then you'll be able to pipe whatever ai model or script you can think of that eats a file reference and generates tags right into 'manage tags'
+
+### misc
+
+* fixed some crazy, probably truncated animated gifs that were raising errors when Pillow tried to iterate through their num_frames
+
+### patreon
+
+* nothing bad is happening, but my personal situation is changing a little and I will be closing my Patreon page later this month. the links and pages in the help are removed today to prep for this
+* I expect to keep working on hydrus just like normal, with regular schedule
+* thank you to everyone who supported over the years. I really appreciate it!
+
+### environment stuff
+
+* for advanced source users, the setup_venv.py now tentatively supports python 3.15, with the proviso that you need to select advanced/test on everything and you will not get lz4 (some memory savings) or jxl (the filetype) support yet
+* removed the 'openssl' version line from `help->about`. this wraps the system version, not anything the python venv actually controls, and isn't particularly helpful. the old-date-despite-being-updated is sometimes confusing/worrying for users, too. EDIT: ironically, we ended up looking at openssl versions despite it being non-python this week when we went through some dll fun. I'll bring this back, and other versions we can see, in a new about tab
+
+### boring stuff
+
+* fixed a double-layout-set on the main gui that was raising a warning in PyQt6
+* a routine that streams blocks of data from external executable calls (for ffmpeg video rendering and silent audio checks) now does a CPU-efficient sleep (this continues some CPU-thrashing code cleanup work I started a few months ago)
+* the fast event processor 'job schedulers' are optimised a little and have less per-loop overhead
+* when thread slots are saturated (this happens in the downloader system when there are lots of downloaders waiting to work) downloader jobs now back off on reattempts, slowly moving from 10 second to 180 second waits
+* I wrenched the parser edit ui's edit and test panels apart--very ugly decoupling, and there is more to do--so I could embed the edit UI in the executable callable panel
+* the edit parser panel now has a nicer Qt update signal on any changes
+* a bunch of list handling tools (mass unions, iterator reshapers, some auto-throttling chunkers) have nice type hints, so all callers know the shape of what they are getting back based on what they are giving
+* bit of misc linting
+
+### boring mainloop refactoring
+
+* I did a KISS and merge pass on my manager daemons, such as the things that run file maintenance, sibling/parent calc, and subscriptions. a bunch of timing/waiting code is more solid, but I may need to revisit this to check on some edge cases, particularly around a remaining ugly knot of when new jobs come in while a daemon is cleaning up what it thinks is the final job. I'll keep pushing on this
+* the parent class of mainloops now handles the pausing between loops; every subclass now receives desired work period and returns 'still work to do' status, and the parent makes waiting decisions based on this, in a unified way
+* forced wait times are also now handled by the parent class
+* the separate idle/work waits are merged and wakes are handled instead by current work state logic
+* the top mainloop now handles most 'check if shutting down' calls
+* all nine mainloop managers now do CPU-efficient sleeps when not working, which should reduce some thrashing in busy clients
+
 ## [Version 694](https://github.com/hydrusnetwork/hydrus/releases/tag/v694)
 
 ### misc
@@ -380,47 +438,3 @@ title: Changelog
 * cleaned up the application processing code's responses and formalised that a shortcut will be caught if it matches an entry, not only if it matches and the command produced an arbitrary result. if you say 'copy bitmap' when no file is selected, the shortcut is swallowed there; it won't go "ok nothing happened" and see if anything higher matches your shortcut
 * a user reported an interesting statistical bug in the duplicate pairs fragmentary search; where it does a confidence interval check, in one case it had more searched items than the entire search space. it seems this was a race condition. I have wrapped all the code in proper locking, added nicer guards before the math, and tidied up some redundant code along the way
 * misc linting and typing, blah
-
-## [Version 685](https://github.com/hydrusnetwork/hydrus/releases/tag/v685)
-
-### misc
-
-* the 3-second tooltip micro-notification experiment on the 'edit notes' 'copy urls' button worked out, so I wrote the code up properly and made it so all 20+ copy icon buttons across the program say something like 'Copied!' or 'Copied x ratings!' on click, all 23+ paste icon buttons similarly do 'Pasted!' or 'Pasted x texts!'. I'll slowly integrate this into other buttons that do a thing that isn't immediately obvious
-* the media viewer right-click menu's 'volume' submenu now has a volume slider rather than the list of checkboxes
-* fixed a recent regression that was stopping the media viewer from finding and activating an already-existing manage tags window when you did 'manage tags' from the media viewer--it was instead creating multiple windows, which is not desired (#2085)
-* if you have very large or very small thumbnails, the thumbnail pair lists in auto-resolution now size better, setting saner min/max sizes for the thumbnail item cells and scaling thumbs to that size when a min/max limit applies (#2079)
-* added a 'show anything with specific bandwidth rules' checkbox to 'review bandwidth usage'. if you import a downloader and it comes with bandwidth rules, you can now find those without having to actually use the site
-* added a 'can you run the client headless? (not yet)' to the FAQ page, and then added a test line to it from a user who found a possible way
-
-### alternate software
-
-* expanded and formalised the 'if you like hydrus, maybe you will like this software too/instead' section in the help here: https://hydrusnetwork.github.io/hydrus/getting_started_files.html#other_software
-* as part of this, I am listing three hydrus-adjacent projects that are coming into public this month, same way as I list stuff in the Client API page. feel free to check them out! they are--
-* IDHAN (https://github.com/KJNeko/IDHAN) - A high-performance hydrus-like media manager server with a web UI. Very sophisticated.
-* Naiad (https://github.com/scoopscoop/naiad-net) - A hydrus-like media manager with its own PTR-style tag-sharing solution.
-* refr (https://github.com/therandomlance/refr) - An Immich-like with a focus on managing art reference images.
-* if you create your own hydrus-like or similar tech that hydrus users may like, please link me and I'll list it there!
-
-### executable manager
-
-* I invite advanced users to play with this again (`options->external programs`). there's a little change in the call we were playing with last week
-* after talking it out with people, I realised it would be better not to have two 'local process calls' for 'one template string' vs 'command + list of params', and updated the current prototype object, which was the former, to be the latter. thus the current terminal call is updated to have an exe and a list of params with replacement strings, rather than just one template string. it calls the process directly with the params all nice and separate rather than a raw string to your shell, so no quotespam needed. although editing separate params is more of a pain than just a text box, it is neater and more secure to only do it like this, saving us several headaches, and the only blocking cost of eliminating the worse yet easier option is writing some good UI to make editing the better option easier
-* I've therefore tried to make some decent edit UI. nice and simple exe and param list, and copy/paste buttons so you can just paste a raw template if you have a nice simple one
-* the 'availability call' and 'which availability call' settings are gone; we now just do a `which` on the given exe. this breaks the macOS 'open "Google Chrome" blah' calls, but we'll revisit this if it ever proves a big problem
-* the 'open externally' job now provides 'file hash (sha256)' and 'file id' input parameters
-* some stuff is renamed from, say, 'local terminal call' to 'local process call' and so on to reflect the changes around here
-* improved some labels and update signals in the ui--stuff like updating the example templates on a string processor change
-
-### new thumbnail grid test
-
-* advanced users are encouraged to play with this more (`options->thumbnails->New Rendering Tech Test`). I think we have it pretty much nailed down now and so I'm mostly just optimising and cleaning in prep for switching everyone over, and I'd like to see if there are any more visual bugs lurking
-* a bug in the new thumbnail grid test where thumbnails would not redraw is fixed. it turned out there was some duff redraw logic when the 'fade thumbnails' option was off
-* set it so the new thumbnail grid only registers with the animation timer while it has thumbs animating--as soon as there is no more work, it delists itself
-* the new thumbnail grid no longer attempts to animate thumbs if it is not currently on a visible page; it just schedules them for instant draw
-* a thumbnail now correctly understands it is no longer animating if its paint errors out or its fade-in time or backing pixmap are invalidated, which triggers the above delisting
-* added `help->debug->report modes->graphics view thumbnail update report mode`, which spams a bunch of decisions about the new painting tech to log
-
-### boring cleanup
-
-* did some MainLoop Daemon refactoring, just getting over a hump to move some responsibility to the superclass
-* moved to nicer ui-cleanup calls in a bunch of my async code
