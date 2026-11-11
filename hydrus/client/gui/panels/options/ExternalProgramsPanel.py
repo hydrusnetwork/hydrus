@@ -36,6 +36,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels.options import ClientGUIOptionsPanelBase
+from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.parsing import ClientParsing
@@ -1122,6 +1123,8 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         super().__init__( parent, 'testing' )
         
+        self._last_executable_response: ClientExecutableResponses.ExecutableCallResponse | None = None
+        
         self._executable_callable = ClientExecutableCallables.ClientExecutableCallable( 'test' )
         
         self._test_availability_button = ClientGUICommon.BetterButton( self, 'test availability!', self._TestAvailability )
@@ -1135,16 +1138,27 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         self._test_call_button = ClientGUICommon.BetterButton( self, 'test call!', self._TestCall )
         
-        self._raw_output_panel = ClientGUICommon.StaticBox( self, 'raw output' )
+        self._results_box = ClientGUICommon.StaticBox( self, 'results' )
+        
+        self._results_notebook = QW.QTabWidget( self )
         
         # could make this a notebook in future, with the parsed output params as the first window and 'raw' response tucked away for debugging
-        self._raw_output_text_box = QW.QPlainTextEdit( self._raw_output_panel )
+        self._results_output_text_box = QW.QPlainTextEdit( self._results_notebook )
+        self._results_output_text_box.setReadOnly( True )
+        self._results_output_text_box.setFont( QG.QFont( 'Monospace' ) )
+        
+        self._raw_output_text_box = QW.QPlainTextEdit( self._results_notebook )
         self._raw_output_text_box.setReadOnly( True )
         self._raw_output_text_box.setFont( QG.QFont( 'Monospace' ) )
         
+        self._results_notebook.addTab( self._results_output_text_box, 'parsed results' )
+        self._results_notebook.addTab( self._raw_output_text_box, 'raw output' )
+        
+        self._results_notebook.setCurrentWidget( self._results_output_text_box )
+        
         #
         
-        self._raw_output_panel.Add( self._raw_output_text_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._results_box.Add( self._results_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._currently_running_availability_test = False
         
@@ -1156,7 +1170,9 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self.Add( self._input_param_types_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._actual_command_preview, CC.FLAGS_EXPAND_PERPENDICULAR )
         self.Add( self._test_call_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self.Add( self._raw_output_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self.Add( self._results_box, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._UpdateResultBoxesVisibility()
         
     
     def _GetInputParams( self ) -> dict[ int, str ]:
@@ -1176,7 +1192,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             
             panel = EditInputParameterTestValuePanel( self, required_input_parameter_type )
             
-            panel.valueChanged.connect( self._UpdatePreview )
+            panel.valueChanged.connect( self._UpdateCommandPreviewAndClearTestResults )
             
             self._input_param_types_to_edit_panels[ required_input_parameter_type ] = panel
             
@@ -1204,11 +1220,13 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
                 message = 'Availability test failed!'
                 
             
+            self._results_output_text_box.setPlainText( message )
             self._raw_output_text_box.setPlainText( message )
             
         
         def errback_callable( etype, value, tb ):
             
+            self._results_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
             self._raw_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
             
         
@@ -1223,6 +1241,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         actual_call = self._executable_callable.GetCall()
         
+        self._results_output_text_box.setPlainText( message )
         self._raw_output_text_box.setPlainText( message )
         
         self._currently_running_availability_test = True
@@ -1246,81 +1265,95 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         def publish_callable( executable_response: ClientExecutableResponses.ExecutableCallResponse ):
             
+            self._last_executable_response = executable_response
+            
             pipeline_type = self._executable_callable.GetPipelineType()
             
             response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
             
             if len( response_types ) == 0:
                 
-                message = 'Looks good!'
+                raw_data_message = 'Looks good!'
                 
             else:
                 
-                message = 'Call finished ok!'
+                raw_data_message = 'Call finished ok!'
                 
+            
+            results_data_message = raw_data_message
             
             if len( response_types ) > 0:
                 
                 if ClientExecutablePipelines.RESPONSE_TYPE_IMPORTABLE_FILE in response_types:
                     
-                    message += '\n\n'
+                    raw_data_message += '\n\n'
                     
-                    if executable_response.temp_file_info is None:
+                    if self._last_executable_response.temp_file_info is None:
                         
-                        message += 'Problem: No importable file set!'
+                        raw_data_message += 'Problem: No importable file set!'
                         
                     else:
                         
-                        ( os_file_handle, temp_path ) = executable_response.temp_file_info
+                        ( os_file_handle, temp_path ) = self._last_executable_response.temp_file_info
                         
                         try:
                             
                             mime = HydrusFileTypeDetermination.GetMime( temp_path )
                             size = os.path.getsize( temp_path )
                             
-                            message += f'Received a {HydrusData.ToHumanBytes(size)} {HC.mime_string_lookup[mime]} file!'
+                            raw_data_message += f'Received a {HydrusData.ToHumanBytes(size)} {HC.mime_string_lookup[mime]} file!'
                             
                         except Exception as e:
                             
-                            message += f'Problem with file: {e}'
+                            raw_data_message += f'Problem with file: {e}'
                             
                         finally:
                             
                             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
                             
-                            executable_response.temp_file_info = None
+                            self._last_executable_response.temp_file_info = None
                             
                         
                     
                 
-                if ClientExecutablePipelines.RESPONSE_TYPE_MANDATORY_PARSABLE_METADATA in response_types or ClientExecutablePipelines.RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA in response_types:
+                results_data_message = raw_data_message
+                
+                if ClientExecutablePipelines.PipelineTypeExpectsToParse( pipeline_type ):
                     
-                    message += '\n\n'
+                    results_data_message += '\n\n'
+                    raw_data_message += '\n\n'
                     
-                    if len( executable_response.raw_parsable_response ) == 0:
+                    if len( self._last_executable_response.raw_parsable_response ) == 0:
                         
-                        message += 'Empty/no metadata document returned!'
+                        results_data_message += 'Empty/no metadata document returned!'
+                        raw_data_message += 'Empty/no metadata document returned!'
                         
                     else:
                         
-                        message += f'Received a metadata document of {HydrusNumbers.ToHumanInt(len( executable_response.raw_parsable_response))} characters!'
+                        results_data_message += f'Received a metadata document of {HydrusNumbers.ToHumanInt(len( self._last_executable_response.raw_parsable_response))} characters!'
+                        raw_data_message += f'Received a metadata document of {HydrusNumbers.ToHumanInt(len( self._last_executable_response.raw_parsable_response))} characters!'
                         
-                        message += '\n\n'
+                        results_data_message += '\n\n'
+                        raw_data_message += '\n\n'
                         
                         page_parser = self._executable_callable.GetPageParser()
                         
-                        pretty_text = page_parser.ParsePretty( {}, executable_response.raw_parsable_response )
+                        pretty_text = page_parser.ParsePretty( {}, self._last_executable_response.raw_parsable_response )
                         
-                        message += pretty_text
+                        results_data_message += pretty_text
+                        
+                        raw_data_message += self._last_executable_response.raw_parsable_response
                         
                     
                 
             
-            self._raw_output_text_box.setPlainText( message )
+            self._results_output_text_box.setPlainText( results_data_message )
+            self._raw_output_text_box.setPlainText( raw_data_message )
             
         
         def errback_callable( etype, value, tb ):
             
+            self._results_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
             self._raw_output_text_box.setPlainText( HydrusData.ConvertExceptionTupleToSummary( etype, value, tb ) )
             
         
@@ -1328,6 +1361,8 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             
             self._test_call_button.setEnabled( True )
             
+        
+        self._last_executable_response = None
         
         message = f'Testing{HC.UNICODE_ELLIPSIS}'
         
@@ -1339,6 +1374,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             message += ' (forcing a 15 second timeout for testing purposes)'
             
         
+        self._results_output_text_box.setPlainText( message )
         self._raw_output_text_box.setPlainText( message )
         
         self._test_call_button.setEnabled( False )
@@ -1353,13 +1389,31 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self._test_availability_button.setEnabled( self._executable_callable.GetCall().CanTestAvailability() and not self._currently_running_availability_test )
         
     
-    def _UpdatePreview( self ):
+    def _UpdateCommandPreviewAndClearTestResults( self ):
         
         input_params = self._GetInputParams()
         
         self._actual_command_preview.setText( self._executable_callable.GetCall().GetCommandPreviewWithInputParams( input_params ) )
         
+        self._results_output_text_box.setPlainText( '' )
         self._raw_output_text_box.setPlainText( '' )
+        
+    
+    def _UpdateResultBoxesVisibility( self ):
+        
+        pass
+        
+    
+    def GetExampleText( self ) -> str:
+        
+        if self._last_executable_response is None:
+            
+            return ''
+            
+        else:
+            
+            return self._last_executable_response.raw_parsable_response
+            
         
     
     def SetExecutableCallable( self, executable_callable: ClientExecutableCallables.ClientExecutableCallable ):
@@ -1376,7 +1430,8 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             
         
         self._UpdateAvailabilityTestButton()
-        self._UpdatePreview()
+        self._UpdateCommandPreviewAndClearTestResults()
+        self._UpdateResultBoxesVisibility()
         
     
 
@@ -1402,7 +1457,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_GET_SINGLE_FILE_METADATA:
                 
-                s += ' (in testing--no parsing yet!)'
+                s += ' (in testing!)'
                 
             
             self._pipeline_type.addItem( s, pipeline_type )
@@ -1412,6 +1467,19 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_description.setWordWrap( True )
         
         self._actual_call_panel = EditClientExecutableActualCall( self, call.GetCall(), call.GetPipelineType() )
+        
+        self._parsing_panel_staticbox = ClientGUICommon.StaticBox( self, 'result parsing' )
+        
+        # TODO: I hacked these three getblah methods in, copying from clientguiparsing. we can do better
+        #  when we get to cleaning this up, have a test panel here that has nice update signals too
+        self._parsing_panel = ClientGUIParsing.EditPageParserPanel(
+            self._parsing_panel_staticbox,
+            call.GetPageParser(),
+            self._GetTestData,
+            self._GetTestDataForChild,
+            self._GetExampleParsingContext,
+            show_example_urls = False
+        )
         
         self._validity_text = ClientGUICommon.BetterStaticText( self )
         self._validity_text.setWordWrap( True )
@@ -1439,10 +1507,13 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._pipeline_panel.Add( self._pipeline_description, CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        self._parsing_panel_staticbox.Add( self._parsing_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._pipeline_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._actual_call_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._parsing_panel_staticbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._validity_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         hbox = QP.HBoxLayout()
@@ -1457,6 +1528,25 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_type.currentIndexChanged.connect( self._UpdatePipelineType )
         self._actual_call_panel.valueChanged.connect( self._UpdateValidity )
         self._actual_call_panel.valueChanged.connect( self._UpdateTestPanel )
+        self._parsing_panel.valueChanged.connect( self._UpdateTestPanel )
+        
+    
+    def _GetExampleParsingContext( self ):
+        
+        return dict()
+        
+    
+    def _GetTestData( self ):
+        
+        example_parsing_context = self._GetExampleParsingContext()
+        example_test_text = self._test_panel.GetExampleText()
+        
+        return ClientParsing.ParsingTestData( example_parsing_context, ( example_test_text, ) )
+        
+    
+    def _GetTestDataForChild( self ):
+        
+        return self._GetTestData()
         
     
     def _GetValiditySummary( self ):
@@ -1512,6 +1602,8 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_description.setText( pipeline_type_desc )
         
         self._actual_call_panel.SetPipelineType( pipeline_type )
+        
+        self._parsing_panel_staticbox.setVisible( ClientExecutablePipelines.PipelineTypeExpectsToParse( pipeline_type ) )
         
         self._UpdateValidity()
         
@@ -1569,6 +1661,13 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
             pipeline_type = pipeline_type,
             actual_call = actual_call
         )
+        
+        if ClientExecutablePipelines.PipelineTypeExpectsToParse( pipeline_type ):
+            
+            page_parser = self._parsing_panel.GetValue()
+            
+            call.SetPageParser( page_parser )
+            
         
         call.SetCallableKey( self._original_callable_key )
         

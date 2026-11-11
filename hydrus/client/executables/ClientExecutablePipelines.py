@@ -108,3 +108,11 @@ executable_pipeline_types_to_desc_strs = {
     EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL : 'This tells the client how to open a URL in another program.',
     EXECUTABLE_PIPELINE_TYPE_GET_SINGLE_FILE_METADATA : 'This tells the client how to fetch tags or other metadata for a file. A tag suggestions system that worked via an AI auto-tagger would use this.'
 }
+
+def PipelineTypeExpectsToParse( pipeline_type: int ):
+    
+    parsing_gubbins = { RESPONSE_TYPE_MANDATORY_PARSABLE_METADATA, RESPONSE_TYPE_OPTIONAL_PARSABLE_METADATA }
+    we_are_parsing = len( parsing_gubbins.intersection( executable_pipeline_types_to_response_types[ pipeline_type ] ) ) > 0
+    
+    return we_are_parsing
+    

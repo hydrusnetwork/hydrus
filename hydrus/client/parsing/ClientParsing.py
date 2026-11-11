@@ -2681,16 +2681,16 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     SERIALISABLE_NAME = 'Page Parser'
     SERIALISABLE_VERSION = 3
     
-    def __init__( self, name, parser_key = None, string_converter = None, subsidiary_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None ):
+    def __init__( self, name, parser_key = None, pre_parsing_string_converter = None, subsidiary_page_parsers = None, content_parsers = None, example_urls = None, example_parsing_context = None ):
         
         if parser_key is None:
             
             parser_key = HydrusData.GenerateKey()
             
         
-        if string_converter is None:
+        if pre_parsing_string_converter is None:
             
-            string_converter = ClientStrings.StringConverter()
+            pre_parsing_string_converter = ClientStrings.StringConverter()
             
         
         if subsidiary_page_parsers is None:
@@ -2718,7 +2718,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         super().__init__( name )
         
         self._parser_key: bytes = parser_key
-        self._string_converter: ClientStrings.StringConverter = string_converter
+        self._pre_parsing_string_converter: ClientStrings.StringConverter = pre_parsing_string_converter
         self._subsidiary_page_parsers: list[ SubsidiaryPageParser ] = subsidiary_page_parsers
         self._content_parsers: list[ ContentParser ] = content_parsers
         self._example_urls: collections.abc.Collection[ str ] = example_urls
@@ -2728,22 +2728,22 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
     def _GetSerialisableInfo( self ):
         
         serialisable_parser_key = self._parser_key.hex()
-        serialisable_string_converter = self._string_converter.GetSerialisableTuple()
+        serialisable_pre_parsing_string_converter = self._pre_parsing_string_converter.GetSerialisableTuple()
         
         serialisable_subsidiary_page_parsers = HydrusSerialisable.SerialisableList( sorted( self._subsidiary_page_parsers, key = lambda spp: spp.GetPageParser().GetName().casefold() ) ).GetSerialisableTuple()
         
         serialisable_content_parsers = HydrusSerialisable.SerialisableList( sorted( self._content_parsers, key = lambda p: p.GetName().casefold() ) ).GetSerialisableTuple()
         
-        return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
+        return ( self._name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
-        ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
+        ( self._name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context ) = serialisable_info
         
         self._parser_key = bytes.fromhex( serialisable_parser_key )
         
-        self._string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
+        self._pre_parsing_string_converter = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_pre_parsing_string_converter, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER } ) )
         
         self._subsidiary_page_parsers = HydrusSerialisable.CreateFromSerialisableTuple(
             serialisable_subsidiary_page_parsers,
@@ -2770,20 +2770,20 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         if version == 1:
             
-            ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls ) = old_serialisable_info
+            ( name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls ) = old_serialisable_info
             
             example_parsing_context = {}
             
             example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
             
-            new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
+            new_serialisable_info = ( name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
             
             return ( 2, new_serialisable_info )
             
         
         if version == 2:
             
-            ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context ) = old_serialisable_info
+            ( name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context ) = old_serialisable_info
             
             old_subsidiary_page_parsers = [
                 (
@@ -2809,7 +2809,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             serialisable_subsidiary_page_parsers = subsidiary_page_parsers.GetSerialisableTuple()
             
-            new_serialisable_info = ( name, serialisable_parser_key, serialisable_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
+            new_serialisable_info = ( name, serialisable_parser_key, serialisable_pre_parsing_string_converter, serialisable_subsidiary_page_parsers, serialisable_content_parsers, example_urls, example_parsing_context )
             
             return ( 3, new_serialisable_info )
             
@@ -2909,9 +2909,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return 'Parser "' + self._name + '" - ' + ', '.join( domains )
         
     
-    def GetStringConverter( self ):
+    def GetPreParsingStringConverter( self ):
         
-        return self._string_converter
+        return self._pre_parsing_string_converter
         
     
     def NullifyTestData( self ):
@@ -2928,7 +2928,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         try:
             
-            converted_parsing_text = self._string_converter.Convert( parsing_text )
+            converted_parsing_text = self._pre_parsing_string_converter.Convert( parsing_text )
             
         except HydrusExceptions.StringConvertException as e:
             

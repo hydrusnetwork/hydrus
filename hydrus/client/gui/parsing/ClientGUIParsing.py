@@ -1023,6 +1023,8 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditContentParsersPanel( ClientGUICommon.StaticBox ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ], permitted_content_types ):
         
         super().__init__( parent, 'content parsers' )
@@ -1047,6 +1049,8 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         #
         
         self.Add( content_parsers_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._content_parsers.columnListContentsChanged.connect( self.valueChanged )
         
     
     def _Add( self ):
@@ -1321,12 +1325,14 @@ class EditPageParserTestPanel( ClientGUICommon.StaticBox ):
 # TODO: More decoupling cleanup to do here; particularly the testdata stuff. move it all to Qt signals and clean up the underlying objects
 class EditPageParserPanel( QW.QTabWidget ):
     
-    def __init__( self, parent: QW.QWidget, parser: ClientParsing.PageParser, get_test_data, get_test_data_for_children, get_example_parsing_context, formula = None, sort_posts_by_source_time = None ):
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent: QW.QWidget, parser: ClientParsing.PageParser, get_test_data, get_test_data_for_child, get_example_parsing_context, formula = None, sort_posts_by_source_time = None, show_example_urls = True ):
         
         self._original_parser = parser
         
         self._get_test_data = get_test_data
-        self._get_test_data_for_children = get_test_data_for_children
+        self._get_test_data_for_child = get_test_data_for_child
         self._get_example_parsing_context = get_example_parsing_context
         
         super().__init__( parent )
@@ -1345,9 +1351,9 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         conversion_panel = ClientGUICommon.StaticBox( main_panel, 'pre-parsing conversion' )
         
-        string_converter = parser.GetStringConverter()
+        pre_parsing_string_converter = parser.GetPreParsingStringConverter()
         
-        self._string_converter = ClientGUIStringControls.StringConverterButton( conversion_panel, string_converter )
+        self._pre_parsing_string_converter = ClientGUIStringControls.StringConverterButton( conversion_panel, pre_parsing_string_converter )
         
         #
         
@@ -1399,7 +1405,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         permitted_content_types = [ HC.CONTENT_TYPE_URLS, HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_NOTES, HC.CONTENT_TYPE_HASH, HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_TYPE_TITLE, HC.CONTENT_TYPE_HTTP_HEADERS, HC.CONTENT_TYPE_VETO ]
         
-        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._get_test_data_for_children, permitted_content_types )
+        self._content_parsers = EditContentParsersPanel( content_parsers_panel, self._get_test_data_for_child, permitted_content_types )
         
         #
         
@@ -1431,7 +1437,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         st = ClientGUICommon.BetterStaticText( conversion_panel, 'If the data this parser gets is wrapped in some quote marks or is otherwise encoded,\nyou can convert it to neat HTML/JSON first with this.' )
         
         conversion_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        conversion_panel.Add( self._string_converter, CC.FLAGS_EXPAND_PERPENDICULAR )
+        conversion_panel.Add( self._pre_parsing_string_converter, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         example_urls_panel.Add( self._example_urls, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -1450,6 +1456,11 @@ class EditPageParserPanel( QW.QTabWidget ):
         else:
             
             rows.append( ( 'sort posts by source time: ', self._sort_posts_by_source_time ) )
+            
+        
+        if not show_example_urls:
+            
+            example_urls_panel.setVisible( False )
             
         
         gridbox = ClientGUICommon.WrapInGrid( main_panel, rows )
@@ -1503,6 +1514,12 @@ class EditPageParserPanel( QW.QTabWidget ):
         self.addTab( subsidiary_page_parsers_notebook_panel, 'subsidiary page parsers' )
         self.addTab( content_parsers_panel, 'content parsers' )
         
+        self._name.textChanged.connect( self.valueChanged )
+        self._formula.valueChanged.connect( self.valueChanged )
+        self._example_urls.listBoxChanged.connect( self.valueChanged )
+        self._subsidiary_page_parsers.columnListContentsChanged.connect( self.valueChanged )
+        self._content_parsers.valueChanged.connect( self.valueChanged )
+        
     
     def _AddExampleURL( self ):
         
@@ -1517,7 +1534,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_children() )
+            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_child() )
             
             dlg.SetPanel( panel )
             
@@ -1574,7 +1591,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit sub page parser', frame_key = 'deeply_nested_dialog' ) as dlg:
             
-            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_children() )
+            panel = EditSubsidiaryPageParserAndTestPanel( dlg, subsidiary_page_parser, test_data = self._get_test_data_for_child() )
             
             dlg.SetPanel( panel )
             
@@ -1608,7 +1625,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         parser_key = self._original_parser.GetParserKey()
         
-        string_converter = self._string_converter.GetValue()
+        pre_parsing_string_converter = self._pre_parsing_string_converter.GetValue()
         
         subsidiary_page_parsers = self._subsidiary_page_parsers.GetData()
         
@@ -1618,14 +1635,14 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         example_parsing_context = self._get_example_parsing_context()
         
-        page_parser = ClientParsing.PageParser( name, parser_key = parser_key, string_converter = string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
+        page_parser = ClientParsing.PageParser( name, parser_key = parser_key, pre_parsing_string_converter = pre_parsing_string_converter, subsidiary_page_parsers = subsidiary_page_parsers, content_parsers = content_parsers, example_urls = example_urls, example_parsing_context = example_parsing_context )
         
         return page_parser
         
     
     def GetPreParseStringConverter( self ):
         
-        return self._string_converter.GetValue()
+        return self._pre_parsing_string_converter.GetValue()
         
     
     def GetSortPostsBySourceTime( self ):

@@ -1,5 +1,6 @@
 import collections.abc
 
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -147,6 +148,8 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
 
 class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent: QW.QWidget, formula: ClientParsing.ParseFormula, test_data_callable: collections.abc.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         super().__init__( parent )
@@ -280,6 +283,8 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
+        self.valueChanged.emit()
+        
         self._UpdateControls()
         
     
@@ -328,6 +333,8 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._current_formula = panel.GetValue()
                 
+                self.valueChanged.emit()
+                
                 self._UpdateControls()
                 
             
@@ -345,6 +352,8 @@ class EditFormulaPanel( ClientGUIScrolledPanels.EditPanel ):
             formula = obj
             
             self._current_formula = formula
+            
+            self.valueChanged.emit()
             
             self._UpdateControls()
             
