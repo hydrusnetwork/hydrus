@@ -331,7 +331,7 @@ def MouseIsOverOneOfOurWindows():
     
     for window in QW.QApplication.topLevelWidgets():
         
-        if MouseIsOverWidget( window ):
+        if MouseIsOverWidget( window, padding = 1 ):
             
             return True
             
@@ -340,7 +340,7 @@ def MouseIsOverOneOfOurWindows():
     return False
     
 
-def MouseIsOverWidget( win: QW.QWidget ):
+def MouseIsOverWidget( win: QW.QWidget, padding = 0 ):
     
     # note this is different from win.underMouse(), which in different situations seems to be more complicated than just a rect test
     
@@ -350,7 +350,14 @@ def MouseIsOverWidget( win: QW.QWidget ):
     
     local_mouse_pos = win.mapFromGlobal( global_mouse_pos )
     
-    return win.rect().contains( local_mouse_pos )
+    container_rect = win.rect()
+    
+    if padding > 0:
+        
+        container_rect = container_rect.adjusted( -padding, -padding, padding, padding )
+        
+    
+    return container_rect.contains( local_mouse_pos )
     
 
 def MyWindowHasAChildTLW( win: QW.QWidget ):

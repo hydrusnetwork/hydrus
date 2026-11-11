@@ -1,5 +1,4 @@
 import itertools
-import math
 import typing
 
 from qtpy import QtCore as QC
@@ -1031,7 +1030,7 @@ class AnimationBar( QW.QWidget ):
         return False
         
     
-    def _Redraw( self, painter ):
+    def _Redraw( self, painter: QG.QPainter ):
         
         # making an extra note here: do not under any circumstances query the mpv window during our paint event
         # it leads to the QBackingStore::endPaint() errors when mpv is unhappy/unloaded
@@ -1054,6 +1053,8 @@ class AnimationBar( QW.QWidget ):
         painter.setBackground( QG.QBrush( background_colour ) )
         
         painter.eraseRect( painter.viewport() )
+        
+        painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
         
         #
         
@@ -1157,11 +1158,16 @@ class AnimationBar( QW.QWidget ):
         
         #
         
-        painter.setBrush( QC.Qt.BrushStyle.NoBrush )
+        # annoying >100% UI scale thing. yeah whatever we'll draw four weird lines, let's go
+        # TODO: this should absolutely be fixed after layoput overhaul with something nicer!
         
-        painter.setPen( QG.QPen( self._qss_colours[ 'hab_border' ] ) )
+        painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
+        painter.setBrush( QG.QBrush( self._qss_colours[ 'hab_border' ] ) )
         
-        painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
+        painter.drawRect( 0, 0, my_width, 1 )
+        painter.drawRect( 0, 0, 1, my_height )
+        painter.drawRect( my_width - 1, 0, my_width, my_height )
+        painter.drawRect( 0, my_height - 1, my_width, my_height )
         
     
     def _ScanToCurrentMousePos( self, precise = True ):
@@ -2471,7 +2477,7 @@ class MediaContainer( QW.QWidget ):
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
-            if not ClientGUIFunctions.MouseIsOverWidget( self._canvas ):
+            if not ClientGUIFunctions.MouseIsOverWidget( self._canvas, padding = 1 ):
                 
                 return False
                 
@@ -2607,6 +2613,9 @@ class MediaContainer( QW.QWidget ):
         
         if ShouldHaveAnimationBar( self._media, self._show_action ):
             
+            # TODO: interesting thing here; QtMediaPlayer viewers still don't support a click on the bottom edge in fullscreen. padding/border/positioning issue?
+            # worth a revisit after layout overhaul
+            
             if threshold_for_dropping_seekbar_media_to_bottom is not None:
                 
                 we_are_touching_the_horizontal_edges = x == 0
@@ -2617,22 +2626,23 @@ class MediaContainer( QW.QWidget ):
                     
                     y = canvas_size.height() - ideal_size.height()
                     
+                    if self.devicePixelRatio() > 1.0:
+                        
+                        y += 1
+                        
+                    
                     we_are_touching_the_bottom_edge = True
                     
                 
             
-            # TODO: interesting thing here; QtMediaPlayer viewers still don't support a click on the bottom edge in fullscreen. padding/border/positioning issue?
-            # worth a revisit after layout overhaul
-            if we_are_touching_the_bottom_edge:
-                
-                dpr = self.devicePixelRatio()
-                
-                # filling in half pixel gap
-                if dpr > 1.0:
-                    
-                    y += math.ceil( dpr - 1.0 )
-                    
-                
+            # TODO: additional annoyance here is that we don't _know_ if we have an extra pixel at the bottom
+            # the 'canvas size' is rounded down to integers. so a 1001 becomes 500 here
+            # we set 500 height and position at 0 and everything lines up here ok, and then there's a gap at the bottom
+            # I had a thing that said 'hey if DPR is >1.0, shuffle down one, but we don't know when we do and don't actually fit!
+            # ultimately it means you get a little white gap at the top even when the vid matches the size perfectly, like in fullscreen borderless
+            # were we to migrate to a graphicsview, we'd probably be in SizeF land and it would all work
+            # this is worth considering carefully. some stuff like QtMediaPlayer might be absolutely upside down as a result
+            # but the new mpv player is probably going to be it anyway...
             
         
         ideal_pos =  QC.QPoint( x, y )
