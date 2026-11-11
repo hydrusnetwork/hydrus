@@ -657,7 +657,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
                 if store_backups:
                     
-                    existing_timestamps_ms = sorted( self._STI( self._Execute( 'SELECT timestamp_ms FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) ) )
+                    existing_timestamps_ms: list[ int ] = sorted( self._STI( self._Execute( 'SELECT timestamp_ms FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) ) )
                     
                     if len( existing_timestamps_ms ) > 0:
                         

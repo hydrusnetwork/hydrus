@@ -182,12 +182,12 @@ SERIALISABLE_TYPES_TO_OBJECT_TYPES = {}
 class DeserialisationContext( object ):
     
     def __init__( self, trusted: bool, serialisable_type_whitelist: set[ int ], log_trusted_whitelist_violations: bool = True ):
-        '''
+        """
         How are we going to deserialise this guy? Are we loading from the trusted db storage, or from a recent download? What are we expecting to see?
         :param trusted: whether the ingress is trusted or not; controls how strictly whitelist applies
         :param serialisable_type_whitelist: will raise an exception/print to log if any objects do not match this
         :param log_trusted_whitelist_violations: set to false on your unit test when you notice logspam on dict duplicate twenty minutes before release time on Wednesday
-        '''
+        """
         
         self.trusted = trusted
         self.serialisable_type_whitelist = serialisable_type_whitelist

@@ -37,7 +37,7 @@ Furthermore, if you are two weeks out of sync with PTR you are unable to push ad
 Q: Does this automagically tag my files?
 :   A: No. Until we get machine learning based auto-tagging nothing is truly automatic. All tags on the PTR were uploaded by another user, so if nobody uploaded tags associated with the hash of your file it won't have any tags in the PTR.
 
-Q: How good is the PTR at tagging [insert file format or thing from site here]?
+Q: How good is the PTR at tagging?
 :   A: That depends largely on if there's a scrapable database of tags for whatever you're asking about. Anything that comes from a booru or site that supports tags is fairly likely to have something on the PTR. Original content on some obscure chan-style imageboard is less so.
 
 Q: Help! My files don't have any tags! What do!?

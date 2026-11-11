@@ -3036,7 +3036,7 @@ class DB( HydrusDB.HydrusDB ):
             # counter can just take a list of gubbins like this
             results_dict.update( loop_of_results )
             
-            if cancelled_hook():
+            if cancelled_hook is not None and cancelled_hook():
                 
                 we_stopped_early = True
                 

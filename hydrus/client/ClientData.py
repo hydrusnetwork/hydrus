@@ -207,7 +207,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
     yaml_tag = '!Credentials'
     
-    def __init__( self, host, port, access_key = None ):
+    def __init__( self, host: str, port: int, access_key: bytes | None = None ):
         
         super().__init__()
         
