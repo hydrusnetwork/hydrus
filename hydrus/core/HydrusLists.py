@@ -8,7 +8,9 @@ import typing
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTime
 
-def DedupeList( xs: collections.abc.Iterable ):
+T = typing.TypeVar( 'T' )
+
+def DedupeList( xs: collections.abc.Iterable[ T ] ) -> list[ T ]:
     
     if isinstance( xs, set ):
         
@@ -358,7 +360,7 @@ def ConvertTupleOfDatasToCasefolded( l: collections.abc.Sequence ) -> tuple:
     return tuple( ( casefold_obj( obj ) for obj in l ) )
     
 
-def IntelligentMassIntersect( sets_to_reduce: collections.abc.Collection[ set ] ):
+def IntelligentMassIntersect( sets_to_reduce: collections.abc.Collection[ set[ T ] ] ) -> set[ T ]:
     
     answer = None
     
@@ -396,7 +398,7 @@ def IntelligentMassIntersect( sets_to_reduce: collections.abc.Collection[ set ] 
         
     
 
-def IterateListRandomlyAndFast( xs: list ):
+def IterateListRandomlyAndFast( xs: list[ T ] ) -> collections.abc.Iterator[ T ]:
     
     # do this instead of a pre-for-loop shuffle on big lists
     
@@ -406,23 +408,23 @@ def IterateListRandomlyAndFast( xs: list ):
         
     
 
-def IsAListLikeCollection( obj ):
+def IsAListLikeCollection( obj ) -> bool:
     
     # protip: don't do isinstance( possible_list, collections.abc.Collection ) for a 'list' detection--strings pass it (and sometimes with infinite recursion) lol!
     return isinstance( obj, ( tuple, list, set, frozenset ) )
     
 
-def MassExtend( iterables ):
+def MassExtend( iterables: collections.abc.Iterable[ collections.abc.Iterable[ T ] ] ) -> list[ T ]:
     
     return [ item for item in itertools.chain.from_iterable( iterables ) ]
     
 
-def MassUnion( iterables ):
+def MassUnion( iterables: collections.abc.Iterable[ collections.abc.Iterable[ T ] ] ) -> set[ T ]:
     
     return { item for item in itertools.chain.from_iterable( iterables ) }
     
 
-def MedianPop( population ):
+def MedianPop( population: list[ T ] ) -> T:
     
     # assume it has at least one and comes sorted
     
@@ -447,7 +449,7 @@ def PartitionIteratorIntoLists( pred: collections.abc.Callable[ [ object ], bool
     return ( list( a ), list( b ) )
     
 
-def PullNFromIterator( iterator, n ):
+def PullNFromIterator( iterator: collections.abc.Iterable[ T ], n: int ) -> list[ T ]:
     
     chunk = []
     
@@ -464,7 +466,7 @@ def PullNFromIterator( iterator, n ):
     return chunk
     
 
-def RandomiseListByChunks( xs, n ):
+def RandomiseListByChunks( xs: list[ T ], n: int ) -> list[ T ]:
     
     blocks = list( SplitListIntoChunks( xs, n ) )
     
@@ -473,7 +475,7 @@ def RandomiseListByChunks( xs, n ):
     return [ item for block in blocks for item in block ] # 2025-06-03 - hydev's first nested list comprehension
     
 
-def RandomPop( population ):
+def RandomPop( population: list[ T ] ) -> T:
     
     random_index = random.randint( 0, len( population ) - 1 )
     
@@ -482,9 +484,7 @@ def RandomPop( population ):
     return row
     
 
-T = typing.TypeVar( 'T' )
-
-def SampleSetByGettingFirst( s: set[ T ], n ) -> set[ T ]:
+def SampleSetByGettingFirst( s: set[ T ], n: int ) -> set[ T ]:
     
     # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
     
@@ -510,7 +510,7 @@ def SampleSetByGettingFirst( s: set[ T ], n ) -> set[ T ]:
     return sample
     
 
-def SetsIntersect( a, b ):
+def SetsIntersect( a: set, b: set ) -> bool:
     
     if not isinstance( a, set ):
         
@@ -520,12 +520,12 @@ def SetsIntersect( a, b ):
     return not a.isdisjoint( b )
     
 
-def SmoothOutMappingIterator( xs, n ):
+MT = typing.TypeVar( 'MT' )
+MH = typing.TypeVar( 'MH' )
+
+def SmoothOutMappingIterator( xs: collections.abc.Iterable[ tuple[ MT, MH ] ], n: int ) -> collections.abc.Iterator[ tuple[ MT, MH ] ]:
     
     # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks
-    
-    chunk_weight = 0
-    chunk = []
     
     for ( tag_item, hash_items ) in xs:
         
@@ -541,7 +541,7 @@ def SplayListForDB( xs ):
     return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
     
 
-def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
+def SplitIteratorIntoAutothrottledChunks( iterator: collections.abc.Iterable[ T ], starting_n: int, precise_time_to_stop: float ) -> collections.abc.Iterator[ list[ T ] ]:
     
     n = starting_n
     
@@ -576,7 +576,7 @@ def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_
         
     
 
-def SplitIteratorIntoChunks( iterator, n ):
+def SplitIteratorIntoChunks( iterator: collections.abc.Iterable[ T ], n: int ) -> collections.abc.Iterator[ list[ T ] ]:
     
     chunk = []
     
@@ -598,9 +598,9 @@ def SplitIteratorIntoChunks( iterator, n ):
         
     
 
-def SplitListIntoChunks( xs, n ):
+def SplitListIntoChunks( xs: collections.abc.Collection[ T ], n: int ) -> collections.abc.Iterator[ list[ T ] ]:
     
-    if isinstance( xs, set ):
+    if not isinstance( xs, list ):
         
         xs = list( xs )
         
@@ -611,9 +611,9 @@ def SplitListIntoChunks( xs, n ):
         
     
 
-def SplitListIntoChunksRich( xs, n ):
+def SplitListIntoChunksRich( xs: collections.abc.Collection[ T ], n: int ) -> collections.abc.Iterator[ tuple[ int, int, list[ T ] ] ]:
     
-    if isinstance( xs, set ):
+    if not isinstance( xs, list ):
         
         xs = list( xs )
         
@@ -626,7 +626,7 @@ def SplitListIntoChunksRich( xs, n ):
         
     
 
-def SplitMappingIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):
+def SplitMappingIteratorIntoAutothrottledChunks( iterator: collections.abc.Iterable[ tuple[ MT, MH ] ], starting_n: int, precise_time_to_stop: float ) -> collections.abc.Iterator[ list[ tuple[ MT, MH ] ] ]:
     
     n = starting_n
     
