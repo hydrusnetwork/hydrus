@@ -169,7 +169,7 @@ class PotentialDuplicatesMaintenanceManager( ClientDaemons.ManagerWithMainLoop )
         
         if not still_work_to_do:
             
-            return 30
+            return 600.0
             
         
         if self._work_hard.is_set():

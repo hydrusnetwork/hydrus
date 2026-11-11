@@ -73,6 +73,7 @@ class ManagerWithMainLoop( object ):
         self._shutdown = False
         self._mainloop_is_finished = False
         self._serious_error_encountered = False
+        self._wake_job: HydrusThreading.SingleJob | None = None
         
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         self._controller.sub( self, 'Wake', 'wake_daemons' )
@@ -217,7 +218,12 @@ class ManagerWithMainLoop( object ):
                     
                 else:
                     
-                    CG.client_controller.CallLater( wait_period, self.Wake )
+                    if self._wake_job is not None and not self._wake_job.IsWorkComplete():
+                        
+                        self._wake_job.Cancel()
+                        
+                    
+                    self._wake_job = CG.client_controller.CallLater( wait_period, self.Wake )
                     
                     self._wake_event.wait()
                     
@@ -229,8 +235,6 @@ class ManagerWithMainLoop( object ):
             # we want to push towards:
             # have work to do?
             # can work?
-            # still work to do = do work()
-            # if shutting down, dump out
             
         except HydrusExceptions.DaemonShutdownException:
             

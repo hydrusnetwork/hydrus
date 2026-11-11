@@ -2032,6 +2032,7 @@ class SubscriptionsManager( ClientDaemons.ManagerWithMainLoop ):
             
         else:
             
+            # TODO: we can do better here. wait until next_due_work and wake on changes
             return 5
             
         

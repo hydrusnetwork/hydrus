@@ -406,6 +406,7 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
             self._last_loop_work_period = desired_work_period
             
         
+        # TODO: whatever is going on here, it can be done better and cleaner
         if self._new_data_event.is_set():
             
             time.sleep( 1 )
@@ -450,7 +451,7 @@ class TagDisplayMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         if not still_work_to_do:
             
-            return 10.0
+            return 600.0
             
         
         if len( self._go_faster ) > 0:
