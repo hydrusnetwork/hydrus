@@ -1,4 +1,5 @@
 import itertools
+import math
 import typing
 
 from qtpy import QtCore as QC
@@ -2602,14 +2603,35 @@ class MediaContainer( QW.QWidget ):
         
         threshold_for_dropping_seekbar_media_to_bottom = CG.client_controller.new_options.GetNoneableInteger( 'threshold_for_dropping_seekbar_media_to_bottom' )
         
-        if ShouldHaveAnimationBar( self._media, self._show_action ) and threshold_for_dropping_seekbar_media_to_bottom is not None:
+        we_are_touching_the_bottom_edge = y == 0
+        
+        if ShouldHaveAnimationBar( self._media, self._show_action ):
             
-            we_are_touching_the_horizontal_edges = x == 0
-            we_are_close_to_the_top_and_thus_bottom = y < threshold_for_dropping_seekbar_media_to_bottom
-            
-            if we_are_touching_the_horizontal_edges and we_are_close_to_the_top_and_thus_bottom:
+            if threshold_for_dropping_seekbar_media_to_bottom is not None:
                 
-                y = canvas_size.height() - ideal_size.height()
+                we_are_touching_the_horizontal_edges = x == 0
+                
+                we_are_close_to_the_top_and_thus_bottom = y < threshold_for_dropping_seekbar_media_to_bottom
+                
+                if we_are_touching_the_horizontal_edges and we_are_close_to_the_top_and_thus_bottom and not we_are_touching_the_bottom_edge:
+                    
+                    y = canvas_size.height() - ideal_size.height()
+                    
+                    we_are_touching_the_bottom_edge = True
+                    
+                
+            
+            # TODO: interesting thing here; QtMediaPlayer viewers still don't support a click on the bottom edge in fullscreen. padding/border/positioning issue?
+            # worth a revisit after layout overhaul
+            if we_are_touching_the_bottom_edge:
+                
+                dpr = self.devicePixelRatio()
+                
+                # filling in half pixel gap
+                if dpr > 1.0:
+                    
+                    y += math.ceil( dpr - 1.0 )
+                    
                 
             
         
