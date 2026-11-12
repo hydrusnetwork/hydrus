@@ -1054,6 +1054,8 @@ class AnimationBar( QW.QWidget ):
         
         painter.eraseRect( painter.viewport() )
         
+        initial_pen = painter.pen()
+        
         painter.setPen( QG.QPen( QC.Qt.PenStyle.NoPen ) )
         
         #
@@ -1150,6 +1152,8 @@ class AnimationBar( QW.QWidget ):
                     
                     x = my_width - text_size.width() - 3
                     y = round( ( my_height - text_size.height() ) / 2 )
+                    
+                    painter.setPen( initial_pen )
                     
                     ClientGUIFunctions.DrawText( painter, x, y, s )
                     
