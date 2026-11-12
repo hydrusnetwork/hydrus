@@ -7705,6 +7705,30 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
+    def ClosePage( self, page_key: bytes ):
+        
+        page = self._notebook.GetPageFromPageKey( page_key )
+        
+        if page is None:
+            
+            raise HydrusExceptions.DataMissing( 'Could not find that page!' )
+            
+        
+        if page is self._notebook:
+            
+            raise HydrusExceptions.BadRequestException( 'Cannot close the top-level pages notebook!' )
+            
+        
+        notebook = ClientGUIPages.GetParentNotebook( page )
+        
+        index = notebook.indexOf( page )
+        
+        if not notebook.ClosePage( index, polite = False ):
+            
+            raise HydrusExceptions.DataMissing( 'Could not find that page!' )
+            
+        
+    
     def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, import_options_container, file_limit ):
         
         page = self._notebook.GetOrMakeGalleryDownloaderPage( desired_page_name = 'subscription gap downloaders', select_page = True )

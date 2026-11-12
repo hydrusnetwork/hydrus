@@ -65,6 +65,28 @@ class HydrusResourceClientAPIRestrictedManagePagesAddFiles( HydrusResourceClient
         
     
 
+class HydrusResourceClientAPIRestrictedManagePagesClosePage( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        def do_it( page_key ):
+            
+            CG.client_controller.gui.ClosePage( page_key )
+            
+        
+        page_key = request.parsed_request_args.GetValue( 'page_key', bytes )
+        
+        try:
+            
+            CG.client_controller.CallBlockingToQtTLW( do_it, page_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            raise HydrusExceptions.NotFoundException( 'Could not find that page!' )
+            
+        return HydrusServerResources.ResponseContext( 200 )
+        
+    
 class HydrusResourceClientAPIRestrictedManagePagesFocusPage( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
