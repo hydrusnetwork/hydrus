@@ -48,7 +48,8 @@ CLIENT_API_INT_PARAMS = {
     'width',
     'height',
     'render_format',
-    'render_quality'
+    'render_quality',
+    'interpolation'
 }
 
 CLIENT_API_BYTE_PARAMS = {

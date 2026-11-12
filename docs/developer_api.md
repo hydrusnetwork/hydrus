@@ -2742,6 +2742,7 @@ Arguments :
     *   `render_format`: (optional, integer, the filetype enum value to render the file to, for still images it defaults `2` for PNG, for Ugoiras it defaults to `23` for APNG)
     *   `render_quality`: (optional, integer, the quality or PNG compression level to use for encoding the image, default `1` for PNG and `80` for JPEG and WEBP, has no effect for Ugoiras using APNG)
     *   `width` and `height`: (optional but must provide both if used, integer, the width and height to scale the image to. Doesn't apply to Ugoiras)
+    *   `interpolation`: (optional, applies only if `width` and `height` provided, the interpolation algorithm to use for resizing)
 
     Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
     
@@ -2754,7 +2755,15 @@ Arguments :
     The accepted values for Ugoiras are:
     
     *   `23` for APNG (`quality` does nothing for this format)
-    *   `83` for animated WEBP (`quality` sets WEBP quality 1 to 100, for values over 100 lossless compression is used)
+    *   `83` for animated WEBP (`quality` sets WEBP quality 0 to 100, 101 to 200 set lossless output with `value - 100` being compression level)
+    
+    The accepted values for `interpolation` are:
+    
+    *   `0`: nearest neighbour (cv2 `INTER_NEAREST`)
+    *   `1`: bilinear interpolation (cv2 `INTER_LINEAR`)
+    *   `2`: pixel area resampling (cv2 `INTER_AREA`), default for downscales
+    *   `3`: bicubic interpolation (cv2 `INTER_CUBIC`)
+    *   `4`: 8x8 Lanczos interpolation (cv2 `INTER_LANCZOS4`), default for upscales
 
 The file you request must be a still image file that Hydrus can render (this includes PSD files) or a Ugoira file. This request uses the client image cache for images.
 

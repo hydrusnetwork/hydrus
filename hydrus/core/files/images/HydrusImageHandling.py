@@ -731,22 +731,21 @@ def ResizeNumPyImage( numpy_image: numpy.ndarray, target_resolution, forced_inte
     ( target_width, target_height ) = target_resolution
     ( image_width, image_height ) = GetResolutionNumPy( numpy_image )
     
-    if target_width == image_width and target_height == target_width:
+    if target_width == image_width and target_height == image_height:
         
         return numpy_image
+
+    if forced_interpolation is not None:
+            
+            interpolation = forced_interpolation
         
-    elif target_width > image_height or target_height > image_width:
+    elif target_width > image_width or target_height > image_height:
         
         interpolation = cv2.INTER_LANCZOS4
         
     else:
         
         interpolation = cv2.INTER_AREA
-        
-    
-    if forced_interpolation is not None:
-        
-        interpolation = forced_interpolation
         
     
     return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
