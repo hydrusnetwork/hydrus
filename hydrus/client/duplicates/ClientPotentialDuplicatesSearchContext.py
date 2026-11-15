@@ -33,9 +33,13 @@ class PotentialIdPairAndDistance( typing.NamedTuple ):
     larger_media_id: int
     distance: int
 
+SORT_STATUS_UNKNOWN = 0
+SORT_STATUS_FAST_SEARCH = 1
+SORT_STATUS_RICH_ESTIMATE = 2
+
 class PotentialDuplicateIdPairsAndDistances( object ):
     
-    def __init__( self, potential_id_pairs_and_distances: collections.abc.Collection[ PotentialIdPairAndDistance ] ):
+    def __init__( self, potential_id_pairs_and_distances: collections.abc.Collection[ PotentialIdPairAndDistance ], sort_status = SORT_STATUS_UNKNOWN ):
         
         self._potential_id_pairs_and_distances = list( potential_id_pairs_and_distances )
         
@@ -44,6 +48,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         self._mapping_initialised = False
         
         self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE
+        
+        self._sort_status = sort_status
         
     
     def __len__( self ):
@@ -274,7 +280,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def Duplicate( self ) -> "PotentialDuplicateIdPairsAndDistances":
         
-        return PotentialDuplicateIdPairsAndDistances( self._potential_id_pairs_and_distances )
+        return PotentialDuplicateIdPairsAndDistances( self._potential_id_pairs_and_distances, sort_status = self._sort_status )
         
     
     def FilterWiderPotentialGroup( self, media_ids: collections.abc.Collection[ int ] ):
@@ -348,20 +354,6 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     def GetPairs( self ) -> list[ tuple[ int, int ] ]:
         
         return [ ( row.smaller_media_id, row.larger_media_id ) for row in self._potential_id_pairs_and_distances ]
-        
-    
-    def GetPairListsBySmallestDistanceFirst( self ) -> list[ list[ tuple[ int, int ] ] ]:
-        
-        distance_to_pairs = collections.defaultdict( list )
-        
-        for row in self._potential_id_pairs_and_distances:
-            
-            distance_to_pairs[ row.distance ].append( ( row.smaller_media_id, row.larger_media_id ) )
-            
-        
-        distances = sorted( distance_to_pairs.keys() )
-        
-        return [ distance_to_pairs[ distance ] for distance in distances ]
         
     
     def GetRows( self ) -> list[ PotentialIdPairAndDistance ]:
@@ -442,18 +434,32 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def RandomiseForFastSearch( self ):
         
+        if self._sort_status == SORT_STATUS_FAST_SEARCH:
+            
+            return
+            
+        
         # this ensures all the ids are lined up
         self._potential_id_pairs_and_distances.sort()
         
         # this ensures we still have a decent random selection within that
         self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE )
         
+        self._sort_status = SORT_STATUS_FAST_SEARCH
+        
     
     def RandomiseForRichEstimate( self ):
+        
+        if self._sort_status == SORT_STATUS_RICH_ESTIMATE:
+            
+            return
+            
         
         # we want hits early and thus are going for a very fine-grained randomisation
         # I'd just do random.shuffle but it is a bit slow at n=1 tbh
         self._potential_id_pairs_and_distances = HydrusLists.RandomiseListByChunks( self._potential_id_pairs_and_distances, 32 )
+        
+        self._sort_status = SORT_STATUS_RICH_ESTIMATE
         
     
 
@@ -856,7 +862,7 @@ class PotentialDuplicatePairsFragmentarySearch( object ):
             
         
     
-    def NotifyPotentialDuplicatePairsUpdate( self, update_type, *args ):
+    def NotifyPotentialDuplicatePairsUpdate( self, update_type: int, *args ):
         
         with self._lock:
             
