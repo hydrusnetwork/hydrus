@@ -34,7 +34,7 @@ from hydrus.client.metadata import ClientMetadataMigrationImporters
 
 class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, import_folders ):
+    def __init__( self, parent, import_folders: collections.abc.Collection[ ClientImportLocal.ImportFolder ] ):
         
         super().__init__( parent )
         
@@ -49,6 +49,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         import_folders_panel.AddButton( 'add', self._Add )
         import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         import_folders_panel.AddDeleteButton()
+        import_folders_panel.AddImportExportButtons( ( ClientImportLocal.ImportFolder, ), tuple(), self._RawAdd )
         
         #
         
@@ -65,8 +66,11 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
+        warning += '\n\n'
+        warning += 'Careful with export/import/duplicate, too. Import folders retain some info about the files in their previous runs, so do not share them publicly. Watch out for two import folders pointed at the same location, too!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        warning_st.setWordWrap( True )
         warning_st.setObjectName( 'HydrusWarning' )
         
         QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -89,14 +93,19 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 import_folder = panel.GetValue()
                 
-                import_folder.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
-                
-                self._import_folders.AddData( import_folder, select_sort_and_scroll = True )
+                self._RawAdd( import_folder )
                 
             
         
     
-    def _ConvertImportFolderToDisplayTuple( self, import_folder ):
+    def _RawAdd( self, import_folder: ClientImportLocal.ImportFolder ):
+        
+        import_folder.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
+        
+        self._import_folders.AddData( import_folder, select_sort_and_scroll = True )
+        
+    
+    def _ConvertImportFolderToDisplayTuple( self, import_folder: ClientImportLocal.ImportFolder ):
         
         ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
         
@@ -123,7 +132,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertImportFolderToSortTuple( self, import_folder ):
+    def _ConvertImportFolderToSortTuple( self, import_folder: ClientImportLocal.ImportFolder ):
         
         ( name, path, paused, check_regularly, check_period ) = import_folder.ToListBoxTuple()
         
@@ -176,7 +185,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _GetExistingNames( self ):
+    def _GetExistingNames( self ) -> set[ str ]:
         
         import_folders = self._import_folders.GetData()
         
@@ -185,9 +194,9 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
-    def GetValue( self ) -> collections.abc.Collection[ ClientImportLocal.ImportFolder ]:
+    def GetValue( self ) -> list[ ClientImportLocal.ImportFolder ]:
         
-        import_folders = self._import_folders.GetData()
+        import_folders = list( self._import_folders.GetData() )
         
         return import_folders
         
