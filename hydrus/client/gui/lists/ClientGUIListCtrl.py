@@ -41,15 +41,17 @@ def SafeNoneStr( value ):
     return '' if value is None else value
     
 
+T = typing.TypeVar( 'T' )
+
 # note that this AbstractItemModel can support nested folder stuff, with some work. we'd prob want to move to a data storage system that actuall was a tree, rather than this indices-to-data stuff
-class HydrusListItemModel( QC.QAbstractItemModel ):
+class HydrusListItemModel( QC.QAbstractItemModel, typing.Generic[ T ] ):
     
     def __init__(
         self,
         parent: QW.QWidget,
         column_list_type: int,
-        data_to_display_tuple_func: collections.abc.Callable[ [ object ], tuple[ int ] ],
-        data_to_sort_tuple_func: collections.abc.Callable[ [ object ], tuple[ object ] ],
+        data_to_display_tuple_func: collections.abc.Callable[ [ T ], tuple ],
+        data_to_sort_tuple_func: collections.abc.Callable[ [ T ], tuple ],
         column_types_to_name_overrides = None
     ):
         
@@ -67,13 +69,13 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
         self._column_types_to_name_overrides = column_types_to_name_overrides
         
-        self._data_to_display_tuple_func = data_to_display_tuple_func
-        self._data_to_sort_tuple_func = data_to_sort_tuple_func
+        self._data_to_display_tuple_func: collections.abc.Callable[ [ T ], tuple ] = data_to_display_tuple_func
+        self._data_to_sort_tuple_func: collections.abc.Callable[ [ T ], tuple ] = data_to_sort_tuple_func
         
-        self._indices_to_data = {}
-        self._data_to_indices = {}
-        self._data_to_display_tuples = {}
-        self._data_to_sort_tuples = {}
+        self._indices_to_data: dict[ int, T ] = {}
+        self._data_to_indices: dict[ T, int ] = {}
+        self._data_to_display_tuples: dict[ T, tuple ] = {}
+        self._data_to_sort_tuples: dict[ T, tuple ] = {}
         
         self._sort_column_type = 0
         
@@ -100,7 +102,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         
     
-    def AddDatas( self, datas ):
+    def AddDatas( self, datas: collections.abc.Collection[ T ] ):
         
         insert_index = len( self._indices_to_data )
         
@@ -163,7 +165,6 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
                 return text
                 
             
-            
         elif role == QC.Qt.ItemDataRole.UserRole:
             
             return self._indices_to_data[ index.row() ] # same data no matter the column in this system!
@@ -172,7 +173,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return None
         
     
-    def DeleteDatas( self, deletee_datas ):
+    def DeleteDatas( self, deletee_datas: collections.abc.Collection[ T ] ):
         
         deletee_indices = [ self._data_to_indices[ data ] for data in deletee_datas ]
         
@@ -229,7 +230,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return self._column_list_type
         
     
-    def GetData( self, indices: collections.abc.Collection[ int ] | None = None ):
+    def GetData( self, indices: collections.abc.Collection[ int ] | None = None ) -> list[ T ]:
         
         if indices is None:
             
@@ -241,7 +242,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         
     
-    def GetEarliestData( self, datas ):
+    def GetEarliestData( self, datas ) -> T | None:
         
         if len( datas ) == 0:
             
@@ -257,7 +258,8 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
         return matching_tuples[0][1]
         
-    def GetModelIndexFromData( self, data: object ):
+    
+    def GetModelIndexFromData( self, data: T ) -> QC.QModelIndex:
         
         if data in self._data_to_indices:
             
@@ -271,7 +273,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         
     
-    def HasData( self, data: object ):
+    def HasData( self, data: T ) -> bool:
         
         return data in self._data_to_indices
         
@@ -334,7 +336,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         return len( self._indices_to_data )
         
     
-    def SetData( self, datas ):
+    def SetData( self, datas: collections.abc.Collection[ T ] ):
         
         existing_datas = set( self._data_to_indices.keys() )
         
@@ -416,7 +418,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         self.layoutChanged.emit()
         
     
-    def ReplaceDatas( self, replacement_tuples ):
+    def ReplaceDatas( self, replacement_tuples: list[ tuple[ T, T ] ] ) -> None:
         
         for ( old_data, new_data ) in replacement_tuples:
             
@@ -434,7 +436,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         self.UpdateDatas( new_datas )
         
     
-    def UpdateDatas( self, datas, check_for_changed_sort_data = False ):
+    def UpdateDatas( self, datas: collections.abc.Collection[ T ], check_for_changed_sort_data = False ):
         
         sort_data_has_changed = False
         
