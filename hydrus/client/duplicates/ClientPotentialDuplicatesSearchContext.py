@@ -78,6 +78,16 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             
         
     
+    def _ClearMapping( self ):
+        
+        if self._mapping_initialised:
+            
+            self._media_ids_to_pertinent_rows = collections.defaultdict( list )
+            self._media_ids_to_other_media_ids_to_distances = collections.defaultdict( dict )
+            self._mapping_initialised = False
+            
+        
+    
     def _DeleteFromMappingIfInitialised( self, deletee_pairs ):
         
         if not self._mapping_initialised:
@@ -299,9 +309,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
         self._potential_id_pairs_and_distances = []
         
-        self._media_ids_to_pertinent_rows = collections.defaultdict( list )
-        self._media_ids_to_other_media_ids_to_distances = collections.defaultdict( dict )
-        self._mapping_initialised = False
+        self._ClearMapping()
         
         self._pending_delete_pairs = set()
         
@@ -482,18 +490,18 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def PopBlock( self, block_size = None ):
         
-        self._FlushPendingDeletePairs()
-        
         if block_size is None:
             
             block_size = self._current_search_block_size
             
         
+        self._ClearMapping()
+        
+        self._FlushPendingDeletePairs()
+        
         block_of_id_pairs_and_distances = self._potential_id_pairs_and_distances[ : block_size ]
         
         self._potential_id_pairs_and_distances = self._potential_id_pairs_and_distances[ block_size : ]
-        
-        self._mapping_initialised = False
         
         return PotentialDuplicateIdPairsAndDistances( block_of_id_pairs_and_distances )
         
