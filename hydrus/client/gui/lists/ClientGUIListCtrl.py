@@ -525,11 +525,13 @@ def EMPTY_ROWS_MENU_CALLABLE() -> QW.QMenu:
     raise HydrusExceptions.DataMissing( 'This should never be called!' )
     
 
+MT = typing.TypeVar( 'MT' )
+
 class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()
     
-    def __init__( self, parent, min_height_num_chars: int, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None, max_height_num_chars = None ):
+    def __init__( self, parent, min_height_num_chars: int, model: HydrusListItemModel[ MT ], use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None, max_height_num_chars = None ):
         
         super().__init__( parent )
         
@@ -858,12 +860,12 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         CGC.core().PopupMenu( self, menu )
         
     
-    def AddData( self, data: object, select_sort_and_scroll = False ):
+    def AddData( self, data: MT, select_sort_and_scroll = False ):
         
         self.AddDatas( ( data, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def AddDatas( self, datas: collections.abc.Iterable[ object ], select_sort_and_scroll = False ):
+    def AddDatas( self, datas: collections.abc.Iterable[ MT ], select_sort_and_scroll = False ):
         
         datas = list( datas )
         
@@ -900,7 +902,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.customContextMenuRequested.connect( self.EventShowMenu )
         
     
-    def DeleteDatas( self, deletee_datas: collections.abc.Iterable[ object ] ):
+    def DeleteDatas( self, deletee_datas: collections.abc.Iterable[ MT ] ):
         
         deletee_datas = [ QP.ListsToTuples( data ) for data in deletee_datas ]
         
@@ -979,7 +981,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return self.model().rowCount()
         
     
-    def GetData( self, only_selected = False ) -> list:
+    def GetData( self, only_selected = False ) -> list[ MT ]:
         
         if only_selected:
             
@@ -993,7 +995,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def GetTopSelectedData( self ) -> typing.Any | None:
+    def GetTopSelectedData( self ) -> MT | None:
         
         indices_iter = self._GetSelectedIndicesIterator()
         
@@ -1016,19 +1018,19 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return None
         
     
-    def HasData( self, data: object ):
+    def HasData( self, data: MT ):
         
         data = QP.ListsToTuples( data )
         
         return self.model().HasData( data )
         
     
-    def HasDoneDeletes( self ):
+    def HasDoneDeletes( self ) -> bool:
         
         return self._has_done_deletes
         
     
-    def HasOneSelected( self ):
+    def HasOneSelected( self ) -> bool:
         
         rows_seen = set()
         
@@ -1047,7 +1049,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return len( rows_seen ) == 1
         
     
-    def HasSelected( self ):
+    def HasSelected( self ) -> bool:
         
         return self.selectionModel().hasSelection()
         
@@ -1086,9 +1088,9 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return min_size_hint
         
     
-    def model( self ) -> HydrusListItemModel:
+    def model( self ) -> HydrusListItemModel[ MT ]:
         
-        return typing.cast( HydrusListItemModel, super().model() )
+        return typing.cast( HydrusListItemModel[ MT ], super().model() )
         
     
     def mouseDoubleClickEvent( self, event: QG.QMouseEvent ):
@@ -1192,12 +1194,12 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def ReplaceData( self, old_data: object, new_data: object, sort_and_scroll = False ):
+    def ReplaceData( self, old_data: MT, new_data: MT, sort_and_scroll = False ):
         
         self.ReplaceDatas( [ ( old_data, new_data ) ], sort_and_scroll = sort_and_scroll )
         
     
-    def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
+    def ReplaceDatas( self, replacement_tuples: list[ tuple[ MT, MT ] ], sort_and_scroll = False ):
         
         if len( replacement_tuples ) == 0:
             
@@ -1294,7 +1296,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return size_hint
         
     
-    def ScrollToData( self, data: object, do_focus = True ):
+    def ScrollToData( self, data: MT, do_focus = True ):
         
         data = QP.ListsToTuples( data )
         
@@ -1311,7 +1313,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def SelectDatas( self, datas: collections.abc.Iterable[ object ], deselect_others = False ):
+    def SelectDatas( self, datas: collections.abc.Iterable[ MT ], deselect_others = False ):
         
         selectee_datas = { QP.ListsToTuples( data ) for data in datas }
         
@@ -1367,7 +1369,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self._copy_rows_callable = copy_rows_callable
         
     
-    def SetData( self, datas: collections.abc.Iterable[ object ] ):
+    def SetData( self, datas: collections.abc.Iterable[ MT ] ):
         
         datas = [ QP.ListsToTuples( data ) for data in datas ]
         
@@ -1380,7 +1382,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self.updateGeometry()
         
     
-    def SetNonDupeName( self, obj: object, do_casefold = False ):
+    def SetNonDupeName( self, obj: MT, do_casefold = False ):
         
         current_names = { o.GetName() for o in self.GetData() if o is not obj }
 
@@ -1431,7 +1433,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def UpdateDatas( self, datas: collections.abc.Iterable[ object ] | None = None, check_for_changed_sort_data = False ):
+    def UpdateDatas( self, datas: collections.abc.Iterable[ MT ] | None = None, check_for_changed_sort_data = False ):
         
         if datas is not None:
             
