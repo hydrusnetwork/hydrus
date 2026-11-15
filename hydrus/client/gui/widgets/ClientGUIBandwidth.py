@@ -64,7 +64,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
 '''
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, int | None, int ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_RULES.ID, self._ConvertRuleToDisplayTuple, self._ConvertRuleToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 24 )
         
@@ -104,7 +104,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         
     
-    def _ConvertRuleToDisplayTuple( self, rule ):
+    def _ConvertRuleToDisplayTuple( self, rule: tuple[ int, int | None, int ] ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
@@ -126,7 +126,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         return display_tuple
         
     
-    def _ConvertRuleToSortTuple( self, rule ):
+    def _ConvertRuleToSortTuple( self, rule: tuple[ int, int | None, int ] ):
         
         ( bandwidth_type, time_delta, max_allowed ) = rule
         
