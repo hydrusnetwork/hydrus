@@ -67,7 +67,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         warning = 'WARNING: Import folders check (and potentially move/delete!) the contents of all subdirectories as well as the base directory!'
         warning += '\n\n'
-        warning += 'Careful with export/import/duplicate, too. Import folders retain some info about the files in their previous runs, so do not share them publicly. Watch out for two import folders pointed at the same location, too!'
+        warning += 'Careful with export/import/duplicate, too. Import folders retain some info about the files in their previous runs, so do not share them publicly. Some things like service references are not likely to transfer well across clients, so double-check anything you migrate. Watch out for two import folders pointed at the same location, too!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setWordWrap( True )

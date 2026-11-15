@@ -1,3 +1,4 @@
+import collections.abc
 import os
 import time
 
@@ -42,7 +43,7 @@ from hydrus.client.search import ClientSearchFileSearchContext
 
 class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, export_folders ):
+    def __init__( self, parent, export_folders: collections.abc.Collection[ ClientExportingFiles.ExportFolder ] ):
         
         super().__init__( parent )
         
@@ -57,6 +58,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._export_folders_panel.AddButton( 'add', self._AddFolder )
         self._export_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._export_folders_panel.AddDeleteButton()
+        self._export_folders_panel.AddImportExportButtons( ( ClientExportingFiles.ExportFolder, ), tuple(), self._AddRaw )
         
         #
         
@@ -68,7 +70,14 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         intro = 'Here you can set the client to regularly export a certain query to a particular location.'
         
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
+        warning = 'WARNING: Be careful with export/import/duplicate. Some things like service references are not likely to transfer well across clients, so double-check anything you migrate. Watch out for two export folders pointed at the same location, too!'
+        
+        warning_st = ClientGUICommon.BetterStaticText( self, warning )
+        warning_st.setWordWrap( True )
+        warning_st.setObjectName( 'HydrusWarning' )
+        
+        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( self, intro ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, warning_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._export_folders_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -135,11 +144,16 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 export_folder = panel.GetValue()
                 
-                export_folder.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
-                
-                self._export_folders.AddData( export_folder, select_sort_and_scroll = True )
+                self._AddRaw( export_folder )
                 
             
+        
+    
+    def _AddRaw( self, export_folder: ClientExportingFiles.ExportFolder ):
+        
+        export_folder.SetNonDupeName( self._GetExistingNames(), do_casefold = True )
+        
+        self._export_folders.AddData( export_folder, select_sort_and_scroll = True )
         
     
     def _ConvertExportFolderToDisplayTuple( self, export_folder: ClientExportingFiles.ExportFolder ):
