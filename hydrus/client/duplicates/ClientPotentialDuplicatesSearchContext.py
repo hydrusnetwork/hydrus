@@ -47,6 +47,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         self._media_ids_to_pertinent_rows: collections.defaultdict[ int, list[ PotentialIdPairAndDistance ] ] = collections.defaultdict( list )
         self._mapping_initialised = False
         
+        self._pending_delete_pairs = set()
+        
         self._current_search_block_size = POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE
         
         self._sort_status = sort_status
@@ -54,7 +56,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def __len__( self ):
         
-        return len( self._potential_id_pairs_and_distances )
+        return len( self._potential_id_pairs_and_distances ) - len( self._pending_delete_pairs )
         
     
     def _AddToMappingIfInitialised( self, rows ):
@@ -69,8 +71,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             self._media_ids_to_pertinent_rows[ row.smaller_media_id ].append( row )
             self._media_ids_to_pertinent_rows[ row.larger_media_id ].append( row )
             
-        
-        for ( smaller_media_id, larger_media_id, distance ) in rows:
+            ( smaller_media_id, larger_media_id, distance ) = row
             
             self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ][ larger_media_id ] = distance
             self._media_ids_to_other_media_ids_to_distances[ larger_media_id ][ smaller_media_id ] = distance
@@ -155,13 +156,24 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             self._InitialiseMapping()
             
         
-        existing_pairs = [
-            ( smaller_media_id, larger_media_id )
-            for ( smaller_media_id, larger_media_id )
-            in pairs
-            if smaller_media_id in self._media_ids_to_pertinent_rows and True in ( row.larger_media_id == larger_media_id for row in self._media_ids_to_pertinent_rows[ smaller_media_id ] )
-        ]
-        
+        if len( self._pending_delete_pairs ) > 0:
+            
+            existing_pairs = [
+                ( smaller_media_id, larger_media_id )
+                for ( smaller_media_id, larger_media_id )
+                in pairs
+                if smaller_media_id in self._media_ids_to_pertinent_rows and True in ( row.larger_media_id == larger_media_id for row in self._media_ids_to_pertinent_rows[ smaller_media_id ] ) and ( smaller_media_id, larger_media_id ) not in self._pending_delete_pairs
+            ]
+            
+        else:
+            
+            existing_pairs = [
+                ( smaller_media_id, larger_media_id )
+                for ( smaller_media_id, larger_media_id )
+                in pairs
+                if smaller_media_id in self._media_ids_to_pertinent_rows and True in ( row.larger_media_id == larger_media_id for row in self._media_ids_to_pertinent_rows[ smaller_media_id ] )
+            ]
+            
         return existing_pairs
         
     
@@ -172,14 +184,40 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             self._InitialiseMapping()
             
         
-        new_rows = [
-            row
-            for row
-            in rows
-            if row.smaller_media_id not in self._media_ids_to_pertinent_rows or True not in ( row.larger_media_id == pertinent_row.larger_media_id for pertinent_row in self._media_ids_to_pertinent_rows[ row.smaller_media_id ] )
-        ]
+        if len( self._pending_delete_pairs ) > 0:
+            
+            new_rows = [
+                row
+                for row
+                in rows
+                if row.smaller_media_id not in self._media_ids_to_pertinent_rows or True not in ( row.larger_media_id == pertinent_row.larger_media_id for pertinent_row in self._media_ids_to_pertinent_rows[ row.smaller_media_id ] ) or ( row.smaller_media_id, row.larger_media_id ) in self._pending_delete_pairs
+            ]
+            
+        else:
+            
+            new_rows = [
+                row
+                for row
+                in rows
+                if row.smaller_media_id not in self._media_ids_to_pertinent_rows or True not in ( row.larger_media_id == pertinent_row.larger_media_id for pertinent_row in self._media_ids_to_pertinent_rows[ row.smaller_media_id ] )
+            ]
+            
         
         return new_rows
+        
+    
+    def _FlushPendingDeletePairs( self ):
+        
+        if len( self._pending_delete_pairs ) == 0:
+            
+            return
+            
+        
+        self._potential_id_pairs_and_distances = [ row for row in self._potential_id_pairs_and_distances if ( row.smaller_media_id, row.larger_media_id ) not in self._pending_delete_pairs ]
+        
+        self._DeleteFromMappingIfInitialised( self._pending_delete_pairs )
+        
+        self._pending_delete_pairs = set()
         
     
     def _GetPairsFromMediaId( self, media_id ) -> list[ tuple[ int, int ] ]:
@@ -191,7 +229,14 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
         if media_id in self._media_ids_to_pertinent_rows:
             
-            return [ ( row.smaller_media_id, row.larger_media_id ) for row in self._media_ids_to_pertinent_rows[ media_id ] ]
+            result = [ ( row.smaller_media_id, row.larger_media_id ) for row in self._media_ids_to_pertinent_rows[ media_id ] ]
+            
+            if len( self._pending_delete_pairs ) > 0:
+                
+                result = [ pair for pair in result if pair not in self._pending_delete_pairs ]
+                
+            
+            return result
             
         else:
             
@@ -209,8 +254,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             self._media_ids_to_pertinent_rows[ row.smaller_media_id ].append( row )
             self._media_ids_to_pertinent_rows[ row.larger_media_id ].append( row )
             
-        
-        for ( smaller_media_id, larger_media_id, distance ) in self._potential_id_pairs_and_distances:
+            ( smaller_media_id, larger_media_id, distance ) = row
             
             self._media_ids_to_other_media_ids_to_distances[ smaller_media_id ][ larger_media_id ] = distance
             self._media_ids_to_other_media_ids_to_distances[ larger_media_id ][ smaller_media_id ] = distance
@@ -235,6 +279,19 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
         self._potential_id_pairs_and_distances.extend( new_rows )
         
+        if len( self._pending_delete_pairs ) > 0:
+            
+            for row in new_rows:
+                
+                delete_pair = ( row.smaller_media_id, row.larger_media_id )
+                
+                if delete_pair in self._pending_delete_pairs:
+                    
+                    self._pending_delete_pairs.discard( delete_pair )
+                    
+                
+            
+        
         self._AddToMappingIfInitialised( new_rows )
         
     
@@ -246,6 +303,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         self._media_ids_to_other_media_ids_to_distances = collections.defaultdict( dict )
         self._mapping_initialised = False
         
+        self._pending_delete_pairs = set()
+        
     
     def DeletePairs( self, deletee_pairs: collections.abc.Collection[ tuple[ int, int ] ] ):
         
@@ -256,19 +315,7 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
         existing_deletee_pairs = self._FilterExistingPairs( deletee_pairs )
         
-        if len( existing_deletee_pairs ) == 0:
-            
-            return
-            
-        
-        if not isinstance( existing_deletee_pairs, set ):
-            
-            existing_deletee_pairs = set( existing_deletee_pairs )
-            
-        
-        self._potential_id_pairs_and_distances = [ row for row in self._potential_id_pairs_and_distances if ( row.smaller_media_id, row.larger_media_id ) not in existing_deletee_pairs ]
-        
-        self._DeleteFromMappingIfInitialised( existing_deletee_pairs )
+        self._pending_delete_pairs.update( existing_deletee_pairs )
         
     
     def DeletePairsByMediaId( self, deletee_media_id: int ):
@@ -279,6 +326,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
     
     def Duplicate( self ) -> "PotentialDuplicateIdPairsAndDistances":
+        
+        self._FlushPendingDeletePairs()
         
         return PotentialDuplicateIdPairsAndDistances( self._potential_id_pairs_and_distances, sort_status = self._sort_status )
         
@@ -310,6 +359,11 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             
             pertinent_rows = self._media_ids_to_pertinent_rows[ search_media_id ]
             
+            if len( self._pending_delete_pairs ) > 0:
+                
+                pertinent_rows = [ row for row in pertinent_rows if ( row.smaller_media_id, row.larger_media_id ) not in self._pending_delete_pairs ]
+                
+            
             for pertinent_row in pertinent_rows:
                 
                 if search_media_id == pertinent_row.smaller_media_id:
@@ -337,6 +391,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def IterateBlocks( self ) -> "collections.abc.Iterator[ PotentialDuplicateIdPairsAndDistances ]":
         
+        self._FlushPendingDeletePairs()
+        
         for block in HydrusLists.SplitListIntoChunks( self._potential_id_pairs_and_distances, POTENTIAL_DUPLICATE_PAIRS_BLOCK_SIZE_GUIDELINE ):
             
             yield PotentialDuplicateIdPairsAndDistances( block )
@@ -344,6 +400,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
         
     
     def IteratePairs( self ) -> collections.abc.Iterator[ tuple[ int, int ] ]:
+        
+        self._FlushPendingDeletePairs()
         
         for row in self._potential_id_pairs_and_distances:
             
@@ -353,15 +411,21 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def GetPairs( self ) -> list[ tuple[ int, int ] ]:
         
+        self._FlushPendingDeletePairs()
+        
         return [ ( row.smaller_media_id, row.larger_media_id ) for row in self._potential_id_pairs_and_distances ]
         
     
     def GetRows( self ) -> list[ PotentialIdPairAndDistance ]:
         
+        self._FlushPendingDeletePairs()
+        
         return list( self._potential_id_pairs_and_distances )
         
     
     def IterateRows( self ) -> collections.abc.Iterator[ PotentialIdPairAndDistance ]:
+        
+        self._FlushPendingDeletePairs()
         
         return self._potential_id_pairs_and_distances.__iter__()
         
@@ -418,6 +482,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
     
     def PopBlock( self, block_size = None ):
         
+        self._FlushPendingDeletePairs()
+        
         if block_size is None:
             
             block_size = self._current_search_block_size
@@ -439,6 +505,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             return
             
         
+        self._FlushPendingDeletePairs()
+        
         # this ensures all the ids are lined up
         self._potential_id_pairs_and_distances.sort()
         
@@ -454,6 +522,8 @@ class PotentialDuplicateIdPairsAndDistances( object ):
             
             return
             
+        
+        self._FlushPendingDeletePairs()
         
         # we want hits early and thus are going for a very fine-grained randomisation
         # I'd just do random.shuffle but it is a bit slow at n=1 tbh
