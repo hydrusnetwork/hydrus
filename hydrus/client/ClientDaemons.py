@@ -47,21 +47,6 @@ class ManagerWithMainLoop( object ):
     
     def __init__( self, controller: "CG.ClientController.Controller", pre_loop_wait_time: int ):
         
-        # TODO: move work_time/rest_time into this superclass
-        # maybe some methods that can be overridden to get current rest time ratio and stuff in the subclasses
-        # but otherwise this guy should take more responsibility for the mainloop code, and the subclasses should basically only implement 'dojob()' for the loop proper
-        # one logical implementation!
-        
-        # when doing this, also make sure we do anti-CPU-thrash tech on wake_from_work/idle_sleep_event. those guys should not be referred to outside of here
-        # and then we should move to a wait(), no timeout, on them
-        # and along with that, a complete revamp of manager wait and wake tech. if we want to wake every twenty mins, let's have JobScheduler or one of those guys wake us
-        # maybe premainloopwait can do it, yeah, but not in the mainloop
-        
-        # I think we want one master self._Wait command that takes time took and work_still_to_do/work_done, which is what a work packet should return to our mainloop
-        # that sleep guy decides which sleep to do and such
-        
-        # note it looks like we'll need a 'CleanUpAfterMainLoop' guy in a finally, so Subs at least can clean up
-        
         self._controller = controller
         
         self._pre_loop_wait_time = pre_loop_wait_time
@@ -233,6 +218,9 @@ class ManagerWithMainLoop( object ):
             
             # ok I moved from DoMainLoop to DoSingleLoop. now we can pull common parts out no here
             # we want to push towards:
+            # fixing file maintenance so it works on a rest/work ratio thing and can work as hard as it wants on one file at a time
+            # fold 'work hard' file maintenance into the mainloop with some 'work hard' job_type filter and popup creation
+            # also rework rest/work ratio so it is user friendly
             # have work to do?
             # can work?
             

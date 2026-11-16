@@ -8537,6 +8537,26 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 695:
+            
+            try:
+                
+                self._Execute( 'DROP INDEX IF EXISTS file_maintenance_jobs_job_type_index;' )
+                
+                self._CreateIndex( 'external_caches.file_maintenance_jobs', [ 'job_type', 'time_can_start' ] )
+                
+                self.modules_db_maintenance.AnalyzeTable( 'file_maintenance_jobs' )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update your file maintenance index failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         #
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )

@@ -77,6 +77,9 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._reset_background_event = threading.Event()
         
+        self._last_refresh_numbers_signal_time = HydrusTime.GetNow()
+        self._jobs_done_since_last_refresh_numbers_signal = 0
+        
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
         self._controller.sub( self, 'Wake', 'notify_new_file_maintenance_work' )
@@ -1328,7 +1331,8 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 while True:
                     
-                    hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs', mandated_job_types )
+                    # currently gets blocks of 256 files' jobs at a time
+                    hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs', job_types = mandated_job_types )
                     
                     if len( hashes_to_job_types ) == 0:
                         
@@ -1440,13 +1444,11 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         with self._maintenance_lock:
             
-            hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs' )
+            hashes_to_job_types = self._controller.Read( 'file_maintenance_get_jobs', limit = 16 )
             
             if len( hashes_to_job_types ) > 0:
                 
                 job_status = ClientThreading.JobStatus()
-                
-                i = 0
                 
                 try:
                     
@@ -1475,16 +1477,17 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
                     
                     time.sleep( 0.0001 )
                     
-                    i += 1
+                finally:
                     
-                    if i % 100 == 0:
+                    self._jobs_done_since_last_refresh_numbers_signal += 1
+                    
+                    if self._jobs_done_since_last_refresh_numbers_signal > 100 and HydrusTime.TimeHasPassed( self._last_refresh_numbers_signal_time + 10 ):
                         
                         self._controller.pub( 'notify_files_maintenance_done' )
                         
-                    
-                finally:
-                    
-                    self._controller.pub( 'notify_files_maintenance_done' )
+                        self._last_refresh_numbers_signal_time = HydrusTime.GetNow()
+                        self._jobs_done_since_last_refresh_numbers_signal = 0
+                        
                     
                 
                 still_work_to_do = True

@@ -33,7 +33,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         index_generation_dict = {}
         
         index_generation_dict[ 'external_caches.file_maintenance_jobs' ] = [
-            ( [ 'job_type' ], False, 545 )
+            ( [ 'job_type', 'time_can_start' ], False, 696 )
         ]
         
         return index_generation_dict
@@ -84,52 +84,89 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'DELETE FROM file_maintenance_jobs WHERE hash_id = ? AND job_type = ?;', ( ( hash_id, job_type_to_delete ) for job_type_to_delete in job_types_to_delete ) )
         
     
-    def GetJobs( self, job_types = None ):
+    def GetJobs( self, job_types: None | collections.abc.Collection[ int ] = None, limit: int = 256 ):
+        
+        now = HydrusTime.GetNow()
         
         if job_types is None:
+            
+            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE time_can_start < ? LIMIT ?;', ( now, limit ) ) )
             
             possible_job_types = ClientFilesMaintenance.ALL_REGEN_JOBS_IN_RUN_ORDER
             
         else:
             
+            hash_ids = []
+            
             possible_job_types = job_types
             
-        
-        now = HydrusTime.GetNow()
-        
-        for job_type in possible_job_types:
-            
-            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, now, 256 ) ) )
-            
-            if len( hash_ids ) > 0:
+            for job_type in job_types:
                 
-                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, now, limit ) ) )
+                
+                if len( hash_ids ) > 0:
+                    
+                    break
+                    
+                
+            
+        
+        if len( hash_ids ) > 0:
+            
+            if len( hash_ids ) == 1:
+                
+                hash_id = list( hash_ids )[0]
+                
+                if job_types is None:
+                    
+                    hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM file_maintenance_jobs WHERE hash_id = ? AND time_can_start < ?;', ( hash_id, now ) ) )
+                    
+                else:
                     
                     splayed_job_types = HydrusLists.SplayListForDB( possible_job_types )
                     
-                    # temp to file jobs
-                    hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM {temp_hash_ids_table_name} CROSS JOIN file_maintenance_jobs USING ( hash_id ) WHERE time_can_start < ? AND job_type IN {splayed_job_types};', ( HydrusTime.GetNow(), ) ) )
+                    hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM file_maintenance_jobs WHERE hash_id = ? AND time_can_start < ? AND job_type IN {splayed_job_types};', ( hash_id, now ) ) )
                     
                 
-                hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
+            else:
                 
-                hashes_to_job_types = {}
+                hash_ids_to_job_types = dict()
                 
-                sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFilesMaintenance.ALL_REGEN_JOBS_IN_RUN_ORDER ) }
-                
-                for ( hash_id, job_types ) in hash_ids_to_job_types.items():
+                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
-                    hash = hash_ids_to_hashes[ hash_id ]
-                    
-                    job_types = sorted( job_types, key = lambda s: sort_index[ s ] )
-                    
-                    hashes_to_job_types[ hash ] = job_types
+                    if job_types is None:
+                        
+                        # temp to file jobs
+                        hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM {temp_hash_ids_table_name} CROSS JOIN file_maintenance_jobs USING ( hash_id ) WHERE time_can_start < ?;', ( now, ) ) )
+                        
+                    else:
+                        
+                        splayed_job_types = HydrusLists.SplayListForDB( possible_job_types )
+                        
+                        # temp to file jobs
+                        hash_ids_to_job_types = HydrusData.BuildKeyToSetDict( self._Execute( f'SELECT hash_id, job_type FROM {temp_hash_ids_table_name} CROSS JOIN file_maintenance_jobs USING ( hash_id ) WHERE time_can_start < ? AND job_type IN {splayed_job_types};', ( now, ) ) )
+                        
                     
                 
-                hashes_to_job_types = { hash_ids_to_hashes[ hash_id ] : job_types for ( hash_id, job_types ) in hash_ids_to_job_types.items() }
+            
+            hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
+            
+            hashes_to_job_types = {}
+            
+            sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFilesMaintenance.ALL_REGEN_JOBS_IN_RUN_ORDER ) }
+            
+            for ( hash_id, job_types ) in hash_ids_to_job_types.items():
                 
-                return hashes_to_job_types
+                hash = hash_ids_to_hashes[ hash_id ]
                 
+                job_types = sorted( job_types, key = lambda s: sort_index[ s ] )
+                
+                hashes_to_job_types[ hash ] = job_types
+                
+            
+            hashes_to_job_types = { hash_ids_to_hashes[ hash_id ] : job_types for ( hash_id, job_types ) in hash_ids_to_job_types.items() }
+            
+            return hashes_to_job_types
             
         
         return {}
