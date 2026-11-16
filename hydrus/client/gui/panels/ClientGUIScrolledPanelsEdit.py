@@ -426,6 +426,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 num_local_services_done += 1
                 
                 # this is an ugly place to put this, and the mickey-mouse append, but it works
+                # noinspection chained-comparisons
                 if self._num_actionable_local_file_service_domains > 1 and num_local_services_done == self._num_actionable_local_file_service_domains:
                     
                     self._permitted_action_choices.append( ( text, ( deletee_file_service_key, content_update_packages, save_reason, hashes_physically_deleted, text ) ) )

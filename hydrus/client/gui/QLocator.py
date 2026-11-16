@@ -1191,7 +1191,7 @@ class QLocator(QC.QObject):
     
     def provider(self, idx: int):
         
-        if idx >= 0 and idx <= len(self.providers):
+        if 0 <= idx <= len(self.providers):
             
             return self.providers[idx]
             
@@ -1240,7 +1240,7 @@ class QLocator(QC.QObject):
     
     
     def activateResult(self, provider: int, id: int) -> None:
-        if provider >= 0 and provider < len(self.providers):
+        if 0 <= provider < len(self.providers):
             self.providers[provider].resultSelected(id)
 
     def handleItemUpdate(self, jobID: int, data) -> None:

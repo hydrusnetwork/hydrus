@@ -298,17 +298,17 @@ def convert_to_list_and_simplify(node):
         if node.op == 'and':
             for chld in node.children:
                 if type(chld) == str:
-                    res.append(set([chld]))
+                    res.append({chld})
                 elif chld.op == 'not':
-                    res.append(set(["-"+chld.children[0]]))
+                    res.append({"-" + chld.children[0]})
                 else:
                     res.append(set(map(lambda x: "-"+x.children[0] if hasattr(x, "op") else x, chld.children)))
         elif node.op == 'or':
             res.append(set(map(lambda x: "-"+x.children[0] if hasattr(x, "op") else x, node.children)))
         elif node.op == 'not':
-            res.append(set(["-"+node.children[0]]))
+            res.append({"-" + node.children[0]})
     else:
-        res.append(set([node]))
+        res.append({node})
     filtered_res = []
     last_found_always_true_clause = None
     #Filter out tautologies

@@ -1829,6 +1829,7 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         
         if import_page_progress_display:
             
+            # noinspection chained-comparisons
             if num_range > 0 and num_value != num_range:
                 
                 if len( num_string ) > 0:
@@ -3123,7 +3124,8 @@ class PagesNotebook( ClientGUIPagesTreeView.TabWidgetWithDnD ):
         ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
         
         num_string = HydrusNumbers.ToHumanInt( num_files )
-        
+
+        # noinspection chained-comparisons
         if num_range > 0 and num_value != num_range:
             
             num_string += ', ' + HydrusNumbers.ValueRangeToPrettyString( num_value, num_range )

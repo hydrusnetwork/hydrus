@@ -2999,14 +2999,16 @@ class DB( HydrusDB.HydrusDB ):
         
         # while this searches pending and current tags, it does not cross-reference current and pending on the same file, oh well!
         
-        cancelled_hook = None
+        cancelled_hook: collections.abc.Callable[ [], bool ] | None = None
         
         if stop_time_for_finding_results is not None:
             
-            def cancelled_hook():
+            def hook():
                 
                 return HydrusTime.TimeHasPassedPrecise( stop_time_for_finding_results )
                 
+            
+            cancelled_hook = hook
             
         
         results_dict = collections.Counter()
@@ -8240,7 +8242,8 @@ class DB( HydrusDB.HydrusDB ):
                 executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
                 
                 new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
+
+                # noinspection protected-member
                 new_options_dict = new_options._dictionary
                 
                 #

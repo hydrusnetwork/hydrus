@@ -202,7 +202,7 @@ class Controller( HydrusController.HydrusController ):
             from hydrus.client.gui import ClientGUI
             
 
-        self.gui: "ClientGUI.FrameGUI" = None
+        self.gui: "ClientGUI.FrameGUI | None" = None
         
         super().__init__( db_dir, logger )
         

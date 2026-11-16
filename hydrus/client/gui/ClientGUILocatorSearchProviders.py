@@ -433,6 +433,7 @@ class PagesHistorySearchProvider( HydrusSearchProvider ):
             self.result_ids_to_page_keys = {}
             
         
+    
     # Should generate a list of QLocatorSearchResults
     def processQuery( self, query: str, context, jobID: int ):
         
@@ -441,7 +442,7 @@ class PagesHistorySearchProvider( HydrusSearchProvider ):
         self.result_ids_to_page_keys = {}
         self.result_id_counter = 0
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+        if CG.client_controller.gui is None or len( CG.client_controller.gui.GetPagesHistory() ) == 0:
             
             return
             
@@ -572,7 +573,7 @@ class MainMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
         
         self.result_ids_to_pages = {}
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+        if CG.client_controller.gui is None or len( CG.client_controller.gui.GetPagesHistory() ) == 0:
             
             return
             
@@ -587,13 +588,13 @@ class MainMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
             return
             
         
-        menubar = CG.client_controller.gui._menubar
+        menubar = CG.client_controller.gui.GetMenubar()
         
         # helper function to traverse menu and generate entries
         # TODO: need to filter out menu items not suitable for display in locator
         # (probably best to mark them when they are created and just check a property here)
         # TODO: need special icon or secondary text for toggle-able items to see toggle state
-        def get_menu_items( menu: QW.QWidget, parent_name: str ) -> list:
+        def get_menu_items( menu: QW.QMenuBar, parent_name: str ) -> list:
             
             result = []
             
@@ -606,11 +607,13 @@ class MainMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
                 
                 actionText = action.text().replace( "&", "" )
                 
-                if action.menu():
+                action_menu = action.menu()
+                
+                if action_menu is not None:
                     
                     new_parent_name = parent_name + " | " + actionText if parent_name else actionText
                     
-                    result.extend( get_menu_items( action.menu(), new_parent_name ) )
+                    result.extend( get_menu_items( action_menu, new_parent_name ) )
                     
                 else:
                     
@@ -711,7 +714,7 @@ class MediaMenuSearchProvider( HydrusSearchProviderCrazyLaggy ):
         self.result_ids_to_pages = {}
         self.menu = None
         
-        if not CG.client_controller.gui or not CG.client_controller.gui.GetPagesHistory():
+        if CG.client_controller.gui is None or len( CG.client_controller.gui.GetPagesHistory() ) == 0:
             
             return
             

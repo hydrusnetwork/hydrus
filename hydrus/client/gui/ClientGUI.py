@@ -6396,6 +6396,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
             
             for i in indices:
                 
+                # noinspection protected-member
                 CG.client_controller.CallLaterQtSafe( self, t, 'test job', page_of_pages._ClosePage, i )
                 
                 t += 0.25
@@ -6421,7 +6422,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
             t = 0.5
             
             CG.client_controller.CallLaterQtSafe( self, t, 'test job', page.SetSearchFocus )
-            
+
+            # noinspection protected-member
             ac_widget = page.GetSidebar()._tag_autocomplete._text_ctrl
             
             t += 0.5
@@ -8071,6 +8073,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
         return media_viewers
+        
+    
+    def GetMenubar( self ) -> QW.QMenuBar:
+        
+        return self._menubar
         
     
     def GetNotebookCurrentPage( self ):
