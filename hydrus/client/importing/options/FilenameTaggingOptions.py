@@ -90,7 +90,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
         return ( self._quick_namespaces, self._regexes )
         
     
-    def GetTags( self, service_key, path ):
+    def GetTags( self, service_key, path ) -> set[ str ]:
         
         tags = set()
         

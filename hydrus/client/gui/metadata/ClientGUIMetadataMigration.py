@@ -121,7 +121,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateTestPanel()
         
     
-    def _ConvertTestRowToDisplayTuple( self, test_row ):
+    def _ConvertTestRowToDisplayTuple( self, test_row: tuple[ ClientMetadataMigrationImporters.SingleFileMetadataImporter, object ] ):
         
         ( importer, test_object ) = test_row
         
@@ -147,7 +147,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertTestRowToSortTuple( self, test_row ):
+    def _ConvertTestRowToSortTuple( self, test_row: tuple[ ClientMetadataMigrationImporters.SingleFileMetadataImporter, object ] ):
         
         ( importer, test_object ) = test_row
         
@@ -225,7 +225,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._test_notebook.count() < i + 1:
                 
-                model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToDisplayTuple, self._ConvertTestRowToSortTuple )
+                model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ ClientMetadataMigrationImporters.SingleFileMetadataImporter, object ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToDisplayTuple, self._ConvertTestRowToSortTuple )
                 
                 list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._test_notebook, 12, model )
                 

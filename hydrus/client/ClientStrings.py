@@ -1627,7 +1627,7 @@ class StringProcessor( StringProcessingStep ):
         return True in ( step.MakesChanges() for step in self._processing_steps )
         
     
-    def ProcessStrings( self, starting_strings: collections.abc.Iterable[ str ], max_steps_allowed = None, no_slicing = False ) -> list[ str ]:
+    def ProcessStrings( self, starting_strings: collections.abc.Collection[ str ], max_steps_allowed = None, no_slicing = False ) -> list[ str ]:
         
         current_strings = list( starting_strings )
         

@@ -509,7 +509,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_base_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, self._ConvertLocationToDisplayTuple, self._ConvertLocationToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientFilesPhysical.FilesStorageBaseLocation ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, self._ConvertLocationToDisplayTuple, self._ConvertLocationToSortTuple )
         
         self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( current_media_base_locations_listctrl_panel, 4, model, activation_callback = self._SetMaxNumBytes, max_height_num_chars = 12 )
         self._current_media_base_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SelectionMode.SingleSelection )

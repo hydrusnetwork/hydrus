@@ -58,7 +58,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, self._ConvertPathToDisplayTuple, self._ConvertPathToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientImportLocalFileParse.LocalFileParse ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_INPUT_LOCAL_FILES.ID, self._ConvertLocalFileParseToDisplayTuple, self._ConvertLocalFileParseToSortTuple )
         
         self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, delete_key_callback = self.RemovePaths )
         
@@ -198,7 +198,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _ConvertPathToDisplayTuple( self, local_file_parse: ClientImportLocalFileParse.LocalFileParse ):
+    def _ConvertLocalFileParseToDisplayTuple( self, local_file_parse: ClientImportLocalFileParse.LocalFileParse ):
         
         pretty_index = HydrusNumbers.ToHumanInt( local_file_parse.index )
         
@@ -220,7 +220,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertPathToSortTuple( self, local_file_parse: ClientImportLocalFileParse.LocalFileParse ):
+    def _ConvertLocalFileParseToSortTuple( self, local_file_parse: ClientImportLocalFileParse.LocalFileParse ):
         
         sort_tuple = (
             local_file_parse.index,

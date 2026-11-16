@@ -40,7 +40,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToDisplayTuple, self._ConvertImportFolderToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientImportLocal.ImportFolder ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToDisplayTuple, self._ConvertImportFolderToSortTuple )
         
         self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, 4, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
@@ -280,7 +280,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToDisplayTuple, self._ConvertFilenameTaggingOptionsToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ bytes, FilenameTaggingOptions.FilenameTaggingOptions ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToDisplayTuple, self._ConvertFilenameTaggingOptionsToSortTuple )
         
         self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, 4, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions, max_height_num_chars = 12 )
         
@@ -604,7 +604,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertFilenameTaggingOptionsToDisplayTuple( self, data ):
+    def _ConvertFilenameTaggingOptionsToDisplayTuple( self, data: tuple[ bytes, FilenameTaggingOptions.FilenameTaggingOptions ] ):
         
         ( service_key, filename_tagging_options ) = data
         

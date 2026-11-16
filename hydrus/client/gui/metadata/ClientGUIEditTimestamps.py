@@ -56,7 +56,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._domain_modified_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( domain_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, self._ConvertDomainToDomainModifiedDisplayTuple, self._ConvertDomainToDomainModifiedSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ str ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAIN_MODIFIED_TIMESTAMPS.ID, self._ConvertDomainToDomainModifiedDisplayTuple, self._ConvertDomainToDomainModifiedSortTuple )
         
         self._domain_modified_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._domain_modified_list_ctrl_panel, 4, model, use_simple_delete = True, activation_callback = self._EditDomainModifiedTimestamp, max_height_num_chars = 12 )
         
@@ -72,7 +72,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._file_services_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_services_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, self._ConvertDataRowToFileServiceDisplayTuple, self._ConvertDataRowToFileServiceSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ bytes, int ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SERVICE_TIMESTAMPS.ID, self._ConvertDataRowToFileServiceDisplayTuple, self._ConvertDataRowToFileServiceSortTuple )
         
         self._file_services_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._file_services_list_ctrl_panel, 4, model, activation_callback = self._EditFileServiceTimestamp, max_height_num_chars = 12 )
         
@@ -322,7 +322,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         ClientGUIFunctions.SetFocusLater( self )
         
     
-    def _ConvertDomainToDomainModifiedDisplayTuple( self, domain ):
+    def _ConvertDomainToDomainModifiedDisplayTuple( self, domain: str ):
         
         ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
         
@@ -333,7 +333,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         return display_tuple
         
     
-    def _ConvertDomainToDomainModifiedSortTuple( self, domain ):
+    def _ConvertDomainToDomainModifiedSortTuple( self, domain: str ):
         
         ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
         
@@ -344,7 +344,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         return sort_tuple
         
     
-    def _ConvertDataRowToFileServiceDisplayTuple( self, row ):
+    def _ConvertDataRowToFileServiceDisplayTuple( self, row: tuple[ bytes, int ] ):
         
         ( file_service_key, timestamp_type ) = row
         
@@ -360,7 +360,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         return display_tuple
         
     
-    def _ConvertDataRowToFileServiceSortTuple( self, row ):
+    def _ConvertDataRowToFileServiceSortTuple( self, row: tuple[ bytes, int ] ):
         
         ( file_service_key, timestamp_type ) = row
         

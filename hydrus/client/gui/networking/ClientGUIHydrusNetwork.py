@@ -220,7 +220,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._deletee_account_type_keys_to_new_account_type_keys = {}
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, self._ConvertAccountTypeToDataTuple, self._ConvertAccountTypeToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ HydrusNetwork.AccountType ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, self._ConvertAccountTypeToDataTuple, self._ConvertAccountTypeToSortTuple )
         
         self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 4, model, delete_key_callback = self._Delete, activation_callback = self._Edit, max_height_num_chars = 20 )
         

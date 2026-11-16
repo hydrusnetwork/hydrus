@@ -282,7 +282,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on gallery_seed add/remove
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToDisplayTuple, self._ConvertGallerySeedToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientImportGallerySeeds.GallerySeed ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToDisplayTuple, self._ConvertGallerySeedToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self._DeleteSelected )
         
@@ -309,7 +309,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         CG.client_controller.CallAfterQtSafe( self, self._UpdateText )
         
     
-    def _ConvertGallerySeedToDisplayTuple( self, gallery_seed ):
+    def _ConvertGallerySeedToDisplayTuple( self, gallery_seed: ClientImportGallerySeeds.GallerySeed ):
         
         try:
             
@@ -338,7 +338,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )
         
     
-    def _ConvertGallerySeedToSortTuple( self, gallery_seed ):
+    def _ConvertGallerySeedToSortTuple( self, gallery_seed: ClientImportGallerySeeds.GallerySeed ):
         
         try:
             

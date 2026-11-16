@@ -36,7 +36,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         tag_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( tag_services_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToDisplayTuple, self._ConvertTagDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ bytes ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToDisplayTuple, self._ConvertTagDataToSortTuple )
         
         self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, 4, model, delete_key_callback = self._DeleteTag, max_height_num_chars = 12 )
         
@@ -53,7 +53,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
         
         rating_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( rating_services_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToDisplayTuple, self._ConvertRatingDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ bytes ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToDisplayTuple, self._ConvertRatingDataToSortTuple )
         
         self._rating_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( rating_services_listctrl_panel, 4, model, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating, max_height_num_chars = 12 )
         
@@ -282,7 +282,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
             
         
     
-    def _ConvertRatingDataToDisplayTuple( self, service_key ):
+    def _ConvertRatingDataToDisplayTuple( self, service_key: bytes ):
         
         action = self._service_keys_to_rating_options[ service_key ]
         
@@ -318,7 +318,7 @@ class EditDuplicateContentMergeOptionsWidget( ClientGUICommon.StaticBox ):
     
     _ConvertRatingDataToSortTuple = _ConvertRatingDataToDisplayTuple
     
-    def _ConvertTagDataToDisplayTuple( self, service_key ):
+    def _ConvertTagDataToDisplayTuple( self, service_key: bytes ):
         
         ( action, tag_filter ) = self._service_keys_to_tag_options[ service_key ]
         

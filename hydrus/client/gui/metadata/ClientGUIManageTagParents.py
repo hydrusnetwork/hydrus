@@ -172,7 +172,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
+            model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
             self._tag_parents = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 8, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
@@ -307,7 +307,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
-        def _ConvertPairToDisplayTuple( self, pair ):
+        def _ConvertPairToDisplayTuple( self, pair: tuple[ str, str ] ):
             
             ( old, new ) = pair
             
@@ -338,7 +338,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return ( pretty_status, old, new, note )
             
         
-        def _ConvertPairToSortTuple( self, pair ):
+        def _ConvertPairToSortTuple( self, pair: tuple[ str, str ] ):
             
             ( old, new ) = pair
             

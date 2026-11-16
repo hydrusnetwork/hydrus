@@ -598,7 +598,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
         self._UpdateRuleCache()
         
     
-    def Filter( self, tags, apply_unnamespaced_rules_to_namespaced_tags = False ):
+    def Filter( self, tags: collections.abc.Collection[ str ], apply_unnamespaced_rules_to_namespaced_tags = False ) -> set[ str ]:
         
         with self._lock:
             

@@ -23,7 +23,7 @@ class MigrationTestContextFactory( object ):
             
         
     
-    def GetExampleTestStringsForTestObject( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, test_object: object, sans_string_processing = False ):
+    def GetExampleTestStringsForTestObject( self, importer: ClientMetadataMigrationImporters.SingleFileMetadataImporter, test_object: object, sans_string_processing = False ) -> list[ str ]:
         
         try:
             

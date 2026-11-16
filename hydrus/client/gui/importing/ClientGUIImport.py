@@ -255,7 +255,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             quick_namespaces_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._quick_namespaces_panel )
             
-            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToDisplayTuple, self._ConvertQuickRegexDataToSortTuple )
+            model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToDisplayTuple, self._ConvertQuickRegexDataToSortTuple )
             
             self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrlTreeView( quick_namespaces_listctrl_panel, 4, model, use_simple_delete = True, activation_callback = self.EditQuickNamespaces, max_height_num_chars = 12 )
             
@@ -353,7 +353,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._regex_input.SetEnterCallable( self.AddRegex )
             
         
-        def _ConvertQuickRegexDataToDisplayTuple( self, data ):
+        def _ConvertQuickRegexDataToDisplayTuple( self, data: tuple[ str, str ] ):
             
             ( namespace, regex ) = data
             
@@ -967,7 +967,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._service_key = service_key
             self._paths = paths
             
-            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+            model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
             self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model )
             
@@ -999,7 +999,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._filename_tagging_panel.tagsChanged.connect( self.ScheduleRefreshFileList )
             
         
-        def _ConvertDataToDisplayTuple( self, data ):
+        def _ConvertDataToDisplayTuple( self, data: tuple[ int, str ] ):
             
             ( index, path ) = data
             
@@ -1012,14 +1012,14 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             return ( pretty_index, path, pretty_tags )
             
         
-        def _ConvertDataToSortTuple( self, data ):
+        def _ConvertDataToSortTuple( self, data: tuple[ int, str ] ):
             
             ( index, path ) = data
             
             return ( index, path, index )
             
         
-        def _GetTags( self, index, path ):
+        def _GetTags( self, index, path ) -> list[ str ]:
             
             filename_tagging_options = self._filename_tagging_panel.GetFilenameTaggingOptions()
             
@@ -1082,7 +1082,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._paths = paths
             
-            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+            model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
             self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model )
             
@@ -1123,7 +1123,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._metadata_routers_control.listBoxChanged.connect( self.ScheduleRefreshFileList )
             
         
-        def _ConvertDataToDisplayTuple( self, data ):
+        def _ConvertDataToDisplayTuple( self, data: tuple[ int, str ] ):
             
             ( index, path ) = data
             
@@ -1137,7 +1137,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             return ( pretty_index, pretty_path, pretty_strings )
             
         
-        def _ConvertDataToSortTuple( self, data ):
+        def _ConvertDataToSortTuple( self, data: tuple[ int, str ] ):
             
             ( index, path ) = data
             

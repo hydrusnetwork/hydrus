@@ -268,7 +268,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoToDisplayTuple, self._ConvertDomainAndLoginInfoToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoToDisplayTuple, self._ConvertDomainAndLoginInfoToSortTuple )
         
         self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrlTreeView( self._domains_and_login_info_panel, 8, model, use_simple_delete = True, activation_callback = self._EditCredentials, max_height_num_chars = 12 )
         
@@ -621,7 +621,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertDomainAndLoginInfoToDisplayTuple( self, domain_and_login_info ):
+    def _ConvertDomainAndLoginInfoToDisplayTuple( self, domain_and_login_info: tuple ):
         
         ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
         
@@ -722,7 +722,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertDomainAndLoginInfoToSortTuple( self, domain_and_login_info ):
+    def _ConvertDomainAndLoginInfoToSortTuple( self, domain_and_login_info: tuple ):
         
         ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
         
@@ -1374,7 +1374,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         credential_definitions_panel = ClientGUIListCtrl.BetterListCtrlPanel( credential_definitions_box_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToDisplayTuple, self._ConvertCredentialDefinitionToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingLogin.LoginCredentialDefinition ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToDisplayTuple, self._ConvertCredentialDefinitionToSortTuple )
         
         self._credential_definitions = ClientGUIListCtrl.BetterListCtrlTreeView( credential_definitions_panel, 4, model, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions, max_height_num_chars = 8 )
         
@@ -1402,7 +1402,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domains_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( example_domains_info_box_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToDisplayTuple, self._ConvertExampleDomainInfoToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, int, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToDisplayTuple, self._ConvertExampleDomainInfoToSortTuple )
         
         self._example_domains_info = ClientGUIListCtrl.BetterListCtrlTreeView( example_domains_info_panel, 4, model, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo, max_height_num_chars = 12 )
         
@@ -1422,7 +1422,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToDisplayTuple, self._ConvertTestResultToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToDisplayTuple, self._ConvertTestResultToSortTuple )
         
         self._test_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( test_listctrl_panel, 4, model, activation_callback = self._ReviewTestResult, max_height_num_chars = 12 )
         
@@ -1565,7 +1565,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._EditLoginStep( login_step )
         
     
-    def _ConvertCredentialDefinitionToDisplayTuple( self, credential_definition ):
+    def _ConvertCredentialDefinitionToDisplayTuple( self, credential_definition: ClientNetworkingLogin.LoginCredentialDefinition ):
         
         name = credential_definition.GetName()
         credential_type = credential_definition.GetType()
@@ -1585,7 +1585,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertCredentialDefinitionToSortTuple( self, credential_definition ):
+    def _ConvertCredentialDefinitionToSortTuple( self, credential_definition: ClientNetworkingLogin.LoginCredentialDefinition ):
         
         name = credential_definition.GetName()
         credential_type = credential_definition.GetType()
@@ -1601,7 +1601,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return sort_tuple
         
     
-    def _ConvertExampleDomainInfoToDisplayTuple( self, example_domain_info ):
+    def _ConvertExampleDomainInfoToDisplayTuple( self, example_domain_info: tuple[ str, int, str ] ):
         
         ( domain, access_type, access_text ) = example_domain_info
         
@@ -1614,7 +1614,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertExampleDomainInfoToSortTuple( self, example_domain_info ):
+    def _ConvertExampleDomainInfoToSortTuple( self, example_domain_info: tuple[ str, int, str ] ):
         
         ( domain, access_type, access_text ) = example_domain_info
         
@@ -1632,7 +1632,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return name
         
     
-    def _ConvertTestResultToDisplayTuple( self, test_result ):
+    def _ConvertTestResultToDisplayTuple( self, test_result: tuple ):
         
         ( name, url, body, downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
@@ -1647,7 +1647,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertTestResultToSortTuple( self, test_result ):
+    def _ConvertTestResultToSortTuple( self, test_result: tuple ):
         
         ( name, url, body, downloaded_data, new_temp_strings, new_cookie_strings, result ) = test_result
         
@@ -1979,7 +1979,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_scripts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToDisplayTuple, self._ConvertLoginScriptToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingLogin.LoginScriptDomain ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToDisplayTuple, self._ConvertLoginScriptToSortTuple )
         
         self._login_scripts = ClientGUIListCtrl.BetterListCtrlTreeView( login_scripts_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -2039,7 +2039,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._login_scripts.AddData( login_script, select_sort_and_scroll = True )
         
     
-    def _ConvertLoginScriptToDisplayTuple( self, login_script ):
+    def _ConvertLoginScriptToDisplayTuple( self, login_script: ClientNetworkingLogin.LoginScriptDomain ):
         
         name = login_script.GetName()
         
@@ -2053,7 +2053,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertLoginScriptToSortTuple( self, login_script ):
+    def _ConvertLoginScriptToSortTuple( self, login_script: ClientNetworkingLogin.LoginScriptDomain ):
         
         name = login_script.GetName()
         

@@ -34,6 +34,7 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIPathWidgets
+from hydrus.client.media import ClientMediaSingle
 from hydrus.client.media import ClientMediaSort
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -49,7 +50,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToDisplayTuple, self._ConvertExportFolderToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientExportingFiles.ExportFolder ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToDisplayTuple, self._ConvertExportFolderToSortTuple )
         
         self._export_folders = ClientGUIListCtrl.BetterListCtrlTreeView( self._export_folders_panel, 4, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
@@ -603,7 +604,9 @@ If you select synchronise, be careful!'''
 
 class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, flat_media, do_export_and_then_quit = False ):
+    def __init__( self, parent, flat_media: list[ ClientMediaSingle.MediaSingle ], do_export_and_then_quit = False ):
+        
+        # TODO: Convert this guy to MediaResults instead of MediaSingle
         
         super().__init__( parent )
         
@@ -625,7 +628,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientMediaSingle.MediaSingle ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._paths = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self._DeletePaths )
         
@@ -737,7 +740,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _ConvertDataToDisplayTuple( self, media ):
+    def _ConvertDataToDisplayTuple( self, media: ClientMediaSingle.MediaSingle ):
         
         directory = self._directory_picker.GetPath()
         
@@ -766,7 +769,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return ( pretty_number, pretty_mime, pretty_path )
         
     
-    def _ConvertDataToSortTuple( self, media ):
+    def _ConvertDataToSortTuple( self, media: ClientMediaSingle.MediaSingle ):
         
         directory = self._directory_picker.GetPath()
         

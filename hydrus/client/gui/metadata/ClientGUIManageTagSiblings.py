@@ -178,7 +178,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
+            model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
             self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, 8, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
@@ -306,7 +306,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
-        def _ConvertPairToDisplayTuple( self, pair ):
+        def _ConvertPairToDisplayTuple( self, pair: tuple[ str, str ] ):
             
             ( old, new ) = pair
             
@@ -372,7 +372,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             return ( pretty_status, old, new, note )
             
         
-        def _ConvertPairToSortTuple( self, pair ):
+        def _ConvertPairToSortTuple( self, pair: tuple[ str, str ] ):
             
             ( old, new ) = pair
             
