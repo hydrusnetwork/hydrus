@@ -95,7 +95,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._forgive_frame_gubbins_fuzzy_padding = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 0, max = 100 )
         self._forgive_frame_gubbins_fuzzy_padding.setToolTip( ClientGUIFunctions.WrapToolTip( 'Controls the amount of fuzziness added to the rescued window positions. This applies to both of the above 2 options.' ) )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
         
         self._frame_locations_panel = ClientGUIListCtrl.BetterListCtrlPanel( frame_locations_panel )
         
@@ -294,7 +294,7 @@ class GUIPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._frame_locations.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
         
     
-    def _GetPrettyFrameLocationInfo( self, listctrl_gubbins ):
+    def _GetPrettyFrameLocationInfo( self, listctrl_gubbins: tuple ):
         
         ( name, remember_size, remember_position, last_size, last_pos, default_gravity, default_position, maximised, fullscreen ) = listctrl_gubbins
         

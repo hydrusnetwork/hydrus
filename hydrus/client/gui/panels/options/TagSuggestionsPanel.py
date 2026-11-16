@@ -105,7 +105,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         search_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( search_tag_slices_weight_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, int ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
         
         self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( search_tag_slices_weight_panel, 8, model, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
         tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
@@ -123,7 +123,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         result_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( result_tag_slices_weight_box )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, int ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToDisplayTuple, self._ConvertTagSliceAndWeightToSortTuple )
         
         self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( result_tag_slices_weight_panel, 8, model, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
         tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
@@ -415,7 +415,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return True
         
     
-    def _ConvertTagSliceAndWeightToDisplayTuple( self, tag_slice_and_weight ):
+    def _ConvertTagSliceAndWeightToDisplayTuple( self, tag_slice_and_weight: tuple[ str, int ] ):
         
         ( tag_slice, weight ) = tag_slice_and_weight
         
@@ -428,7 +428,7 @@ class TagSuggestionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return display_tuple
         
     
-    def _ConvertTagSliceAndWeightToSortTuple( self, tag_slice_and_weight ):
+    def _ConvertTagSliceAndWeightToSortTuple( self, tag_slice_and_weight: tuple[ str, int ] ):
         
         ( tag_slice, weight ) = tag_slice_and_weight
         

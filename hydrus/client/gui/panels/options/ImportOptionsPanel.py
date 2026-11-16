@@ -59,7 +59,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         default_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( default_import_options_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_IMPORT_OPTIONS.ID, self._ConvertDefaultDataToDisplayTuple, self._ConvertDefaultDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ int ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_IMPORT_OPTIONS.ID, self._ConvertDefaultDataToDisplayTuple, self._ConvertDefaultDataToSortTuple )
         
         self._default_import_options_list = ClientGUIListCtrl.BetterListCtrlTreeView( default_import_options_list_panel, 7, model, activation_callback = self._EditDefault )
         
@@ -93,7 +93,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         url_class_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( url_class_import_options_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_IMPORT_OPTIONS.ID, self._ConvertURLClassDataToDisplayTuple, self._ConvertURLClassDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingURLClass.URLClass ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_IMPORT_OPTIONS.ID, self._ConvertURLClassDataToDisplayTuple, self._ConvertURLClassDataToSortTuple )
         
         self._url_class_import_options_list = ClientGUIListCtrl.BetterListCtrlTreeView( url_class_import_options_list_panel, 12, model, activation_callback = self._EditURLClass )
         
@@ -125,7 +125,7 @@ class ImportOptionsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         favourite_import_options_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( favourite_import_options_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_IMPORT_OPTIONS.ID, self._ConvertFavouriteDataToDisplayTuple, self._ConvertFavouriteDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, ImportOptionsContainer.ImportOptionsContainer ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFAULT_IMPORT_OPTIONS.ID, self._ConvertFavouriteDataToDisplayTuple, self._ConvertFavouriteDataToSortTuple )
         
         self._favourite_import_options_list = ClientGUIListCtrl.BetterListCtrlTreeView( favourite_import_options_list_panel, 7, model, activation_callback = self._EditFavourite, delete_key_callback = self._DeleteFavourite )
         

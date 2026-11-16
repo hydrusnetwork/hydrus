@@ -501,7 +501,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToDisplayTuple, self._ConvertParameterToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingURLClass.URLClassParameterFixedName ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToDisplayTuple, self._ConvertParameterToSortTuple )
         
         self._parameters = ClientGUIListCtrl.BetterListCtrlTreeView( parameters_listctrl_panel, 4, model, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters, max_height_num_chars = 8 )
         
@@ -1435,7 +1435,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingURLClass.URLClass ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 24, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -1509,7 +1509,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._changes_made = True
         
     
-    def _ConvertDataToDisplayTuple( self, url_class ):
+    def _ConvertDataToDisplayTuple( self, url_class: ClientNetworkingURLClass.URLClass ):
         
         name = url_class.GetName()
         url_type = url_class.GetURLType()

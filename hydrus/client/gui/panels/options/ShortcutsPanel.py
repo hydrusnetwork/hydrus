@@ -42,7 +42,7 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientGUIShortcuts.ShortcutSet ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
         self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, 6, model, activation_callback = self._EditReserved, max_height_num_chars = 12 )
         
@@ -57,7 +57,7 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientGUIShortcuts.ShortcutSet ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
         self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, 4, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom, max_height_num_chars = 12 )
         
@@ -239,7 +239,7 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
         
     
-    def _GetDisplayTuple( self, shortcuts ):
+    def _GetDisplayTuple( self, shortcuts: ClientGUIShortcuts.ShortcutSet ):
         
         name = shortcuts.GetName()
         
@@ -262,17 +262,17 @@ class ShortcutsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return { shortcuts.GetName() for shortcuts in self._custom_shortcuts.GetData() }
         
     
-    def _GetSortTuple( self, shortcuts ):
+    def _GetSortTuple( self, shortcuts: ClientGUIShortcuts.ShortcutSet ):
         
         name = shortcuts.GetName()
         
         if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
             
-            sort_name = ClientGUIShortcuts.shortcut_names_sorted.index( name )
+            sort_name = ( ClientGUIShortcuts.shortcut_names_sorted.index( name ), name )
             
         else:
             
-            sort_name = name
+            sort_name = ( 1, name )
             
         
         size = len( shortcuts )

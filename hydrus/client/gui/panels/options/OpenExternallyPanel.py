@@ -127,7 +127,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._mime_launch_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( mime_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_OPEN_EXTERNALLY.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, list[ HydrusSerialisable.IdAndName ] ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_OPEN_EXTERNALLY.ID, self._ConvertMimeToDisplayTuple, self._ConvertMimeToSortTuple )
         
         self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._mime_launch_listctrl_panel, 12, model, activation_callback = self._EditMimeLaunch, use_simple_delete = True, can_delete_callback = self._GeneralFileIsNotSelected )
         
@@ -220,7 +220,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return ClientGUIDialogsQuick.SelectFromListButtons( self, 'select call to add', choice_tuples, allow_insta_one_item_select = False )
         
     
-    def _ConvertMimeToDisplayTuple( self, data ):
+    def _ConvertMimeToDisplayTuple( self, data: tuple[ int, list[ HydrusSerialisable.IdAndName ] ] ):
         
         ( mime, executable_ids_and_names ) = data
         
@@ -240,7 +240,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return display_tuple
         
     
-    def _ConvertMimeToSortTuple( self, data ):
+    def _ConvertMimeToSortTuple( self, data: tuple[ int, list[ HydrusSerialisable.IdAndName ] ] ):
         
         ( mime, ids_and_names ) = data
 
