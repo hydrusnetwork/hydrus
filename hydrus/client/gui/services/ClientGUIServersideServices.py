@@ -246,7 +246,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._deletee_service_keys = []
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SERVICES.ID, self._ConvertServiceToDisplayTuple, self._ConvertServiceToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ HydrusNetwork.ServerService ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SERVICES.ID, self._ConvertServiceToDisplayTuple, self._ConvertServiceToSortTuple )
         
         self._services_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, 4, model, delete_key_callback = self._Delete, activation_callback = self._Edit, max_height_num_chars = 24 )
         
@@ -287,7 +287,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertServiceToDisplayTuple( self, service ):
+    def _ConvertServiceToDisplayTuple( self, service: HydrusNetwork.ServerService ):
         
         port = service.GetPort()
         name = service.GetName()
@@ -300,7 +300,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         return ( pretty_port, pretty_name, pretty_service_type )
         
     
-    def _ConvertServiceToSortTuple( self, service ):
+    def _ConvertServiceToSortTuple( self, service: HydrusNetwork.ServerService ):
         
         port = service.GetPort()
         name = service.GetName()

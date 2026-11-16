@@ -261,7 +261,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         
         self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientImportGallery.GalleryImport ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport, max_height_num_chars = 24 )
         
@@ -455,7 +455,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         self._gallery_importers_listctrl.UpdateDatas()
         
     
-    def _ConvertDataToDisplayTuple( self, gallery_import ):
+    def _ConvertDataToDisplayTuple( self, gallery_import: ClientImportGallery.GalleryImport ):
         
         query_text = gallery_import.GetQueryText()
         
@@ -524,7 +524,7 @@ class SidebarImporterMultipleGallery( SidebarImporter ):
         return ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
         
     
-    def _ConvertDataToSortTuple( self, gallery_import ):
+    def _ConvertDataToSortTuple( self, gallery_import: ClientImportGallery.GalleryImport ):
         
         query_text = gallery_import.GetQueryText()
         
@@ -1340,7 +1340,7 @@ class SidebarImporterMultipleWatcher( SidebarImporter ):
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientImportWatchers.WatcherImport ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher, max_height_num_chars = 24 )
         

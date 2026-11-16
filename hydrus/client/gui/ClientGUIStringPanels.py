@@ -1,5 +1,6 @@
 import collections.abc
 import re
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -313,7 +314,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         conversions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToDisplayTuple, self._ConvertConversionToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, int, typing.Any ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToDisplayTuple, self._ConvertConversionToSortTuple )
         
         # TODO: this thing seems crazy and probably should be a queuelistbox or whatever instead of a multi-column list!!
         # I'm doing all sorts of moveup/down and other adjustments to our # here, but who cares about displaying and maintaining that--there is only one appropriate sort
@@ -461,7 +462,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _ConvertConversionToDisplayTuple( self, conversion ):
+    def _ConvertConversionToDisplayTuple( self, conversion: tuple[ int, int, typing.Any ] ):
         
         ( number, conversion_type, data ) = conversion
         
@@ -482,7 +483,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( pretty_number, pretty_conversion, pretty_result )
         
     
-    def _ConvertConversionToSortTuple( self, conversion ):
+    def _ConvertConversionToSortTuple( self, conversion: tuple[ int, int, typing.Any ] ):
         
         ( number, conversion_type, data ) = conversion
         

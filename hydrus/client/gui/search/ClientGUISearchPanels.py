@@ -171,11 +171,14 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, favourite_searches_rows, initial_search_row_to_edit = None ):
         
+        # TODO: Seems like this should not be a bunch of tuples but actual nice 'favourite search' objects or whatever m8
+        # slightly separate question of whether file search contexts should eat up synchronised and potentially the collect/sort gubbins too. truly not sure
+        
         super().__init__( parent )
         
         self._favourite_searches_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
         self._favourite_searches = ClientGUIListCtrl.BetterListCtrlTreeView( self._favourite_searches_panel, 12, model, use_simple_delete = True, activation_callback = self._EditFavouriteSearch, max_height_num_chars = 24 )
         
@@ -248,7 +251,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertRowToDisplayTuple( self, row ):
+    def _ConvertRowToDisplayTuple( self, row: tuple ):
         
         ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) = row
         

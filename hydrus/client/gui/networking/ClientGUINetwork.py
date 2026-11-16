@@ -360,11 +360,13 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_contexts_to_custom_header_dicts ):
         
+        # TODO: this guy should have an object m8, not this weird tuple mess
+        
         super().__init__( parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -379,9 +381,9 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         datas = []
         
-        for ( network_context, custom_header_dict ) in list(network_contexts_to_custom_header_dicts.items()):
+        for ( network_context, custom_header_dict ) in network_contexts_to_custom_header_dicts.items():
             
-            for ( key, ( value, approved, reason ) ) in list(custom_header_dict.items()):
+            for ( key, ( value, approved, reason ) ) in custom_header_dict.items():
                 
                 data = ( network_context, ( key, value ), approved, reason )
                 
@@ -427,7 +429,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertDataToDisplayTuple( self, data ):
+    def _ConvertDataToDisplayTuple( self, data: tuple ):
         
         ( network_context, ( key, value ), approved, reason ) = data
         
@@ -444,7 +446,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         return display_tuple
         
     
-    def _ConvertDataToSortTuple( self, data ):
+    def _ConvertDataToSortTuple( self, data: tuple ):
         
         ( network_context, ( key, value ), approved, reason ) = data
         
@@ -656,7 +658,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToDisplayTuple, self._ConvertNetworkContextsToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingContexts.NetworkContext ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextToDisplayTuple, self._ConvertNetworkContextToSortTuple )
         
         self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self._bandwidths_panel, 8, model, activation_callback = self.ShowNetworkContext )
         
@@ -717,7 +719,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertNetworkContextsToDisplayTuple( self, network_context ):
+    def _ConvertNetworkContextToDisplayTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
         
         bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
         
@@ -790,7 +792,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertNetworkContextsToSortTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
+    def _ConvertNetworkContextToSortTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
         
         bandwidth_tracker = self._controller.network_engine.bandwidth_manager.GetTracker( network_context )
         
@@ -973,7 +975,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", network_context ):
+    def __init__( self, parent: QW.QWidget, controller: "CG.ClientController.Controller", network_context: ClientNetworkingContexts.NetworkContext ):
         
         self._controller = controller
         
@@ -1251,7 +1253,7 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, ClientNetworkingJobs.NetworkJob ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 8, model )
         
@@ -1291,10 +1293,9 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertDataToDisplayTuple( self, job_row ):
-        
-        network_engine_status: int = job_row[0]
-        job: ClientNetworkingJobs.NetworkJob = job_row[1]
+    def _ConvertDataToDisplayTuple( self, job_row: tuple[ int, ClientNetworkingJobs.NetworkJob ] ):
+
+        ( network_engine_status, job ) = job_row
         
         position = network_engine_status
         url = job.GetURL()
@@ -1311,10 +1312,9 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertDataToSortTuple( self, job_row ):
-        
-        network_engine_status: int = job_row[0]
-        job: ClientNetworkingJobs.NetworkJob = job_row[1]
+    def _ConvertDataToSortTuple( self, job_row: tuple[ int, ClientNetworkingJobs.NetworkJob ] ):
+
+        ( network_engine_status, job ) = job_row
         
         position = network_engine_status
         url = job.GetURL()
@@ -1405,7 +1405,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToDisplayTuple, self._ConvertNetworkContextToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientNetworkingContexts.NetworkContext ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToDisplayTuple, self._ConvertNetworkContextToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, delete_key_callback = self._Clear, activation_callback = self._Review )
         
@@ -1498,7 +1498,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertNetworkContextToDisplayTuple( self, network_context ):
+    def _ConvertNetworkContextToDisplayTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
         
         session = self._session_manager.GetSession( network_context )
         
@@ -1540,7 +1540,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertNetworkContextToSortTuple( self, network_context ):
+    def _ConvertNetworkContextToSortTuple( self, network_context: ClientNetworkingContexts.NetworkContext ):
         
         session = self._session_manager.GetSession( network_context )
         
@@ -1842,7 +1842,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, self._ConvertCookieToDisplayTuple, self._ConvertCookieToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ http.cookiejar.Cookie ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, self._ConvertCookieToDisplayTuple, self._ConvertCookieToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 8, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
@@ -1918,7 +1918,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _ConvertCookieToDisplayTuple( self, cookie ):
+    def _ConvertCookieToDisplayTuple( self, cookie: http.cookiejar.Cookie ):
         
         name = cookie.name
         pretty_name = name
@@ -1948,7 +1948,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertCookieToSortTuple( self, cookie ):
+    def _ConvertCookieToSortTuple( self, cookie: http.cookiejar.Cookie ):
         
         name = cookie.name
         

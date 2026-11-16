@@ -47,7 +47,7 @@ class EditNodes( QW.QWidget ):
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NODES.ID, self._ConvertNodeToDisplayTuple, self._ConvertNodeToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientParsing.ContentParser | ClientParsingLegacy.ParseNodeContentLink ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NODES.ID, self._ConvertNodeToDisplayTuple, self._ConvertNodeToSortTuple )
         
         self._nodes = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -91,7 +91,7 @@ class EditNodes( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertNodeToDisplayTuple( self, node ):
+    def _ConvertNodeToDisplayTuple( self, node: ClientParsing.ContentParser | ClientParsingLegacy.ParseNodeContentLink ):
         
         ( name, node_type, produces ) = node.ToPrettyStrings()
         
@@ -879,7 +879,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         super().__init__( parent )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToDisplayTuple, self._ConvertScriptToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientParsingLegacy.ParseRootFileLookup ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToDisplayTuple, self._ConvertScriptToSortTuple )
         
         self._scripts = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
@@ -939,7 +939,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertScriptToDisplayTuple( self, script ):
+    def _ConvertScriptToDisplayTuple( self, script: ClientParsingLegacy.ParseRootFileLookup ):
         
         ( name, query_type, script_type, produces ) = script.ToPrettyStrings()
         

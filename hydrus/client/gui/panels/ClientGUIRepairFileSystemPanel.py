@@ -52,7 +52,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         st = ClientGUICommon.BetterStaticText( self, text )
         st.setWordWrap( True )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToDisplayTuple, self._ConvertPrefixToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientFilesPhysical.FilesStorageSubfolder ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToDisplayTuple, self._ConvertPrefixToSortTuple )
         
         self._locations = ClientGUIListCtrl.BetterListCtrlTreeView( self, 12, model, activation_callback = self._SetLocations )
         
@@ -114,7 +114,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._locations.UpdateDatas()
         
     
-    def _ConvertPrefixToDisplayTuple( self, subfolder ):
+    def _ConvertPrefixToDisplayTuple( self, subfolder: ClientFilesPhysical.FilesStorageSubfolder ):
         
         prefix = subfolder.prefix
         incorrect_base_location = subfolder.base_location
@@ -155,7 +155,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         return display_tuple
         
     
-    def _ConvertPrefixToSortTuple( self, subfolder ):
+    def _ConvertPrefixToSortTuple( self, subfolder: ClientFilesPhysical.FilesStorageSubfolder ):
         
         prefix = subfolder.prefix
         incorrect_base_location = subfolder.base_location

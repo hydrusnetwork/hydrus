@@ -21,7 +21,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ str, str ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -95,7 +95,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         self._regexes.AddData( row, select_sort_and_scroll = True )
         
     
-    def _ConvertDataToDisplayTuple( self, row ):
+    def _ConvertDataToDisplayTuple( self, row: tuple[ str, str ] ):
         
         ( regex_phrase, description ) = row
         

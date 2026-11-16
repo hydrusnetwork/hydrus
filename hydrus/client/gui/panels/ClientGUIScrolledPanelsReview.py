@@ -1,6 +1,7 @@
 import collections
 import collections.abc
 import subprocess
+import typing
 
 from PIL import ExifTags
 
@@ -120,7 +121,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         exif_panel = ClientGUICommon.StaticBox( self, 'EXIF' )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, self._ConvertEXIFToDataTuple, self._ConvertEXIFToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ int, typing.Any ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXIF_DATA.ID, self._ConvertEXIFToDataTuple, self._ConvertEXIFToSortTuple )
         
         self._exif_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( exif_panel, 16, model, activation_callback = self._CopyRow )
         
@@ -280,7 +281,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertEXIFToDataTuple( self, exif_tuple ):
+    def _ConvertEXIFToDataTuple( self, exif_tuple: tuple[ int, typing.Any ] ):
         
         ( exif_id, raw_value ) = exif_tuple
         
@@ -323,7 +324,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertEXIFToSortTuple( self, exif_tuple ):
+    def _ConvertEXIFToSortTuple( self, exif_tuple: tuple[ int, typing.Any ] ):
         
         ( exif_id, raw_value ) = exif_tuple
         
@@ -757,7 +758,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         jobs_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._current_work_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToDisplayTuple, self._ConvertJobTypeToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ int ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_MAINTENANCE_JOBS.ID, self._ConvertJobTypeToDisplayTuple, self._ConvertJobTypeToSortTuple )
         
         self._jobs_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( jobs_listctrl_panel, 4, model, max_height_num_chars = 12 )
         
@@ -929,7 +930,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         job.start()
         
     
-    def _ConvertJobTypeToDisplayTuple( self, job_type ):
+    def _ConvertJobTypeToDisplayTuple( self, job_type: int ):
         
         pretty_job_type = ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ]
         
@@ -956,7 +957,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertJobTypeToSortTuple( self, job_type ):
+    def _ConvertJobTypeToSortTuple( self, job_type: int ):
         
         pretty_job_type = ClientFilesMaintenance.regen_file_enum_to_str_lookup[ job_type ]
         sort_job_type = pretty_job_type
@@ -1752,7 +1753,7 @@ class JobSchedulerPanel( QW.QWidget ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ HydrusThreading.SchedulableJob ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_JOB_SCHEDULER_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
         
@@ -1820,7 +1821,7 @@ class ThreadsPanel( QW.QWidget ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ HydrusThreading.JobScheduler | HydrusThreading.THREADCallToThread ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_THREADS_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
         
@@ -1845,7 +1846,7 @@ class ThreadsPanel( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToDisplayTuple( self, thread ):
+    def _ConvertDataToDisplayTuple( self, thread: HydrusThreading.JobScheduler | HydrusThreading.THREADCallToThread ):
         
         name = thread.GetName()
         thread_type = repr( type( thread ) )
@@ -1860,7 +1861,7 @@ class ThreadsPanel( QW.QWidget ):
         return display_tuple
         
     
-    def _ConvertDataToSortTuple( self, thread ):
+    def _ConvertDataToSortTuple( self, thread: HydrusThreading.JobScheduler | HydrusThreading.THREADCallToThread ):
         
         name = thread.GetName()
         thread_type = repr( type( thread ) )
@@ -1899,7 +1900,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._names_to_num_rows = {}
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ str ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
         self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( deferred_delete_listctrl_panel, 12, model )
         
@@ -1936,7 +1937,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         self._controller.sub( self, 'NotifyRefresh', 'notify_deferred_delete_database_maintenance_new_work' )
         
     
-    def _ConvertRowToDisplayTuple( self, name ):
+    def _ConvertRowToDisplayTuple( self, name: str ):
         
         num_rows = self._names_to_num_rows.get( name, None )
         
@@ -1957,7 +1958,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         return display_tuple
         
     
-    def _ConvertRowToSortTuple( self, name ):
+    def _ConvertRowToSortTuple( self, name: str ):
         
         num_rows = self._names_to_num_rows.get( name, None )
         
@@ -2068,7 +2069,7 @@ class ReviewSubprocesses( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBPROCESSES_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ subprocess.Popen ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBPROCESSES_REVIEW.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, 12, model )
         
@@ -2235,7 +2236,7 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         
         vacuum_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_VACUUM_DATA.ID, self._ConvertNameToDisplayTuple, self._ConvertNameToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ str ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_VACUUM_DATA.ID, self._ConvertNameToDisplayTuple, self._ConvertNameToSortTuple )
         
         self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( vacuum_listctrl_panel, 6, model )
         
@@ -2304,7 +2305,7 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         return True
         
     
-    def _ConvertNameToDisplayTuple( self, name ):
+    def _ConvertNameToDisplayTuple( self, name: str ):
         
         vacuum_dict = self._vacuum_data[ name ]
         
@@ -2345,7 +2346,7 @@ Vacuuming is an expensive operation. It creates one (temporary) copy of the data
         return display_tuple
         
     
-    def _ConvertNameToSortTuple( self, name ):
+    def _ConvertNameToSortTuple( self, name: str ):
         
         vacuum_dict = self._vacuum_data[ name ]
         

@@ -76,7 +76,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._shortcuts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertShortcutTupleToDisplayTuple, self._ConvertShortcutTupleToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ tuple[ ClientGUIShortcuts.Shortcut, CAC.ApplicationCommand ] ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertShortcutTupleToDisplayTuple, self._ConvertShortcutTupleToSortTuple )
         
         self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, 12, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts, max_height_num_chars = 24 )
         
@@ -159,12 +159,9 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertShortcutTupleToDisplayTuple( self, shortcut_tuple ):
+    def _ConvertShortcutTupleToDisplayTuple( self, shortcut_tuple: tuple[ ClientGUIShortcuts.Shortcut, CAC.ApplicationCommand ] ):
         
         ( shortcut, command ) = shortcut_tuple
-        
-        shortcut = typing.cast( ClientGUIShortcuts.Shortcut, shortcut )
-        command = typing.cast( CAC.ApplicationCommand, command )
         
         return ( shortcut.ToString( call_mouse_buttons_primary_secondary_override = self._call_mouse_buttons_primary_secondary ), command.ToString() )
         

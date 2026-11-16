@@ -37,9 +37,19 @@ from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingJobs
+from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingURLClass
 from hydrus.client.parsing import ClientParsing
 from hydrus.client.parsing import ClientParsingResults
+
+EXPORT_PANEL_OBJECT_TYPES = (
+    ClientNetworkingGUG.GalleryURLGenerator |
+    ClientNetworkingGUG.NestedGalleryURLGenerator |
+    ClientNetworkingURLClass.URLClass |
+    ClientParsing.PageParser |
+    ClientNetworkingLogin.LoginScriptDomain |
+    ClientNetworkingDomain.DomainMetadataPackage
+)
 
 class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
@@ -61,7 +71,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToDisplayTuple, self._ConvertContentToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ EXPORT_PANEL_OBJECT_TYPES ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToDisplayTuple, self._ConvertContentToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, 12, model, use_simple_delete = True )
         
@@ -218,7 +228,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return len( self._listctrl.GetData() ) > 0
         
     
-    def _ConvertContentToDisplayTuple( self, content ):
+    def _ConvertContentToDisplayTuple( self, content: EXPORT_PANEL_OBJECT_TYPES ):
         
         if isinstance( content, ClientNetworkingDomain.DomainMetadataPackage ):
             
@@ -1034,7 +1044,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToDisplayTuple, self._ConvertContentParserToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientParsing.ContentParser ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToDisplayTuple, self._ConvertContentParserToSortTuple )
         
         self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, 6, model, use_simple_delete = True, activation_callback = self._Edit, max_height_num_chars = 12 )
         
@@ -1379,7 +1389,7 @@ class EditPageParserPanel( QW.QTabWidget ):
         
         subsidiary_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( subsidiary_page_parsers_notebook_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientParsing.SubsidiaryPageParser ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSIDIARY_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
         
         self._subsidiary_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( subsidiary_page_parsers_panel, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser, max_height_num_chars = 12 )
         
@@ -1813,7 +1823,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToDisplayTuple, self._ConvertParserToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientParsing.PageParser ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PARSERS.ID, self._ConvertParserToDisplayTuple, self._ConvertParserToSortTuple )
         
         self._parsers = ClientGUIListCtrl.BetterListCtrlTreeView( parsers_panel, 24, model, use_simple_delete = True, activation_callback = self._Edit )
         

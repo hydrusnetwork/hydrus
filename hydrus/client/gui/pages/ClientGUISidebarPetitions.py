@@ -290,7 +290,7 @@ class SidebarPetitions( ClientGUISidebarCore.Sidebar ):
         
         self._petitions_summary_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._petitions_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ HydrusNetwork.PetitionHeader ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._petitions_summary_list_panel, 12, model, activation_callback = self._ActivateToHighlightPetition )
         
