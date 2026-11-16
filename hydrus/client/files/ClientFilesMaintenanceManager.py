@@ -79,6 +79,7 @@ class FilesMaintenanceManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
+        self._controller.sub( self, 'Wake', 'notify_new_file_maintenance_work' )
         
     
     def _AbleToDoBackgroundMaintenance( self ):

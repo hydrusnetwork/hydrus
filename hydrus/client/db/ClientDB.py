@@ -4341,7 +4341,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_maintenance_queue = ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue( self._c, self.modules_hashes_local_cache )
+        self.modules_files_maintenance_queue = ClientDBFilesMaintenanceQueue.ClientDBFilesMaintenanceQueue( self._c, self._cursor_transaction_wrapper, self.modules_hashes_local_cache )
         
         self._modules.append( self.modules_files_maintenance_queue )
         

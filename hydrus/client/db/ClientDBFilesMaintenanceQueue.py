@@ -4,6 +4,7 @@ import sqlite3
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
@@ -17,11 +18,13 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     def __init__(
         self,
         cursor: sqlite3.Cursor,
+        cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper,
         modules_hashes_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalHashes,
         ):
         
         super().__init__( 'client files maintenance queue', cursor )
         
+        self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_hashes_local_cache = modules_hashes_local_cache
         
     
@@ -56,18 +59,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
         
-        if CG.client_controller.IsBooted():
-            
-            try:
-                
-                # if this happens during boot db update, this doesn't exist lol
-                CG.client_controller.files_maintenance_manager.Wake()
-                
-            except Exception as e:
-                
-                pass
-                
-            
+        self._cursor_transaction_wrapper.pub_after_job( 'notify_new_file_maintenance_work' )
         
     
     def AddJobsHashes( self, hashes, job_type, time_can_start = 0 ):
