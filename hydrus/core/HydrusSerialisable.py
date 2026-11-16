@@ -576,11 +576,6 @@ class SerialisableDictionary( SerialisableBase, dict[ K, V ] ):
     SERIALISABLE_NAME = 'Serialisable Dictionary'
     SERIALISABLE_VERSION = 2 # this is used in the network, do not update it casually!
     
-    def __init__( self, *args, **kwargs ):
-        
-        super().__init__( *args, **kwargs )
-        
-    
     def _GetSerialisableInfo( self ):
         
         meta_keys_and_meta_values = []
@@ -750,11 +745,6 @@ class SerialisableBytesDictionary( SerialisableBase, dict[ int | bytes, V_bytes 
     SERIALISABLE_NAME = 'Serialisable Dictionary With Bytestring Key/Value Support'
     SERIALISABLE_VERSION = 1
     
-    def __init__( self, *args, **kwargs ):
-        
-        super().__init__( *args, **kwargs )
-        
-    
     def _GetSerialisableInfo( self ):
         
         pairs = []
@@ -866,11 +856,6 @@ class SerialisableList( SerialisableBase, list[ T ] ):
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_LIST
     SERIALISABLE_NAME = 'Serialisable List'
     SERIALISABLE_VERSION = 3
-    
-    def __init__( self, *args, **kwargs ):
-        
-        super().__init__( *args, **kwargs )
-        
     
     def _GetSerialisableInfo( self ):
         
