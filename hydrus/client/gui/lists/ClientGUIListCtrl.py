@@ -527,7 +527,7 @@ def EMPTY_ROWS_MENU_CALLABLE() -> QW.QMenu:
 
 MT = typing.TypeVar( 'MT' )
 
-class BetterListCtrlTreeView( QW.QTreeView ):
+class BetterListCtrlTreeView( QW.QTreeView, typing.Generic[ MT ] ):
     
     columnListContentsChanged = QC.Signal()
     
