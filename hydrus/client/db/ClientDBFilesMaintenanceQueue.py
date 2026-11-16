@@ -103,9 +103,11 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
             possible_job_types = job_types
             
         
+        now = HydrusTime.GetNow()
+        
         for job_type in possible_job_types:
             
-            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, HydrusTime.GetNow(), 256 ) ) )
+            hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM file_maintenance_jobs WHERE job_type = ? AND time_can_start < ? LIMIT ?;', ( job_type, now, 256 ) ) )
             
             if len( hash_ids ) > 0:
                 
@@ -143,22 +145,16 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
     
     def GetJobCounts( self ):
         
-        result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start < ? GROUP BY job_type;', ( HydrusTime.GetNow(), ) ).fetchall()
+        now = HydrusTime.GetNow()
         
-        job_types_to_count = collections.Counter( dict( result ) )
+        result = self._Execute( 'SELECT job_type, time_can_start < ?, COUNT( * ) FROM file_maintenance_jobs GROUP BY job_type, time_can_start < ?;', ( now, now ) ).fetchall()
         
-        not_due_result = self._Execute( 'SELECT job_type, COUNT( * ) FROM file_maintenance_jobs WHERE time_can_start >= ? GROUP BY job_type;', ( HydrusTime.GetNow(), ) ).fetchall()
+        job_types_to_count = collections.Counter( { job_type : count for ( job_type, can_start, count ) in result if can_start } )
+        job_types_to_not_due_count = collections.Counter( { job_type : count for ( job_type, can_start, count ) in result if not can_start } )
         
-        job_type_to_not_due_count = collections.Counter( dict( not_due_result ) )
+        all_keys = set( job_types_to_count.keys() ).union( job_types_to_not_due_count.keys() )
         
-        job_types_to_counts = {}
-        
-        all_keys = set( job_types_to_count.keys() ).union( job_type_to_not_due_count.keys() )
-        
-        for key in all_keys:
-            
-            job_types_to_counts[ key ] = ( job_types_to_count[ key ], job_type_to_not_due_count[ key ] )
-            
+        job_types_to_counts = { key : ( job_types_to_count[ key ], job_types_to_not_due_count[ key ] ) for key in all_keys }
         
         return job_types_to_counts
         
