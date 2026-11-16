@@ -59,6 +59,9 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._export_folders_panel.AddButton( 'add', self._AddFolder )
         self._export_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._export_folders_panel.AddDeleteButton()
+        
+        self._export_folders_panel.AddSeparator()
+        
         self._export_folders_panel.AddImportExportButtons( ( ClientExportingFiles.ExportFolder, ), tuple(), self._AddRaw )
         
         #

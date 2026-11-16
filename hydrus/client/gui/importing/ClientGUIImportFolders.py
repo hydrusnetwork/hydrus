@@ -49,6 +49,9 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         import_folders_panel.AddButton( 'add', self._Add )
         import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         import_folders_panel.AddDeleteButton()
+        
+        import_folders_panel.AddSeparator()
+        
         import_folders_panel.AddImportExportButtons( ( ClientImportLocal.ImportFolder, ), tuple(), self._RawAdd )
         
         #
