@@ -97,6 +97,8 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
         
         self._pending_hashes = set()
         
+        self._job_status: ClientThreading.JobStatus | None = None
+        
         super().__init__( controller, 5 )
         
     
@@ -130,13 +132,16 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                 
                 if self._total_hashes_in_this_run == 0:
                     
-                    job_status = ClientThreading.JobStatus( cancellable = True )
-                    
-                    job_status.SetStatusTitle( 'downloading' )
-                    
-                    job_status.SetStatusText( 'initialising downloader' )
-                    
-                    job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_status )
+                    if self._job_status is None:
+                        
+                        self._job_status = ClientThreading.JobStatus( cancellable = True )
+                        
+                        self._job_status.SetStatusTitle( 'downloading' )
+                        
+                        self._job_status.SetStatusText( 'initialising downloader' )
+                        
+                        job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', self._job_status )
+                        
                     
                 
                 num_before = len( self._hashes_still_to_download_in_this_run )
@@ -159,7 +164,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             return still_work_to_do
             
         
-        if job_status.IsCancelled():
+        if self._job_status is not None and self._job_status.IsCancelled():
             
             self._hashes_still_to_download_in_this_run = set()
             
@@ -172,8 +177,11 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
         
         total_done = self._total_hashes_in_this_run - len( self._hashes_still_to_download_in_this_run )
         
-        job_status.SetStatusText( 'downloading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, self._total_hashes_in_this_run ) ) )
-        job_status.SetGauge( total_done, self._total_hashes_in_this_run )
+        if self._job_status is not None:
+            
+            self._job_status.SetStatusText( 'downloading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, self._total_hashes_in_this_run ) ) )
+            self._job_status.SetGauge( total_done, self._total_hashes_in_this_run )
+            
         
         try:
             
@@ -282,17 +290,22 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
             
             if len( self._hashes_still_to_download_in_this_run ) == 0:
                 
-                job_status.DeleteStatusText()
-                job_status.DeleteGauge()
-                
-                if self._total_successful_hashes_in_this_run > 0:
+                if self._job_status is not None:
                     
-                    job_status.SetStatusText( HydrusNumbers.ToHumanInt( self._total_successful_hashes_in_this_run ) + ' files downloaded' )
+                    self._job_status.DeleteStatusText()
+                    self._job_status.DeleteGauge()
                     
-                
-                job_status_pub_job.Cancel()
-                
-                job_status.FinishAndDismiss( 1 )
+                    if self._total_successful_hashes_in_this_run > 0:
+                        
+                        self._job_status.SetStatusText( HydrusNumbers.ToHumanInt( self._total_successful_hashes_in_this_run ) + ' files downloaded' )
+                        
+                    
+                    job_status_pub_job.Cancel()
+                    
+                    self._job_status.FinishAndDismiss( 1 )
+                    
+                    self._job_status = None
+                    
                 
             
         
