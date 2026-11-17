@@ -19,18 +19,18 @@ controller: "HydrusController.HydrusController" = None
 
 # TODO: move the client, server, and any test-specific garbage to the new module Globals mate, and/or the controller objects themselves
 
-started_shutdown = False
-view_shutdown = False
-model_shutdown = False
+started_shutdown: bool = False
+view_shutdown: bool = False
+model_shutdown: bool = False
 
 server_action = 'start'
 
 db_journal_mode = 'WAL'
-no_db_temp_files = False
+no_db_temp_files: bool = False
 
-non_interactive_update = False
+non_interactive_update: bool = False
 
-boot_debug = False
+boot_debug: bool = False
 
 db_cache_size = 256
 db_transaction_commit_period = 30
@@ -40,10 +40,10 @@ db_transaction_commit_period = 30
 # corruption cannot occur either way, but since we have multiple ATTACH dbs with diff journals, let's not mess around when power-cut during heavy file import or w/e
 db_synchronous = 2
 
-import_folders_running = False
-export_folders_running = False
+import_folders_running: bool = False
+export_folders_running: bool = False
 
-boot_with_network_traffic_paused_command_line = False
+boot_with_network_traffic_paused_command_line: bool = False
 
 db_profile_min_job_time_ms = 16
 callto_profile_min_job_time_ms = 10
@@ -52,31 +52,31 @@ menu_profile_min_job_time_ms = 16
 pubsub_profile_min_job_time_ms = 5
 ui_timer_profile_min_job_time_ms = 5
 
-macos_antiflicker_test = False
+macos_antiflicker_test: bool = False
 
-canvas_tile_outline_mode = False
+canvas_tile_outline_mode: bool = False
 
-callto_report_mode = False
-db_report_mode = False
-file_report_mode = False
-file_sort_report_mode = False
-media_load_report_mode = False
-gui_report_mode = False
-shortcut_report_mode = False
-cache_report_mode = False
-idle_report_mode = False
-subprocess_report_mode = False
-subscription_report_mode = False
-hover_window_report_mode = False
-file_import_report_mode = False
-phash_generation_report_mode = False
-network_report_mode = False
-network_report_mode_silent = False
-pubsub_report_mode = False
-daemon_report_mode = False
-mpv_report_mode = False
-potential_duplicates_report_mode = False
-thumbnail_graphics_view_report_mode = False
+callto_report_mode: bool = False
+db_report_mode: bool = False
+file_report_mode: bool = False
+file_sort_report_mode: bool = False
+media_load_report_mode: bool = False
+gui_report_mode: bool = False
+shortcut_report_mode: bool = False
+cache_report_mode: bool = False
+idle_report_mode: bool = False
+subprocess_report_mode: bool = False
+subscription_report_mode: bool = False
+hover_window_report_mode: bool = False
+file_import_report_mode: bool = False
+phash_generation_report_mode: bool = False
+network_report_mode: bool = False
+network_report_mode_silent: bool = False
+pubsub_report_mode: bool = False
+daemon_report_mode: bool = False
+mpv_report_mode: bool = False
+potential_duplicates_report_mode: bool = False
+thumbnail_graphics_view_report_mode: bool = False
 
 # just to note for this guy, we are looking at:
     # MainLoop: quick downloader
@@ -90,23 +90,23 @@ thumbnail_graphics_view_report_mode = False
     # 10+ CallToThread
     # 2 Job Scheduler
     # ~10 CallToThreadLongRunning
-shutdown_report_mode = False
+shutdown_report_mode: bool = False
 
-mpv_allow_crashy_files = False
-mpv_allow_crashy_files_silently = False
+mpv_allow_crashy_files: bool = False
+mpv_allow_crashy_files_silently: bool = False
 
-fake_petition_mode = False
+fake_petition_mode: bool = False
 
-force_idle_mode = False
-thumbnail_debug_mode = False
-autocomplete_delay_mode = False
+force_idle_mode: bool = False
+thumbnail_debug_mode: bool = False
+autocomplete_delay_mode: bool = False
 
-blurhash_mode = False
+blurhash_mode: bool = False
 
-shutdown_complete = False
-restart = False
+shutdown_complete: bool = False
+restart: bool = False
 
-twisted_is_broke = False
+twisted_is_broke: bool = False
 twisted_is_broke_exception = None
 
 dirty_object_lock = threading.Lock()
