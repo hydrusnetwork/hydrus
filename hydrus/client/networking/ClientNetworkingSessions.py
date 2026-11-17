@@ -82,15 +82,21 @@ def CleanseHeadersForSession( ambiguous_session, headers: dict[ str, str ], engi
         
     
 
-def ClearExpiredCookies( ambiguous_session ):
+def ClearExpiredCookies( ambiguous_session, last_touched_time: int ):
     """
-    This is not super important since expired cookies are not sent, but it is useful as cleanup and login expiry detection, so we do it regularly.
+    This is not super important for actually expired cookies since they are not sent, but it is useful as cleanup and login expiry detection, so we do it regularly.
     
-    THIS DOES NOT REMOVE SESSION COOKIES
-    clear_session_cookies does that, and we are planning some options around it
+    This now does also clear out session cookies.
     """
     
     cookies = GetRequestsSessionCookieJar( ambiguous_session )
+    
+    session_cookie_last_touched_timeout_seconds = CG.client_controller.new_options.GetInteger( 'session_cookie_last_touched_timeout_seconds' )
+    
+    if HydrusTime.TimeHasPassed( last_touched_time + session_cookie_last_touched_timeout_seconds ):
+        
+        cookies.clear_session_cookies()
+        
     
     cookies.clear_expired_cookies()
     
@@ -284,7 +290,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER
     SERIALISABLE_NAME = 'Session Manager Session Container'
-    SERIALISABLE_VERSION = 3
+    SERIALISABLE_VERSION = 4
     
     POOL_CONNECTION_TIMEOUT = 5 * 60
     
@@ -367,12 +373,12 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         
         serialisable_cookie_tuples = ConvertRequestsCookieJarToSerialisable( cookie_jar )
         
-        return ( serialisable_network_context, serialisable_cookie_tuples )
+        return ( serialisable_network_context, serialisable_cookie_tuples, self.last_touched_time )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
-        ( serialisable_network_context, serialisable_cookie_tuples ) = serialisable_info
+        ( serialisable_network_context, serialisable_cookie_tuples, self.last_touched_time ) = serialisable_info
         
         self.network_context = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_network_context, deserialisation_context.DuplicateForNewWhitelist( { HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT } ) )
         
@@ -396,7 +402,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             HydrusData.Print( "Could not load and set cookies for session {}".format( self.network_context ) )
             
         
-        ClearExpiredCookies( self.session )
+        ClearExpiredCookies( self.session, self.last_touched_time )
         
     
     def _UpdateSerialisableInfo( self, version: int, old_serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
@@ -425,6 +431,17 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             return ( 3, new_serialisable_info )
             
         
+        if version == 3:
+            
+            ( serialisable_network_context, serialisable_cookie_tuples ) = old_serialisable_info
+            
+            last_touched_time = HydrusTime.GetNow()
+            
+            new_serialisable_info = ( serialisable_network_context, serialisable_cookie_tuples, last_touched_time )
+            
+            return ( 4, new_serialisable_info )
+            
+        
     
     def MaintainConnectionPool( self ):
         
@@ -450,7 +467,6 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
                     
                 
                 self.pool_is_cleared = True
-                self.last_touched_time = HydrusTime.GetNow()
                 
             except Exception as e:
                 
@@ -468,7 +484,7 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
     def PrepareForNewWork( self ):
         
         # this is useful here as 'are we logged in' tracking
-        ClearExpiredCookies( self.session )
+        ClearExpiredCookies( self.session, self.last_touched_time )
         
         self.last_touched_time = HydrusTime.GetNow()
         self.pool_is_cleared = False

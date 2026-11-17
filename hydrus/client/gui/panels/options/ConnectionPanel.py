@@ -69,6 +69,9 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._max_network_jobs = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_max )
         self._max_network_jobs_per_domain = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
         
+        self._session_cookie_last_touched_timeout_seconds = ClientGUITime.TimeDeltaWidget( general, min = 15 * 60, days = True, hours = True, minutes = True )
+        self._session_cookie_last_touched_timeout_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a particular domain has not been used in this long, any "session" cookies, which means those without a fixed expiry, will be deleted. Hydrus remembers session cookies and the last touch time through a program restart.' ) )
+        
         self._set_requests_ca_bundle_env = QW.QCheckBox( general )
         self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart. Note: this breaks the self-signed certificates of hydrus services.' ) )
         
@@ -130,6 +133,7 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._max_network_jobs.setValue( self._new_options.GetInteger( 'max_network_jobs' ) )
         self._max_network_jobs_per_domain.setValue( self._new_options.GetInteger( 'max_network_jobs_per_domain' ) )
+        self._session_cookie_last_touched_timeout_seconds.SetValue( self._new_options.GetInteger( 'session_cookie_last_touched_timeout_seconds' ) )
         
         #
         
@@ -155,6 +159,7 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'Halt new jobs as long as this many network infrastructure errors on their domain (0 for never wait): ', self._domain_network_infrastructure_error_velocity ) )
         rows.append( ( 'max number of simultaneous active network jobs: ', self._max_network_jobs ) )
         rows.append( ( 'max number of simultaneous active network jobs per domain: ', self._max_network_jobs_per_domain ) )
+        rows.append( ( 'clear "session" cookies after this much domain inactivity: ', self._session_cookie_last_touched_timeout_seconds ) )
         rows.append( ( 'DEBUG: set the REQUESTS_CA_BUNDLE env to certifi cacert.pem on program start:', self._set_requests_ca_bundle_env ) )
         rows.append( ( 'DEBUG: do not verify regular https traffic:', self._do_not_verify_regular_https ) )
         rows.append( ( 'TEST: run the curl_cffi test with this browser definition:', self._curl_cffi_definition ) )
@@ -296,5 +301,6 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )
         self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.value() )
+        self._new_options.SetInteger( 'session_cookie_last_touched_timeout_seconds', self._session_cookie_last_touched_timeout_seconds.GetValue() )
         
     
