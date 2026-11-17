@@ -1120,9 +1120,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._log_requests = QW.QCheckBox( self._client_server_options_panel )
         self._log_requests.setToolTip( ClientGUIFunctions.WrapToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' ) )
         
-        self._use_normie_eris = QW.QCheckBox( self._client_server_options_panel )
-        self._use_normie_eris.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use alternate ASCII art on the root page of the server.' ) )
-        
         self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'https' )
         self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'host.com' )
         self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, '12345' )
@@ -1146,7 +1143,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._use_https.setChecked( dictionary[ 'use_https' ] )
         self._support_cors.setChecked( dictionary[ 'support_cors' ] )
         self._log_requests.setChecked( dictionary[ 'log_requests' ] )
-        self._use_normie_eris.setChecked( dictionary[ 'use_normie_eris' ] )
         
         self._external_scheme_override.SetValue( dictionary[ 'external_scheme_override' ] )
         self._external_host_override.SetValue( dictionary[ 'external_host_override' ] )
@@ -1162,7 +1158,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         rows.append( ( 'use https', self._use_https ) )
         rows.append( ( 'support CORS headers', self._support_cors ) )
         rows.append( ( 'log requests', self._log_requests ) )
-        rows.append( ( 'normie-friendly welcome page', self._use_normie_eris ) )
         
         if False: # some old local booru gubbins--maybe delete?
             
@@ -1199,7 +1194,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._use_https.setEnabled( service_running )
         self._support_cors.setEnabled( service_running )
         self._log_requests.setEnabled( service_running )
-        self._use_normie_eris.setEnabled( service_running )
         self._external_scheme_override.setEnabled( service_running )
         self._external_host_override.setEnabled( service_running )
         self._external_port_override.setEnabled( service_running )
@@ -1224,7 +1218,6 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         dictionary_part[ 'use_https' ] = self._use_https.isChecked()
         dictionary_part[ 'support_cors' ] = self._support_cors.isChecked()
         dictionary_part[ 'log_requests' ] = self._log_requests.isChecked()
-        dictionary_part[ 'use_normie_eris' ] = self._use_normie_eris.isChecked()
         dictionary_part[ 'external_scheme_override' ] = self._external_scheme_override.GetValue()
         dictionary_part[ 'external_host_override' ] = self._external_host_override.GetValue()
         dictionary_part[ 'external_port_override' ] = self._external_port_override.GetValue()

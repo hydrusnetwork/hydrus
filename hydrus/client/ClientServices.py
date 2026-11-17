@@ -50,7 +50,7 @@ def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result =
     return s
     
 
-def GenerateDefaultServiceDictionary( service_type ):
+def GenerateDefaultServiceDictionary( service_type: int ):
     
     dictionary = HydrusSerialisable.SerialisableDictionary()
     
@@ -96,8 +96,6 @@ def GenerateDefaultServiceDictionary( service_type ):
         
         dictionary[ 'support_cors' ] = False
         dictionary[ 'log_requests' ] = False
-        
-        dictionary[ 'use_normie_eris' ] = False
         
         dictionary[ 'external_scheme_override' ] = None
         dictionary[ 'external_host_override' ] = None
@@ -529,7 +527,6 @@ class ServiceLocalServerService( Service ):
         dictionary[ 'allow_non_local_connections' ] = self._allow_non_local_connections
         dictionary[ 'support_cors' ] = self._support_cors
         dictionary[ 'log_requests' ] = self._log_requests
-        dictionary[ 'use_normie_eris' ] = self._use_normie_eris
         dictionary[ 'bandwidth_tracker' ] = self._bandwidth_tracker
         dictionary[ 'bandwidth_rules' ] = self._bandwidth_rules
         dictionary[ 'external_scheme_override' ] = self._external_scheme_override
@@ -548,7 +545,6 @@ class ServiceLocalServerService( Service ):
         self._allow_non_local_connections = dictionary[ 'allow_non_local_connections' ]
         self._support_cors = dictionary[ 'support_cors' ]
         self._log_requests = dictionary[ 'log_requests' ]
-        self._use_normie_eris = dictionary[ 'use_normie_eris' ]
         self._bandwidth_tracker = dictionary[ 'bandwidth_tracker' ]
         self._bandwidth_rules = dictionary[ 'bandwidth_rules' ]
         self._external_scheme_override = dictionary[ 'external_scheme_override' ]
@@ -620,14 +616,6 @@ class ServiceLocalServerService( Service ):
         with self._lock:
             
             return self._use_https
-            
-        
-    
-    def UseNormieEris( self ):
-        
-        with self._lock:
-            
-            return self._use_normie_eris
             
         
     
