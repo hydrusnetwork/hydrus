@@ -171,6 +171,11 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return self.context_type in ( CC.NETWORK_CONTEXT_DOWNLOADER_PAGE, CC.NETWORK_CONTEXT_WATCHER_PAGE )
         
     
+    def IsGlobal( self ):
+        
+        return self.context_type == CC.NETWORK_CONTEXT_GLOBAL
+        
+    
     def IsHydrus( self ):
         
         return self.context_type == CC.NETWORK_CONTEXT_HYDRUS
@@ -240,6 +245,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
         return NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = domain )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT ] = NetworkContext
 
 GLOBAL_NETWORK_CONTEXT = NetworkContext( CC.NETWORK_CONTEXT_GLOBAL )

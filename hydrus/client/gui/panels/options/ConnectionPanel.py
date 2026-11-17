@@ -80,6 +80,12 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self._fetch_curl_cffi_names_button = ClientGUICommon.BetterButton( general, 'fetch browser names', self._FetchCURLCFFIBrowserNames )
         
+        self._curl_cffi_strip_hydrus_user_agent = QW.QCheckBox( general )
+        self._curl_cffi_strip_hydrus_user_agent.setToolTip( ClientGUIFunctions.WrapToolTip( 'curl_cffi wants to set its own User-Agent, so we generally strip whatever hydrus wants to set. If you need to set a specific User-Agent anyway, disable the removal here.' ) )
+        
+        self._curl_cffi_strip_hydrus_user_agent_only_if_global = QW.QCheckBox( general )
+        self._curl_cffi_strip_hydrus_user_agent_only_if_global.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you only want curl_cffi to have its own User-Agent when you otherwise have nothing special set, allow that here.' ) )
+        
         #
         
         proxy_panel = ClientGUICommon.StaticBox( self, 'proxy settings' )
@@ -103,6 +109,9 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._do_not_verify_regular_https.setChecked( not self._new_options.GetBoolean( 'verify_regular_https' ) )
         
         self._curl_cffi_definition.SetValue( self._new_options.GetNoneableString( 'curl_cffi_definition' ) )
+        
+        self._curl_cffi_strip_hydrus_user_agent.setChecked( self._new_options.GetBoolean( 'curl_cffi_strip_hydrus_user_agent' ) )
+        self._curl_cffi_strip_hydrus_user_agent_only_if_global.setChecked( self._new_options.GetBoolean( 'curl_cffi_strip_hydrus_user_agent_only_if_global' ) )
         
         self._http_proxy.SetValue( self._new_options.GetNoneableString( 'http_proxy' ) )
         self._https_proxy.SetValue( self._new_options.GetNoneableString( 'https_proxy' ) )
@@ -150,6 +159,8 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         rows.append( ( 'DEBUG: do not verify regular https traffic:', self._do_not_verify_regular_https ) )
         rows.append( ( 'TEST: run the curl_cffi test with this browser definition:', self._curl_cffi_definition ) )
         rows.append( ( '', self._fetch_curl_cffi_names_button ) )
+        rows.append( ( 'TEST: Strip hydrus User-Agent for curl_cffi jobs:', self._curl_cffi_strip_hydrus_user_agent ) )
+        rows.append( ( '-- But only if the User-Agent is the Global hydrus network setting:', self._curl_cffi_strip_hydrus_user_agent_only_if_global ) )
         
         gridbox = ClientGUICommon.WrapInGrid( general, rows )
         
@@ -200,6 +211,10 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         self.setLayout( vbox )
         
+        self._UpdateCURLCFFICheckbox()
+        
+        self._curl_cffi_strip_hydrus_user_agent.clicked.connect( self._UpdateCURLCFFICheckbox )
+        
     
     def _FetchCURLCFFIBrowserNames( self ):
         
@@ -249,12 +264,20 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._curl_cffi_definition.SetValue( browser_name )
         
     
+    def _UpdateCURLCFFICheckbox( self ):
+        
+        self._curl_cffi_strip_hydrus_user_agent_only_if_global.setEnabled( self._curl_cffi_strip_hydrus_user_agent.isChecked() )
+        
+    
     def UpdateOptions( self ):
         
         self._new_options.SetBoolean( 'set_requests_ca_bundle_env', self._set_requests_ca_bundle_env.isChecked() )
         self._new_options.SetBoolean( 'verify_regular_https', not self._do_not_verify_regular_https.isChecked() )
         
         self._new_options.SetNoneableString( 'curl_cffi_definition', self._curl_cffi_definition.GetValue() )
+        
+        self._new_options.SetBoolean( 'curl_cffi_strip_hydrus_user_agent', self._curl_cffi_strip_hydrus_user_agent.isChecked() )
+        self._new_options.SetBoolean( 'curl_cffi_strip_hydrus_user_agent_only_if_global', self._curl_cffi_strip_hydrus_user_agent_only_if_global.isChecked() )
         
         self._new_options.SetNoneableString( 'http_proxy', self._http_proxy.GetValue() )
         self._new_options.SetNoneableString( 'https_proxy', self._https_proxy.GetValue() )

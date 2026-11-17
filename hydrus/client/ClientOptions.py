@@ -392,6 +392,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'tag_suggestions_related_tags_search_siblings_and_parents_default' : True,
             'do_new_hide_terminal_subprocess_tech_on_windows' : True,
             'test_session_exit_signal' : False,
+            'curl_cffi_strip_hydrus_user_agent' : True, # Move these two guys to per-domain settings too, can be just the one bool then
+            'curl_cffi_strip_hydrus_user_agent_only_if_global' : False,
         }
         
         #

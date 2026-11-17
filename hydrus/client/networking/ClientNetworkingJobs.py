@@ -789,7 +789,7 @@ class NetworkJob( object ):
         
         session = self.engine.session_manager.GetSession( snc )
         
-        ClientNetworkingSessions.CleanseHeadersForSession( session, headers )
+        ClientNetworkingSessions.CleanseHeadersForSession( session, headers, self.engine )
         
         ( connect_timeout, read_timeout ) = self._GetTimeouts()
         

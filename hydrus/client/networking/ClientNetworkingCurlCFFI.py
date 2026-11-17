@@ -26,6 +26,20 @@ try:
                 
             except Exception as e:
                 
+                # Timeout retry edit: curl_cffi often reports curl error 28 as a plain Timeout, which hydrus does not retry.
+                # Label it as a connect or read timeout (by curl's message) so hydrus waits and reattempts as normal.
+                if isinstance( e, curl_cffi.requests.exceptions.Timeout ) and not isinstance( e, ( curl_cffi.requests.exceptions.ReadTimeout, curl_cffi.requests.exceptions.ConnectTimeout ) ):
+                    
+                    if 'connection timed out' in str( e ).lower():
+                        
+                        raise requests.exceptions.ConnectTimeout( e ) from e
+                        
+                    else:
+                        
+                        raise requests.exceptions.ReadTimeout( e ) from e
+                        
+                    
+                
                 # order matters here; most to least specific!
                 for ( curl_cffi_type, requests_type ) in [
                     ( curl_cffi.requests.exceptions.ReadTimeout, requests.exceptions.ReadTimeout ),

@@ -52,15 +52,32 @@ def AddCookiesToSessionActualCookies( session, list_of_cookies: list[ http.cooki
     EnsureSessionCookiesAreSynced( session, cookies )
     
 
-def CleanseHeadersForSession( ambiguous_session, headers: dict[ str, str ] ):
+def CleanseHeadersForSession( ambiguous_session, headers: dict[ str, str ], engine ):
     
     if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( ambiguous_session ):
         
-        lower_to_actual = { key.lower() : key for key in headers.keys() }
+        strip_user_agent = CG.client_controller.new_options.GetBoolean( 'curl_cffi_strip_hydrus_user_agent' )
         
-        if 'user-agent' in lower_to_actual:
+        if strip_user_agent and CG.client_controller.new_options.GetBoolean( 'curl_cffi_strip_hydrus_user_agent_only_if_global' ):
             
-            del headers[ lower_to_actual[ 'user-agent' ] ]
+            global_headers = engine.domain_manager.GetHeaders( [ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] )
+            
+            uses_global_user_agent = 'User-Agent' in global_headers and 'User-Agent' in headers
+            
+            if not uses_global_user_agent:
+                
+                strip_user_agent = False
+                
+            
+        
+        if strip_user_agent:
+            
+            lower_to_actual = { key.lower() : key for key in headers.keys() }
+            
+            if 'user-agent' in lower_to_actual:
+                
+                del headers[ lower_to_actual[ 'user-agent' ] ]
+                
             
         
     
