@@ -3572,6 +3572,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#manage_pages_close_page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /manage_pages/close_page
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#manage_pages_refresh_page" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -5454,6 +5465,17 @@
     <span class="md-ellipsis">
       
         POST /manage_pages/focus_page
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manage_pages_close_page" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        POST /manage_pages/close_page
       
     </span>
   </a>
@@ -8279,6 +8301,7 @@ Accept: application/json
 <li><code>render_format</code>: (optional, integer, the filetype enum value to render the file to, for still images it defaults <code>2</code> for PNG, for Ugoiras it defaults to <code>23</code> for APNG)</li>
 <li><code>render_quality</code>: (optional, integer, the quality or PNG compression level to use for encoding the image, default <code>1</code> for PNG and <code>80</code> for JPEG and WEBP, has no effect for Ugoiras using APNG)</li>
 <li><code>width</code> and <code>height</code>: (optional but must provide both if used, integer, the width and height to scale the image to. Doesn't apply to Ugoiras)</li>
+<li><code>interpolation</code>: (optional, applies only if <code>width</code> and <code>height</code> provided, the interpolation algorithm to use for resizing)</li>
 </ul>
 <p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 <p>Currently the accepted values for <code>render_format</code> for image files are:</p>
@@ -8290,7 +8313,15 @@ Accept: application/json
 <p>The accepted values for Ugoiras are:</p>
 <ul>
 <li><code>23</code> for APNG (<code>quality</code> does nothing for this format)</li>
-<li><code>83</code> for animated WEBP (<code>quality</code> sets WEBP quality 1 to 100, for values over 100 lossless compression is used)</li>
+<li><code>83</code> for animated WEBP (<code>quality</code> sets WEBP quality 0 to 100, 101 to 200 set lossless output with <code>value - 100</code> being compression level)</li>
+</ul>
+<p>The accepted values for <code>interpolation</code> are:</p>
+<ul>
+<li><code>0</code>: nearest neighbour (cv2 <code>INTER_NEAREST</code>)</li>
+<li><code>1</code>: bilinear interpolation (cv2 <code>INTER_LINEAR</code>)</li>
+<li><code>2</code>: pixel area resampling (cv2 <code>INTER_AREA</code>), default for downscales</li>
+<li><code>3</code>: bicubic interpolation (cv2 <code>INTER_CUBIC</code>)</li>
+<li><code>4</code>: 8x8 Lanczos interpolation (cv2 <code>INTER_LANCZOS4</code>), default for upscales</li>
 </ul>
 </dd>
 </dl>
@@ -9413,6 +9444,33 @@ This request will also return any cookies for subdomains. The session system in 
 <dt>Response:</dt>
 <dd>200 with no content. If the page key is not found, this will 404.</dd>
 </dl>
+<h3 id="manage_pages_close_page"><strong>POST <code>/manage_pages/close_page</code></strong><a class="headerlink" href="#manage_pages_close_page" title="Permanent link">&para;</a></h3>
+<p><em>Close a page in the main GUI. Closing a page of pages also closes the pages it contains.</em></p>
+<p>This will cloase the page immediately, even if imports are in progress.</p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Manage Pages permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: application/json</li>
+</ul>
+</dd>
+<dt>Arguments (in JSON):</dt>
+<dd>
+<ul>
+<li><code>page_key</code>: (the page key for the page you wish to close)</li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">"page_key"</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">"af98318b6eece15fef3cf0378385ce759bfe056916f6e12157cd928eb56c1f18"</span>
+<span class="p">}</span>
+</code></pre></div>
+<dl>
+<dt>Response:</dt>
+<dd>200 with no content on success. The top-level pages notebook returns 400. If the page key is not found, this will 404.</dd>
+</dl>
 <h3 id="manage_pages_refresh_page"><strong>POST <code>/manage_pages/refresh_page</code></strong><a class="headerlink" href="#manage_pages_refresh_page" title="Permanent link">&para;</a></h3>
 <p><em>Refresh a page in the main GUI. Like hitting F5 in the client, this obviously makes file search pages perform their search again, but for other page types it will force the currently in-view files to be re-sorted.</em></p>
 <dl>
@@ -10048,7 +10106,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="September 6, 2026 22:05:50 UTC">September 6, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="November 18, 2026 02:38:14 UTC">November 18, 2026</span>
   </span>
 
     

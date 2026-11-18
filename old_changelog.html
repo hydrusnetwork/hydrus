@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_696"><a href="#version_696">version 696</a></h2>
+                    <ul>
+                        <li><h3>PTR definition problem</h3></li>
+                        <li>several users reported their PTR processing suddenly encountered a critical definition error! if you got it too, or get it, please do not panic. the server burped because of a rare race condition and delivered insufficient data last saturday. I am figuring out a serverside fix with the hope that in a few days a client will be able to step over the gap and never notice there was an issue. please bear with me and expect to unpause any halted repo sync in a few days</li>
+                        <li>the actual problem is there was a very rare race condition in how updates are generated. it required a user to upload tags at the same time as updates for the last update period were being generated at the same time as a very slow maintenance job was running, and then it needed an unlucky dice roll. this has not happened in the 15-odd years the PTR has been running, and the respective code here is so old there isn't even a git record. I have now fixed the issue so it will not happen again</li>
+                        <li>we still have the problem on the PTR that did happen. the update built on 2026-11-14 was missing one or more ids. I am doing an investigation now to figure out exactly which ids we are talking about so we can roll out a manual fix to the database. hold on for a bit please, and in a couple days I hope to say 'ok unpause now' and it'll all just work again no worries</li>
+                        <li><h3>misc</h3></li>
+                        <li>you can now import/export/duplicate import folders. a little label on the panel says be careful doing this for a couple reasons (privacy leak when sharing and some service migration pains)</li>
+                        <li>you can now import/export/duplicate export folders. there's a new warning label here too</li>
+                        <li>fixed a regression in v695 where the video seekbar text disappeared</li>
+                        <li>fixed a regression introduced in v695 mainloop refactor when downloading more than one file at once from a hydrus file repository</li>
+                        <li>loading up the pending count of file maintenance jobs is now twice as fast in CPU terms (I/O on initial fetch can still be a little slow)</li>
+                        <li><h3>user submissions on image resizing and close pages api</h3></li>
+                        <li>thanks to a user, we have fixes for several (stupid) image resizing typo-bugs I had made that mostly meant optimisations were not kicking in or the incorrect interpolation algorithm was being selected when interpolating (scaling up) images in many non-media-viewer contexts like 'get me a bigger version of this thumb right away'</li>
+                        <li>also added is a query param to the render API endpoint to allow setting the resizing interpolation algorithm</li>
+                        <li>also adds safety clamp to the render quality param when using animated WebP so Pillow doesn't error</li>
+                        <li>Changes the wording for ZOOM_CUBIC to "bicubic interpolation" rather than "4x4 bilinear interpolation" which is incorrect.</li>
+                        <li>the Client API gets a new `/manage_pages/close_page` call! it takes a page_key and closes the page immediately, skipping user-interaction for any potential 'are you sure?' stuff</li>
+                        <li>Client API version is now 97</li>
+                        <li><h3>network stuff</h3></li>
+                        <li>hydrus now clears "session" cookies (i.e. those with no fixed expiry) after thirty-six hours of domain inactivity. for a long long time, hydrus has not aggressively cleared session cookies, since it is useful sometimes to hang on to them, but it has been causing issues on some sites with them piling up, so I'm instituting a pragmatic and KISS answer. if you'd like something different than thirty-six hours, check the new setting under `options-&gt;connection`. I may revisit this with a more aggressive system, or per-cookie timeouts, and likely an option to purge on every client restart, so let me know how you get on</li>
+                        <li>with thanks to several users' contributions, we have some curl_cffi improvements--</li>
+                        <li>a number of connection timeout (error 28) errors are now caught correctly and converted to something hydrus understands</li>
+                        <li>two new checkboxes under `options-&gt;connection` now handle whether jobs under curl_cffi should strip the User-Agent header set by hydrus--you can select to do it generally, or only when the hydrus-side header comes from the default global context. default settings here are to strip in all situations, preserving old behaviour. I expect to migrate this, like curl_cffi in general, to a simpler per-domain yes/no in future</li>
+                        <li><h3>duplicate pair search CPU optimisations</h3></li>
+                        <li>duplicate pair search caches now remember their sort status, whether sorted for fast search or rich estimates, and do not repeat sorts. they pass on their sort state to child caches they spawn</li>
+                        <li>duplicate pair search caches now defer deletes in many cases, saving much CPU time when we run into millions of rows</li>
+                        <li>duplicate pair search caches are better about cleaning up their internal mapping indices during a particular sort of destructive pop-iteration</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>I removed a couple old requirements.txts from the build folders. we use the pyproject.toml now, and these old files were not being updated and just giving dependabot warnings</li>
+                        <li>added dynamic typedefs to the multi-column list model and panel code, so they know what they are supposed to hold</li>
+                        <li>went through all 60-odd lists in the program and added typing decorators to their init and row presentation/sort code so they better know what's flying around. good news is there were no problems, but now we know</li>
+                        <li>also cleared out some stub methods that weren't doing anything and allowed my custom serialisable list/dict objects to figure out their types better too. lots of inferred type hinting now just werks</li>
+                        <li>misc linting and type hinting</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_695"><a href="#version_695">version 695</a></h2>
                     <ul>
                         <li><h3>seekbar</h3></li>
