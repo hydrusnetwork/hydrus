@@ -8,7 +8,6 @@ from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBModule
 from hydrus.client.files import ClientFilesMaintenance
