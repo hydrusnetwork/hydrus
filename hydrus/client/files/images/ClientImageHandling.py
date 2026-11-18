@@ -20,7 +20,7 @@ def ResizeNumPyImageForMediaViewer( mime, numpy_image, target_resolution ):
     
     ( image_height, image_width, depth ) = numpy_image.shape
     
-    if ( target_width, target_height ) == ( image_height, image_width ):
+    if target_width == image_width and target_height == image_height:
         
         return numpy_image
         
