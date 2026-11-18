@@ -623,7 +623,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'page_sidebar_alignment' : CC.DIRECTION_LEFT,
             'treeview_indentation' : 20,
             'treeview_row_height' : 20,
-            'session_cookie_last_touched_timeout_seconds' : 3600 * 5
+            'session_cookie_last_touched_timeout_seconds' : 3600 * 36
         }
         
         self._dictionary[ 'floats' ] = {
