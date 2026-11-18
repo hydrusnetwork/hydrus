@@ -734,10 +734,11 @@ def ResizeNumPyImage( numpy_image: numpy.ndarray, target_resolution, forced_inte
     if target_width == image_width and target_height == image_height:
         
         return numpy_image
-
+        
+    
     if forced_interpolation is not None:
-            
-            interpolation = forced_interpolation
+        
+        interpolation = forced_interpolation
         
     elif target_width > image_width or target_height > image_height:
         
