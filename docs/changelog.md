@@ -7,6 +7,52 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 696](https://github.com/hydrusnetwork/hydrus/releases/tag/v696)
+
+### PTR definition problem
+
+* several users reported their PTR processing suddenly encountered a critical definition error! if you got it too, or get it, please do not panic. the server burped because of a rare race condition and delivered insufficient data last saturday. I am figuring out a serverside fix with the hope that in a few days a client will be able to step over the gap and never notice there was an issue. please bear with me and expect to unpause any halted repo sync in a few days
+* the actual problem is there was a very rare race condition in how updates are generated. it required a user to upload tags at the same time as updates for the last update period were being generated at the same time as a very slow maintenance job was running, and then it needed an unlucky dice roll. this has not happened in the 15-odd years the PTR has been running, and the respective code here is so old there isn't even a git record. I have now fixed the issue so it will not happen again
+* we still have the problem on the PTR that did happen. the update built on 2026-11-14 was missing one or more ids. I am doing an investigation now to figure out exactly which ids we are talking about so we can roll out a manual fix to the database. hold on for a bit please, and in a couple days I hope to say 'ok unpause now' and it'll all just work again no worries
+
+### misc
+
+* you can now import/export/duplicate import folders. a little label on the panel says be careful doing this for a couple reasons (privacy leak when sharing and some service migration pains)
+* you can now import/export/duplicate export folders. there's a new warning label here too
+* fixed a regression in v695 where the video seekbar text disappeared
+* fixed a regression introduced in v695 mainloop refactor when downloading more than one file at once from a hydrus file repository
+* loading up the pending count of file maintenance jobs is now twice as fast in CPU terms (I/O on initial fetch can still be a little slow)
+
+### user submissions on image resizing and close pages api
+
+* thanks to a user, we have fixes for several (stupid) image resizing typo-bugs I had made that mostly meant optimisations were not kicking in or the incorrect interpolation algorithm was being selected when interpolating (scaling up) images in many non-media-viewer contexts like 'get me a bigger version of this thumb right away'
+* also added is a query param to the render API endpoint to allow setting the resizing interpolation algorithm
+* also adds safety clamp to the render quality param when using animated WebP so Pillow doesn't error
+* Changes the wording for ZOOM_CUBIC to "bicubic interpolation" rather than "4x4 bilinear interpolation" which is incorrect.
+* the Client API gets a new `/manage_pages/close_page` call! it takes a page_key and closes the page immediately, skipping user-interaction for any potential 'are you sure?' stuff
+* Client API version is now 97
+
+### network stuff
+
+* hydrus now clears "session" cookies (i.e. those with no fixed expiry) after thirty-six hours of domain inactivity. for a long long time, hydrus has not aggressively cleared session cookies, since it is useful sometimes to hang on to them, but it has been causing issues on some sites with them piling up, so I'm instituting a pragmatic and KISS answer. if you'd like something different than thirty-six hours, check the new setting under `options->connection`. I may revisit this with a more aggressive system, or per-cookie timeouts, and likely an option to purge on every client restart, so let me know how you get on
+* with thanks to several users' contributions, we have some curl_cffi improvements--
+* a number of connection timeout (error 28) errors are now caught correctly and converted to something hydrus understands
+* two new checkboxes under `options->connection` now handle whether jobs under curl_cffi should strip the User-Agent header set by hydrus--you can select to do it generally, or only when the hydrus-side header comes from the default global context. default settings here are to strip in all situations, preserving old behaviour. I expect to migrate this, like curl_cffi in general, to a simpler per-domain yes/no in future
+
+### duplicate pair search CPU optimisations
+
+* duplicate pair search caches now remember their sort status, whether sorted for fast search or rich estimates, and do not repeat sorts. they pass on their sort state to child caches they spawn
+* duplicate pair search caches now defer deletes in many cases, saving much CPU time when we run into millions of rows
+* duplicate pair search caches are better about cleaning up their internal mapping indices during a particular sort of destructive pop-iteration
+
+### boring stuff
+
+* I removed a couple old requirements.txts from the build folders. we use the pyproject.toml now, and these old files were not being updated and just giving dependabot warnings
+* added dynamic typedefs to the multi-column list model and panel code, so they know what they are supposed to hold
+* went through all 60-odd lists in the program and added typing decorators to their init and row presentation/sort code so they better know what's flying around. good news is there were no problems, but now we know
+* also cleared out some stub methods that weren't doing anything and allowed my custom serialisable list/dict objects to figure out their types better too. lots of inferred type hinting now just werks
+* misc linting and type hinting
+
 ## [Version 695](https://github.com/hydrusnetwork/hydrus/releases/tag/v695)
 
 ### seekbar
@@ -390,51 +436,3 @@ title: Changelog
 * refactored the executable manager action calls out of the manager to their own file and moved some 'open url with default browser' calls in there too
 * refactored the 'open help docs here' to better tapdance around the new 'open url' pipeline
 * wrote up a slender gui-executable-actions wrapper module for all 'open url/file' commands so if there is error, there is always an UI context upon which to throw up an information error message dialog. there is better testing and error reporting when trying to open a non-local file externally
-
-## [Version 686](https://github.com/hydrusnetwork/hydrus/releases/tag/v686)
-
-### misc
-
-* the 'give child windows a tool flag' test setting went well, and I am switching everyone to use this mode as default now. if you have trouble with 'review services' or similar, please hit `options->gui` and hit the new `BUGFIX: Set child windows as non-tool flagged`
-* the `force that hitting Enter/Return on radio button lists triggers a dialog ok` checkbox is now set to true by default, and everyone is switched over this week. same as before, the test went well. if you prefer it the other way, please hit up `options->gui` and switch it back
-* the content summary strings in the duplicate auto-resolution thumbnail pair lists have some formatting improvements: the 'add mappings a, add mappings b, add mappings c...' stuff is now 'add mappings: a, b, c'; different service lines are now newline-separated; and the thumbnail rows are a little taller by minimum to typically fit this text in better
-* decided to finally remove the long-time disabled 'potential pairs' line from Mr Bones. the newer duplicates page with its fragmentary and cancellable search handles all this better, and since the potential pairs space exists only for local files rather than Mr Bones's ability to look into deleted files, it is best just not to bring this number back here. He now only handles total dupes and alternates made
-* improved the maths behind the alternates counts in Mr Bones. it also works a bit faster. the 'x alternate groups' number is now filtered correctly according to the current search context, and some interesting edge cases are consciously handled so a search for 'system:file relationships - number of alternates = 0' produces the correct 0/0 results. there's a couple of ways of looking at these numbers and I've taken the most conservative to occasionally undercount but never overcount
-
-### new thumbnail grid rendering tech
-
-* we've been testing out a new, cleverer way of rendering the thumbnail grid. it works and looks basically exactly like the old system for now but will support new layouts and resizable thumbs in future. we are happy with the test, so I am switching everyone to use it today. ideally, you do not notice any differences. if you suddenly do have trouble with your thumbs, hit up `options->thumbnails`, switch off the new rendering mode, restart the client, and let me know
-* I made the 'which file to select when you press an arrow/page key' work more humanly in the new grid; now, if your current focus file is removed and you then press a movement key, the 'ghost selection' media is now selected, re-initialising your position. previously, it would navigate _from_ the ghost to a neighbour, which always felt weird. also, the ghost is now the _next_ non-removed file (used to be previous), unless the removees stretch to the end of the list, in which case the _previous_ is chosen. this feels a bit more natural and catches some odd cases since previously it worked on selections rather than removees
-* this is more controversial and may mess with muscle memory, but I have also made it so a shift-select does not move the "navigate from here" ghost. this ghost now sticks to the current focus. if this drives you crazy, there is a new checkbox under `options->thumbnails` to switch back to moving the ghost to the last file you hit to alter the shift-selection. if you understand what this means, you are a true patrician and I personally recommend mapping ctrl and shift to your mouse. also, I may start rendering the ghost as a dotted line or something just like you'd get in a file explorer or something
-* as part of this, I fixed an issue with the new tech where it could have trouble finding a new media to select after certain removal of non-selected items, for instance after zero-selection archive/delete filtering or a background file delete
-* fixed the enable-reactivity of the ctrl- and shift-selection checkboxes under `options->thumbnails`
-* I fixed up some various other focus items and 'these were selected in the current shift-select' variables that were not properly cleansing themselves after a media remove event
-* the new graphics view thumbgrid test can now process an interactive 'entry dialog' content update shortcut
-* fixed a trace error with the interactive 'entry dialog' command when nothing is selected in the thumbgrid
-
-### new ways to open files and urls externally
-
-* in prep for the exe manager taking over, the options for 'default programs' that handles web browser calls and 'open externally' for different filetypes are updated
-* the web browser setting is now a list of calls, so you can set up alternate web browsers or profiles if you like. if you have multiple, the top one is selected for quick/default url-openings and in the media 'urls' menu you now get multiple submenus to choose which one you want
-* the file 'open externally' has two changes--now you can set the default 'open externally' call for "all files" and "all images/videos/whatever" as well as for individual filetypes. I hope this makes it simpler to just switch from x image viewer to y for everything while still allowing something special for avif or whatever. your existing options are going to be eaten up and converted to the simplest suitable umbrella solution
-* and, secondly, each of those entries now support multiple calls, so you can say 'open images with x program or y' and then, like with the urls, the top item is the default for quick actions but otherwise your media 'open externally' menu is going to dynamically expand into multiple options if you set that up
-* the string program cals are all going to be converted to the exe manager in a week or two. feel free to add new paths now, or wait for that, at which point you'll be selecting from a dropdown here
-
-### potential pair discovery scheduling logic
-
-* I cleaned up a bunch of edge-case logic around how files are set to be searched for potential pairs. an interesting bug (#2086) revealed that previously-deleted files were not being scheduled for re-entry into the potential pairs search system, and when I looked into it, this revealed some more messy logic. I've cleaned it up and now blank square files are 'find similar files' searchable
-* first off, when a previously deleted file is re-imported, it is now scheduled for potential-pair discovery as expected
-* further, the determinant of whether a file should be searched for potentiar-pair discovery is now strictly that it has non-blank phashes. files with blank or near-blank phashes are now entered into the search tree, but they are not scheduled for potential pair discovery (blank files produce many false positive pairs, so we do not want them)
-* the 'ensure file is in similar files search system' job is now careful to only consider that question, and it no longer triggers any pixel or phash regens
-* files that are discovered to have no useful phashes are deregistered from the system correctly. previously, some pixel hash and re-import events would trigger an accidental listing or not trigger a proper delisting; now the logic is KISS
-* all files that currently have no phashes (blank files and some weird non-renderable things) are scheduled for a phash regen on update, which will make 'system:similar to' work for them
-* identical blank files (we had an example of two pure white comic pages with the same resolution, once) that share the same pixel hash will no longer naturally appear in the potential pair search
-* pasting a blank or near-blank image into the 'system:similar files' panel also now produces phashes in the box. it is now possible to search for blank and blank-like images with this system. if you are interested, the blank phash is `8000000000000000`. paste it in once the maintenance has caught up here and brace yourself for a rollercoaster ride
-* the names and descriptions of the 'check for membership in...' and 'regenerate perceptual hashes' file maintenance jobs are clarified
-
-### boring stuff
-
-* fixed an issue where non-advanced users saw the 'external programs (TESTING)' page in the options lol
-* cleaned up the application processing code's responses and formalised that a shortcut will be caught if it matches an entry, not only if it matches and the command produced an arbitrary result. if you say 'copy bitmap' when no file is selected, the shortcut is swallowed there; it won't go "ok nothing happened" and see if anything higher matches your shortcut
-* a user reported an interesting statistical bug in the duplicate pairs fragmentary search; where it does a confidence interval check, in one case it had more searched items than the entire search space. it seems this was a race condition. I have wrapped all the code in proper locking, added nicer guards before the math, and tidied up some redundant code along the way
-* misc linting and typing, blah
