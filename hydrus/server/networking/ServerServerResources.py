@@ -1111,9 +1111,15 @@ class HydrusResourceRestrictedRepositoryFile( HydrusResourceRestricted ):
             file_dict[ 'ip' ] = request.getClientIP()
             
         
-        timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+        metadata_update_lock = self._service.GetMetadataUpdateLock()
         
-        SG.server_controller.WriteSynchronous( 'file', self._service, request.hydrus_account, file_dict, timestamp )
+        # this closes a race condition between the timestamp fetch and the db job. it sucks but there we are 
+        with metadata_update_lock:
+            
+            timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+            
+            SG.server_controller.WriteSynchronous( 'file', self._service, request.hydrus_account, file_dict, timestamp )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -1337,9 +1343,15 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
             client_to_server_update.ApplyTagFilterToPendingMappings( self._service.GetTagFilter() )
             
         
-        timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+        metadata_update_lock = self._service.GetMetadataUpdateLock()
         
-        SG.server_controller.WriteSynchronous( 'update', self._service_key, request.hydrus_account, client_to_server_update, timestamp )
+        # this closes a race condition between the timestamp fetch and the db job. it sucks but there we are
+        with metadata_update_lock:
+            
+            timestamp = self._service.GetMetadata().GetNextUpdateBegin() + 1
+            
+            SG.server_controller.WriteSynchronous( 'update', self._service_key, request.hydrus_account, client_to_server_update, timestamp )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         

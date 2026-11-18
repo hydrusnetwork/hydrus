@@ -2925,6 +2925,13 @@ class ServerServiceRestricted( ServerService ):
     
 class ServerServiceRepository( ServerServiceRestricted ):
     
+    def __init__( self, *args, **kwargs ):
+        
+        super().__init__( *args, **kwargs )
+        
+        self._metadata_update_lock = threading.Lock()
+        
+    
     def _GetSerialisableDictionary( self ):
         
         dictionary = ServerServiceRestricted._GetSerialisableDictionary( self )
@@ -2984,6 +2991,11 @@ class ServerServiceRepository( ServerServiceRestricted ):
             
             return self._metadata.GetSlice( from_update_index )
             
+        
+    
+    def GetMetadataUpdateLock( self ):
+        
+        return self._metadata_update_lock
         
     
     def GetNullificationPeriod( self ) -> int:
@@ -3136,67 +3148,70 @@ class ServerServiceRepository( ServerServiceRestricted ):
     
     def Sync( self ):
         
-        with self._lock:
-            
-            update_due = self._metadata.UpdateDue()
-            
-        
-        update_created = False
-        
-        if update_due:
-            
-            locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
-            
-            if not locked:
-                
-                return
-                
-            
-            try:
-                
-                while update_due:
-                    
-                    with self._lock:
-                        
-                        service_key = self._service_key
-                        
-                        begin = self._metadata.GetNextUpdateBegin()
-                        
-                    
-                    update_period = self._service_options[ 'update_period' ]
-                    
-                    end = begin + update_period
-                    
-                    update_hashes = HG.controller.WriteSynchronous( 'create_update', service_key, begin, end )
-                    
-                    update_created = True
-                    
-                    next_update_due = end + update_period
-                    
-                    with self._lock:
-                        
-                        self._metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
-                        
-                        update_due = self._metadata.UpdateDue()
-                        
-                    
-                
-            finally:
-                
-                HG.server_busy.release()
-                
-                if update_created:
-                    
-                    HG.controller.pub( 'notify_update_created' )
-                    
-                
+        # 2026-11: I hate this but it is patching a race condition that allowed a content update to go ahead with an old timestamp amidst this routine (combined with some backup etc... that obviated a ten second padding)
+        with self._metadata_update_lock:
             
             with self._lock:
                 
-                self._SetDirty()
+                update_due = self._metadata.UpdateDue()
                 
             
-        
+            update_created = False
+            
+            if update_due:
+                
+                locked = HG.server_busy.acquire( False ) # pylint: disable=E1111
+                
+                if not locked:
+                    
+                    return
+                    
+                
+                try:
+                    
+                    while update_due:
+                        
+                        with self._lock:
+                            
+                            service_key = self._service_key
+                            
+                            begin = self._metadata.GetNextUpdateBegin()
+                            
+                        
+                        update_period = self._service_options[ 'update_period' ]
+                        
+                        end = begin + update_period
+                        
+                        update_hashes = HG.controller.WriteSynchronous( 'create_update', service_key, begin, end )
+                        
+                        update_created = True
+                        
+                        next_update_due = end + update_period
+                        
+                        with self._lock:
+                            
+                            self._metadata.AppendUpdate( update_hashes, begin, end, next_update_due )
+                            
+                            update_due = self._metadata.UpdateDue()
+                            
+                        
+                    
+                finally:
+                    
+                    HG.server_busy.release()
+                    
+                    if update_created:
+                        
+                        HG.controller.pub( 'notify_update_created' )
+                        
+                    
+                
+                with self._lock:
+                    
+                    self._SetDirty()
+                    
+                
+            
         
     
 class ServerServiceRepositoryTag( ServerServiceRepository ):
