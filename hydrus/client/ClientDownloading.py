@@ -98,6 +98,7 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
         self._pending_hashes = set()
         
         self._job_status: ClientThreading.JobStatus | None = None
+        self._job_status_pub_job = None
         
         super().__init__( controller, 5 )
         
@@ -140,7 +141,12 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                         
                         self._job_status.SetStatusText( 'initialising downloader' )
                         
-                        job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', self._job_status )
+                        if self._job_status_pub_job is not None:
+                            
+                            self._job_status_pub_job.Cancel()
+                            
+                        
+                        self._job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', self._job_status )
                         
                     
                 
@@ -300,7 +306,12 @@ class QuickDownloadManager( ClientDaemons.ManagerWithMainLoop ):
                         self._job_status.SetStatusText( HydrusNumbers.ToHumanInt( self._total_successful_hashes_in_this_run ) + ' files downloaded' )
                         
                     
-                    job_status_pub_job.Cancel()
+                    if self._job_status_pub_job is not None:
+                        
+                        self._job_status_pub_job.Cancel()
+                        
+                        self._job_status_pub_job = None
+                        
                     
                     self._job_status.FinishAndDismiss( 1 )
                     
