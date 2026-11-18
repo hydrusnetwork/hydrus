@@ -8559,23 +8559,20 @@ class DB( HydrusDB.HydrusDB ):
             try:
                 
                 # we made an update to session containers that includes a timestamp that wants to be 'now' in the update routine. we'll wash them through a save cycle to lock that in
-                all_session_container_names = self.modules_serialisable.GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER )
+                all_session_container_names: list[ str ] = self.modules_serialisable.GetJSONDumpNames( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER )
                 
                 for name in all_session_container_names:
                     
-                    session_container = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER, name )
+                    session_container: ClientNetworkingSessions.NetworkSessionManagerSessionContainer = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_SESSION_MANAGER_SESSION_CONTAINER, name )
                     
                     self.modules_serialisable.SetJSONDump( session_container )
                     
-                
-                pass
-                
                 
             except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
-                message = 'Trying to update your file maintenance index failed! Please let hydrus dev know!'
+                message = 'Trying to update your session containers failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 
