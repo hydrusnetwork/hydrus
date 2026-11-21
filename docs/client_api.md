@@ -54,8 +54,9 @@ _I do not make or contribute to these! I can guarantee nothing about them. Check
 
 ### Auto-taggers
 
-* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus.
-* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): More AI tagging, with more models.
+* [wd-e621-hydrus-tagger (new)](https://github.com/micnorian14/wd-e621-hydrus-tagger): Newer fork of an AI tagger project for hydrus.
+* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): Old system that supports more AI tagging and models than DeepDanbooru.
+* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): Old DeepDanbooru tagging for Hydrus.
 
 ### Misc
 
