@@ -391,7 +391,7 @@ title: Changelog
 ### misc
 
 * the popup toaster is now very anti-taking-focus. if you navigating the thumbs via keyboard while popups bounce around doing their thing, particularly subs, they should now be less likely to steal focus from what you were doing. even clicking buttons shouldn't do it. this is mostly an experiment, so let me know how it works out
-* updated `mkdocs-material` from `6.7.1` to `6.7.7` due to a dependbot alert about an XSS issue with the search box
+* updated `mkdocs-material` from `9.7.1` to `9.7.7` due to a dependbot alert about an XSS issue with the search box
 
 ### simpler menubar
 
