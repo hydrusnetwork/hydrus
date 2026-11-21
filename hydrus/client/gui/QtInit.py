@@ -11,13 +11,6 @@ if 'QT_API' in os.environ:
     
 else:
     
-    from hydrus.core import HydrusConstants as HC
-    
-    if HC.RUNNING_FROM_MACOS_APP:
-        
-        os.environ[ 'FORCE_QT_API' ] = '1'
-        
-    
     QT_API_INITIAL_VALUE = None
     
     if 'QT_API' not in os.environ:

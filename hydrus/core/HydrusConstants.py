@@ -84,10 +84,7 @@ if NICE_ARCHITECTURE_STRING == 'AMD64':
     NICE_ARCHITECTURE_STRING = 'x86_64'
     
 
-# this is obviously old, but we'll leave it in for any future attempts
-RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
-
-RUNNING_FROM_SOURCE = not ( RUNNING_FROM_FROZEN_BUILD or RUNNING_FROM_MACOS_APP )
+RUNNING_FROM_SOURCE = not RUNNING_FROM_FROZEN_BUILD
 
 GOT_A_NORMAL_LOOKING_VENV = os.path.exists( os.path.join( BASE_DIR, 'venv' ) )
 
@@ -95,8 +92,6 @@ if RUNNING_FROM_SOURCE:
     NICE_RUNNING_AS_STRING = 'from source'
 elif RUNNING_FROM_FROZEN_BUILD:
     NICE_RUNNING_AS_STRING = 'from frozen build'
-elif RUNNING_FROM_MACOS_APP:
-    NICE_RUNNING_AS_STRING = 'from App'
 else:
     NICE_RUNNING_AS_STRING = 'from unknown?!'
 

@@ -601,27 +601,15 @@ def ElideFilenameSafely( destination_directory: str, subdirs_elidable: str, base
     return ( subdirs_elided, base_filename )
     
 
-def FigureOutDBDir( arg_db_dir: str ):
+def FigureOutDBDir( arg_db_dir: str | None ):
     
     switching_to_userpath_is_ok = False
     
     if arg_db_dir is None:
         
-        if HC.RUNNING_FROM_MACOS_APP:
-            
-            if HC.USERPATH_DB_DIR is None:
-                
-                raise Exception( 'The userpath (for macOS App database) could not be determined!' )
-                
-            
-            db_dir = HC.USERPATH_DB_DIR
-            
-        else:
-            
-            db_dir = HC.DEFAULT_DB_DIR
-            
-            switching_to_userpath_is_ok = True
-            
+        db_dir = HC.DEFAULT_DB_DIR
+        
+        switching_to_userpath_is_ok = True
         
     else:
         
