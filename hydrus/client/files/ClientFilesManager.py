@@ -1187,7 +1187,7 @@ class ClientFilesManager( object ):
             
             job_status.SetStatusText( final_text )
             
-            HydrusData.Print( job_status.ToString() )
+            HydrusData.Print( f'Finished checking for orphan files--{final_text}' )
             
             job_status.Finish()
             

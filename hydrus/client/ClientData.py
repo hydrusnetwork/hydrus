@@ -157,11 +157,21 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
 
 def ShowTextClient( text ):
     
+    if not isinstance( text, str ):
+        
+        try:
+            
+            text = str( text )
+            
+        except:
+            
+            text = repr( text )
+            
+        
+    
     job_status = ClientThreading.JobStatus()
     
-    job_status.SetStatusText( str( text ) )
-    
-    text = job_status.ToString()
+    job_status.SetStatusText( text )
     
     HydrusData.Print( text )
     

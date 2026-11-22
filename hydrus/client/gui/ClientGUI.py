@@ -161,6 +161,7 @@ def GetTagServiceKeyForMaintenance( win: QW.QWidget ):
     
     return ClientGUIDialogsQuick.SelectFromListButtons( win, 'Which service?', choice_tuples )
     
+
 def THREADUploadPending( service_key ):
     
     finished_all_uploads = False
@@ -175,8 +176,23 @@ def THREADUploadPending( service_key ):
         
         service = CG.client_controller.services_manager.GetService( service_key )
         
-        service_name = service.GetName()
-        service_type = service.GetServiceType()
+    except HydrusExceptions.DataMissing:
+        
+        HydrusData.ShowText( 'Unknown service!?' )
+        
+        return
+        
+    
+    service_name = service.GetName()
+    service_type = service.GetServiceType()
+    
+    try:
+        
+        content_types_for_this_service = set( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
+        
+        nums_pending = CG.client_controller.Read( 'nums_pending' )
+        
+        nums_pending_for_this_service = nums_pending[ service_key ]
         
         if service_type in HC.REPOSITORIES:
             
@@ -188,17 +204,6 @@ def THREADUploadPending( service_key ):
                 
                 return
                 
-            
-        
-        job_status.SetStatusTitle( 'uploading pending to ' + service_name )
-        
-        nums_pending = CG.client_controller.Read( 'nums_pending' )
-        
-        nums_pending_for_this_service = nums_pending[ service_key ]
-        
-        content_types_for_this_service = set( HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service_type ] )
-        
-        if service_type in HC.REPOSITORIES:
             
             content_types_to_count_types_and_permissions = {
                 HC.CONTENT_TYPE_FILES : ( ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.PERMISSION_ACTION_CREATE ), ( HC.SERVICE_INFO_NUM_PETITIONED_FILES, HC.PERMISSION_ACTION_PETITION ) ),
@@ -287,6 +292,8 @@ def THREADUploadPending( service_key ):
             content_types_to_request = content_types_for_this_service
             
         
+        job_status.SetStatusTitle( 'uploading pending to ' + service_name )
+        
         if len( content_types_to_request ) == 0:
             
             return
@@ -330,7 +337,7 @@ def THREADUploadPending( service_key ):
                     job_status.DeleteGauge()
                     job_status.SetStatusText( 'cancelled' )
                     
-                    HydrusData.Print( job_status.ToString() )
+                    HydrusData.Print( f'Upload to {service_name} cancelled!' )
                     
                     job_status.FinishAndDismiss( 5 )
                     
@@ -471,7 +478,7 @@ def THREADUploadPending( service_key ):
         
         CG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
-        HydrusData.Print( job_status.ToString() )
+        HydrusData.Print( f'Finished uploading to {service_name}!' )
         
         if len( content_types_to_request ) == 0:
             

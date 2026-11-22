@@ -7,6 +7,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
@@ -262,6 +263,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 CG.client_controller.pub( 'modal_message', job_status )
                 
+                num_done = 0
+                
                 for name in HydrusLists.IterateListRandomlyAndFast( names_to_analyze ):
                     
                     job_status.SetStatusText( 'analyzing ' + name )
@@ -271,6 +274,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                     started = HydrusTime.GetNowPrecise()
                     
                     self.AnalyzeTable( name )
+                    
+                    num_done += 1
                     
                     time_took = HydrusTime.GetNowPrecise() - started
                     
@@ -292,7 +297,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 job_status.SetStatusText( 'done!' )
                 
-                HydrusData.Print( job_status.ToString() )
+                HydrusData.Print( f'Finished analysing {HydrusNumbers.ValueRangeToPrettyString( num_done, len(names_to_analyze) )} due tables!' )
                 
             finally:
                 
