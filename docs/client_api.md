@@ -60,8 +60,9 @@ _I do not make or contribute to these! I can guarantee nothing about them. Check
 
 ### Misc
 
-* [Hydrus Slideshow Frame](https://github.com/apampurin/hydrus-slideshow) ([opendesktop](https://www.opendesktop.org/p/2362439/)): KDE Plasma Widget slideshow photo frame
-* [Hydrus Video Deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter. 
+* [Hydrus Slideshow Frame](https://github.com/apampurin/hydrus-slideshow) ([opendesktop](https://www.opendesktop.org/p/2362439/)): KDE Plasma Widget slideshow photo frame.
+* [Hydrus Video Deduplicator](https://github.com/hydrusvideodeduplicator/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter.
+* [Hydrus Video Deduplicator with optimizations](https://github.com/micnorian14/hydrus-video-deduplicator): Fork of the above that works faster!
 * [HydrusTools](https://github.com/GiovanH/HydrusTools): Toolkit for multiple kinds of metadata management and organisation.
 * [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
 * [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations.
