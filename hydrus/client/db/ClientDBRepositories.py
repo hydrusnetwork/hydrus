@@ -641,7 +641,8 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def ProcessRepositoryDefinitions( self, service_key: bytes, definition_hash: bytes, definition_iterator_dict, content_types, job_status, work_period ):
         
-        # ignore content_types for now
+        # this guy consciously filters out pre-existing rows for mega speedup, just like content processing.
+        # if we ever need REPLACE tech, as this guy used to do, we'll want to write a special hook for it (delete suspected bad rows->trigger fill in holes?)
         
         service_id = self.modules_services.GetServiceId( service_key )
         
@@ -657,18 +658,33 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
             for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
+                service_hash_ids = [ service_hash_id for ( service_hash_id, hash ) in chunk ]
+                
+                with self._MakeTemporaryIntegerTable( service_hash_ids, 'service_hash_id' ) as temp_service_hash_ids_table_name:
+                    
+                    existing_service_hash_ids = self._STS( self._Execute( f'SELECT service_hash_id FROM {temp_service_hash_ids_table_name} CROSS JOIN {hash_id_map_table_name} USING ( service_hash_id );' ) )
+                    
+                
                 inserts = []
                 
                 for ( service_hash_id, hash ) in chunk:
+                    
+                    if service_hash_id in existing_service_hash_ids:
+                        
+                        continue
+                        
                     
                     hash_id = self.modules_hashes_local_cache.GetHashId( hash )
                     
                     inserts.append( ( service_hash_id, hash_id ) )
                     
                 
-                self._ExecuteMany( 'REPLACE INTO {} ( service_hash_id, hash_id ) VALUES ( ?, ? );'.format( hash_id_map_table_name ), inserts )
+                if len( inserts ) > 0:
+                    
+                    self._ExecuteMany( f'INSERT OR IGNORE INTO {hash_id_map_table_name} ( service_hash_id, hash_id ) VALUES ( ?, ? );', inserts )
+                    
                 
-                num_rows_processed += len( inserts )
+                num_rows_processed += len( chunk )
                 
                 if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_status.IsCancelled():
                     
@@ -685,9 +701,21 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
             for chunk in HydrusLists.SplitIteratorIntoAutothrottledChunks( i, 50, precise_time_to_stop ):
                 
+                service_tag_ids = [ service_tag_id for ( service_tag_id, tag ) in chunk ]
+                
+                with self._MakeTemporaryIntegerTable( service_tag_ids, 'service_tag_id' ) as temp_service_tag_ids_table_name:
+                    
+                    existing_service_tag_ids = self._STS( self._Execute( f'SELECT service_tag_id FROM {temp_service_tag_ids_table_name} CROSS JOIN {tag_id_map_table_name} USING ( service_tag_id );' ) )
+                    
+                
                 inserts = []
                 
                 for ( service_tag_id, tag ) in chunk:
+                    
+                    if service_tag_id in existing_service_tag_ids:
+                        
+                        continue
+                        
                     
                     try:
                         
@@ -703,9 +731,12 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                     inserts.append( ( service_tag_id, tag_id ) )
                     
                 
-                self._ExecuteMany( 'REPLACE INTO {} ( service_tag_id, tag_id ) VALUES ( ?, ? );'.format( tag_id_map_table_name ), inserts )
+                if len( inserts ) > 0:
+                    
+                    self._ExecuteMany( f'INSERT OR IGNORE INTO {tag_id_map_table_name} ( service_tag_id, tag_id ) VALUES ( ?, ? );', inserts )
+                    
                 
-                num_rows_processed += len( inserts )
+                num_rows_processed += len( chunk )
                 
                 if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_status.IsCancelled():
                     
