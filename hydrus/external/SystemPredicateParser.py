@@ -381,7 +381,7 @@ class SystemPredParseResult( object ):
             self.subtag_text_lower = self.original_text_lower
             
         
-        self.text_remainder = self.subtag_text_lower
+        self.text_remainder_lower = self.subtag_text_lower
         
         self.pred_type = None
         self.operator = None
@@ -421,7 +421,7 @@ def parse_system_predicate( string: str ):
             # TODO: Keep pushing on parse_result
             # I've crammed this 'parse_result' in here, with the intention that future iterations of this will work on that workspace rather than passing around a bunch of variables
             # there's plenty I still haven't done and this looks uglier in places
-            # A part of this will be re-examining if and how much we still want to do 'text_remainder', with the stripping away of the thing being parsed, or if that is only appropriate for some pred types
+            # A part of this will be re-examining if and how much we still want to do 'text_remainder_lower', with the stripping away of the thing being parsed, or if that is only appropriate for some pred types
             # good example is 'has blah', where it'd be nice to recognise that as a special case and deliver our 'NumberTest( > 0 )' in a quicker step
             # see the new 'ratings_advanced' bit for an example of where I mostly want to go
             #
@@ -433,15 +433,17 @@ def parse_system_predicate( string: str ):
             # iirc we do some silly stuff in the caller atm to convert from op+value to numbertest, so let's embed it in here instead when reasonable
             # at the same time, I believe we can then get +/- absolute and percentage stuff working. this is the 'is about', unicode_approx_equal, result, which then passes an 'extra_value' on to the numbertest or whatever
             
-            parse_result.text_remainder = parse_result.text_remainder[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = parse_result.text_remainder_lower[ len( match[ 0 ] ): ]
             
             ( predicate_type, operator_format, value_format, unit_format ) = SYSTEM_PREDICATES[ pred_regex ]
             
+            parse_result.pred_type = predicate_type
+            
             parse_operator( parse_result, operator_format )
             parse_value( parse_result, value_format )
-            ( parse_result.text_remainder, parse_result.unit ) = parse_unit( parse_result.text_remainder, unit_format )
+            ( parse_result.text_remainder_lower, parse_result.unit ) = parse_unit( parse_result.text_remainder_lower, unit_format )
             
-            if len( parse_result.text_remainder ) > 0:
+            if len( parse_result.text_remainder_lower ) > 0:
                 
                 raise ValueError( "Unrecognized characters at the end of the predicate: " + string )
                 
@@ -509,9 +511,9 @@ def parse_unit( string: str, spec ):
 
 def parse_value( parse_result: SystemPredParseResult, spec ):
     
-    string = parse_result.text_remainder
+    string_pre_string = parse_result.text_remainder_lower
     
-    string = string.strip()
+    string = string_pre_string.strip()
     
     if spec is None:
         
@@ -522,7 +524,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         # 'has urls', 'has words'
         if string.startswith( 'has' ) or string.startswith( 'no' ):
             
-            parse_result.text_remainder = ''
+            parse_result.text_remainder_lower = ''
             parse_result.value = 0
             
             return
@@ -545,7 +547,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 raise ValueError( "Invalid value, expected a positive integer!" )
                 
             
-            parse_result.text_remainder = rest_of_string
+            parse_result.text_remainder_lower = rest_of_string
             parse_result.value = value
             
             return
@@ -579,7 +581,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 distance = 4
                 
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = (hashes, distance)
             
             return
@@ -608,7 +610,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 distance = 8
                 
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = (pixel_hashes, perceptual_hashes, distance)
             
             return
@@ -625,7 +627,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         
         for possible_algorithm in ( 'md5', 'sha1', 'sha512' ):
             
-            if possible_algorithm in parse_result.original_text_lower: # original text lower--it will be gone from text_remainder by now
+            if possible_algorithm in parse_result.original_text_lower: # original text lower--it will be gone from text_remainder_lower by now
                 
                 algorithm = possible_algorithm
                 
@@ -641,7 +643,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             
             
-            parse_result.text_remainder = string[ match.endpos : ]
+            parse_result.text_remainder_lower = string[ match.endpos : ]
             parse_result.value = (hashes, algorithm)
             
             return
@@ -666,7 +668,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                     found_ftypes_good.extend( FILETYPES[ ftype ] )
             
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = set( found_ftypes_good )
             
             return
@@ -703,20 +705,20 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 
                 if years + months + days + hours == 0:
                     
-                    parse_result.text_remainder = ''
+                    parse_result.text_remainder_lower = ''
                     parse_result.value = dt
                     
                     return
                     
                 
-                parse_result.text_remainder = ''
+                parse_result.text_remainder_lower = ''
                 parse_result.value = ( years, months, days, hours )
                 
                 return
                 
             else:
                 
-                parse_result.text_remainder = ''
+                parse_result.text_remainder_lower = ''
                 parse_result.value = dt
                 
                 return
@@ -738,7 +740,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                     string_result = ''
                     
                 
-                parse_result.text_remainder = string_result
+                parse_result.text_remainder_lower = string_result
                 parse_result.value = ( years, months, days, hours )
                 
                 return
@@ -750,7 +752,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 
                 # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
                 
-                parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+                parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
                 parse_result.value = datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
                 
                 return
@@ -764,7 +766,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         # 'has duration'
         if string.startswith( 'has' ) or string.startswith( 'no' ):
             
-            parse_result.text_remainder = ''
+            parse_result.text_remainder_lower = ''
             parse_result.value = 0
             
             return
@@ -796,7 +798,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                     
                 
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = ms_delta
             
             return
@@ -812,9 +814,11 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             
             try:
                 
-                index = parse_result.original_text.find( string )
+                # got to be careful about upper/lower here. what a mess!
                 
-                original_string = parse_result.original_text[ index + len( string ) ]
+                index = parse_result.original_text_lower.find( string )
+                
+                original_string = parse_result.original_text[ index : index + len( string ) ]
                 
                 string = original_string
                 
@@ -824,7 +828,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 
             
         
-        parse_result.text_remainder = ''
+        parse_result.text_remainder_lower = ''
         parse_result.value = string
         
         return
@@ -846,7 +850,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             days += math.floor( hours / 24 )
             hours = hours % 24
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = (days, hours, minutes, seconds)
             
             return
@@ -860,7 +864,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         
         if match:
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.value = ( int( match[ 'first' ] ), int( match[ 'second' ] ) )
             
             return
@@ -885,7 +889,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
                 raise ValueError( 'Invalid value, rating value was out of bounds')
                 
             
-            parse_result.text_remainder = ''
+            parse_result.text_remainder_lower = ''
             parse_result.value = ( numerator, service_name )
             
             return
@@ -932,7 +936,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         
         service_name = string
         
-        parse_result.text_remainder = ''
+        parse_result.text_remainder_lower = ''
         parse_result.value = ( value, service_name )
         
         return
@@ -948,7 +952,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             service_name = match[ 'name' ]
             value = int( match[ 'num' ] )
             
-            parse_result.text_remainder = ''
+            parse_result.text_remainder_lower = ''
             parse_result.value = ( value, service_name )
             
             return
@@ -974,7 +978,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             
             ( gubbins, operator ) = parse_operator_relational( operator_string, Operators.RELATIONAL )
             
-            parse_result.text_remainder = ''
+            parse_result.text_remainder_lower = ''
             parse_result.value = ( namespace, operator, num )
             
             return
@@ -1010,7 +1014,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
             tag = 'invalid tag'
             
         
-        parse_result.text_remainder = ''
+        parse_result.text_remainder_lower = ''
         parse_result.value = tag
         
         return
@@ -1089,7 +1093,7 @@ def parse_value( parse_result: SystemPredParseResult, spec ):
         
         service_specifier_primary = parse_service_specifier( subtag_workspace )
         
-        parse_result.text_remainder = ''
+        parse_result.text_remainder_lower = ''
         parse_result.value = ( logical_operator, service_specifier_primary, service_specifier_secondary, rated )
         
         return
@@ -1172,7 +1176,7 @@ def parse_service_specifier( text: str ):
 
 def parse_operator( parse_result: SystemPredParseResult, spec ):
     
-    string = parse_result.text_remainder
+    string = parse_result.text_remainder_lower
     
     while string.startswith( ':' ) or string.startswith( ' ' ):
         
@@ -1206,7 +1210,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
         
         ( string, relational_op ) = parse_operator_relational( string, Operators.RELATIONAL )
         
-        parse_result.text_remainder = string
+        parse_result.text_remainder_lower = string
         parse_result.operator = ( desired_canvas_types, relational_op )
         
         return
@@ -1215,7 +1219,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
         
         if string.startswith( 'has' ):
             
-            parse_result.text_remainder = string
+            parse_result.text_remainder_lower = string
             parse_result.operator = '>'
             
             return
@@ -1223,7 +1227,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
         
         if string.startswith( 'no' ):
             
-            parse_result.text_remainder = string
+            parse_result.text_remainder_lower = string
             parse_result.operator = '='
             
             return
@@ -1233,7 +1237,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if string.startswith( op_string ):
                 
-                parse_result.text_remainder = string[ len( op_string ) : ]
+                parse_result.text_remainder_lower = string[ len( op_string ) : ]
                 parse_result.operator = op_result
                 
                 return
@@ -1242,7 +1246,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
         
     elif spec in ( Operators.RELATIONAL, Operators.RELATIONAL_EXACT, Operators.RELATIONAL_TIME ):
         
-        ( parse_result.text_remainder, parse_result.operator ) = parse_operator_relational( string, spec )
+        ( parse_result.text_remainder_lower, parse_result.operator ) = parse_operator_relational( string, spec )
         
         return
         
@@ -1273,7 +1277,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
                     
                     parsing_string = f'{service_name} {value}'
                     
-                    parse_result.text_remainder = parsing_string
+                    parse_result.text_remainder_lower = parsing_string
                     parse_result.operator = possible_operator
                     
                     return
@@ -1297,7 +1301,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if string.startswith( possible_operator_str ):
                 
-                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.text_remainder_lower = string[ len( possible_operator_str ) : ]
                 parse_result.operator = possible_operator
                 
                 return
@@ -1319,7 +1323,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if match:
                 
-                parse_result.text_remainder = string[ len( match[ 0 ] ) : ]
+                parse_result.text_remainder_lower = string[ len( match[ 0 ] ) : ]
                 parse_result.operator = possible_operator
                 
                 return
@@ -1358,7 +1362,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
                 op = UNICODE_APPROX_EQUAL
                 
             
-            parse_result.text_remainder = string[ len( match[ 0 ] ): ]
+            parse_result.text_remainder_lower = string[ len( match[ 0 ] ): ]
             parse_result.operator = ( namespace, op )
             
             return
@@ -1372,7 +1376,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if string.startswith( possible_operator_str ):
                 
-                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.text_remainder_lower = string[ len( possible_operator_str ) : ]
                 parse_result.operator = '='
                 
                 return
@@ -1397,7 +1401,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if string.startswith( possible_operator_str ):
                 
-                parse_result.text_remainder = string[ len( possible_operator_str ) : ]
+                parse_result.text_remainder_lower = string[ len( possible_operator_str ) : ]
                 parse_result.operator = possible_operator
                 
                 return
@@ -1416,7 +1420,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             
             if possible_operator_str in string:
                 
-                parse_result.text_remainder = ''
+                parse_result.text_remainder_lower = ''
                 parse_result.operator = possible_operator
                 parse_result.value = ( 1, 1 )
                 
@@ -1508,7 +1512,7 @@ def parse_operator( parse_result: SystemPredParseResult, spec ):
             statuses = [ HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ]
             
         
-        parse_result.text_remainder = tag
+        parse_result.text_remainder_lower = tag
         parse_result.operator = ( service_key, tag_display_type, tuple( sorted( statuses ) ) )
         
         return
