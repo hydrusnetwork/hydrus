@@ -30,7 +30,7 @@ Then, we want to tell hydrus to scan itself for bad items and clear them out.
 
     2. IF YOU HAVE THOUSANDS OF HASHES MISSING: Open up _database->file maintenance->manage scheduled jobs_. Go to 'add new work', load up 'system:everything' and click 'run this search'. Then add 'if file is missing, then if has URL try to redownload, else remove record'. Go to the 'scheduled work' tab and hurry all those jobs along. Wait for them to finish, and then, if you can, wait for the new url downloader page, if any, to finish too. Then go back to 'add new work' and add 'if file is missing, remove record (leave no delete record)'. You may get more error reports about missing identifiers here. Hydrus may report that it was able to auto-heal some.
 
-2. Hit database->db maintenance->clear orphan file records. It probably won't find any problems.
+2. Hit database->db maintenance->clear/fix orphan file records. It probably won't find any problems.
 
 3. Hit database->file maintenance->clear orphan files. It will probably find as many files as you had hashes that were non-URL-recoverable. These are your actual files, with their actual hash names. The routine will export them to a new subfolder beneath install_dir/db. Wait for it to finish, and then import all those files back into the program. You have lost all your metadata like tags and archive status etc... but the files are recovered.
 
