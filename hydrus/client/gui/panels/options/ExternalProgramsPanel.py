@@ -820,7 +820,17 @@ class EditProcessCallPanel( QW.QWidget ):
         actual_call.SetParsableResponseName( response_name )
         actual_call.SetParsableResponseEncoding( response_encoding )
         
-        ( source_type, response_name ) = self._importable_source_widget.GetValue()
+        response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ self._pipeline_type ]
+        
+        if len( response_types ) == 0:
+            
+            source_type = ClientExecutableActualCall.LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE
+            response_name = ''
+            
+        else:
+            
+            ( source_type, response_name ) = self._importable_source_widget.GetValue()
+            
         
         actual_call.SetImportableResponseSourceType( source_type )
         actual_call.SetImportableResponseName( response_name )
@@ -1175,7 +1185,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self._UpdateResultBoxesVisibility()
         
     
-    def _GetInputParams( self ) -> dict[ int, str ]:
+    def _GetInputParams( self ) -> dict[ int, str | list[ str ] ]:
         
         return { param_type : input_param_edit_panel.GetValue() for ( param_type, input_param_edit_panel ) in self._input_param_types_to_edit_panels.items() }
         

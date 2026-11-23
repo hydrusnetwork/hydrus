@@ -96,7 +96,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def Call( self, input_params ) -> ClientExecutableResponses.ExecutableCallResponse:
+    def Call( self, input_params: dict[ int, str | list[ str ] ] ) -> ClientExecutableResponses.ExecutableCallResponse:
         
         return self._actual_call.Call( input_params )
         

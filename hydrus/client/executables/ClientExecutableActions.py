@@ -7,6 +7,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
+from hydrus.client.files import ClientFilesMaintenance
 from hydrus.client.media import ClientMediaResult
 
 def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, media_result: ClientMediaResult.MediaResult ):
@@ -36,7 +37,7 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
     
     file_path_or_none: str | None = None
     
-    input_params = dict()
+    input_params: dict[ int, str | list[ str ] ] = dict()
     
     for required_input_parameter in required_input_parameters:
         
@@ -75,13 +76,49 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
                 raise NotImplementedError( 'Unknown input parameter, something needs to get updated!' )
                 
             
-        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH:
+        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_SHA256:
             
             value = hash.hex()
             
-        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_ID:
+        elif required_input_parameter in (
+            ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_MD5,
+            ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_SHA1,
+            ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_SHA512,
+        ):
             
-            value = media_result.GetHashId()
+            desired_hash_type = {
+                ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_MD5 : 'md5',
+                ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_SHA1 : 'sha1',
+                ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_SHA512 : 'sha256',
+            }.get( required_input_parameter )
+            
+            source_to_desired = CG.client_controller.Read( 'file_hashes', ( hash, ), 'sha256', desired_hash_type )
+            
+            if hash not in source_to_desired:
+                
+                if media_result.GetLocationsManager().IsLocal():
+                    
+                    CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
+                    
+                    extra_note = 'Since the file is local, it is supposed to have this hash available. I have scheduled your database to regen this hash to fill in the gap. With luck, you can try this job again soon and it will work.'
+                    
+                else:
+                    
+                    extra_note = 'Unfortunately, because this file is not local, we cannot generate this hash. You would have to import this file to make this job work.'
+                    
+                
+                message = f'This call needs a {desired_hash_type} hash, but the file {hash.hex()} does not seem to have that hash!'
+                message += '\n\n'
+                message += extra_note
+                
+                raise HydrusExceptions.CannotProvideExecutableCallParameters( message )
+                
+            
+            value = source_to_desired[ hash ].hex()
+            
+        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_FILE_ID:
+            
+            value = str( media_result.GetHashId() )
             
         else:
             
@@ -142,7 +179,7 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
             
         
     
-    input_params = dict()
+    input_params: dict[ int, str | list[ str ] ] = dict()
     
     if ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS in required_input_parameters:
         
@@ -175,7 +212,7 @@ def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager
     
     required_input_parameters = call.GetCall().GetInputParametersUsed()
     
-    input_params = dict()
+    input_params: dict[ int, str | list[ str ] ] = dict()
     
     if ClientExecutablePipelines.PARAMETER_TYPE_URL in required_input_parameters:
         

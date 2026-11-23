@@ -71,7 +71,7 @@ class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
-    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ):
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str | list[ str ] ] ):
         
         raise NotImplementedError()
         
@@ -538,7 +538,7 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         return 'CALL: ' + self._executable_path + ' ' + ' '.join( self._executable_parameter_templates )
         
     
-    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str | list[ str ] ] ) -> str:
         
         try:
             
@@ -728,7 +728,7 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         return '-hardcoded- Call OS default file launcher'
         
     
-    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str | list[ str ] ] ) -> str:
         
         try:
             
@@ -805,7 +805,7 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         return '-hardcoded- Call OS default URL launcher'
         
     
-    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str ] ) -> str:
+    def GetCommandPreviewWithInputParams( self, input_params: dict[ int, str | list[ str ] ] ) -> str:
         
         try:
             
