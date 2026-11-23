@@ -18,6 +18,8 @@ from hydrus.client.gui import ClientGUIFunctions
 
 LAST_MOUSE_CLICK_BUTTON = QC.Qt.MouseButton.LeftButton
 
+P = typing.ParamSpec( 'P' )
+
 def AddLastClickMemory( gui_item ):
     
     class _ClickMemoryFilter( QC.QObject ):
@@ -44,7 +46,7 @@ def AddLastClickMemory( gui_item ):
     return filter_obj
     
 
-def AppendMenu( menu, submenu, label ):
+def AppendMenu( menu: QW.QMenu, submenu: QW.QMenu, label: str ):
     
     RemoveFinalSeparator( submenu )
     
@@ -56,7 +58,15 @@ def AppendMenu( menu, submenu, label ):
     return menu_action
     
 
-def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.QIcon, callable, *args, **kwargs ):
+def AppendMenuIconItem(
+    menu: QW.QMenu,
+    label: str,
+    description: str,
+    icon: QG.QIcon,
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
     
     menu_item = QW.QAction( menu )
     
@@ -66,12 +76,20 @@ def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.Q
     
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, callable, *args, **kwargs )
+    BindMenuItem( menu_item, menu_callable, *args, **kwargs )
     
     return menu_item
     
 
-def AppendMenuCheckItem( menu, label, description, initial_value, callable, *args, **kwargs ):
+def AppendMenuCheckItem(
+    menu: QW.QMenu,
+    label: str,
+    description: str,
+    initial_value: bool,
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
     
     menu_item = QW.QAction( menu )
     
@@ -82,7 +100,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, callable, *args, **kwargs )
+    BindMenuItem( menu_item, menu_callable, *args, **kwargs )
     
     return menu_item
     
@@ -95,7 +113,7 @@ def AppendMenuSlider(
     min_value: int,
     max_value: int,
     step: int,
-    value_changed_callable,
+    value_changed_callable: collections.abc.Callable[ [ int ], typing.Any ],
     min_width_chars: int | None = None
 ):
     
@@ -127,7 +145,7 @@ def AppendMenuSlider(
     value_label.setMinimumWidth( 32 )
     value_label.setAlignment( QC.Qt.AlignmentFlag.AlignRight | QC.Qt.AlignmentFlag.AlignVCenter )
     
-    def value_changed( value ):
+    def value_changed( value: int ):
         
         value_label.setText( str( value ) )
         value_changed_callable( value )
@@ -146,13 +164,41 @@ def AppendMenuSlider(
     return slider_menu_item
     
 
-def AppendMenuItem( menu, label, description, menu_callable: collections.abc.Callable[ [], typing.Any ], *args, role: QW.QAction.MenuRole | None = None, **kwargs ):
+def AppendMenuItem(
+    menu: QW.QMenu,
+    label: str,
+    description: str,
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
+    
+    AppendMenuItemRole(
+        menu,
+        label,
+        description,
+        QW.QAction.MenuRole.NoRole,
+        menu_callable,
+        *args,
+        **kwargs
+    )
+    
+
+def AppendMenuItemRole(
+    menu: QW.QMenu,
+    label: str,
+    description: str,
+    role: QW.QAction.MenuRole,
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
     
     menu_item = QW.QAction( menu )
     
     if HC.PLATFORM_MACOS:
         
-        menu_item.setMenuRole( role if role is not None else QW.QAction.MenuRole.NoRole )
+        menu_item.setMenuRole( role )
         
     
     SetMenuTexts( menu_item, label, description )
@@ -166,7 +212,14 @@ def AppendMenuItem( menu, label, description, menu_callable: collections.abc.Cal
 
 class LabelAction( QW.QAction ): pass
 
-def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = False, make_it_bold = False ):
+def AppendMenuLabel(
+    menu: QW.QMenu,
+    label: str,
+    description: str = '',
+    copy_text: str = '',
+    no_copy: bool = False,
+    make_it_bold: bool = False
+):
     
     if no_copy:
         
@@ -211,7 +264,12 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = Fa
     return menu_item
     
 
-def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
+def AppendMenuOrItem(
+    menu: QW.QMenu,
+    submenu_name: str,
+    menu_tuples: list[ tuple[ str, str, collections.abc.Callable | None ] ],
+    sort_tuples: bool = True
+):
     
     if sort_tuples:
         
@@ -254,7 +312,8 @@ def AppendMenuOrItem( menu, submenu_name, menu_tuples, sort_tuples = True ):
             
         
     
-def AppendSeparator( menu ):
+
+def AppendSeparator( menu: QW.QMenu ):
     
     num_items = len( menu.actions() )
     
@@ -273,14 +332,19 @@ def AppendSeparator( menu ):
         
     
 
-def BindMenuItem( menu_item, callable, *args, **kwargs ):
+def BindMenuItem(
+    menu_item: QW.QAction,
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
     
-    event_callable = GetEventCallable( callable, *args, **kwargs )
+    event_callable = GetEventCallable( menu_callable, *args, **kwargs )
     
     menu_item.triggered.connect( event_callable )
     
 
-def DestroyMenu( menu ):
+def DestroyMenu( menu: QW.QMenu | None ):
     
     if menu is None:
         
@@ -329,25 +393,29 @@ def GenerateMenu( parent: QW.QWidget ) -> QW.QMenu:
     return menu
     
 
-def GetEventCallable( callable, *args, **kwargs ):
+def GetEventCallable(
+    menu_callable: collections.abc.Callable[ P, typing.Any ],
+    *args: P.args,
+    **kwargs: P.kwargs
+):
     
     def event_callable( checked_state ):
         
         if HydrusProfiling.IsProfileMode( 'ui' ):
             
-            summary = 'Profiling menu: ' + repr( callable )
+            summary = 'Profiling menu: ' + repr( menu_callable )
             
-            HydrusProfiling.Profile( summary, HydrusData.Call( callable, *args, **kwargs ), min_duration_ms = HG.menu_profile_min_job_time_ms )
+            HydrusProfiling.Profile( summary, HydrusData.Call( menu_callable, *args, **kwargs ), min_duration_ms = HG.menu_profile_min_job_time_ms )
             
         else:
             
-            callable( *args, **kwargs )
+            menu_callable( *args, **kwargs )
             
         
     
     return event_callable
     
-    
+
 def RemoveFinalSeparator( menu: QW.QMenu ):
     
     num_items = len( menu.actions() )
@@ -367,6 +435,7 @@ def RemoveFinalSeparator( menu: QW.QMenu ):
             
         
     
+
 def SanitiseLabel( label: str ) -> str:
     
     if label == '':
@@ -415,7 +484,11 @@ def SetMenuTitle( menu: QW.QMenu, label: str ):
     menu.setTitle( label )
     
 
-def SpamItems( menu: QW.QMenu, labels_descriptions_and_calls: collections.abc.Collection[ tuple[ str, str, collections.abc.Callable[ [], typing.Any ] ] ], max_allowed: int ):
+def SpamItems(
+    menu: QW.QMenu,
+    labels_descriptions_and_calls: collections.abc.Collection[ tuple[ str, str, collections.abc.Callable[ [], typing.Any ] ] ],
+    max_allowed: int
+):
     
     if len( labels_descriptions_and_calls ) > max_allowed:
         
@@ -439,7 +512,11 @@ def SpamItems( menu: QW.QMenu, labels_descriptions_and_calls: collections.abc.Co
         
     
 
-def SpamLabels( menu: QW.QMenu, labels_and_copy_texts: collections.abc.Collection[ tuple[ str, str ] ], max_allowed: int ):
+def SpamLabels(
+    menu: QW.QMenu,
+    labels_and_copy_texts: collections.abc.Collection[ tuple[ str, str ] ],
+    max_allowed: int
+):
     
     if len( labels_and_copy_texts ) > max_allowed:
         
