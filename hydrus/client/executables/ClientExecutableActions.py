@@ -32,18 +32,64 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
         raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
     
-    mime = media_result.GetMime()
+    required_input_parameters = call.GetCall().GetInputParametersUsed()
     
-    file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    file_path_or_none: str | None = None
     
-    file_uri = Path( file_path ).as_uri()
+    input_params = dict()
     
-    input_params = {
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH : file_path,
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URI : file_uri,
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH : hash.hex(),
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_ID : media_result.GetHashId(),
-    }
+    for required_input_parameter in required_input_parameters:
+        
+        if required_input_parameter in ( ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH, ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URI ):
+            
+            if file_path_or_none is None:
+                
+                mime = media_result.GetMime()
+                
+                try:
+                    
+                    file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+                    
+                except HydrusExceptions.FileMissingException as e:
+                    
+                    raise HydrusExceptions.CannotProvideExecutableCallParameters( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
+                    
+                
+            else:
+                
+                file_path = file_path_or_none
+                
+            
+            if required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATH:
+                
+                value = file_path
+                
+            elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URI:
+                
+                file_url = Path( file_path ).as_uri()
+                
+                value = file_url
+                
+            else:
+                
+                raise NotImplementedError( 'Unknown input parameter, something needs to get updated!' )
+                
+            
+        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH:
+            
+            value = hash.hex()
+            
+        elif required_input_parameter == ClientExecutablePipelines.PARAMETER_TYPE_FILE_HASH_ID:
+            
+            value = media_result.GetHashId()
+            
+        else:
+            
+            raise NotImplementedError( 'Unknown input parameter, something needs to get updated!' )
+            
+        
+        input_params[ required_input_parameter ] = value
+        
     
     call.Call( input_params )
     
@@ -68,6 +114,8 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
         raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
     
+    required_input_parameters = call.GetCall().GetInputParametersUsed()
+    
     file_paths = []
     file_uris = []
     
@@ -76,18 +124,35 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
         hash = media_result.GetHash()
         mime = media_result.GetMime()
         
-        file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
-        
-        file_uri = Path( file_path ).as_uri()
-        
-        file_paths.append( file_path )
-        file_uris.append( file_uri )
+        if ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS in required_input_parameters or ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS in required_input_parameters:
+            
+            try:
+                
+                file_path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+                
+            except HydrusExceptions.FileMissingException as e:
+                
+                raise HydrusExceptions.CannotProvideExecutableCallParameters( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
+                
+            
+            file_uri = Path( file_path ).as_uri()
+            
+            file_paths.append( file_path )
+            file_uris.append( file_uri )
+            
         
     
-    input_params = {
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS : file_paths,
-        ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS : file_uris,
-    }
+    input_params = dict()
+    
+    if ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS in required_input_parameters:
+        
+        input_params[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_PATHS ] = file_paths
+        
+    
+    if ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS in required_input_parameters:
+        
+        input_params[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS ] = file_uris
+        
     
     call.Call( input_params )
     
@@ -108,9 +173,14 @@ def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager
         raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
         
     
-    input_params = {
-        ClientExecutablePipelines.PARAMETER_TYPE_URL : url,
-    }
+    required_input_parameters = call.GetCall().GetInputParametersUsed()
+    
+    input_params = dict()
+    
+    if ClientExecutablePipelines.PARAMETER_TYPE_URL in required_input_parameters:
+        
+        input_params[ ClientExecutablePipelines.PARAMETER_TYPE_URL ] = url
+        
     
     call.Call( input_params )
     

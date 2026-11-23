@@ -69,6 +69,7 @@ class DaemonShutdownException( HydrusException ): pass
 class ProgramShutdownException( HydrusException ): pass
 
 class ExecutableException( HydrusException ): pass
+class CannotProvideExecutableCallParameters( ExecutableException ): pass
 class SubprocessTimedOut( ExecutableException ): pass
 class BadReturnCodeException( ExecutableException ): pass
 

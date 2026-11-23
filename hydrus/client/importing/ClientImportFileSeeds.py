@@ -764,6 +764,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     ClientExecutableActions.SendSingleFile( CG.client_controller.executable_manager, id_and_name, media_result )
                     
+                except HydrusExceptions.CannotProvideExecutableCallParameters as e:
+                    
+                    # since this stuff is going to be 'file was not local' or 'could not find md5', which an import would be very strange to cause,
+                    # we will broadly assume this is going to be a rare blip we can generally ignore
+                    HydrusData.ShowText( f'Failed to run "{id_and_name.name}" on file with hash "{hash.hex()}"! {e}' )
+                    
                 except Exception as e:
                     
                     CG.client_controller.new_options.SetBoolean( 'pause_import_folders_sync', True )
