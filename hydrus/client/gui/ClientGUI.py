@@ -3499,13 +3499,13 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'options' + HC.UNICODE_ELLIPSIS, 'Change how the client operates.', self._ManageOptions, role = QW.QAction.MenuRole.PreferencesRole )
+        ClientGUIMenus.AppendMenuItemRole( menu, 'options' + HC.UNICODE_ELLIPSIS, 'Change how the client operates.', QW.QAction.MenuRole.PreferencesRole, self._ManageOptions )
         
         ClientGUIMenus.AppendSeparator( menu )
         
         label = 'minimise to system tray'
         
-        self._menubar_file_minimise_to_system_tray = ClientGUIMenus.AppendMenuItem( menu, label, 'Hide the client to an icon on your system tray.', self._SystemTrayHide, role = QW.QAction.MenuRole.ApplicationSpecificRole )
+        self._menubar_file_minimise_to_system_tray = ClientGUIMenus.AppendMenuItemRole( menu, label, 'Hide the client to an icon on your system tray.', QW.QAction.MenuRole.ApplicationSpecificRole, self._SystemTrayHide )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3513,10 +3513,10 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         if not we_borked_linux_pyinstaller:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'restart', 'Shut the client down and then start it up again.', self.TryToExit, role = QW.QAction.MenuRole.ApplicationSpecificRole, restart = True )
+            ClientGUIMenus.AppendMenuItemRole( menu, 'restart', 'Shut the client down and then start it up again.', QW.QAction.MenuRole.ApplicationSpecificRole, self.TryToExit, restart = True )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'exit', 'Shut the client down.', self.TryToExit, role = QW.QAction.MenuRole.QuitRole )
+        ClientGUIMenus.AppendMenuItemRole( menu, 'exit', 'Shut the client down.', QW.QAction.MenuRole.QuitRole, self.TryToExit )
         
         return ( menu, '&file' )
         
@@ -3746,8 +3746,8 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'about Qt', 'See information about the Qt framework.', QW.QMessageBox.aboutQt, self, role = QW.QAction.MenuRole.AboutQtRole )
-        ClientGUIMenus.AppendMenuItem( menu, 'about', 'See this client\'s version and other information.', self._AboutWindow, role = QW.QAction.MenuRole.AboutRole )
+        ClientGUIMenus.AppendMenuItemRole( menu, 'about Qt', 'See information about the Qt framework.', QW.QAction.MenuRole.AboutQtRole, QW.QMessageBox.aboutQt, self )
+        ClientGUIMenus.AppendMenuItemRole( menu, 'about', 'See this client\'s version and other information.', QW.QAction.MenuRole.AboutRole, self._AboutWindow )
         
         return ( menu, '&help' )
         
