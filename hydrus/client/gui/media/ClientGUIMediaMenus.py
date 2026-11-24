@@ -515,7 +515,7 @@ def AddKnownURLsViewCopyMenu( win: QW.QWidget, command_processor: CAC.Applicatio
         
         if len( open_url_executable_ids_and_names ) == 0:
             
-            open_url_executable_ids_and_names = [ CG.client_controller.executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
+            open_url_executable_ids_and_names = [ CG.client_controller.executable_manager.GetOSLaunchURLCallableSocket().GetIdAndName() ]
             
         
         open_url_executable_ids_and_names_and_url_visit_submenus = []

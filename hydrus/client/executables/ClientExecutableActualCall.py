@@ -36,7 +36,7 @@ def CleanExecutableParameterTemplates( executable_parameter_templates: list[ str
     return clean_executable_parameter_templates
     
 
-class ExecutableActualCall( HydrusSerialisable.SerialisableBase ):
+class ActualCall( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_NAME = 'Actual Call Superclass'
     SERIALISABLE_VERSION = 1
@@ -182,7 +182,7 @@ LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_IGNORE = 0
 LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_PIPE = 1
 LOCAL_PROCESS_RESPONSE_SOURCE_TYPE_INPUT_PARAMETER_TEMP_PATH = 2
 
-class ExecutableLocalProcessCall( ExecutableActualCall ):
+class LocalProcessCall( ActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL
     SERIALISABLE_NAME = 'Local Process Call'
@@ -643,9 +643,9 @@ class ExecutableLocalProcessCall( ExecutableActualCall ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL ] = ExecutableLocalProcessCall
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_CALL ] = LocalProcessCall
 
-class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
+class LocalProcessDefaultLaunchFile( ActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_FILE
     SERIALISABLE_NAME = 'Local Process (Default Launch File Command)'
@@ -746,9 +746,9 @@ class ExecutableLocalProcessDefaultLaunchFile( ExecutableActualCall ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_FILE ] = ExecutableLocalProcessDefaultLaunchFile
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_FILE ] = LocalProcessDefaultLaunchFile
 
-class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
+class LocalProcessDefaultLaunchURL( ActualCall ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_URL
     SERIALISABLE_NAME = 'Local Process (Default Launch URL Command)'
@@ -823,4 +823,4 @@ class ExecutableLocalProcessDefaultLaunchURL( ExecutableActualCall ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_URL ] = ExecutableLocalProcessDefaultLaunchURL
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALL_LOCAL_PROCESS_DEFAULT_LAUNCH_URL ] = LocalProcessDefaultLaunchURL

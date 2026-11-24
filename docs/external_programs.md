@@ -92,6 +92,8 @@ THEREFORE, if you import an exe definition from someone else, load up its edit p
 
 Similarly, if the call uses a network operation like `curl` or `wget`--are you sure that is what you wanted?
 
+And, similarly, if he gives you a trust_me.py script for the call to actually invoke, give it a quick look. If it isn't clear what it is doing, _do not run it_!
+
 ### Testing
 
 Once you are set up, look at the testing panel on the right. Put in a valid value for each input parameter you have set up, e.g. an actual URL, and then click test, and the job will fire for real. If everything is good, your program should do its thing.

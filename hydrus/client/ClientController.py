@@ -1370,7 +1370,7 @@ class Controller( HydrusController.HydrusController ):
             executable_manager = ClientExecutableManager.ExecutableManager()
             
             # this sets him dirty
-            executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+            executable_manager.SetCallableSockets( ClientExecutableDefaults.GetAllDefaultCallableSockets( True ) )
             
             self.BlockingSafeShowCriticalMessage( 'Problem loading object', 'Your executable manager was missing on boot! I have recreated a new empty one. You will have to recreate/remap any executable calls you had set up, sorry! Please check that your hard drive and client are ok and let the hydrus dev know the details if there is a mystery.' )
             

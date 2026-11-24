@@ -15,7 +15,7 @@ def OpenExternallySingleFileDefault( win: QW.QWidget, media_result: ClientMediaR
     
     if len( ids_and_names ) == 0:
         
-        id_and_name = CG.client_controller.executable_manager.GetOSLaunchFileCallable().GetIdAndName()
+        id_and_name = CG.client_controller.executable_manager.GetOSLaunchFileCallableSocket().GetIdAndName()
         
     else:
         
@@ -69,7 +69,7 @@ def OpenExternallyURLDefault( win: QW.QWidget, url: str ) -> bool:
     
     if len( ids_and_names ) == 0:
         
-        id_and_name = CG.client_controller.executable_manager.GetOSLaunchURLCallable().GetIdAndName()
+        id_and_name = CG.client_controller.executable_manager.GetOSLaunchURLCallableSocket().GetIdAndName()
         
     else:
         

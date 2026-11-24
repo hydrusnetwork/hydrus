@@ -21,19 +21,19 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
     
     try:
         
-        call = executable_manager.GetCallable( id_and_name )
+        callable_socket = executable_manager.GetCallableSocket( id_and_name )
         
     except HydrusExceptions.DataMissing:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
+    if callable_socket.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
         
-        raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
+        raise HydrusExceptions.ExecutableException( f'When trying to open file "{hash.hex()}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[callable_socket.GetPipelineType()]})!' )
         
     
-    required_input_parameters = call.GetCall().GetInputParametersUsed()
+    required_input_parameters = callable_socket.GetCall().GetInputParametersUsed()
     
     file_path_or_none: str | None = None
     
@@ -53,7 +53,7 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
                     
                 except HydrusExceptions.FileMissingException as e:
                     
-                    raise HydrusExceptions.CannotProvideExecutableCallParameters( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
+                    raise HydrusExceptions.CannotProvideExecutableCallParametersNonRecoverable( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
                     
                 
             else:
@@ -96,22 +96,23 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
             
             if hash not in source_to_desired:
                 
+                message = f'This call needs a {desired_hash_type} hash, but the file {hash.hex()} does not seem to have that hash!'
+                message += '\n\n'
+                
                 if media_result.GetLocationsManager().IsLocal():
                     
                     CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { hash }, ClientFilesMaintenance.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                     
-                    extra_note = 'Since the file is local, it is supposed to have this hash available. I have scheduled your database to regen this hash to fill in the gap. With luck, you can try this job again soon and it will work.'
+                    message += 'Since the file is local, it is supposed to have this hash available. I have scheduled your database to regen this hash to fill in the gap. With luck, you can try this job again soon and it will work.'
+                    
+                    raise HydrusExceptions.CannotProvideExecutableCallParametersRecoverable( message )
                     
                 else:
                     
-                    extra_note = 'Unfortunately, because this file is not local, we cannot generate this hash. You would have to import this file to make this job work.'
+                    message += 'Unfortunately, because this file is not local, we cannot generate this hash. You would have to import this file to make this job work.'
                     
-                
-                message = f'This call needs a {desired_hash_type} hash, but the file {hash.hex()} does not seem to have that hash!'
-                message += '\n\n'
-                message += extra_note
-                
-                raise HydrusExceptions.CannotProvideExecutableCallParameters( message )
+                    raise HydrusExceptions.CannotProvideExecutableCallParametersNonRecoverable( message )
+                    
                 
             
             value = source_to_desired[ hash ].hex()
@@ -128,7 +129,7 @@ def SendSingleFile( executable_manager: ClientExecutableManager.ExecutableManage
         input_params[ required_input_parameter ] = value
         
     
-    call.Call( input_params )
+    callable_socket.Call( input_params )
     
     return True
     
@@ -139,19 +140,19 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
     
     try:
         
-        call = executable_manager.GetCallable( id_and_name )
+        callable_socket = executable_manager.GetCallableSocket( id_and_name )
         
     except HydrusExceptions.DataMissing:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
+    if callable_socket.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
         
-        raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
+        raise HydrusExceptions.ExecutableException( f'When trying to open {files_desc} externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[callable_socket.GetPipelineType()]})!' )
         
     
-    required_input_parameters = call.GetCall().GetInputParametersUsed()
+    required_input_parameters = callable_socket.GetCall().GetInputParametersUsed()
     
     file_paths = []
     file_uris = []
@@ -169,7 +170,7 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
                 
             except HydrusExceptions.FileMissingException as e:
                 
-                raise HydrusExceptions.CannotProvideExecutableCallParameters( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
+                raise HydrusExceptions.CannotProvideExecutableCallParametersNonRecoverable( f'This call needs a file path, but the file {hash.hex()} appears to be missing!' ) from e
                 
             
             file_uri = Path( file_path ).as_uri()
@@ -191,26 +192,26 @@ def SendMultipleFiles( executable_manager: ClientExecutableManager.ExecutableMan
         input_params[ ClientExecutablePipelines.PARAMETER_TYPE_FILE_LOCAL_PATH_URIS ] = file_uris
         
     
-    call.Call( input_params )
+    callable_socket.Call( input_params )
     
 
 def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager, id_and_name: HydrusSerialisable.IdAndName, url: str ):
     
     try:
         
-        call = executable_manager.GetCallable( id_and_name )
+        callable_socket = executable_manager.GetCallableSocket( id_and_name )
         
     except HydrusExceptions.DataMissing:
         
         raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) did not exist!' )
         
     
-    if call.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
+    if callable_socket.GetPipelineType() != ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
         
-        raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[call.GetPipelineType()]})!' )
+        raise HydrusExceptions.ExecutableException( f'When trying to open URL "{url}" externally, the executable we wanted to call ({id_and_name}) was the wrong type ({ClientExecutablePipelines.executable_pipeline_types_to_strs[callable_socket.GetPipelineType()]})!' )
         
     
-    required_input_parameters = call.GetCall().GetInputParametersUsed()
+    required_input_parameters = callable_socket.GetCall().GetInputParametersUsed()
     
     input_params: dict[ int, str | list[ str ] ] = dict()
     
@@ -219,5 +220,5 @@ def SendSingleURL( executable_manager: ClientExecutableManager.ExecutableManager
         input_params[ ClientExecutablePipelines.PARAMETER_TYPE_URL ] = url
         
     
-    call.Call( input_params )
+    callable_socket.Call( input_params )
     

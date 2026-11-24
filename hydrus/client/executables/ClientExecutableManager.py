@@ -13,7 +13,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client.executables import ClientExecutableActualCall
-from hydrus.client.executables import ClientExecutableCallables
+from hydrus.client.executables import ClientExecutableCallableSockets
 from hydrus.client.executables import ClientExecutablePipelines
 
 class ExecutableManager( HydrusSerialisable.SerialisableBase ):
@@ -30,28 +30,28 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
-        self._callables: HydrusSerialisable.SerialisableList[ ClientExecutableCallables.ClientExecutableCallable ] = HydrusSerialisable.SerialisableList()
+        self._callable_sockets: HydrusSerialisable.SerialisableList[ ClientExecutableCallableSockets.CallableSocket ] = HydrusSerialisable.SerialisableList()
         
-        self._callable_ids_and_names_to_callables: dict[ HydrusSerialisable.IdAndName, ClientExecutableCallables.ClientExecutableCallable ] = {}
+        self._callable_ids_and_names_to_callable_sockets: dict[ HydrusSerialisable.IdAndName, ClientExecutableCallableSockets.CallableSocket ] = {}
         
     
     def _GetSerialisableInfo( self ):
         
-        serialisable_callables = self._callables.GetSerialisableTuple()
+        serialisable_callable_sockets = self._callable_sockets.GetSerialisableTuple()
         
-        return serialisable_callables
+        return serialisable_callable_sockets
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info: object, deserialisation_context: HydrusSerialisable.DeserialisationContext ):
         
-        serialisable_callables = serialisable_info
+        serialisable_callable_sockets = serialisable_info
         
-        self._callables = HydrusSerialisable.CreateFromSerialisableTuple(
-            serialisable_callables,
+        self._callable_sockets = HydrusSerialisable.CreateFromSerialisableTuple(
+            serialisable_callable_sockets,
             deserialisation_context.DuplicateForNewWhitelist(
                 {
                     HydrusSerialisable.SERIALISABLE_TYPE_LIST,
-                    HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE
+                    HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE_SOCKET
                 }
             )
         )
@@ -61,7 +61,7 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
     
     def _RegenCache( self ):
         
-        self._callable_ids_and_names_to_callables = { c.GetIdAndName() : c for c in self._callables }
+        self._callable_ids_and_names_to_callable_sockets = { c.GetIdAndName() : c for c in self._callable_sockets }
         
     
     def _SetDirty( self ):
@@ -69,24 +69,24 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         self._dirty = True
         
     
-    def GetCallable( self, id_and_name: HydrusSerialisable.IdAndName ) -> ClientExecutableCallables.ClientExecutableCallable:
+    def GetCallableSocket( self, id_and_name: HydrusSerialisable.IdAndName ) -> ClientExecutableCallableSockets.CallableSocket:
         
         with self._lock:
             
-            if id_and_name in self._callable_ids_and_names_to_callables:
+            if id_and_name in self._callable_ids_and_names_to_callable_sockets:
                 
-                return self._callable_ids_and_names_to_callables[ id_and_name ]
+                return self._callable_ids_and_names_to_callable_sockets[ id_and_name ]
                 
             
             raise HydrusExceptions.DataMissing( f'Did not have callable {id_and_name} in the executable manager!' )
             
         
     
-    def GetCallables( self ) -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
+    def GetCallableSockets( self ) -> list[ ClientExecutableCallableSockets.CallableSocket ]:
         
         with self._lock:
             
-            return list( self._callables )
+            return list( self._callable_sockets )
             
         
     
@@ -94,7 +94,7 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            calls = sorted( [ call for call in self._callables if call.GetPipelineType() == pipeline_type ], key = lambda c: c.GetName() )
+            calls = sorted( [ call for call in self._callable_sockets if call.GetPipelineType() == pipeline_type ], key = lambda c: c.GetName() )
             
             ids_and_names = [ call.GetIdAndName() for call in calls ]
             
@@ -102,17 +102,17 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetOSCallable( self, pipeline_type: int ):
+    def GetOSCallableSocket( self, pipeline_type: int ):
         
         with self._lock:
             
             if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
                 
-                results = [ call for call in self._callables if isinstance( call.GetCall(), ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile ) ]
+                results = [ call for call in self._callable_sockets if isinstance( call.GetCall(), ClientExecutableActualCall.LocalProcessDefaultLaunchFile ) ]
                 
             elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
                 
-                results = [ call for call in self._callables if isinstance( call.GetCall(), ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL ) ]
+                results = [ call for call in self._callable_sockets if isinstance( call.GetCall(), ClientExecutableActualCall.LocalProcessDefaultLaunchURL ) ]
                 
             else:
                 
@@ -123,9 +123,9 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
                 
                 if pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
                     
-                    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
+                    actual_call = ClientExecutableActualCall.LocalProcessDefaultLaunchFile()
                     
-                    call = ClientExecutableCallables.ClientExecutableCallable(
+                    call = ClientExecutableCallableSockets.CallableSocket(
                         'Default OS File Launch',
                         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
                         actual_call = actual_call
@@ -133,9 +133,9 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
                     
                 elif pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
                     
-                    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
+                    actual_call = ClientExecutableActualCall.LocalProcessDefaultLaunchURL()
                     
-                    call = ClientExecutableCallables.ClientExecutableCallable(
+                    call = ClientExecutableCallableSockets.CallableSocket(
                         'Default OS URL Launch',
                         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
                         actual_call = actual_call
@@ -146,9 +146,9 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
                     raise NotImplementedError( 'Unknown pipeline type!' )
                     
                 
-                HydrusSerialisable.SetNonDupeName( call, { c.GetName() for c in self._callables } )
+                HydrusSerialisable.SetNonDupeName( call, { c.GetName() for c in self._callable_sockets } )
                 
-                self._callables.append( call )
+                self._callable_sockets.append( call )
                 
                 self._RegenCache()
                 
@@ -163,14 +163,14 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetOSLaunchFileCallable( self ):
+    def GetOSLaunchFileCallableSocket( self ):
         
-        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
+        return self.GetOSCallableSocket( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
         
     
-    def GetOSLaunchURLCallable( self ):
+    def GetOSLaunchURLCallableSocket( self ):
         
-        return self.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
+        return self.GetOSCallableSocket( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
         
     
     def IsDirty( self ):
@@ -181,11 +181,11 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetCallables( self, callables: list[ ClientExecutableCallables.ClientExecutableCallable ] ):
+    def SetCallableSockets( self, callable_sockets: list[ ClientExecutableCallableSockets.CallableSocket ] ):
         
         with self._lock:
             
-            self._callables = HydrusSerialisable.SerialisableList( callables )
+            self._callable_sockets = HydrusSerialisable.SerialisableList( callable_sockets )
             
             self._RegenCache()
             
@@ -206,7 +206,7 @@ class ExecutableManager( HydrusSerialisable.SerialisableBase ):
         # the caller has old ids_and_names and may need to update the names
         # this also clears out missing guys
         
-        lookup = { call.GetIdAndName() : call for call in self._callables if call.GetPipelineType() == pipeline_type }
+        lookup = { call.GetIdAndName() : call for call in self._callable_sockets if call.GetPipelineType() == pipeline_type }
         
         actual_ids_and_names = []
         

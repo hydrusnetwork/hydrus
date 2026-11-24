@@ -335,7 +335,7 @@ class Controller( object ):
         
         self.executable_manager = ClientExecutableManager.ExecutableManager()
         
-        self.executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+        self.executable_manager.SetCallableSockets( ClientExecutableDefaults.GetAllDefaultCallableSockets( True ) )
         
         bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
         session_manager = ClientNetworkingSessions.NetworkSessionManager()

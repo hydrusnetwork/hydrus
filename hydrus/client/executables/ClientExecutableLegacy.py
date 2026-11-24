@@ -2,7 +2,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 
 from hydrus.client.executables import ClientExecutableActualCall
-from hydrus.client.executables import ClientExecutableCallables
+from hydrus.client.executables import ClientExecutableCallableSockets
 from hydrus.client.executables import ClientExecutablePipelines
 
 def ConvertOldCallToExecutableParams( call_template: str ):
@@ -55,13 +55,13 @@ def ConvertOldFileCallToExecutableActualCall( call_template: str ):
     
     ( executable_path, executable_parameter_templates ) = ConvertOldCallToExecutableParams( call_template )
     
-    process_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    process_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = executable_path,
         executable_parameter_templates = executable_parameter_templates,
         input_parameter_processing_rules = input_parameter_processing_rules
     )
     
-    executable_callable = ClientExecutableCallables.ClientExecutableCallable(
+    executable_callable = ClientExecutableCallableSockets.CallableSocket(
         name = call_template,
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = process_call
@@ -83,13 +83,13 @@ def ConvertOldURLCallToExecutableActualCall( call_template: str ):
     
     ( executable_path, executable_parameter_templates ) = ConvertOldCallToExecutableParams( call_template )
     
-    process_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    process_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = executable_path,
         executable_parameter_templates = executable_parameter_templates,
         input_parameter_processing_rules = input_parameter_processing_rules
     )
     
-    executable_callable = ClientExecutableCallables.ClientExecutableCallable(
+    executable_callable = ClientExecutableCallableSockets.CallableSocket(
         name = call_template,
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = process_call

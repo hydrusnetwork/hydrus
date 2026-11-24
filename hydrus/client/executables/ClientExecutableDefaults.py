@@ -1,10 +1,10 @@
 from hydrus.core import HydrusConstants as HC
 
 from hydrus.client.executables import ClientExecutableActualCall
-from hydrus.client.executables import ClientExecutableCallables
+from hydrus.client.executables import ClientExecutableCallableSockets
 from hydrus.client.executables import ClientExecutablePipelines
 
-def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
+def GetDefaultOpenExternally() -> list[ ClientExecutableCallableSockets.CallableSocket ]:
     
     input_parameter_processing_rules = [
         ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule(
@@ -17,9 +17,9 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
+    actual_call = ClientExecutableActualCall.LocalProcessDefaultLaunchFile()
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'Default OS File Launch',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -29,7 +29,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'xdg-open',
         executable_parameter_templates = [ '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -37,7 +37,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'xdg-open',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -47,7 +47,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'gio',
         executable_parameter_templates = [ 'open', '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -55,7 +55,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'gio open (Gnome)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -65,7 +65,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'kioclient',
         executable_parameter_templates = [ 'exec', '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -73,7 +73,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'kioclient exec (KDE)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -83,7 +83,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'firefox',
         executable_parameter_templates = [ '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -91,7 +91,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'firefox (file path)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -101,7 +101,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'google-chrome',
         executable_parameter_templates = [ '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -109,7 +109,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (file path)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -121,7 +121,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'chrome',
         executable_parameter_templates = [ '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -129,7 +129,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (file path) (Windows)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -139,7 +139,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'open',
         executable_parameter_templates = [ '-a', 'Firefox', '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -147,7 +147,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'firefox (file path) (macOS)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -157,7 +157,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'open',
         executable_parameter_templates = [ '-a', 'Google Chrome', '%path%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -165,7 +165,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (file path) (macOS)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE,
         actual_call = actual_call
@@ -176,7 +176,7 @@ def GetDefaultOpenExternally() -> list[ ClientExecutableCallables.ClientExecutab
     return callables
     
 
-def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
+def GetDefaultOpenURL() -> list[ ClientExecutableCallableSockets.CallableSocket ]:
     
     input_parameter_processing_rules = [
         ClientExecutableActualCall.LocalProcessCallInputParameterProcessingRule(
@@ -189,9 +189,9 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
+    actual_call = ClientExecutableActualCall.LocalProcessDefaultLaunchURL()
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'Default OS URL Launch',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -201,7 +201,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'firefox',
         executable_parameter_templates = [ '%url%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -209,7 +209,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'firefox (URL)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -219,7 +219,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'google-chrome',
         executable_parameter_templates = [ '%url%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -227,7 +227,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (URL)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -239,7 +239,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'chrome',
         executable_parameter_templates = [ '%url%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -247,7 +247,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (URL) (Windows)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -257,7 +257,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'open',
         executable_parameter_templates = [ '-a', 'Firefox', '%url%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -265,7 +265,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'firefox (URL) (macOS)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -275,7 +275,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     #
     
-    actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+    actual_call = ClientExecutableActualCall.LocalProcessCall(
         executable_path = 'open',
         executable_parameter_templates = [ '-a', 'Google Chrome', '%url%' ],
         input_parameter_processing_rules = input_parameter_processing_rules
@@ -283,7 +283,7 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     
     actual_call.SetThisIsAPotentiallyLongLivedExternalGuy( True )
     
-    call = ClientExecutableCallables.ClientExecutableCallable(
+    call = ClientExecutableCallableSockets.CallableSocket(
         'chrome (URL) (macOS)',
         pipeline_type = ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL,
         actual_call = actual_call
@@ -294,19 +294,19 @@ def GetDefaultOpenURL() -> list[ ClientExecutableCallables.ClientExecutableCalla
     return callables
     
 
-def GetAllDefaults( filter_by_platform: bool ):
+def GetAllDefaultCallableSockets( filter_by_platform: bool ):
     
-    external_platforms_and_callables = list( GetDefaultOpenExternally() )
-    external_platforms_and_callables.extend( GetDefaultOpenURL() )
+    external_platforms_and_callable_sockets = list( GetDefaultOpenExternally() )
+    external_platforms_and_callable_sockets.extend( GetDefaultOpenURL() )
     
     if filter_by_platform:
         
-        external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables if my_platform ]
+        external_callable_sockets = [ call for ( my_platform, call ) in external_platforms_and_callable_sockets if my_platform ]
         
     else:
         
-        external_callables = [ call for ( my_platform, call ) in external_platforms_and_callables ]
+        external_callable_sockets = [ call for ( my_platform, call ) in external_platforms_and_callable_sockets ]
         
     
-    return external_callables
+    return external_callable_sockets
     

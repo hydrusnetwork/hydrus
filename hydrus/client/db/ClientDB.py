@@ -1231,7 +1231,7 @@ class DB( HydrusDB.HydrusDB ):
         
         executable_manager = ClientExecutableManager.ExecutableManager()
         
-        executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+        executable_manager.SetCallableSockets( ClientExecutableDefaults.GetAllDefaultCallableSockets( True ) )
         
         self.modules_serialisable.SetJSONDump( executable_manager )
         
@@ -8239,7 +8239,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 executable_manager = ClientExecutableManager.ExecutableManager()
                 
-                executable_manager.SetCallables( ClientExecutableDefaults.GetAllDefaults( True ) )
+                executable_manager.SetCallableSockets( ClientExecutableDefaults.GetAllDefaultCallableSockets( True ) )
                 
                 new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
 
@@ -8248,7 +8248,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                calls_to_add = set()
+                callable_sockets_to_add = set()
                 
                 # update open url calls
                 
@@ -8272,7 +8272,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if path is None:
                         
-                        call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
+                        call = executable_manager.GetOSCallableSocket( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL )
                         
                     else:
                         
@@ -8288,7 +8288,7 @@ class DB( HydrusDB.HydrusDB ):
                             continue
                             
                         
-                        calls_to_add.add( call )
+                        callable_sockets_to_add.add( call )
                         
                     
                     web_browser_executable_ids_and_names.append( call.GetIdAndName() )
@@ -8322,13 +8322,13 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if path is None:
                             
-                            call = executable_manager.GetOSCallable( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
+                            callable_socket = executable_manager.GetOSCallableSocket( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE )
                             
                         else:
                             
                             try:
                                 
-                                call = ClientExecutableLegacy.ConvertOldFileCallToExecutableActualCall( path )
+                                callable_socket = ClientExecutableLegacy.ConvertOldFileCallToExecutableActualCall( path )
                                 
                             except Exception as e:
                                 
@@ -8338,10 +8338,10 @@ class DB( HydrusDB.HydrusDB ):
                                 continue
                                 
                             
-                            calls_to_add.add( call )
+                            callable_sockets_to_add.add( callable_socket )
                             
                         
-                        open_externally_executable_ids_and_names.append( call.GetIdAndName() )
+                        open_externally_executable_ids_and_names.append( callable_socket.GetIdAndName() )
                         
                     
                     open_externally_mimes_to_executable_ids_and_names[ mime ] = open_externally_executable_ids_and_names
@@ -8351,20 +8351,20 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                new_callables = list( executable_manager.GetCallables() )
+                new_callable_sockets = list( executable_manager.GetCallableSockets() )
                 
-                existing_names = { c.GetName() for c in new_callables }
+                existing_names = { c.GetName() for c in new_callable_sockets }
                 
-                for call in calls_to_add:
+                for callable_socket in callable_sockets_to_add:
                     
-                    HydrusSerialisable.SetNonDupeName( call, existing_names )
+                    HydrusSerialisable.SetNonDupeName( callable_socket, existing_names )
                     
-                    existing_names.add( call.GetName() )
+                    existing_names.add( callable_socket.GetName() )
                     
-                    new_callables.append( call )
+                    new_callable_sockets.append( callable_socket )
                     
                 
-                executable_manager.SetCallables( new_callables )
+                executable_manager.SetCallableSockets( new_callable_sockets )
                 
                 executable_manager.SetClean()
                 

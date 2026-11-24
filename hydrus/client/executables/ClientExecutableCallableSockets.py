@@ -6,13 +6,13 @@ from hydrus.client.executables import ClientExecutablePipelines
 from hydrus.client.executables import ClientExecutableResponses
 from hydrus.client.parsing import ClientParsing
 
-class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
+class CallableSocket(HydrusSerialisable.SerialisableBaseNamed):
     
-    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE
-    SERIALISABLE_NAME = 'Executable Manager Callable'
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE_SOCKET
+    SERIALISABLE_NAME = 'Executable Manager Callable Socket'
     SERIALISABLE_VERSION = 2
     
-    def __init__( self, name: str, pipeline_type: int | None = None, actual_call: ClientExecutableActualCall.ExecutableActualCall | None = None ):
+    def __init__( self, name: str, pipeline_type: int | None = None, actual_call: ClientExecutableActualCall.ActualCall | None = None ):
         
         super().__init__( name )
         
@@ -23,7 +23,7 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         
         if actual_call is None:
             
-            actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall()
+            actual_call = ClientExecutableActualCall.LocalProcessCall()
             
         
         self._callable_key = HydrusData.GenerateKey()
@@ -147,4 +147,4 @@ class ClientExecutableCallable( HydrusSerialisable.SerialisableBaseNamed ):
         
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE ] = ClientExecutableCallable
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_EXECUTABLE_CALLABLE_SOCKET ] = CallableSocket

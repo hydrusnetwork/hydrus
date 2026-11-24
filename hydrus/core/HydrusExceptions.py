@@ -70,6 +70,8 @@ class ProgramShutdownException( HydrusException ): pass
 
 class ExecutableException( HydrusException ): pass
 class CannotProvideExecutableCallParameters( ExecutableException ): pass
+class CannotProvideExecutableCallParametersRecoverable( ExecutableException ): pass
+class CannotProvideExecutableCallParametersNonRecoverable( ExecutableException ): pass
 class SubprocessTimedOut( ExecutableException ): pass
 class BadReturnCodeException( ExecutableException ): pass
 

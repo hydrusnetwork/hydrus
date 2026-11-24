@@ -2013,7 +2013,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallableSocket().GetIdAndName() ]
                 
             except Exception as e:
                 
@@ -2044,7 +2044,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                fallback = [ CG.client_controller.executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchURLCallableSocket().GetIdAndName() ]
                 
             except Exception as e:
                 
@@ -2066,7 +2066,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+                fallback = [ CG.client_controller.executable_manager.GetOSLaunchFileCallableSocket().GetIdAndName() ]
                 
             except Exception as e:
                 

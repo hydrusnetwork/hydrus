@@ -17,7 +17,7 @@ from hydrus.core.files import HydrusFileTypeDetermination
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.executables import ClientExecutableActualCall
-from hydrus.client.executables import ClientExecutableCallables
+from hydrus.client.executables import ClientExecutableCallableSockets
 from hydrus.client.executables import ClientExecutableDefaults
 from hydrus.client.executables import ClientExecutableManager
 from hydrus.client.executables import ClientExecutablePipelines
@@ -91,7 +91,7 @@ class DefaultLaunchFileWidget( QW.QWidget ):
     
     def GetValue( self ):
         
-        return ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile()
+        return ClientExecutableActualCall.LocalProcessDefaultLaunchFile()
         
     
     def SetPipelineType( self, pipeline_type: int ):
@@ -99,7 +99,7 @@ class DefaultLaunchFileWidget( QW.QWidget ):
         pass
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile, pipeline_type: int ):
+    def SetValue( self, actual_call: ClientExecutableActualCall.LocalProcessDefaultLaunchFile, pipeline_type: int ):
         
         pass
         
@@ -137,7 +137,7 @@ class DefaultLaunchURLWidget( QW.QWidget ):
     
     def GetValue( self ):
         
-        return ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL()
+        return ClientExecutableActualCall.LocalProcessDefaultLaunchURL()
         
     
     def SetPipelineType( self, pipeline_type: int ):
@@ -145,7 +145,7 @@ class DefaultLaunchURLWidget( QW.QWidget ):
         pass
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL, pipeline_type: int ):
+    def SetValue( self, actual_call: ClientExecutableActualCall.LocalProcessDefaultLaunchURL, pipeline_type: int ):
         
         pass
         
@@ -795,7 +795,7 @@ class EditProcessCallPanel( QW.QWidget ):
         
         input_parameter_processing_rules = self._GetCurrentInputParameterProcessingRules()
         
-        actual_call = ClientExecutableActualCall.ExecutableLocalProcessCall(
+        actual_call = ClientExecutableActualCall.LocalProcessCall(
             executable_path = self._executable_path,
             executable_parameter_templates = self._executable_parameter_templates,
             input_parameter_processing_rules = input_parameter_processing_rules,
@@ -877,7 +877,7 @@ class EditProcessCallPanel( QW.QWidget ):
         self._we_are_initialised = True
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableLocalProcessCall, pipeline_type: int ):
+    def SetValue( self, actual_call: ClientExecutableActualCall.LocalProcessCall, pipeline_type: int ):
         
         self.blockSignals( True )
         
@@ -924,11 +924,11 @@ class EditProcessCallPanel( QW.QWidget ):
         
     
 
-class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
+class EditActualCall( ClientGUICommon.StaticBox ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, actual_call: ClientExecutableActualCall.ExecutableActualCall, pipeline_type: int ):
+    def __init__( self, parent: QW.QWidget, actual_call: ClientExecutableActualCall.ActualCall, pipeline_type: int ):
         
         super().__init__( parent, 'external call' )
         
@@ -936,12 +936,12 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         
         self._call_types_choice = ClientGUICommon.BetterChoice( self )
         
-        self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall )
+        self._call_types_choice.addItem( 'local process call', ClientExecutableActualCall.LocalProcessCall )
         
         self._call_types_to_windows = {
-            ClientExecutableActualCall.ExecutableLocalProcessCall : EditProcessCallPanel( self ),
-            ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile : DefaultLaunchFileWidget( self ),
-            ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL : DefaultLaunchURLWidget( self ),
+            ClientExecutableActualCall.LocalProcessCall : EditProcessCallPanel( self ),
+            ClientExecutableActualCall.LocalProcessDefaultLaunchFile : DefaultLaunchFileWidget( self ),
+            ClientExecutableActualCall.LocalProcessDefaultLaunchURL : DefaultLaunchURLWidget( self ),
         }
         
         #
@@ -1017,19 +1017,19 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         self._call_types_choice.clear()
         
         labels_and_call_types: list[ tuple[ str, type ] ] = [
-            ( 'local process call', ClientExecutableActualCall.ExecutableLocalProcessCall ),
+            ( 'local process call', ClientExecutableActualCall.LocalProcessCall ),
         ]
         
         if self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE:
             
             labels_and_call_types.append(
-                ( 'default OS launch file call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchFile )
+                ( 'default OS launch file call', ClientExecutableActualCall.LocalProcessDefaultLaunchFile )
             )
             
         elif self._pipeline_type == ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL:
             
             labels_and_call_types.append(
-                ( 'default OS launch URL call', ClientExecutableActualCall.ExecutableLocalProcessDefaultLaunchURL )
+                ( 'default OS launch URL call', ClientExecutableActualCall.LocalProcessDefaultLaunchURL )
             )
             
         
@@ -1045,7 +1045,7 @@ class EditClientExecutableActualCall( ClientGUICommon.StaticBox ):
         self.valueChanged.emit()
         
     
-    def SetValue( self, actual_call: ClientExecutableActualCall.ExecutableActualCall, pipeline_type: int ):
+    def SetValue( self, actual_call: ClientExecutableActualCall.ActualCall, pipeline_type: int ):
         
         self.blockSignals( True )
         
@@ -1135,7 +1135,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         self._last_executable_response: ClientExecutableResponses.ExecutableCallResponse | None = None
         
-        self._executable_callable = ClientExecutableCallables.ClientExecutableCallable( 'test' )
+        self._callable_socket = ClientExecutableCallableSockets.CallableSocket( 'test' )
         
         self._test_availability_button = ClientGUICommon.BetterButton( self, 'test availability!', self._TestAvailability )
         
@@ -1196,7 +1196,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         self._input_param_types_box.Clear()
         
         # don't do a sort here; the one we inherit is actually good
-        required_input_parameter_types = self._executable_callable.GetCall().GetInputParametersUsed()
+        required_input_parameter_types = self._callable_socket.GetCall().GetInputParametersUsed()
         
         for required_input_parameter_type in required_input_parameter_types:
             
@@ -1249,7 +1249,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
         message = f'Testing{HC.UNICODE_ELLIPSIS}'
         
-        actual_call = self._executable_callable.GetCall()
+        actual_call = self._callable_socket.GetCall()
         
         self._results_output_text_box.setPlainText( message )
         self._raw_output_text_box.setPlainText( message )
@@ -1277,7 +1277,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             
             self._last_executable_response = executable_response
             
-            pipeline_type = self._executable_callable.GetPipelineType()
+            pipeline_type = self._callable_socket.GetPipelineType()
             
             response_types = ClientExecutablePipelines.executable_pipeline_types_to_response_types[ pipeline_type ]
             
@@ -1346,7 +1346,7 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
                         results_data_message += '\n\n'
                         raw_data_message += '\n\n'
                         
-                        page_parser = self._executable_callable.GetPageParser()
+                        page_parser = self._callable_socket.GetPageParser()
                         
                         pretty_text = page_parser.ParsePretty( {}, self._last_executable_response.raw_parsable_response )
                         
@@ -1377,9 +1377,9 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         message = f'Testing{HC.UNICODE_ELLIPSIS}'
         
         input_params = self._GetInputParams()
-        actual_call = self._executable_callable.GetCall()
+        actual_call = self._callable_socket.GetCall()
         
-        if isinstance( actual_call, ClientExecutableActualCall.ExecutableLocalProcessCall ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
+        if isinstance( actual_call, ClientExecutableActualCall.LocalProcessCall ) and actual_call.GetThisIsAPotentiallyLongLivedExternalGuy():
             
             message += ' (forcing a 15 second timeout for testing purposes)'
             
@@ -1396,14 +1396,14 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
     
     def _UpdateAvailabilityTestButton( self ):
         
-        self._test_availability_button.setEnabled( self._executable_callable.GetCall().CanTestAvailability() and not self._currently_running_availability_test )
+        self._test_availability_button.setEnabled( self._callable_socket.GetCall().CanTestAvailability() and not self._currently_running_availability_test )
         
     
     def _UpdateCommandPreviewAndClearTestResults( self ):
         
         input_params = self._GetInputParams()
         
-        self._actual_command_preview.setText( self._executable_callable.GetCall().GetCommandPreviewWithInputParams( input_params ) )
+        self._actual_command_preview.setText( self._callable_socket.GetCall().GetCommandPreviewWithInputParams( input_params ) )
         
         self._results_output_text_box.setPlainText( '' )
         self._raw_output_text_box.setPlainText( '' )
@@ -1426,11 +1426,11 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
             
         
     
-    def SetExecutableCallable( self, executable_callable: ClientExecutableCallables.ClientExecutableCallable ):
+    def SetExecutableCallable(self, callable_socket: ClientExecutableCallableSockets.CallableSocket ):
         
-        self._executable_callable = executable_callable
+        self._callable_socket = callable_socket
         
-        actual_call = self._executable_callable.GetCall()
+        actual_call = self._callable_socket.GetCall()
         
         required_input_parameter_types = actual_call.GetInputParametersUsed()
         
@@ -1445,9 +1445,9 @@ class TestCallablePanel( ClientGUICommon.StaticBox ):
         
     
 
-class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
+class EditCallableSocketPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, call: ClientExecutableCallables.ClientExecutableCallable ):
+    def __init__( self, parent: QW.QWidget, call: ClientExecutableCallableSockets.CallableSocket ):
         
         super().__init__( parent )
         
@@ -1476,7 +1476,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         self._pipeline_description = ClientGUICommon.BetterStaticText( self._pipeline_panel )
         self._pipeline_description.setWordWrap( True )
         
-        self._actual_call_panel = EditClientExecutableActualCall( self, call.GetCall(), call.GetPipelineType() )
+        self._actual_call_panel = EditActualCall( self, call.GetCall(), call.GetPipelineType() )
         
         self._parsing_panel_staticbox = ClientGUICommon.StaticBox( self, 'result parsing' )
         
@@ -1620,9 +1620,9 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateTestPanel( self ):
         
-        executable_callable = self.GetValue()
+        callable_socket = self.GetValue()
         
-        self._test_panel.SetExecutableCallable( executable_callable )
+        self._test_panel.SetExecutableCallable( callable_socket )
         
     
     def _UpdateValidity( self ):
@@ -1666,7 +1666,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         pipeline_type = self._pipeline_type.GetValue()
         actual_call = self._actual_call_panel.GetValue()
         
-        call = ClientExecutableCallables.ClientExecutableCallable(
+        call = ClientExecutableCallableSockets.CallableSocket(
             name = name,
             pipeline_type = pipeline_type,
             actual_call = actual_call
@@ -1684,7 +1684,7 @@ class EditClientExecutableCallablePanel( ClientGUIScrolledPanels.EditPanel ):
         return call
         
     
-    def SetValue( self, call: ClientExecutableCallables.ClientExecutableCallable ):
+    def SetValue(self, call: ClientExecutableCallableSockets.CallableSocket ):
         
         self._name.setText( call.GetName() )
         self._pipeline_type.SetValue( call.GetPipelineType() )
@@ -1750,18 +1750,18 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         external_calls_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( external_calls_panel )
         
-        model: ClientGUIListCtrl.HydrusListItemModel[ ClientExecutableCallables.ClientExecutableCallable ] = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertCallableToDisplayTuple, self._ConvertCallableToSortTuple )
+        model: ClientGUIListCtrl.HydrusListItemModel[ ClientExecutableCallableSockets.CallableSocket ] = ClientGUIListCtrl.HydrusListItemModel(self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertCallableSocketToDisplayTuple, self._ConvertCallableSocketToSortTuple)
         
-        self._external_calls = ClientGUIListCtrl.BetterListCtrlTreeView( external_calls_list_panel, 12, model, activation_callback = self._EditCallable, use_simple_delete = True )
+        self._callable_sockets = ClientGUIListCtrl.BetterListCtrlTreeView( external_calls_list_panel, 12, model, activation_callback = self._EditCallableSocket, use_simple_delete = True )
         
-        external_calls_list_panel.SetListCtrl( self._external_calls )
+        external_calls_list_panel.SetListCtrl( self._callable_sockets )
         
-        external_calls_list_panel.AddButton( 'add', self._AddCallableBrandNew )
-        external_calls_list_panel.AddButton( 'edit', self._EditCallable, enabled_only_on_single_selection = True )
+        external_calls_list_panel.AddButton( 'add', self._AddCallableSocketBrandNew )
+        external_calls_list_panel.AddButton( 'edit', self._EditCallableSocket, enabled_only_on_single_selection = True )
         external_calls_list_panel.AddDeleteButton()
         external_calls_list_panel.AddSeparator()
-        external_calls_list_panel.AddImportExportButtons( ( ClientExecutableCallables.ClientExecutableCallable, ), tuple(), self._AddCallableViaImport )
-        external_calls_list_panel.AddDefaultsButton( self._GetDefaultCallables, self._AddCallableFullyFormed )
+        external_calls_list_panel.AddImportExportButtons(( ClientExecutableCallableSockets.CallableSocket, ), tuple(), self._AddCallableSocketViaImport)
+        external_calls_list_panel.AddDefaultsButton( self._GetDefaultCallableSockets, self._AddCallableSocketFullyFormed )
         
         #
         
@@ -1775,14 +1775,14 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         executable_manager = CG.client_controller.executable_manager
         
         # these initialise them if they are currently missing
-        executable_manager.GetOSLaunchURLCallable()
-        executable_manager.GetOSLaunchFileCallable()
+        executable_manager.GetOSLaunchURLCallableSocket()
+        executable_manager.GetOSLaunchFileCallableSocket()
         
-        callables = CG.client_controller.executable_manager.GetCallables()
+        callable_sockets = CG.client_controller.executable_manager.GetCallableSockets()
         
-        self._external_calls.SetData( callables )
+        self._callable_sockets.SetData( callable_sockets )
         
-        self._external_calls.Sort()
+        self._callable_sockets.Sort()
         
         #
         
@@ -1813,35 +1813,35 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self.setLayout( vbox )
         
     
-    def _AddCallableBrandNew( self ):
+    def _AddCallableSocketBrandNew( self ):
         
-        call = ClientExecutableCallables.ClientExecutableCallable( 'new call' )
+        callable_socket = ClientExecutableCallableSockets.CallableSocket( 'new call' )
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit external program call' ) as dlg:
             
-            panel = EditClientExecutableCallablePanel( dlg, call )
+            panel = EditCallableSocketPanel( dlg, callable_socket )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
-                edited_call = panel.GetValue()
+                edited_callable_socket = panel.GetValue()
                 
-                self._AddCallableFullyFormed( edited_call )
+                self._AddCallableSocketFullyFormed( edited_callable_socket )
                 
             
         
     
-    def _AddCallableFullyFormed( self, call: ClientExecutableCallables.ClientExecutableCallable ):
+    def _AddCallableSocketFullyFormed(self, call: ClientExecutableCallableSockets.CallableSocket ):
         
         HydrusSerialisable.SetNonDupeName( call, self._GetExistingNames() )
         
         call.GenerateNewCallableKey()
         
-        self._external_calls.AddData( call )
+        self._callable_sockets.AddData( call )
         
     
-    def _AddCallableViaImport( self, call: ClientExecutableCallables.ClientExecutableCallable ):
+    def _AddCallableSocketViaImport(self, call: ClientExecutableCallableSockets.CallableSocket ):
         
         try:
             
@@ -1859,14 +1859,14 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
                 
             
         
-        self._AddCallableFullyFormed( call )
+        self._AddCallableSocketFullyFormed( call )
         
     
-    def _ConvertCallableToDisplayTuple( self, call: ClientExecutableCallables.ClientExecutableCallable ):
+    def _ConvertCallableSocketToDisplayTuple(self, callable_socket: ClientExecutableCallableSockets.CallableSocket ):
         
-        name = call.GetName()
-        pipeline_type = call.GetPipelineType()
-        desc = call.GetCall().GetCommandDescription()
+        name = callable_socket.GetName()
+        pipeline_type = callable_socket.GetPipelineType()
+        desc = callable_socket.GetCall().GetCommandDescription()
         
         pretty_pipeline_type = ClientExecutablePipelines.executable_pipeline_types_to_strs[ pipeline_type ]
         
@@ -1875,40 +1875,40 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         return display_tuple
         
     
-    _ConvertCallableToSortTuple = _ConvertCallableToDisplayTuple
+    _ConvertCallableSocketToSortTuple = _ConvertCallableSocketToDisplayTuple
     
-    def _EditCallable( self ):
+    def _EditCallableSocket( self ):
         
-        data = self._external_calls.GetTopSelectedData()
+        data = self._callable_sockets.GetTopSelectedData()
         
         if data is None:
             
             return
             
         
-        call: ClientExecutableCallables.ClientExecutableCallable = data
+        callable_socket: ClientExecutableCallableSockets.CallableSocket = data
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit external program call' ) as dlg:
             
-            panel = EditClientExecutableCallablePanel( dlg, call )
+            panel = EditCallableSocketPanel( dlg, callable_socket )
             
             dlg.SetPanel( panel )
             
             if dlg.exec() == QW.QDialog.DialogCode.Accepted:
                 
                 existing_names = self._GetExistingNames()
-                existing_names.discard( call.GetName() )
+                existing_names.discard( callable_socket.GetName() )
                 
                 edited_call = panel.GetValue()
                 
                 HydrusSerialisable.SetNonDupeName( edited_call, existing_names )
                 
-                self._external_calls.ReplaceData( call, edited_call, sort_and_scroll = True )
+                self._callable_sockets.ReplaceData( callable_socket, edited_call, sort_and_scroll = True )
                 
             
         
     
-    def _GetDefaultCallables( self ) -> list[ ClientExecutableCallables.ClientExecutableCallable ]:
+    def _GetDefaultCallableSockets( self ) -> list[ ClientExecutableCallableSockets.CallableSocket ]:
         
         message = f'Want to see the calls just for your platform ({HC.NICE_PLATFORM_STRING}) or everything?'
         
@@ -1916,14 +1916,14 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         filter_by_platform = result == QW.QDialog.DialogCode.Accepted
         
-        external_callables = ClientExecutableDefaults.GetAllDefaults( filter_by_platform )
+        external_callables = ClientExecutableDefaults.GetAllDefaultCallableSockets( filter_by_platform )
         
         return external_callables
         
     
     def _GetExistingNames( self ) -> set[ str ]:
         
-        calls = self._external_calls.GetData()
+        calls = self._callable_sockets.GetData()
         
         names = { call.GetName() for call in calls }
         
@@ -1932,11 +1932,11 @@ class ExternalProgramsPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
     
     def GetExecutableManager( self ):
         
-        callables = self._external_calls.GetData()
+        callable_sockets = self._callable_sockets.GetData()
         
         executable_manager = ClientExecutableManager.ExecutableManager()
         
-        executable_manager.SetCallables( callables )
+        executable_manager.SetCallableSockets( callable_sockets )
         
         return executable_manager
         

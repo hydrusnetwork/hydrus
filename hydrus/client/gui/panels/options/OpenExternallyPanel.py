@@ -367,7 +367,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if len( launch_url_executable_ids_and_names ) == 0:
             
-            launch_url_executable_ids_and_names = [ executable_manager.GetOSLaunchURLCallable().GetIdAndName() ]
+            launch_url_executable_ids_and_names = [ executable_manager.GetOSLaunchURLCallableSocket().GetIdAndName() ]
             
         
         launch_url_executable_ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_URL, launch_url_executable_ids_and_names )
@@ -380,7 +380,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
             
             if len( ids_and_names ) == 0:
                 
-                ids_and_names = [ executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+                ids_and_names = [ executable_manager.GetOSLaunchFileCallableSocket().GetIdAndName() ]
                 
             
             ids_and_names = executable_manager.WashIdsAndNames( ClientExecutablePipelines.EXECUTABLE_PIPELINE_TYPE_SEND_SINGLE_FILE, ids_and_names )
@@ -390,7 +390,7 @@ class OpenExternallyPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         
         if HC.GENERAL_FILE not in mimes_to_launch_file_executable_ids_and_names:
             
-            mimes_to_launch_file_executable_ids_and_names[ HC.GENERAL_FILE ] = [ executable_manager.GetOSLaunchFileCallable().GetIdAndName() ]
+            mimes_to_launch_file_executable_ids_and_names[ HC.GENERAL_FILE ] = [ executable_manager.GetOSLaunchFileCallableSocket().GetIdAndName() ]
             
         
         self._new_options.SetMimesToLaunchFileExecutableIdsAndNames( mimes_to_launch_file_executable_ids_and_names )
