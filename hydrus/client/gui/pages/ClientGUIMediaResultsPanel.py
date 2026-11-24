@@ -1332,35 +1332,38 @@ class MediaResultsPanel( CAC.ApplicationCommandProcessorMixin, ClientMediaList.M
             
             try:
                 
+                good_candidate = None
+                
                 new_candidate_for_previously_focused_media_when_nothing_now = self._previously_focused_media_when_nothing_now
                 
                 index = self._sorted_media.index( new_candidate_for_previously_focused_media_when_nothing_now )
                 
-                while index < len( self._sorted_media ) - 1 and ( new_candidate_for_previously_focused_media_when_nothing_now in singleton_media or new_candidate_for_previously_focused_media_when_nothing_now in collected_media ):
+                for m in self._sorted_media[ index : ]:
                     
-                    index += 1
-                    
-                    new_candidate_for_previously_focused_media_when_nothing_now = self._sorted_media[ index ]
+                    if m not in singleton_media and m not in collected_media:
+                        
+                        good_candidate = m
+                        
+                        break
+                        
                     
                 
-                if index == len( self._sorted_media ) - 1:
+                if good_candidate is None:
                     
                     # ok going forward produced no result. selection probably until the end of the thumbs. let's try and step back
                     
-                    new_candidate_for_previously_focused_media_when_nothing_now = self._previously_focused_media_when_nothing_now
-                    
-                    while index > 0 and ( new_candidate_for_previously_focused_media_when_nothing_now in singleton_media or new_candidate_for_previously_focused_media_when_nothing_now in collected_media ):
+                    for m in reversed( self._sorted_media[ : index ] ):
                         
-                        index -= 1
-                        
-                        new_candidate_for_previously_focused_media_when_nothing_now = self._sorted_media[ index ]
+                        if m not in singleton_media and m not in collected_media:
+                            
+                            good_candidate = m
+                            
+                            break
+                            
                         
                     
                 
-                if 0 <= index <= len( self._sorted_media ) - 1:
-                    
-                    self._previously_focused_media_when_nothing_now = new_candidate_for_previously_focused_media_when_nothing_now
-                    
+                self._previously_focused_media_when_nothing_now = good_candidate
                 
             except:
                 

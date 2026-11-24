@@ -331,6 +331,12 @@ class MediaResultsPanelThumbnails( ClientGUIMediaResultsPanel.MediaResultsPanel 
             media_to_use = self._sorted_media[ 0 ]
             
         
+        # failsafe
+        if media_to_use not in self._sorted_media:
+            
+            media_to_use = None
+            
+        
         return ( media_to_use, you_should_just_select_this_guy )
         
     
