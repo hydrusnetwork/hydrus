@@ -121,7 +121,10 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                 
                 num_pairs_in_total_search_space = len( self.modules_files_duplicates_updates.GetPotentialDuplicateIdPairsAndDistances( ClientLocation.LocationContext.STATICCreateSimple( ClientConstants.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ) )
                 
-                temp_table_insert_of_popblock_is_ok = num_pairs_we_will_have_to_insert_for_temp_table_business < INSERTING_THIS_MANY_ROWS_IS_ACCEPTABLE or num_pairs_we_will_have_to_insert_for_temp_table_business < num_pairs_in_total_search_space * THRESHOLD_WHERE_MASTER_TABLE_IS_TOO_BIG_TO_SAVE_TIME
+                absolute_size_is_ok = num_pairs_we_will_have_to_insert_for_temp_table_business < INSERTING_THIS_MANY_ROWS_IS_ACCEPTABLE
+                relative_size_means_we_are_leery_of_searching_master = num_pairs_we_will_have_to_insert_for_temp_table_business < num_pairs_in_total_search_space * THRESHOLD_WHERE_MASTER_TABLE_IS_TOO_BIG_TO_SAVE_TIME
+                
+                temp_table_insert_of_popblock_is_ok = absolute_size_is_ok or relative_size_means_we_are_leery_of_searching_master
                 
             
         
