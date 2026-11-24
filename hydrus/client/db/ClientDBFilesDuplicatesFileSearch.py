@@ -6,6 +6,8 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientConstants
+from hydrus.client import ClientLocation
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesDuplicatesStorage
 from hydrus.client.db import ClientDBFilesDuplicatesUpdates
@@ -80,6 +82,7 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
         # - file queries that prep the join are limited to the media_ids' king_hash_ids
         
         do_file_based_search = False
+        temp_table_insert_of_popblock_is_ok = False
         
         if potential_duplicate_pairs_fragmentary_search.DoingFileBasedSearchIsOK() and potential_duplicate_pairs_fragmentary_search.ThisAppearsToHaveAHitRateLowerThan( 0.01 ):
             
@@ -99,16 +102,26 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
             # this still equals ~500x, so great stuff
             #
             # there are still numerous problems with this since we aren't capturing overhead costs per job and edge case file results will have very large result counts and all that (one dude had 29s per file hit, let's go), but there we go
+            # 2026-11: we are updating to handle the situation of '6.1m pairs in PopRemaining, only ~5 results', which takes 61 seconds at 100k/s inserts to set up the search
+            # if remaining rows is >3% of total search space, we'll just do the search mate and intersect with the rows we already have in memory
             how_many_potential_rows_of_work_to_do_one_file_hit = 500
+            INSERTING_THIS_MANY_ROWS_IS_ACCEPTABLE = 200000
+            THRESHOLD_WHERE_MASTER_TABLE_IS_TOO_BIG_TO_SAVE_TIME = 0.1 # guesstimate. maybe we can incorporate the current 95% confident hit-rate??
             
             if do_report_mode:
                 
-                HydrusData.Print( f'This does appear to be a low hit-rate search, and the magic weights are: {estimated_num_file_search_based_hits_total * how_many_potential_rows_of_work_to_do_one_file_hit} versus {estimated_num_potential_based_rows_remaining}')
+                HydrusData.Print( f'This does appear to be a low hit-rate search, and the magic weights are: {estimated_num_file_search_based_hits_total * how_many_potential_rows_of_work_to_do_one_file_hit} versus {estimated_num_potential_based_rows_remaining}' )
                 
             
             if estimated_num_file_search_based_hits_total * how_many_potential_rows_of_work_to_do_one_file_hit < estimated_num_potential_based_rows_remaining:
                 
                 do_file_based_search = True
+                
+                num_pairs_we_will_have_to_insert_for_temp_table_business = potential_duplicate_pairs_fragmentary_search.NumPairsStillToSearch()
+                
+                num_pairs_in_total_search_space = len( self.modules_files_duplicates_updates.GetPotentialDuplicateIdPairsAndDistances( ClientLocation.LocationContext.STATICCreateSimple( ClientConstants.COMBINED_LOCAL_FILE_DOMAINS_SERVICE_KEY ) ) )
+                
+                temp_table_insert_of_popblock_is_ok = num_pairs_we_will_have_to_insert_for_temp_table_business < INSERTING_THIS_MANY_ROWS_IS_ACCEPTABLE or num_pairs_we_will_have_to_insert_for_temp_table_business < num_pairs_in_total_search_space * THRESHOLD_WHERE_MASTER_TABLE_IS_TOO_BIG_TO_SAVE_TIME
                 
             
         
@@ -200,51 +213,74 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                         
                         relevant_pairs_and_distances = potential_duplicate_pairs_fragmentary_search.PopRemaining()
                         
-                        with self._MakeTemporaryIntegerTable( relevant_pairs_and_distances, ( 'smaller_media_id', 'larger_media_id', 'distance' ) ) as temp_media_ids_table_name_for_culling:
+                        if dupe_search_type != ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES and ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
                             
-                            self._Execute( f'ANALYZE {temp_media_ids_table_name_for_culling};')
+                            # I presume this situation will rarely happen, but we'll be good and cover it
+                            # candidates for it happening:
+                            # the user is searching distance 2 on everything when that is 99.8% cleared
                             
-                            if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                            self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_media_ids_table_name} ( smaller_media_id, larger_media_id, distance ) VALUES ( ?, ?, ? );', relevant_pairs_and_distances )
+                            
+                        else:
+                            
+                            # ok, are we going to insert this whack of a search domain or just filter by it afterwards?
+                            if temp_table_insert_of_popblock_is_ok:
                                 
-                                results_1 = self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
-                                results_2 = self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
-                                
-                                if len( results_1 ) < len( results_2 ):
-                                    
-                                    ( first_table, second_table ) = ( temp_table_name_1, temp_table_name_2 )
-                                    
-                                else:
-                                    
-                                    ( first_table, second_table ) = ( temp_table_name_2, temp_table_name_1 )
-                                    
-                                
-                                self._Execute( f'ANALYZE {temp_table_name_1};')
-                                self._Execute( f'ANALYZE {temp_table_name_2};')
-                                
-                                table_join_1 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
-                                table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id ) '
-                                table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id ) '
-                                table_join_1 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
-                                
-                                table_join_2 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
-                                table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id ) '
-                                table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id ) '
-                                table_join_2 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
-                                
-                                select_statements = [
-                                    f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join_1}',
-                                    f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join_2}'
-                                ]
+                                stuff_to_insert = relevant_pairs_and_distances
+                                use_this_table_instead = None
+                                rows_to_filter_on = None
                                 
                             else:
                                 
-                                if ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ) and db_location_context.SingleTableIsFast():
+                                stuff_to_insert = []
+                                use_this_table_instead = 'potential_duplicate_pairs'
+                                rows_to_filter_on = set( relevant_pairs_and_distances )
+                                
+                            
+                            with self._MakeTemporaryIntegerTable( stuff_to_insert, ( 'smaller_media_id', 'larger_media_id', 'distance' ) ) as temp_media_ids_table_name_for_culling:
+                                
+                                if use_this_table_instead is None:
                                     
-                                    # I presume this situation will never happen since what system:everything would deliver a low hitrate, but we'll be good and cover it
-                                    # I think the user who has five media groups, each of 500 members (low king incidence), with some similar to each other, might hit this
-                                    # or a guy with 99999990 webms and 10 images I guess. we'll see if that becomes a problem
+                                    self._Execute( f'ANALYZE {temp_media_ids_table_name_for_culling};')
                                     
-                                    select_statements = [ f'SELECT smaller_media_id, larger_media_id, distance FROM {temp_media_ids_table_name_for_culling}' ]
+                                    table_of_search_rows = temp_media_ids_table_name_for_culling
+                                    
+                                else:
+                                    
+                                    table_of_search_rows = use_this_table_instead
+                                    
+                                
+                                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                                    
+                                    results_1 = self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
+                                    results_2 = self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
+                                    
+                                    if len( results_1 ) < len( results_2 ):
+                                        
+                                        ( first_table, second_table ) = ( temp_table_name_1, temp_table_name_2 )
+                                        
+                                    else:
+                                        
+                                        ( first_table, second_table ) = ( temp_table_name_2, temp_table_name_1 )
+                                        
+                                    
+                                    self._Execute( f'ANALYZE {temp_table_name_1};')
+                                    self._Execute( f'ANALYZE {temp_table_name_2};')
+                                    
+                                    table_join_1 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
+                                    table_join_1 += f'CROSS JOIN {table_of_search_rows} ON ( duplicate_files_1.media_id = {table_of_search_rows}.smaller_media_id ) '
+                                    table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {table_of_search_rows}.larger_media_id = duplicate_files_2.media_id ) '
+                                    table_join_1 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
+                                    
+                                    table_join_2 = f'{first_table} CROSS JOIN duplicate_files AS duplicate_files_1 ON ( {first_table}.hash_id = duplicate_files_1.king_hash_id ) '
+                                    table_join_2 += f'CROSS JOIN {table_of_search_rows} ON ( duplicate_files_1.media_id = {table_of_search_rows}.larger_media_id ) '
+                                    table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {table_of_search_rows}.smaller_media_id = duplicate_files_2.media_id ) '
+                                    table_join_2 += f'CROSS JOIN {second_table} ON ( duplicate_files_2.king_hash_id = {second_table}.hash_id )'
+                                    
+                                    select_statements = [
+                                        f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join_1}',
+                                        f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join_2}'
+                                    ]
                                     
                                 else:
                                     
@@ -255,13 +291,13 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                                     if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                                         
                                         table_join_1 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id ) '
-                                        table_join_1 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id ) '
-                                        table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.larger_media_id = duplicate_files_2.media_id ) '
+                                        table_join_1 += f'CROSS JOIN {table_of_search_rows} ON ( duplicate_files_1.media_id = {table_of_search_rows}.smaller_media_id ) '
+                                        table_join_1 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {table_of_search_rows}.larger_media_id = duplicate_files_2.media_id ) '
                                         table_join_1 += f'CROSS JOIN {temp_table_name_1} AS file_results_2 ON ( duplicate_files_2.king_hash_id = file_results_2.hash_id )'
                                         
                                         table_join_2 = f'{temp_table_name_1} as file_results_1 CROSS JOIN duplicate_files AS duplicate_files_1 ON ( file_results_1.hash_id = duplicate_files_1.king_hash_id ) '
-                                        table_join_2 += f'CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files_1.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id ) '
-                                        table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {temp_media_ids_table_name_for_culling}.smaller_media_id = duplicate_files_2.media_id ) '
+                                        table_join_2 += f'CROSS JOIN {table_of_search_rows} ON ( duplicate_files_1.media_id = {table_of_search_rows}.larger_media_id ) '
+                                        table_join_2 += f'CROSS JOIN duplicate_files AS duplicate_files_2 ON ( {table_of_search_rows}.smaller_media_id = duplicate_files_2.media_id ) '
                                         table_join_2 += f'CROSS JOIN {temp_table_name_1} AS file_results_2 ON ( duplicate_files_2.king_hash_id = file_results_2.hash_id )'
                                         
                                         select_statements = [
@@ -271,16 +307,25 @@ class ClientDBFilesDuplicatesFileSearch( ClientDBModule.ClientDBModule ):
                                         
                                     else:
                                         
-                                        table_join = f'{temp_table_name_1} CROSS JOIN duplicate_files ON ( {temp_table_name_1}.hash_id = duplicate_files.king_hash_id ) CROSS JOIN {temp_media_ids_table_name_for_culling} ON ( duplicate_files.media_id = {temp_media_ids_table_name_for_culling}.smaller_media_id OR duplicate_files.media_id = {temp_media_ids_table_name_for_culling}.larger_media_id )'
+                                        table_join = f'{temp_table_name_1} CROSS JOIN duplicate_files ON ( {temp_table_name_1}.hash_id = duplicate_files.king_hash_id ) CROSS JOIN {table_of_search_rows} ON ( duplicate_files.media_id = {table_of_search_rows}.smaller_media_id OR duplicate_files.media_id = {table_of_search_rows}.larger_media_id )'
                                         
                                         select_statements = [ f'SELECT smaller_media_id, larger_media_id, distance FROM {table_join}' ]
                                         
                                     
                                 
-                            
-                            for select_statement in select_statements:
-                                
-                                self._Execute( f'INSERT OR IGNORE INTO {temp_media_ids_table_name} ( smaller_media_id, larger_media_id, distance ) {select_statement};' )
+                                for select_statement in select_statements:
+                                    
+                                    if rows_to_filter_on is None:
+                                        
+                                        self._Execute( f'INSERT OR IGNORE INTO {temp_media_ids_table_name} ( smaller_media_id, larger_media_id, distance ) {select_statement};' )
+                                        
+                                    else:
+                                        
+                                        good_rows = [ row for row in self._Execute( f'{select_statement};' ) if row in rows_to_filter_on ]
+                                        
+                                        self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_media_ids_table_name} ( smaller_media_id, larger_media_id, distance ) VALUES ( ?, ?, ? );', good_rows )
+                                        
+                                    
                                 
                             
                         
