@@ -171,9 +171,9 @@ def AppendMenuItem(
     menu_callable: collections.abc.Callable[ P, typing.Any ],
     *args: P.args,
     **kwargs: P.kwargs
-):
+) -> QW.QAction:
     
-    AppendMenuItemRole(
+    return AppendMenuItemRole(
         menu,
         label,
         description,
@@ -192,7 +192,7 @@ def AppendMenuItemRole(
     menu_callable: collections.abc.Callable[ P, typing.Any ],
     *args: P.args,
     **kwargs: P.kwargs
-):
+) -> QW.QAction:
     
     menu_item = QW.QAction( menu )
     
@@ -219,7 +219,7 @@ def AppendMenuLabel(
     copy_text: str = '',
     no_copy: bool = False,
     make_it_bold: bool = False
-):
+) -> QW.QAction:
     
     if no_copy:
         
@@ -357,7 +357,6 @@ def DestroyMenu( menu: QW.QMenu | None ):
         
     
 
-
 class StatusBarRedirectFilter( QC.QObject ):
     
     def eventFilter( self, watched, event ):
@@ -397,9 +396,9 @@ def GetEventCallable(
     menu_callable: collections.abc.Callable[ P, typing.Any ],
     *args: P.args,
     **kwargs: P.kwargs
-):
+) -> collections.abc.Callable[ [ bool ], None ]:
     
-    def event_callable( checked_state ):
+    def event_callable( checked_state: bool ):
         
         if HydrusProfiling.IsProfileMode( 'ui' ):
             
