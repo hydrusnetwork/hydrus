@@ -1691,11 +1691,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     cookie.discard = True
                     
                 
-                session = self._session_manager.GetSessionForDomain( cookie.domain )
-                
-                ClientNetworkingSessions.AddCookieToSessionActualCookie( session, cookie )
-                
-                self._session_manager.SetSessionDirtyForDomain( cookie.domain )
+                self._SetActualCookie( cookie )
                 
                 num_added += 1
                 
@@ -1763,7 +1759,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     expires = None
                     
                 
-                session = self._session_manager.GetSessionForDomain( domain )
+                session = self._session_manager.GetSessionForDomain( domain, intending_to_give_it_work_or_change_a_cookie = True )
                 
                 ClientNetworkingSessions.AddCookieToSession( session, name, value, domain, path, expires )
                 
@@ -1839,6 +1835,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._session = self._session_manager.GetSession( self._network_context )
         
         self._description = ClientGUICommon.BetterStaticText( self, network_context.ToString() )
+        self._last_touched_label = ClientGUICommon.BetterStaticText( self, '' )
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -1877,6 +1874,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._description, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._last_touched_label, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -1979,17 +1977,22 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 path = cookie.path
                 name = cookie.name
                 
-                requests_cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( self._session )
-                
-                requests_cookies.clear( domain = domain, path = path, name = name )
-                
-                ClientNetworkingSessions.EnsureSessionCookiesAreSynced( self._session, requests_cookies )
-                
-                self._session_manager.SetSessionDirty( self._network_context )
+                self._DeleteCookie( domain, path, name )
                 
             
             self._Update()
             
+        
+    
+    def _DeleteCookie( self, domain, path, name ):
+        
+        requests_cookies = ClientNetworkingSessions.GetRequestsSessionCookieJar( self._session )
+        
+        requests_cookies.clear( domain = domain, path = path, name = name )
+        
+        ClientNetworkingSessions.EnsureSessionCookiesAreSynced( self._session, requests_cookies )
+        
+        self._session_manager.SetSessionDirty( self._network_context )
         
     
     def _Edit( self ):
@@ -2009,6 +2012,8 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.DialogCode.Accepted:
+                    
+                    self._DeleteCookie( domain, path, name )
                     
                     ( name, value, domain, path, expires ) = panel.GetValue()
                     
@@ -2076,17 +2081,11 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 return
                 
             
+            self._session_manager.GetSession( self._network_context, intending_to_give_it_work_or_change_a_cookie = True )
+            
             for cookie in cj:
                 
-                if cookie.expires == 0:
-                    
-                    cookie.expires = None
-                    cookie.discard = True
-                    
-                
-                ClientNetworkingSessions.AddCookieToSessionActualCookie( self._session, cookie )
-                
-                self._session_manager.SetSessionDirty( self._network_context )
+                self._SetActualCookie( cookie )
                 
                 num_added += 1
                 
@@ -2213,11 +2212,26 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _SetActualCookie( self, cookie: http.cookiejar.Cookie ):
+        
+        if cookie.expires == 0:
+            
+            cookie.expires = None
+            cookie.discard = True
+            
+        
+        session = self._session_manager.GetSessionForDomain( cookie.domain, intending_to_give_it_work_or_change_a_cookie = True )
+        
+        ClientNetworkingSessions.AddCookieToSessionActualCookie( session, cookie )
+        
+        self._session_manager.SetSessionDirtyForDomain( cookie.domain )
+        
+    
     def _SetCookie( self, name, value, domain, path, expires ):
         
-        ClientNetworkingSessions.AddCookieToSession( self._session, name, value, domain, path, expires )
+        cookie = ClientNetworkingSessions.CreateCookie( name, value, domain, path, expires )
         
-        self._session_manager.SetSessionDirty( self._network_context )
+        self._SetActualCookie( cookie )
         
     
     def _Update( self ):
@@ -2227,5 +2241,16 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         cookies = list( ClientNetworkingSessions.GetRequestsSessionCookieJar( self._session ) )
         
         self._listctrl.SetData( cookies )
+        
+        last_touched_time = self._session_manager.GetSessionLastTouchedTime( self._network_context )
+        
+        if last_touched_time == 0:
+            
+            self._last_touched_label.setText( 'This session appears to have never been used before.' )
+            
+        else:
+            
+            self._last_touched_label.setText( f'This session was last used/modified {HydrusTime.TimestampToPrettyTimeDelta( last_touched_time )}' ) 
+            
         
     

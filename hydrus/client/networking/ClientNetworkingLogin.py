@@ -1659,7 +1659,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
         test_result_body = None
         downloaded_text = 'Did not download data.'
         new_temp_variables = {}
-        original_cookie_strings = session_to_cookie_strings( engine.session_manager.GetSessionForDomain( domain ) )
+        original_cookie_strings = session_to_cookie_strings( engine.session_manager.GetSessionForDomain( domain, intending_to_give_it_work_or_change_a_cookie = True ) )
         test_script_result = 'Did not start.'
         
         try:

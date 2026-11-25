@@ -787,7 +787,7 @@ class NetworkJob( object ):
             snc = self._session_network_context
             
         
-        session = self.engine.session_manager.GetSession( snc )
+        session = self.engine.session_manager.GetSession( snc, intending_to_give_it_work_or_change_a_cookie = True )
         
         ClientNetworkingSessions.CleanseHeadersForSession( session, headers, self.engine )
         

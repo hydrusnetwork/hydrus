@@ -70,7 +70,7 @@ class ConnectionPanel( ClientGUIOptionsPanelBase.OptionsPagePanel ):
         self._max_network_jobs_per_domain = ClientGUICommon.BetterSpinBox( general, min = 1, max = max_network_jobs_per_domain_max )
         
         self._session_cookie_last_touched_timeout_seconds = ClientGUITime.TimeDeltaWidget( general, min = 15 * 60, days = True, hours = True, minutes = True )
-        self._session_cookie_last_touched_timeout_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a particular domain has not been used in this long, any "session" cookies, which means those without a fixed expiry, will be deleted. Hydrus remembers session cookies and the last touch time through a program restart.' ) )
+        self._session_cookie_last_touched_timeout_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a particular domain has not been used or its cookies modified in this long, any "session" cookies, which means those without a fixed expiry, will be deleted. Hydrus remembers session cookies and the last touch time through a program restart.' ) )
         
         self._set_requests_ca_bundle_env = QW.QCheckBox( general )
         self._set_requests_ca_bundle_env.setToolTip( ClientGUIFunctions.WrapToolTip( 'Just testing something here; ignore unless hydev asks you to use it please. Requires restart. Note: this breaks the self-signed certificates of hydrus services.' ) )

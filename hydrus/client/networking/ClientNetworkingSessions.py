@@ -443,6 +443,11 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             
         
     
+    def ClearExpiredCookies( self ):
+        
+        ClearExpiredCookies( self.session, self.last_touched_time )
+        
+    
     def MaintainConnectionPool( self ):
         
         if ClientNetworkingCurlCFFI.SessionIsCurlCFFI( self.session ):
@@ -481,15 +486,6 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
             
         
     
-    def PrepareForNewWork( self ):
-        
-        # this is useful here as 'are we logged in' tracking
-        ClearExpiredCookies( self.session, self.last_touched_time )
-        
-        self.last_touched_time = HydrusTime.GetNow()
-        self.pool_is_cleared = False
-        
-    
     def ReinitialiseSession( self ):
         """
         The server just rewangled the network connection settings on this domain, so we need to regen while preserving gubbins.
@@ -507,6 +503,12 @@ class NetworkSessionManagerSessionContainer( HydrusSerialisable.SerialisableBase
         new_session.proxies = old_session.proxies
         
         self.session = new_session
+        
+    
+    def TouchAndPrepareForNewWork( self ):
+        
+        self.last_touched_time = HydrusTime.GetNow()
+        self.pool_is_cleared = False
         
     
 
@@ -679,7 +681,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSession( self, network_context ):
+    def GetSession( self, network_context, intending_to_give_it_work_or_change_a_cookie = False ):
         
         with self._lock:
             
@@ -692,7 +694,12 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
             session_container = self._network_contexts_to_session_containers[ network_context ]
             
-            session_container.PrepareForNewWork()
+            session_container.ClearExpiredCookies()
+            
+            if intending_to_give_it_work_or_change_a_cookie:
+                
+                session_container.TouchAndPrepareForNewWork()
+                
             
             session = session_container.session
             
@@ -712,11 +719,28 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetSessionForDomain( self, domain ):
+    def GetSessionForDomain( self, domain, intending_to_give_it_work_or_change_a_cookie = False ):
         
         network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = domain )
         
-        return self.GetSession( network_context )
+        return self.GetSession( network_context, intending_to_give_it_work_or_change_a_cookie = intending_to_give_it_work_or_change_a_cookie )
+        
+    
+    def GetSessionLastTouchedTime( self, network_context ):
+        
+        with self._lock:
+            
+            network_context = self._GetSessionNetworkContext( network_context )
+            
+            if network_context not in self._network_contexts_to_session_containers:
+                
+                self._InitialiseSessionContainer( network_context )
+                
+            
+            session_container = self._network_contexts_to_session_containers[ network_context ]
+            
+            return session_container.last_touched_time
+            
         
     
     def HasDirtySessionContainers( self ):
