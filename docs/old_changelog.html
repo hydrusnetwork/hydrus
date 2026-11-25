@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_697"><a href="#version_697">version 697</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>radically improved repository definition re-processing time. after the PTR definitions reprocess last week, I noticed it wasn't running as fast as I expected. content re-process uses some optimisations to handle the exact same situation, and after looking at it, I saw that definitions was not doing the same thing. I've now implemented this, and in my test situation, re-processing definitions went from 50k/s to 400k/s! I am sorry for those who sat through an hour or more slog with the PTR work--should be much nicer in future</li>
+                        <li>fixed system predicate parsing for 'system:has url' in regex and url class modes when the incoming regex or url class name includes uppercase letters. for regex, we'll read any `(?P&lt;name&gt;...)` stuff correctly, and url classes should match regardless of capitalisation (I think url classes actually did work before, but they didn't remember their capitalisation through the parse, so that's more of a display fix). this fixes such predicates sent through the Client API. also added some unit tests for this (issue #2122)</li>
+                        <li>fixed a harmless but not great error popup when you launch the media viewer with a file focused in a particular position (a bunch of categories like 'the first file in the thumbgrid when the n first files in the thumbgrid are selected', I think), delete that file in the media viewer such that it is removed from the original thumbgridview, and then close the media viewer and make a navigation step that relies on the 'previous focus' media. the 'slide this to a new valid position' logic for the 'previous focus' guy was simply bad and not clearing correctly in all cases. fixed now, and there's a guard to nullify similar errors in future (issue #2118)</li>
+                        <li>added a link in the Client API help to `https://github.com/micnorian14/wd-e621-hydrus-tagger`, which is a new and currently maintained fork of this AI tagging project for hydrus. if you use the old branch of this tech, check out this repo and review the updates</li>
+                        <li>same guy has forked and optimised the Hydrus Video Deduplicator, so this is added to the Client API help too: `https://github.com/micnorian14/hydrus-video-deduplicator`. it might get pulled back into the original project, and another user is working hard merging more improvements, so if you use this tool, watch this space</li>
+                        <li><h3>sessions and session cookies</h3></li>
+                        <li>building on the recent session cookie clearing timer, network sessions are now only 'touched' to reset the cookie expiry when we actually do network work on them or change cookies. previously, any object lookup, including to consult for the 'review cookies' UI or stuff like login checks, was doing a touch, leading to this stuff to take longer to time out the more you checked to see if it had timed out yet</li>
+                        <li>the 'review session' UI now says when a session was last used/modified</li>
+                        <li>fixed editing cookies in the 'review cookies' panel when you edit the domain, path, or name (it was not deleting the old cookie correctly)</li>
+                        <li>I renamed 'review session cookies' and similar to 'review cookies'. the word 'session' refers to both the umbrella that holds all the gubbins for a network connection and it is a specific type of ephemeral cookie. it is valid to say a session's session cookies, but that's not helpful, so I'll try and phase out the former term when it is ambiguous</li>
+                        <li><h3>executable manager</h3></li>
+                        <li>the 'send single file' and 'get metadata for a single file' executable types now support md5, sha1, and sha512 hashes as input parameters. if a file is missing this data on a call but is nonetheless local, the error handling schedules an 'other hash' regen and the message to the user says 'try again in a bit'</li>
+                        <li>the executable manager now only sends the required input parameters to a call. previously it would provide all possible params, but it is now more judicious. this saves a file system hit for a path check on file calls that only need the hash, and it allows calls on non-local files when only, say, a hash is needed</li>
+                        <li>missing file paths or file URIs on non-local files have some nicer handling, although I think you'd have to pull a rabbit out of your hat to trigger one of these</li>
+                        <li>fixed the 'file_id' parameter for 'send single file' commands IRL, outside of the options window test environment</li>
+                        <li>fixed an issue where edited local process calls that were not expecting a response were nonetheless defaulting to saving (and then doing nothing with) stdout to a temp file</li>
+                        <li><h3>dupe search</h3></li>
+                        <li>the pair search optimisation that says 'do the rest of the search in one step', often seen in UI as something like '4,000/1,234,567' for a while before the result comes back, now considers how big the '1,234,567' side is. while the old optimisation is still faster than a block-based search, it seems to take about 1 second for each 100k pairs to set up. if the remaining search is larger than 200K and 10% of your total pair count, I now just use the master potential pair table and filter to the in-memory pair set. this will still take a couple seconds, and it may have bad performance in certain situations, but let's see how it goes IRL</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>cleaned up some lazy job status logging for stuff like db table analyze work summaries</li>
+                        <li>cleaned up some of the 'upload pending' job to be cleaner and report nicer</li>
+                        <li>cleaned up some of the executable manager code with tighter type hinting</li>
+                        <li>cleaned up some duplicated code in 'review cookies'</li>
+                        <li>updated mkdocs-material to from `9.7.7` to `9.8.2` for standard security patches</li>
+                        <li>removed the old macOS app build files from static dir and the 'running from app' checks during program init</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_696"><a href="#version_696">version 696</a></h2>
                     <ul>
                         <li><h3>PTR definition problem</h3></li>

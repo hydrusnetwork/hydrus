@@ -831,7 +831,7 @@ class ReviewWhatIsThisObject( ClientGUIScrolledPanels.ReviewPanel ):
         
         text = 'u wot m8, u r \'avin a laugh'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'dillinja', no_label = 'im not starting nothin m8' )
+        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'dillinja', no_label = 'im not start\'in nuffin m8' )
         
         if result != QW.QDialog.DialogCode.Accepted:
             

@@ -7,6 +7,44 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 697](https://github.com/hydrusnetwork/hydrus/releases/tag/v697)
+
+### misc
+
+* radically improved repository definition re-processing time. after the PTR definitions reprocess last week, I noticed it wasn't running as fast as I expected. content re-process uses some optimisations to handle the exact same situation, and after looking at it, I saw that definitions was not doing the same thing. I've now implemented this, and in my test situation, re-processing definitions went from 50k/s to 400k/s! I am sorry for those who sat through an hour or more slog with the PTR work--should be much nicer in future
+* fixed system predicate parsing for 'system:has url' in regex and url class modes when the incoming regex or url class name includes uppercase letters. for regex, we'll read any `(?P<name>...)` stuff correctly, and url classes should match regardless of capitalisation (I think url classes actually did work before, but they didn't remember their capitalisation through the parse, so that's more of a display fix). this fixes such predicates sent through the Client API. also added some unit tests for this (issue #2122)
+* fixed a harmless but not great error popup when you launch the media viewer with a file focused in a particular position (a bunch of categories like 'the first file in the thumbgrid when the n first files in the thumbgrid are selected', I think), delete that file in the media viewer such that it is removed from the original thumbgridview, and then close the media viewer and make a navigation step that relies on the 'previous focus' media. the 'slide this to a new valid position' logic for the 'previous focus' guy was simply bad and not clearing correctly in all cases. fixed now, and there's a guard to nullify similar errors in future (issue #2118)
+* added a link in the Client API help to `https://github.com/micnorian14/wd-e621-hydrus-tagger`, which is a new and currently maintained fork of this AI tagging project for hydrus. if you use the old branch of this tech, check out this repo and review the updates
+* same guy has forked and optimised the Hydrus Video Deduplicator, so this is added to the Client API help too: `https://github.com/micnorian14/hydrus-video-deduplicator`. it might get pulled back into the original project, and another user is working hard merging more improvements, so if you use this tool, watch this space
+
+### sessions and session cookies
+
+* building on the recent session cookie clearing timer, network sessions are now only 'touched' to reset the cookie expiry when we actually do network work on them or change cookies. previously, any object lookup, including to consult for the 'review cookies' UI or stuff like login checks, was doing a touch, leading to this stuff to take longer to time out the more you checked to see if it had timed out yet
+* the 'review session' UI now says when a session was last used/modified
+* fixed editing cookies in the 'review cookies' panel when you edit the domain, path, or name (it was not deleting the old cookie correctly)
+* I renamed 'review session cookies' and similar to 'review cookies'. the word 'session' refers to both the umbrella that holds all the gubbins for a network connection and it is a specific type of ephemeral cookie. it is valid to say a session's session cookies, but that's not helpful, so I'll try and phase out the former term when it is ambiguous
+
+### executable manager
+
+* the 'send single file' and 'get metadata for a single file' executable types now support md5, sha1, and sha512 hashes as input parameters. if a file is missing this data on a call but is nonetheless local, the error handling schedules an 'other hash' regen and the message to the user says 'try again in a bit'
+* the executable manager now only sends the required input parameters to a call. previously it would provide all possible params, but it is now more judicious. this saves a file system hit for a path check on file calls that only need the hash, and it allows calls on non-local files when only, say, a hash is needed
+* missing file paths or file URIs on non-local files have some nicer handling, although I think you'd have to pull a rabbit out of your hat to trigger one of these
+* fixed the 'file_id' parameter for 'send single file' commands IRL, outside of the options window test environment
+* fixed an issue where edited local process calls that were not expecting a response were nonetheless defaulting to saving (and then doing nothing with) stdout to a temp file
+
+### dupe search
+
+* the pair search optimisation that says 'do the rest of the search in one step', often seen in UI as something like '4,000/1,234,567' for a while before the result comes back, now considers how big the '1,234,567' side is. while the old optimisation is still faster than a block-based search, it seems to take about 1 second for each 100k pairs to set up. if the remaining search is larger than 200K and 10% of your total pair count, I now just use the master potential pair table and filter to the in-memory pair set. this will still take a couple seconds, and it may have bad performance in certain situations, but let's see how it goes IRL
+
+### boring stuff
+
+* cleaned up some lazy job status logging for stuff like db table analyze work summaries
+* cleaned up some of the 'upload pending' job to be cleaner and report nicer
+* cleaned up some of the executable manager code with tighter type hinting
+* cleaned up some duplicated code in 'review cookies'
+* updated mkdocs-material to from `9.7.7` to `9.8.2` for standard security patches
+* removed the old macOS app build files from static dir and the 'running from app' checks during program init
+
 ## [Version 696](https://github.com/hydrusnetwork/hydrus/releases/tag/v696)
 
 ### PTR definition problem
@@ -385,54 +423,3 @@ title: Changelog
 * the favourite tags list is now only refreshed across your autocomplete dropdowns if it actually changes on an options ok
 * some custom-colour widgets now only redraw themselves if darkmode actually flips on options ok
 * fixed a mermaid chart in the 'virtual memory in linux' help
-
-## [Version 687](https://github.com/hydrusnetwork/hydrus/releases/tag/v687)
-
-### misc
-
-* the popup toaster is now very anti-taking-focus. if you navigating the thumbs via keyboard while popups bounce around doing their thing, particularly subs, they should now be less likely to steal focus from what you were doing. even clicking buttons shouldn't do it. this is mostly an experiment, so let me know how it works out
-* updated `mkdocs-material` from `9.7.1` to `9.7.7` due to a dependbot alert about an XSS issue with the search box
-
-### simpler menubar
-
-* in an effort to make the main gui's top-level menubar menus thinner and easier to mouse through, a machete has been applied. long labels are reworked or banished, 'manage x...' is now generally just 'x...', and some 'x and y' are now 'x/y', and some big weird things are pushed down to a submenu. Some tooltips are altered to help. I apologise for the jolt to muscle memory here, but I've been meaning to do this for ages and I'm trying to pack a bunch into one bigger frustration than continually reworking it in dribs and drabs
-* one thing I'm not totally happy with is the 'pending' menu. putting the count of pending stuff at the top of the submenu keeps it tucked out of the way, but if you find you are clicking that and not 'commit' two weeks from now, I'll need to re-do it
-
-### menubar boring details
-
-* under the 'file' menu, I clipped the labels a bit
-* the 'undo' menu is fine
-* under the 'pages' menu, I pushed the page count and weight measure to a 'weight' flyout submenu, the 'sidebar and preview panels' submenu is now just 'sidebar', and the 'new x page' labels are clipped
-* under the 'database' menu, all the long backup gubbins is put into a 'backup' submenu, 'move media files' is renamed to 'locations', and 'file viewing statistics' is renamed to 'clear'
-* under the 'network' menu, 'downloader components' are folded into 'downloaders' and the 'logins' legacy label is pushed to the submenu. also, an ancient ancient and hacky tumblr GDPR click-through patch is removed
-* under the 'services' menu, we just have 'review', 'edit', and 'administrate'. this is another "manage" to "edit" change, which is nomenclature borne from a stupid old technical difference that doesn't matter to the end user and which I am slowly changing. also this weird 'import update files' job is pushed to an 'advanced' submenu
-* under the 'tags' menu, everything is cut to the bone and 'manage where siblings and parents apply' is pushed down to an 'advanced' submenu
-* under the 'pending' menu, the count is now pushed to the flyout submenu, making the top menu just your service names. should make it both thinner and less bouncy as things are pending/uploading in the background
-* under the 'help' menu, I clipped a couple things
-* I think I updated all the help docs to point to the new labels, but let me know if you see something I missed
-
-### executable manager
-
-* the executable manager is now real. check it out under the 'external programs' options page. it supports 'open single file' and 'open url' pipelines to start, and like other hydrus things the objects can be exported and shared between users in a bunch of ways
-* the 'default programs' options page uses the new executable manager. your existing launch paths will be converted to the new system. feel free to rename them. if you are feeling brave, poke around and make your own callable
-* when you do 'open externally' on a file or URL, it all works on the new system. this includes stuff like hyperlinks. the call is cleaner, more secure, and has nicer failure reporting
-* added a 'show PATH' button to the exe manager's process call edit panel. it throws up the PATH as hydrus sees it with a bit of blurb
-
-### exe manager boring stuff
-
-* on init or update, an exe manager is created and populated with defaults or a migration of your existing string launch paths
-* the exe manager now tracks dirty/clean status and is plugged into the normal manager save checker
-* the existing 'open url/file' options are converted to the new calls, and the new exe manager is populated with executables for the old launch paths
-* all the 'default programs' UI is converted to the new 'select which exe' system. it provides live choices from the current the 'external programs' page
-* hooked up some extra safety code to make sure the exe manager provides the fallback default OS call when there is nothing else set, and to remove defunct items on dialog ok and such
-* process calls in the executable manager system now clean their parameters on init, deserialisation, or simple dialog editing. newlines are removed, leading or trailing whitespace is stripped, and multiple whitespace is collapsed to single
-* wrote some migration code for the legacy string templates to the new executable callable objects
-* cleaned up the whole 'open url/file' pipeline of all sorts of old cruft, and updated it to work on media results rather than media singles (part of a long-time cleanup job). similarly deleted a bunch of old code
-* wrote more safety code to inject and fall back to the 'open with default OS call' for 'open file/url' calls that have no options set up for whatever reason
-* fixed some edge case harmless errors when hitting 'open file/url' in the media viewer in the moment it is closing
-* all the open file/url calls now catch the new exceptions and report in nice info popup dialogs when things go wrong
-* fixed some tucked away 'open this url' menu entries (stuff like the regex help link) that were using the wrong 'launch url' call in last week's multi-browser-launch-options refactor
-* refactored some 'populate exe manager with defaults' code to share the same call
-* refactored the executable manager action calls out of the manager to their own file and moved some 'open url with default browser' calls in there too
-* refactored the 'open help docs here' to better tapdance around the new 'open url' pipeline
-* wrote up a slender gui-executable-actions wrapper module for all 'open url/file' commands so if there is error, there is always an UI context upon which to throw up an information error message dialog. there is better testing and error reporting when trying to open a non-local file externally
