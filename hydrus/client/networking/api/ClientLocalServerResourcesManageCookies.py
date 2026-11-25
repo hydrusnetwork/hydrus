@@ -94,7 +94,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
             
             network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, domain )
             
-            session = CG.client_controller.network_engine.session_manager.GetSession( network_context )
+            session = CG.client_controller.network_engine.session_manager.GetSession( network_context, intending_to_give_it_work_or_change_a_cookie = True )
             
             if value is None:
                 
