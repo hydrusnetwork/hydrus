@@ -3823,7 +3823,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
         
         ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage and edit rules', 'See where you are consuming data.', self._ReviewBandwidth )
         ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
-        ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
+        ClientGUIMenus.AppendMenuItem( submenu, 'review cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
         ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers' + HC.UNICODE_ELLIPSIS, 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
@@ -6089,7 +6089,7 @@ ATTACH "client.mappings.db" as external_mappings;'''
     
     def _ReviewNetworkSessions( self ):
         
-        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review session cookies' )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review cookies' )
         
         panel = ClientGUINetwork.ReviewNetworkSessionsPanel( frame, self._controller.network_engine.session_manager )
         

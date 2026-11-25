@@ -1788,7 +1788,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             parent = self.window().parentWidget()
             
-            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( parent, 'review session for ' + network_context.ToString() )
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( parent, 'review cookies for ' + network_context.ToString() )
             
             panel = ReviewNetworkSessionPanel( frame, self._session_manager, network_context )
             

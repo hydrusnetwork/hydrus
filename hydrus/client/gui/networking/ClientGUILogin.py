@@ -312,7 +312,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         warning += '\n' * 2
         warning += 'This system is very old and only works for simple sites. If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! If you do set up HC for an external login, delete any login scripts here that may apply to the same site.'
         warning += '\n' * 2
-        warning += 'If you are looking for your login cookies, go to _network->data->review session cookies_.'
+        warning += 'If you are looking for your login cookies, go to _network->data->review cookies_.'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
         warning_st.setAlignment( QC.Qt.AlignmentFlag.AlignCenter )
